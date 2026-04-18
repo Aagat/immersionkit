@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["chrome", "vite/client"]
+  },
+  "include": ["manifest.config.ts", "vite.config.ts", "popup.html", "options.html", "src/**/*"]
+}
+

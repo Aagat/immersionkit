@@ -1,0 +1,27 @@
+:root {
+  --ik-known-fg: #0f5fa8;
+  --ik-discovery-bg: #f7df87;
+  --ik-discovery-fg: #2d2500;
+  --ik-popover-bg: #fffdf7;
+  --ik-border: rgba(28, 44, 58, 0.14);
+  --ik-shadow: 0 16px 40px rgba(16, 38, 56, 0.16);
+}
+
+.ik-known {
+  color: var(--ik-known-fg);
+}
+
+.ik-discovery {
+  background: var(--ik-discovery-bg);
+  color: var(--ik-discovery-fg);
+  border-radius: 0.2rem;
+  padding: 0 0.15rem;
+}
+
+.ik-popover {
+  background: var(--ik-popover-bg);
+  border: 1px solid var(--ik-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--ik-shadow);
+}
+

@@ -1,0 +1,17 @@
+{
+  "name": "immersionkit",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "pnpm --filter @immersionkit/extension dev",
+    "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4"
+  }
+}
+
