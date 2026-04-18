@@ -1,0 +1,581 @@
+import {
+  DEFAULT_EXTENSION_SETTINGS,
+  RuntimeMessageType,
+  clampUnitInterval,
+  resolveExtensionSettings,
+  type ExtensionSettings,
+  type ProviderName,
+  type ResolvedExtensionSettings,
+  type SiteSetting,
+  type VocabStatus
+} from "@immersionkit/shared";
+
+type StorageRecord = Record<string, unknown>;
+
+export const SETTINGS_STORAGE_KEYS = ["immersionkit.settings", "settings"] as const;
+export const SITE_SETTINGS_STORAGE_KEYS = [
+  "immersionkit.siteSettings",
+  "siteSettings"
+] as const;
+export const PROVIDER_API_KEY_STORAGE_KEYS = [
+  "immersionkit.provider.openai.apiKey",
+  "providerApiKey",
+  "openaiApiKey"
+] as const;
+export const VOCAB_STORAGE_KEYS = [
+  "immersionkit.vocab",
+  "vocab",
+  "vocabEntries"
+] as const;
+export const SENTENCE_CACHE_STORAGE_KEYS = [
+  "immersionkit.sentenceCache",
+  "sentenceCache"
+] as const;
+export const SENTENCE_QUEUE_STORAGE_KEYS = [
+  "immersionkit.sentenceQueue",
+  "sentenceQueue",
+  "immersionkit.pendingSentences"
+] as const;
+
+export type ProficiencySeed = "beginner" | "intermediate" | "advanced";
+
+export const PROFICIENCY_SEED_OPTIONS: readonly {
+  id: ProficiencySeed;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "beginner",
+    label: "Beginner",
+    description: "Start from the highest-frequency English words first."
+  },
+  {
+    id: "intermediate",
+    label: "Intermediate",
+    description: "Blend frequent words with medium-frequency vocabulary."
+  },
+  {
+    id: "advanced",
+    label: "Advanced",
+    description: "Bias toward less frequent discovery vocabulary."
+  }
+] as const;
+
+const PROFICIENCY_SEED_SET: ReadonlySet<ProficiencySeed> = new Set(
+  PROFICIENCY_SEED_OPTIONS.map((option) => option.id)
+);
+
+const CANONICAL_SETTINGS_STORAGE_KEY = SETTINGS_STORAGE_KEYS[0];
+const CANONICAL_SITE_SETTINGS_STORAGE_KEY = SITE_SETTINGS_STORAGE_KEYS[0];
+const CANONICAL_PROVIDER_API_KEY_STORAGE_KEY = PROVIDER_API_KEY_STORAGE_KEYS[0];
+
+export type SettingsState = {
+  rawSettings: StorageRecord;
+  settings: ResolvedExtensionSettings;
+  proficiencySeed: ProficiencySeed;
+  providerApiKey: string;
+};
+
+export type ActiveTabContext = {
+  tabId: number | null;
+  hostname: string | null;
+  url: string | null;
+  isSupportedPage: boolean;
+  supportMessage: string;
+};
+
+export type StoredSiteSetting = SiteSetting & {
+  sentenceTranslationEnabled?: boolean | null;
+};
+
+export type SiteSettingsMap = Record<string, StoredSiteSetting>;
+
+export type VocabStats = {
+  total: number;
+  newCount: number;
+  learning: number;
+  known: number;
+  ignored: number;
+};
+
+export type SentenceStats = {
+  cacheSize: number;
+  pendingCount: number;
+};
+
+export async function loadSettingsState(): Promise<SettingsState> {
+  const storage = await getStorageValues([
+    ...SETTINGS_STORAGE_KEYS,
+    ...PROVIDER_API_KEY_STORAGE_KEYS
+  ]);
+
+  const rawCandidate = pickFirstDefinedValue(storage, SETTINGS_STORAGE_KEYS);
+  const rawSettings = isRecord(rawCandidate) ? { ...rawCandidate } : {};
+
+  return {
+    rawSettings,
+    settings: resolveExtensionSettings(rawSettings as Partial<ExtensionSettings>),
+    proficiencySeed: parseProficiencySeed(rawSettings.proficiencySeed),
+    providerApiKey:
+      readString(pickFirstDefinedValue(storage, PROVIDER_API_KEY_STORAGE_KEYS)) ?? ""
+  };
+}
+
+export async function saveSettingsState(state: SettingsState): Promise<SettingsState> {
+  const nextRawSettings: StorageRecord = {
+    ...state.rawSettings,
+    ...state.settings,
+    targetLanguage: "es",
+    proficiencySeed: state.proficiencySeed
+  };
+
+  await setStorageValues({
+    [CANONICAL_SETTINGS_STORAGE_KEY]: nextRawSettings
+  });
+
+  await persistProviderApiKey(state.providerApiKey);
+
+  return {
+    ...state,
+    rawSettings: nextRawSettings,
+    providerApiKey: state.providerApiKey.trim()
+  };
+}
+
+export async function loadSiteSettingsMap(): Promise<SiteSettingsMap> {
+  const storage = await getStorageValues([...SITE_SETTINGS_STORAGE_KEYS]);
+  const value = pickFirstDefinedValue(storage, SITE_SETTINGS_STORAGE_KEYS);
+  return normalizeSiteSettingsMap(value);
+}
+
+export async function saveSiteSettingsMap(siteSettings: SiteSettingsMap): Promise<void> {
+  await setStorageValues({
+    [CANONICAL_SITE_SETTINGS_STORAGE_KEY]: siteSettings
+  });
+}
+
+export async function upsertSiteEnabledState(
+  hostname: string,
+  enabled: boolean,
+  currentSiteSettings?: SiteSettingsMap
+): Promise<SiteSettingsMap> {
+  const draft = currentSiteSettings
+    ? { ...currentSiteSettings }
+    : await loadSiteSettingsMap();
+
+  const previous = draft[hostname];
+  draft[hostname] = {
+    hostname,
+    enabled,
+    discoveryRate: previous?.discoveryRate ?? null,
+    sentenceTranslationEnabled: previous?.sentenceTranslationEnabled ?? null,
+    updatedAt: new Date().toISOString()
+  };
+
+  await saveSiteSettingsMap(draft);
+  return draft;
+}
+
+export function getSiteEnabledForHost(
+  siteSettings: SiteSettingsMap,
+  hostname: string | null
+): boolean {
+  if (!hostname) {
+    return true;
+  }
+
+  return siteSettings[hostname]?.enabled ?? true;
+}
+
+export async function loadVocabStats(): Promise<VocabStats> {
+  const storage = await getStorageValues([...VOCAB_STORAGE_KEYS]);
+  const vocabValue = pickFirstDefinedValue(storage, VOCAB_STORAGE_KEYS);
+  const statuses = normalizeVocabStatuses(vocabValue);
+
+  const stats: VocabStats = {
+    total: statuses.length,
+    newCount: 0,
+    learning: 0,
+    known: 0,
+    ignored: 0
+  };
+
+  for (const status of statuses) {
+    if (status === "known") {
+      stats.known += 1;
+      continue;
+    }
+
+    if (status === "learning") {
+      stats.learning += 1;
+      continue;
+    }
+
+    if (status === "ignored") {
+      stats.ignored += 1;
+      continue;
+    }
+
+    stats.newCount += 1;
+  }
+
+  return stats;
+}
+
+export async function loadSentenceStats(): Promise<SentenceStats> {
+  const storage = await getStorageValues([
+    ...SENTENCE_CACHE_STORAGE_KEYS,
+    ...SENTENCE_QUEUE_STORAGE_KEYS
+  ]);
+
+  return {
+    cacheSize: countEntries(
+      pickFirstDefinedValue(storage, SENTENCE_CACHE_STORAGE_KEYS)
+    ),
+    pendingCount: countEntries(
+      pickFirstDefinedValue(storage, SENTENCE_QUEUE_STORAGE_KEYS)
+    )
+  };
+}
+
+export async function loadActiveTabContext(): Promise<ActiveTabContext> {
+  if (typeof chrome === "undefined" || !chrome.tabs?.query) {
+    return {
+      tabId: null,
+      hostname: null,
+      url: null,
+      isSupportedPage: false,
+      supportMessage: "Chrome tab APIs are unavailable in this context."
+    };
+  }
+
+  const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (result) => {
+      if (chrome.runtime.lastError) {
+        resolve([]);
+        return;
+      }
+
+      resolve(result ?? []);
+    });
+  });
+
+  const activeTab = tabs[0];
+  if (!activeTab?.url) {
+    return {
+      tabId: activeTab?.id ?? null,
+      hostname: null,
+      url: null,
+      isSupportedPage: false,
+      supportMessage: "Open an HTTP(S) page to configure site controls."
+    };
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(activeTab.url);
+  } catch {
+    return {
+      tabId: activeTab.id ?? null,
+      hostname: null,
+      url: activeTab.url,
+      isSupportedPage: false,
+      supportMessage: "The active tab URL could not be parsed."
+    };
+  }
+
+  const isSupportedPage =
+    parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
+
+  if (!isSupportedPage) {
+    return {
+      tabId: activeTab.id ?? null,
+      hostname: null,
+      url: activeTab.url,
+      isSupportedPage: false,
+      supportMessage: "ImmersionKit controls only apply to HTTP(S) pages."
+    };
+  }
+
+  return {
+    tabId: activeTab.id ?? null,
+    hostname: parsedUrl.hostname,
+    url: activeTab.url,
+    isSupportedPage: true,
+    supportMessage: parsedUrl.hostname
+  };
+}
+
+export async function pingBackground(): Promise<boolean> {
+  const response = await sendRuntimeMessage<{ ok?: boolean }>({
+    type: RuntimeMessageType.Ping
+  });
+
+  return Boolean(response?.ok);
+}
+
+export async function notifySettingsRefresh(tabId?: number | null): Promise<void> {
+  await sendRuntimeMessage({ type: RuntimeMessageType.RefreshActiveTab });
+
+  if (typeof tabId !== "number") {
+    return;
+  }
+
+  await sendTabMessage(tabId, { type: RuntimeMessageType.RefreshActiveTab });
+}
+
+export function parseProficiencySeed(value: unknown): ProficiencySeed {
+  if (typeof value !== "string") {
+    return "beginner";
+  }
+
+  return PROFICIENCY_SEED_SET.has(value as ProficiencySeed)
+    ? (value as ProficiencySeed)
+    : "beginner";
+}
+
+export function isProviderKeyValid(provider: ProviderName, apiKey: string): boolean {
+  if (provider === "none") {
+    return true;
+  }
+
+  const trimmed = apiKey.trim();
+  return trimmed.startsWith("sk-") && trimmed.length >= 20;
+}
+
+export function normalizeDiscoveryRate(value: number): number {
+  return clampUnitInterval(value, DEFAULT_EXTENSION_SETTINGS.discoveryRate);
+}
+
+async function persistProviderApiKey(apiKey: string): Promise<void> {
+  const trimmed = apiKey.trim();
+
+  if (trimmed.length === 0) {
+    await removeStorageKeys([...PROVIDER_API_KEY_STORAGE_KEYS]);
+    return;
+  }
+
+  await setStorageValues({
+    [CANONICAL_PROVIDER_API_KEY_STORAGE_KEY]: trimmed
+  });
+
+  const legacyKeys = PROVIDER_API_KEY_STORAGE_KEYS.slice(1);
+  if (legacyKeys.length > 0) {
+    await removeStorageKeys(legacyKeys);
+  }
+}
+
+function normalizeSiteSettingsMap(input: unknown): SiteSettingsMap {
+  if (Array.isArray(input)) {
+    return input.reduce<SiteSettingsMap>((accumulator, entry) => {
+      if (!isRecord(entry)) {
+        return accumulator;
+      }
+
+      const hostname = readString(entry.hostname);
+      if (!hostname) {
+        return accumulator;
+      }
+
+      accumulator[hostname] = normalizeSiteSetting(hostname, entry);
+      return accumulator;
+    }, {});
+  }
+
+  if (!isRecord(input)) {
+    return {};
+  }
+
+  if (readString(input.hostname)) {
+    const hostname = readString(input.hostname);
+    if (!hostname) {
+      return {};
+    }
+
+    return {
+      [hostname]: normalizeSiteSetting(hostname, input)
+    };
+  }
+
+  const map: SiteSettingsMap = {};
+  for (const [hostname, value] of Object.entries(input)) {
+    if (!isRecord(value)) {
+      continue;
+    }
+
+    map[hostname] = normalizeSiteSetting(hostname, value);
+  }
+
+  return map;
+}
+
+function normalizeSiteSetting(hostname: string, input: StorageRecord): StoredSiteSetting {
+  return {
+    hostname,
+    enabled: typeof input.enabled === "boolean" ? input.enabled : true,
+    discoveryRate:
+      typeof input.discoveryRate === "number" && Number.isFinite(input.discoveryRate)
+        ? clampUnitInterval(input.discoveryRate, DEFAULT_EXTENSION_SETTINGS.discoveryRate)
+        : null,
+    sentenceTranslationEnabled:
+      typeof input.sentenceTranslationEnabled === "boolean"
+        ? input.sentenceTranslationEnabled
+        : null,
+    updatedAt: readString(input.updatedAt) ?? new Date().toISOString()
+  };
+}
+
+function normalizeVocabStatuses(input: unknown): VocabStatus[] {
+  const statuses: VocabStatus[] = [];
+
+  if (Array.isArray(input)) {
+    for (const entry of input) {
+      const status = readVocabStatus(entry);
+      if (status) {
+        statuses.push(status);
+      }
+    }
+
+    return statuses;
+  }
+
+  if (!isRecord(input)) {
+    return statuses;
+  }
+
+  for (const value of Object.values(input)) {
+    const status = readVocabStatus(value);
+    if (status) {
+      statuses.push(status);
+    }
+  }
+
+  return statuses;
+}
+
+function readVocabStatus(input: unknown): VocabStatus | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  if (input.status === "known" || input.status === "learning" || input.status === "ignored") {
+    return input.status;
+  }
+
+  return "new";
+}
+
+function countEntries(value: unknown): number {
+  if (Array.isArray(value)) {
+    return value.length;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value));
+  }
+
+  if (!isRecord(value)) {
+    return 0;
+  }
+
+  if (Array.isArray(value.entries)) {
+    return value.entries.length;
+  }
+
+  if (Array.isArray(value.items)) {
+    return value.items.length;
+  }
+
+  return Object.keys(value).length;
+}
+
+async function getStorageValues(keys: readonly string[]): Promise<StorageRecord> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return {};
+  }
+
+  return new Promise((resolve) => {
+    chrome.storage.local.get([...new Set(keys)], (values) => {
+      if (chrome.runtime.lastError) {
+        resolve({});
+        return;
+      }
+
+      resolve(values as StorageRecord);
+    });
+  });
+}
+
+async function setStorageValues(values: StorageRecord): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    chrome.storage.local.set(values, () => {
+      resolve();
+    });
+  });
+}
+
+async function removeStorageKeys(keys: readonly string[]): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local || keys.length === 0) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    chrome.storage.local.remove([...new Set(keys)], () => {
+      resolve();
+    });
+  });
+}
+
+async function sendRuntimeMessage<TResponse>(message: unknown): Promise<TResponse | null> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+
+      resolve((response as TResponse | undefined) ?? null);
+    });
+  });
+}
+
+async function sendTabMessage(tabId: number, message: unknown): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.tabs?.sendMessage) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    chrome.tabs.sendMessage(tabId, message, () => {
+      resolve();
+    });
+  });
+}
+
+function pickFirstDefinedValue(
+  values: StorageRecord,
+  keys: readonly string[]
+): unknown {
+  for (const key of keys) {
+    if (values[key] !== undefined) {
+      return values[key];
+    }
+  }
+
+  return undefined;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isRecord(value: unknown): value is StorageRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}

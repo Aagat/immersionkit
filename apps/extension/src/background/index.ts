@@ -1,15 +1,4 @@
-import { RuntimeMessageType } from "@immersionkit/shared";
+import { BackgroundRuntimeCoordinator } from "./runtime";
 
-chrome.runtime.onInstalled.addListener(() => {
-  console.info("ImmersionKit installed.");
-});
-
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === RuntimeMessageType.Ping) {
-    sendResponse({ ok: true, source: "background" });
-    return true;
-  }
-
-  return false;
-});
-
+const coordinator = new BackgroundRuntimeCoordinator();
+coordinator.boot();
