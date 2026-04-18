@@ -2,12 +2,14 @@ import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   QueueSentenceCandidatesMessage,
   RefreshActiveTabMessage,
-  RuntimeMessage
+  RuntimeMessage,
+  SentenceTranslationResultMessage
 } from "@immersionkit/shared";
 
 import {
   SentenceQueueOrchestrator,
-  type QueueSentenceCandidatesResponse
+  type QueueSentenceCandidatesResponse,
+  type SentenceTranslationDelivery
 } from "./sentence-queue";
 
 type RefreshActiveTabResponse =
@@ -37,8 +39,15 @@ type ErrorResponse = {
 const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType));
 
 export class BackgroundRuntimeCoordinator {
-  private readonly sentenceQueue = new SentenceQueueOrchestrator();
+  private readonly sentenceQueue: SentenceQueueOrchestrator;
   private isBooted = false;
+
+  constructor() {
+    this.sentenceQueue = new SentenceQueueOrchestrator({
+      notifyFreshTranslations: (deliveries) =>
+        this.deliverFreshSentenceTranslations(deliveries)
+    });
+  }
 
   boot() {
     if (this.isBooted) {
@@ -138,6 +147,25 @@ export class BackgroundRuntimeCoordinator {
       });
     }
   }
+
+  private async deliverFreshSentenceTranslations(
+    deliveries: SentenceTranslationDelivery[]
+  ) {
+    await Promise.all(
+      deliveries.map(async (delivery) => {
+        const sent = await sendSentenceTranslationMessageToTab(delivery.tabId, {
+          type: RuntimeMessageType.SentenceTranslationResult,
+          results: delivery.results
+        });
+
+        if (!sent) {
+          console.info("ImmersionKit sentence translation delivery skipped.", {
+            tabId: delivery.tabId
+          });
+        }
+      })
+    );
+  }
 }
 
 function isRuntimeMessage(message: unknown): message is RuntimeMessage {
@@ -167,6 +195,17 @@ async function getActiveTabId(): Promise<number | null> {
 async function sendRefreshMessageToTab(
   tabId: number,
   message: RefreshActiveTabMessage
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, message, () => {
+      resolve(!chrome.runtime.lastError);
+    });
+  });
+}
+
+async function sendSentenceTranslationMessageToTab(
+  tabId: number,
+  message: SentenceTranslationResultMessage
 ): Promise<boolean> {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, message, () => {

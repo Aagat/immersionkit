@@ -1,6 +1,7 @@
 import { RuntimeMessageType, hashString } from "@immersionkit/shared";
 import type {
   SeedLexiconEntry,
+  SentenceTranslationResult,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
@@ -29,6 +30,11 @@ import {
   shouldSkipDocument
 } from "./dom";
 import { buildLexiconLookup } from "./lexicon";
+import {
+  parseSentenceTranslationResults,
+  renderSentenceTranslations,
+  toggleSentenceSourceReveal
+} from "./sentence-renderer";
 import { loadProcessingContext, persistVocabStatus } from "./storage";
 import "./styles.css";
 
@@ -42,6 +48,7 @@ type ProcessingState = {
   flushHandle: number | null;
   observer: MutationObserver | null;
   nodeSequence: number;
+  sentenceTranslationEnabled: boolean;
 };
 
 type RuntimeState = {
@@ -101,6 +108,11 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
   document.addEventListener(
     "click",
     (event) => {
+      if (toggleSentenceSourceReveal(event.target)) {
+        event.preventDefault();
+        return;
+      }
+
       if (isWithinPopover(event.target)) {
         return;
       }
@@ -124,6 +136,11 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
       }
 
       if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      if (toggleSentenceSourceReveal(event.target)) {
+        event.preventDefault();
         return;
       }
 
@@ -172,6 +189,15 @@ function setupRefreshHook(runtimeState: RuntimeState) {
   }
 
   chrome.runtime.onMessage.addListener((message) => {
+    if (isSentenceTranslationResultMessage(message)) {
+      const results = parseSentenceTranslationResults(message.results);
+      if (results.length > 0) {
+        renderSentenceTranslations(results);
+      }
+
+      return false;
+    }
+
     if (message?.type !== RuntimeMessageType.RefreshActiveTab) {
       return false;
     }
@@ -213,7 +239,11 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       pendingRoots: new Set<ParentNode>(),
       flushHandle: null,
       observer: null,
-      nodeSequence: 0
+      nodeSequence: 0,
+      sentenceTranslationEnabled: isSentenceTranslationEnabled(
+        processingContext.settings.sentenceTranslationEnabled,
+        processingContext.settings.provider
+      )
     };
 
     runtimeState.processing = state;
@@ -346,6 +376,10 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         continue;
       }
 
+      if (!state.sentenceTranslationEnabled) {
+        continue;
+      }
+
       for (const candidate of result.sentenceCandidates) {
         if (state.seenSentenceHashes.has(candidate.sentenceHash)) {
           continue;
@@ -361,10 +395,14 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
     }
   }
 
-  queueSentenceCandidates(queuedSentences);
+  queueSentenceCandidates(state, queuedSentences);
 }
 
-function queueSentenceCandidates(sentences: string[]) {
+function queueSentenceCandidates(state: ProcessingState, sentences: string[]) {
+  if (!state.sentenceTranslationEnabled) {
+    return;
+  }
+
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     return;
   }
@@ -379,8 +417,15 @@ function queueSentenceCandidates(sentences: string[]) {
       type: RuntimeMessageType.QueueSentenceCandidates,
       sentences: uniqueSentences
     },
-    () => {
-      void chrome.runtime.lastError;
+    (response: unknown) => {
+      if (chrome.runtime.lastError) {
+        return;
+      }
+
+      const cachedResults = readCachedResultsFromQueueResponse(response);
+      if (cachedResults.length > 0) {
+        renderSentenceTranslations(cachedResults);
+      }
     }
   );
 }
@@ -722,4 +767,37 @@ function pingBackground() {
   chrome.runtime.sendMessage({ type: RuntimeMessageType.Ping }, () => {
     void chrome.runtime.lastError;
   });
+}
+
+function readCachedResultsFromQueueResponse(
+  response: unknown
+): SentenceTranslationResult[] {
+  if (!isRecord(response)) {
+    return [];
+  }
+
+  return parseSentenceTranslationResults(response.cachedResults);
+}
+
+function isSentenceTranslationResultMessage(
+  message: unknown
+): message is {
+  type: RuntimeMessageType.SentenceTranslationResult;
+  results: unknown;
+} {
+  return (
+    isRecord(message) &&
+    message.type === RuntimeMessageType.SentenceTranslationResult
+  );
+}
+
+function isSentenceTranslationEnabled(
+  sentenceTranslationEnabled: boolean,
+  provider: string
+): boolean {
+  return sentenceTranslationEnabled && provider === "openai";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
