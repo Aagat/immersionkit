@@ -9,7 +9,7 @@ import { isRecord, readString } from "./storage";
 
 const OPENAI_CHAT_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const OPENAI_SENTENCE_PROMPT_VERSION = "openai-sentence-v1";
-const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-nano";
 
 export type ProviderSentenceCandidate = {
   sentenceHash: string;
