@@ -33,6 +33,14 @@ export type ProcessingContext = {
   vocabByLemmaId: Map<string, UserVocabEntry>;
 };
 
+export type PersistVocabStatusInput = {
+  lemmaId: string;
+  status: VocabStatus;
+  lastSeenAt?: string | null;
+  updatedAt?: string;
+  incrementExposure?: boolean;
+};
+
 export async function loadProcessingContext(
   hostname: string
 ): Promise<ProcessingContext> {
@@ -70,6 +78,41 @@ export async function loadProcessingContext(
   };
 }
 
+export async function persistVocabStatus(
+  input: PersistVocabStatusInput
+): Promise<UserVocabEntry | null> {
+  const lemmaId = readString(input.lemmaId);
+  if (!lemmaId) {
+    return null;
+  }
+
+  const storage = await readStorageValues([...STORAGE_KEYS.vocab]);
+  const existingEntries = parseVocabEntries(
+    pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
+  );
+  const existingEntry = existingEntries.get(lemmaId);
+  const now = input.updatedAt ?? new Date().toISOString();
+  const shouldIncrementExposure = input.incrementExposure ?? true;
+
+  const nextEntry: UserVocabEntry = {
+    lemmaId,
+    status: input.status,
+    updatedAt: now,
+    lastSeenAt: input.lastSeenAt === undefined ? now : input.lastSeenAt,
+    exposureCount: Math.max(
+      0,
+      (existingEntry?.exposureCount ?? 0) + (shouldIncrementExposure ? 1 : 0)
+    )
+  };
+
+  existingEntries.set(lemmaId, nextEntry);
+  await writeStorageValues({
+    [STORAGE_KEYS.vocab[0]]: serializeVocabEntries(existingEntries)
+  });
+
+  return nextEntry;
+}
+
 async function readStorageValues(keys: readonly string[]): Promise<StorageRecord> {
   if (typeof chrome === "undefined" || !chrome.storage?.local) {
     return {};
@@ -83,6 +126,18 @@ async function readStorageValues(keys: readonly string[]): Promise<StorageRecord
       }
 
       resolve(values as StorageRecord);
+    });
+  });
+}
+
+async function writeStorageValues(values: StorageRecord): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    chrome.storage.local.set(values, () => {
+      resolve();
     });
   });
 }
@@ -165,6 +220,18 @@ function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
   }
 
   return new Map(entries.map((entry) => [entry.lemmaId, entry]));
+}
+
+function serializeVocabEntries(
+  entries: Map<string, UserVocabEntry>
+): Record<string, UserVocabEntry> {
+  const serialized: Record<string, UserVocabEntry> = {};
+
+  for (const [lemmaId, entry] of entries) {
+    serialized[lemmaId] = entry;
+  }
+
+  return serialized;
 }
 
 function normalizeSeedEntry(input: unknown): SeedLexiconEntry | null {

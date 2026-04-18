@@ -9,6 +9,7 @@ type StorageValues = Record<string, unknown>;
 export type ChromeTestStub = {
   sentMessages: unknown[];
   setStorageValues: (values: StorageValues) => void;
+  getStorageSnapshot: () => StorageValues;
   dispatchRuntimeMessage: (
     message: unknown,
     sender?: chrome.runtime.MessageSender
@@ -49,6 +50,19 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
         set(items: StorageValues, callback?: () => void) {
           Object.assign(storageValues, items);
           callback?.();
+        },
+        remove(keys: unknown, callback?: () => void) {
+          const normalizedKeys = Array.isArray(keys)
+            ? keys.filter((key): key is string => typeof key === "string")
+            : typeof keys === "string"
+              ? [keys]
+              : [];
+
+          for (const key of normalizedKeys) {
+            delete storageValues[key];
+          }
+
+          callback?.();
         }
       }
     },
@@ -68,6 +82,9 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
     sentMessages,
     setStorageValues(values: StorageValues) {
       Object.assign(storageValues, values);
+    },
+    getStorageSnapshot() {
+      return { ...storageValues };
     },
     async dispatchRuntimeMessage(
       message: unknown,

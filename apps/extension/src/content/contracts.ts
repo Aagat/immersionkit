@@ -1,4 +1,8 @@
-import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
+import type {
+  SeedLexiconEntry,
+  UserVocabEntry,
+  VocabStatus
+} from "@immersionkit/shared";
 
 export const IMMERSIONKIT_TOKEN_ACTIVATED_EVENT =
   "immersionkit:token-activated";
@@ -31,6 +35,7 @@ export type TokenStatusUpdatedDetail = {
   tokenId: string;
   lemmaId: string;
   status: VocabStatus;
+  entry?: UserVocabEntry;
 };
 
 export type SentenceCandidateMetadata = {

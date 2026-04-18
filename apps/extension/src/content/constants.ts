@@ -1,4 +1,9 @@
-import type { ExtensionSettings, SeedLexiconEntry, SupportedPos } from "@immersionkit/shared";
+import {
+  DEFAULT_EXTENSION_SETTINGS,
+  type ExtensionSettings,
+  type SeedLexiconEntry,
+  type SupportedPos
+} from "@immersionkit/shared";
 
 export const IMMERSIONKIT_ROOT_ATTRIBUTE = "data-immersionkit-root";
 export const IMMERSIONKIT_NODE_ATTRIBUTE = "data-ik-node-id";
@@ -14,8 +19,9 @@ export const SAFE_POS: ReadonlySet<SupportedPos> = new Set([
   "adverb"
 ]);
 
-export const DEFAULT_DISCOVERY_RATE = 0.22;
-export const DEFAULT_SENTENCE_THRESHOLD = 0.6;
+export const DEFAULT_DISCOVERY_RATE = DEFAULT_EXTENSION_SETTINGS.discoveryRate;
+export const DEFAULT_SENTENCE_THRESHOLD =
+  DEFAULT_EXTENSION_SETTINGS.goldilocksThreshold;
 export const MAX_TEXT_NODE_LENGTH = 420;
 export const MAX_SENTENCE_METADATA_LENGTH = 240;
 

@@ -217,6 +217,11 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   token.classList.remove("ik-word--known", "ik-word--discovery", "ik-word--ignored");
 
   if (update.status === "known") {
+    const targetToken = token.getAttribute("data-ik-target-token");
+    if (targetToken) {
+      token.textContent = targetToken;
+    }
+
     token.classList.add("ik-word--known");
     token.setAttribute("data-ik-word-kind", "known");
     return true;
@@ -231,6 +236,11 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
     token.classList.add("ik-word--ignored");
     token.setAttribute("data-ik-word-kind", "discovery");
     return true;
+  }
+
+  const targetToken = token.getAttribute("data-ik-target-token");
+  if (targetToken) {
+    token.textContent = targetToken;
   }
 
   token.classList.add("ik-word--discovery");
