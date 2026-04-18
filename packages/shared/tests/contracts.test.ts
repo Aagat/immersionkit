@@ -9,6 +9,9 @@ describe("runtime contracts", () => {
     expect(RuntimeMessageType.QueueSentenceCandidates).toBe(
       "sentence/queue-candidates"
     );
+    expect(RuntimeMessageType.SentenceTranslationResult).toBe(
+      "sentence/translation-result"
+    );
   });
 
   it("keeps runtime message types unique", () => {

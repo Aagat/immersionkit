@@ -1,5 +1,9 @@
 import { RuntimeMessageType, hashString } from "@immersionkit/shared";
-import type { SeedLexiconEntry, UserVocabEntry } from "@immersionkit/shared";
+import type {
+  SeedLexiconEntry,
+  SentenceTranslationResult,
+  UserVocabEntry
+} from "@immersionkit/shared";
 
 import {
   applyTokenStatusUpdate,
@@ -24,10 +28,16 @@ import {
   shouldSkipDocument
 } from "./dom";
 import { buildLexiconLookup } from "./lexicon";
+import {
+  parseSentenceTranslationResults,
+  renderSentenceTranslations,
+  toggleSentenceSourceReveal
+} from "./sentence-renderer";
 import { loadProcessingContext } from "./storage";
 import "./styles.css";
 
 type ProcessingState = {
+  siteEnabled: boolean;
   discoveryRate: number;
   samplingSeed: string;
   lexiconLookup: Map<string, SeedLexiconEntry>;
@@ -37,6 +47,7 @@ type ProcessingState = {
   flushHandle: number | null;
   observer: MutationObserver | null;
   nodeSequence: number;
+  sentenceTranslationEnabled: boolean;
 };
 
 void boot();
@@ -73,6 +84,7 @@ async function boot() {
   }
 
   const state: ProcessingState = {
+    siteEnabled: processingContext.siteEnabled,
     discoveryRate: processingContext.discoveryRate,
     samplingSeed: `${window.location.hostname}${window.location.pathname}`,
     lexiconLookup,
@@ -81,7 +93,11 @@ async function boot() {
     pendingRoots: new Set<ParentNode>(),
     flushHandle: null,
     observer: null,
-    nodeSequence: 0
+    nodeSequence: 0,
+    sentenceTranslationEnabled: isSentenceTranslationEnabled(
+      processingContext.settings.sentenceTranslationEnabled,
+      processingContext.settings.provider
+    )
   };
 
   setupInteractionHooks();
@@ -94,6 +110,11 @@ function setupInteractionHooks() {
   document.addEventListener(
     "click",
     (event) => {
+      if (toggleSentenceSourceReveal(event.target)) {
+        event.preventDefault();
+        return;
+      }
+
       emitTokenActivatedEvent(event.target, "click");
     },
     true
@@ -103,6 +124,11 @@ function setupInteractionHooks() {
     "keydown",
     (event) => {
       if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      if (toggleSentenceSourceReveal(event.target)) {
+        event.preventDefault();
         return;
       }
 
@@ -131,12 +157,20 @@ function setupInteractionHooks() {
 
 function setupRefreshHook(state: ProcessingState) {
   chrome.runtime.onMessage.addListener((message) => {
+    if (isSentenceTranslationResultMessage(message)) {
+      const results = parseSentenceTranslationResults(message.results);
+      if (results.length > 0) {
+        renderSentenceTranslations(results);
+      }
+
+      return false;
+    }
+
     if (message?.type !== RuntimeMessageType.RefreshActiveTab) {
       return false;
     }
 
-    restoreAnnotatedNodes(document);
-    processRoots(state, [document.body]);
+    void refreshProcessingState(state);
     return false;
   });
 }
@@ -211,6 +245,10 @@ function scheduleRootFlush(state: ProcessingState) {
 }
 
 function processRoots(state: ProcessingState, roots: ParentNode[]) {
+  if (!state.siteEnabled) {
+    return;
+  }
+
   const queuedSentences: string[] = [];
 
   for (const root of roots) {
@@ -230,6 +268,10 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         continue;
       }
 
+      if (!state.sentenceTranslationEnabled) {
+        continue;
+      }
+
       for (const candidate of result.sentenceCandidates) {
         if (state.seenSentenceHashes.has(candidate.sentenceHash)) {
           continue;
@@ -245,10 +287,14 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
     }
   }
 
-  queueSentenceCandidates(queuedSentences);
+  queueSentenceCandidates(state, queuedSentences);
 }
 
-function queueSentenceCandidates(sentences: string[]) {
+function queueSentenceCandidates(state: ProcessingState, sentences: string[]) {
+  if (!state.sentenceTranslationEnabled) {
+    return;
+  }
+
   const uniqueSentences = [...new Set(sentences)].filter(Boolean).slice(0, 12);
   if (uniqueSentences.length === 0) {
     return;
@@ -259,8 +305,15 @@ function queueSentenceCandidates(sentences: string[]) {
       type: RuntimeMessageType.QueueSentenceCandidates,
       sentences: uniqueSentences
     },
-    () => {
-      void chrome.runtime.lastError;
+    (response: unknown) => {
+      if (chrome.runtime.lastError) {
+        return;
+      }
+
+      const cachedResults = readCachedResultsFromQueueResponse(response);
+      if (cachedResults.length > 0) {
+        renderSentenceTranslations(cachedResults);
+      }
     }
   );
 }
@@ -319,4 +372,59 @@ function pingBackground() {
   chrome.runtime.sendMessage({ type: RuntimeMessageType.Ping }, () => {
     void chrome.runtime.lastError;
   });
+}
+
+async function refreshProcessingState(state: ProcessingState) {
+  const processingContext = await loadProcessingContext(window.location.hostname);
+
+  state.siteEnabled = processingContext.siteEnabled;
+  state.discoveryRate = processingContext.discoveryRate;
+  state.lexiconLookup = buildLexiconLookup(processingContext.lexicon);
+  state.vocabByLemmaId = processingContext.vocabByLemmaId;
+  state.sentenceTranslationEnabled = isSentenceTranslationEnabled(
+    processingContext.settings.sentenceTranslationEnabled,
+    processingContext.settings.provider
+  );
+  state.seenSentenceHashes.clear();
+
+  restoreAnnotatedNodes(document);
+
+  if (!processingContext.siteEnabled || state.lexiconLookup.size === 0 || !document.body) {
+    return;
+  }
+
+  processRoots(state, [document.body]);
+}
+
+function readCachedResultsFromQueueResponse(
+  response: unknown
+): SentenceTranslationResult[] {
+  if (!isRecord(response)) {
+    return [];
+  }
+
+  return parseSentenceTranslationResults(response.cachedResults);
+}
+
+function isSentenceTranslationResultMessage(
+  message: unknown
+): message is {
+  type: RuntimeMessageType.SentenceTranslationResult;
+  results: unknown;
+} {
+  return (
+    isRecord(message) &&
+    message.type === RuntimeMessageType.SentenceTranslationResult
+  );
+}
+
+function isSentenceTranslationEnabled(
+  sentenceTranslationEnabled: boolean,
+  provider: string
+): boolean {
+  return sentenceTranslationEnabled && provider === "openai";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

@@ -1,5 +1,10 @@
 import { hashSentence } from "@immersionkit/shared";
-import type { QueueSentenceCandidatesMessage, SentenceCacheEntry } from "@immersionkit/shared";
+import type {
+  QueueSentenceCandidatesMessage,
+  SentenceCacheEntry,
+  SentenceCacheRepository,
+  SentenceTranslationResult
+} from "@immersionkit/shared";
 
 import {
   createSentenceProviderClient,
@@ -28,11 +33,21 @@ export type TranslationAvailability =
   | "provider-disabled"
   | "missing-credentials";
 
-export type CachedSentenceResult = {
-  sentenceHash: string;
-  sourceText: string;
-  translatedText: string;
-  grammarNote: string;
+export type CachedSentenceResult = SentenceTranslationResult;
+
+export type SentenceTranslationDelivery = {
+  tabId: number;
+  results: CachedSentenceResult[];
+};
+
+type SentenceQueueOrchestratorOptions = {
+  sentenceCache?: SentenceCacheRepository;
+  loadRuntimeConfig?: () => Promise<BackgroundRuntimeConfig>;
+  createProviderClient?: typeof createSentenceProviderClient;
+  notifyFreshTranslations?: (
+    deliveries: SentenceTranslationDelivery[]
+  ) => Promise<void> | void;
+  flushDelayMs?: number;
 };
 
 export type QueueSentenceCandidatesResponse = {
@@ -46,11 +61,33 @@ export type QueueSentenceCandidatesResponse = {
 };
 
 export class SentenceQueueOrchestrator {
-  private readonly sentenceCache = new ChromeStorageSentenceCacheRepository();
+  private readonly sentenceCache: SentenceCacheRepository;
+  private readonly loadRuntimeConfig: () => Promise<BackgroundRuntimeConfig>;
+  private readonly createProviderClient: typeof createSentenceProviderClient;
+  private readonly notifyFreshTranslations: (
+    deliveries: SentenceTranslationDelivery[]
+  ) => Promise<void> | void;
+  private readonly flushDelayMs: number;
   private readonly pendingQueue = new Map<string, QueuedSentenceCandidate>();
   private readonly inFlightHashes = new Set<string>();
+  private readonly inFlightSenderTabIds = new Map<string, Set<number>>();
   private flushTimer: number | null = null;
   private isProcessing = false;
+
+  constructor(options: SentenceQueueOrchestratorOptions = {}) {
+    this.sentenceCache =
+      options.sentenceCache ?? new ChromeStorageSentenceCacheRepository();
+    this.loadRuntimeConfig =
+      options.loadRuntimeConfig ?? loadBackgroundRuntimeConfig;
+    this.createProviderClient =
+      options.createProviderClient ?? createSentenceProviderClient;
+    this.notifyFreshTranslations =
+      options.notifyFreshTranslations ?? (() => undefined);
+    this.flushDelayMs = Math.max(
+      0,
+      Math.round(options.flushDelayMs ?? QUEUE_FLUSH_DELAY_MS)
+    );
+  }
 
   async queueMessage(
     message: QueueSentenceCandidatesMessage,
@@ -58,7 +95,7 @@ export class SentenceQueueOrchestrator {
   ): Promise<QueueSentenceCandidatesResponse> {
     const candidates = normalizeSentenceCandidates(message.sentences);
     if (candidates.length === 0) {
-      const config = await loadBackgroundRuntimeConfig();
+      const config = await this.loadRuntimeConfig();
       return {
         ok: true,
         accepted: 0,
@@ -70,7 +107,7 @@ export class SentenceQueueOrchestrator {
       };
     }
 
-    const config = await loadBackgroundRuntimeConfig();
+    const config = await this.loadRuntimeConfig();
     const translationAvailability = resolveTranslationAvailability(config);
     const cacheHits = await this.findCachedEntries(candidates);
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
@@ -100,12 +137,7 @@ export class SentenceQueueOrchestrator {
       skipped,
       cacheHits: cacheHits.length,
       translationAvailability,
-      cachedResults: cacheHits.map((entry) => ({
-        sentenceHash: entry.sentenceHash,
-        sourceText: entry.sourceText,
-        translatedText: entry.translatedText,
-        grammarNote: entry.grammarNote
-      }))
+      cachedResults: cacheHits.map(toCachedSentenceResult)
     };
   }
 
@@ -118,6 +150,18 @@ export class SentenceQueueOrchestrator {
 
     for (const candidate of candidates) {
       if (this.inFlightHashes.has(candidate.sentenceHash)) {
+        if (typeof senderTabId === "number") {
+          const senderTabIds = this.inFlightSenderTabIds.get(candidate.sentenceHash);
+          if (senderTabIds) {
+            senderTabIds.add(senderTabId);
+          } else {
+            this.inFlightSenderTabIds.set(
+              candidate.sentenceHash,
+              new Set([senderTabId])
+            );
+          }
+        }
+
         skipped += 1;
         continue;
       }
@@ -150,7 +194,7 @@ export class SentenceQueueOrchestrator {
     return { queued, skipped };
   }
 
-  private scheduleQueueFlush(delayMs = QUEUE_FLUSH_DELAY_MS) {
+  private scheduleQueueFlush(delayMs = this.flushDelayMs) {
     if (this.flushTimer !== null) {
       return;
     }
@@ -170,13 +214,13 @@ export class SentenceQueueOrchestrator {
     let batch: QueuedSentenceCandidate[] = [];
 
     try {
-      const config = await loadBackgroundRuntimeConfig();
+      const config = await this.loadRuntimeConfig();
       if (resolveTranslationAvailability(config) !== "ready") {
         this.pendingQueue.clear();
         return;
       }
 
-      const providerClient = createSentenceProviderClient(
+      const providerClient = this.createProviderClient(
         config.settings.provider,
         config.credentials
       );
@@ -192,11 +236,16 @@ export class SentenceQueueOrchestrator {
 
       for (const candidate of batch) {
         this.inFlightHashes.add(candidate.sentenceHash);
+        this.inFlightSenderTabIds.set(
+          candidate.sentenceHash,
+          new Set(candidate.senderTabIds)
+        );
       }
 
       const cachedEntries = await this.sentenceCache.getByHashes(
         batch.map((candidate) => candidate.sentenceHash)
       );
+      await this.notifyQueuedTabs(batch, cachedEntries);
       const cachedHashes = new Set(cachedEntries.map((entry) => entry.sentenceHash));
       const uncachedBatch = batch.filter(
         (candidate) => !cachedHashes.has(candidate.sentenceHash)
@@ -235,12 +284,14 @@ export class SentenceQueueOrchestrator {
       }));
 
       await this.sentenceCache.putMany(entries);
+      await this.notifyQueuedTabs(uncachedBatch, entries);
     } catch (error) {
       this.requeueBatch(batch);
       console.warn("ImmersionKit sentence queue flush failed.", error);
     } finally {
       for (const candidate of batch) {
         this.inFlightHashes.delete(candidate.sentenceHash);
+        this.inFlightSenderTabIds.delete(candidate.sentenceHash);
       }
 
       this.isProcessing = false;
@@ -272,9 +323,18 @@ export class SentenceQueueOrchestrator {
         continue;
       }
 
+      const senderTabIds = new Set(candidate.senderTabIds);
+      const inFlightTabIds = this.inFlightSenderTabIds.get(candidate.sentenceHash);
+      if (inFlightTabIds) {
+        for (const tabId of inFlightTabIds) {
+          senderTabIds.add(tabId);
+        }
+      }
+
       this.pendingQueue.set(candidate.sentenceHash, {
         ...candidate,
-        attempts: candidate.attempts + 1
+        attempts: candidate.attempts + 1,
+        senderTabIds
       });
     }
   }
@@ -302,6 +362,65 @@ export class SentenceQueueOrchestrator {
     );
 
     return hits;
+  }
+
+  private async notifyQueuedTabs(
+    queuedCandidates: readonly QueuedSentenceCandidate[],
+    entries: readonly SentenceCacheEntry[]
+  ) {
+    if (entries.length === 0 || queuedCandidates.length === 0) {
+      return;
+    }
+
+    const candidateByHash = new Map(
+      queuedCandidates.map((candidate) => [candidate.sentenceHash, candidate] as const)
+    );
+    const deliveriesByTabId = new Map<number, CachedSentenceResult[]>();
+
+    for (const entry of entries) {
+      const candidate = candidateByHash.get(entry.sentenceHash);
+      if (!candidate) {
+        continue;
+      }
+
+      const senderTabIds = new Set(candidate.senderTabIds);
+      const inFlightSenderTabIds = this.inFlightSenderTabIds.get(entry.sentenceHash);
+      if (inFlightSenderTabIds) {
+        for (const tabId of inFlightSenderTabIds) {
+          senderTabIds.add(tabId);
+        }
+      }
+
+      if (senderTabIds.size === 0) {
+        continue;
+      }
+
+      const result = toCachedSentenceResult(entry);
+      for (const tabId of senderTabIds) {
+        const deliveries = deliveriesByTabId.get(tabId);
+        if (deliveries) {
+          deliveries.push(result);
+          continue;
+        }
+
+        deliveriesByTabId.set(tabId, [result]);
+      }
+    }
+
+    if (deliveriesByTabId.size === 0) {
+      return;
+    }
+
+    try {
+      await this.notifyFreshTranslations(
+        [...deliveriesByTabId.entries()].map(([tabId, results]) => ({
+          tabId,
+          results
+        }))
+      );
+    } catch (error) {
+      console.warn("ImmersionKit sentence delivery notification failed.", error);
+    }
   }
 }
 
@@ -356,3 +475,11 @@ function resolveTranslationAvailability(
   return "ready";
 }
 
+function toCachedSentenceResult(entry: SentenceCacheEntry): CachedSentenceResult {
+  return {
+    sentenceHash: entry.sentenceHash,
+    sourceText: entry.sourceText,
+    translatedText: entry.translatedText,
+    grammarNote: entry.grammarNote
+  };
+}
