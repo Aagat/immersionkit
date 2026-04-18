@@ -3,6 +3,7 @@ import {
   getSiteEnabledForHost,
   isProviderKeyValid,
   loadActiveTabContext,
+  loadPageDiagnostics,
   loadSentenceStats,
   loadSettingsState,
   loadSiteSettingsMap,
@@ -13,6 +14,7 @@ import {
   saveSettingsState,
   upsertSiteEnabledState,
   type ActiveTabContext,
+  type PageDiagnostics,
   type SentenceStats,
   type SettingsState,
   type SiteSettingsMap,
@@ -46,6 +48,7 @@ export function PopupApp() {
   const [siteSettings, setSiteSettings] = useState<SiteSettingsMap>({});
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
   const [sentenceStats, setSentenceStats] = useState<SentenceStats>(EMPTY_SENTENCE_STATS);
+  const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
   const [backgroundHealthy, setBackgroundHealthy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
@@ -54,15 +57,22 @@ export function PopupApp() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadSnapshot = useCallback(async () => {
-    const [tabContext, loadedSettingsState, loadedSiteSettings, loadedVocabStats, loadedSentenceStats, backgroundOk] =
-      await Promise.all([
-        loadActiveTabContext(),
-        loadSettingsState(),
-        loadSiteSettingsMap(),
-        loadVocabStats(),
-        loadSentenceStats(),
-        pingBackground()
-      ]);
+    const tabContext = await loadActiveTabContext();
+    const [
+      loadedSettingsState,
+      loadedSiteSettings,
+      loadedVocabStats,
+      loadedSentenceStats,
+      backgroundOk,
+      diagnostics
+    ] = await Promise.all([
+      loadSettingsState(),
+      loadSiteSettingsMap(),
+      loadVocabStats(),
+      loadSentenceStats(),
+      pingBackground(),
+      loadPageDiagnostics(tabContext.tabId)
+    ]);
 
     return {
       tabContext,
@@ -70,7 +80,8 @@ export function PopupApp() {
       loadedSiteSettings,
       loadedVocabStats,
       loadedSentenceStats,
-      backgroundOk
+      backgroundOk,
+      diagnostics
     };
   }, []);
 
@@ -85,6 +96,7 @@ export function PopupApp() {
       setSiteSettings(snapshot.loadedSiteSettings);
       setVocabStats(snapshot.loadedVocabStats);
       setSentenceStats(snapshot.loadedSentenceStats);
+      setPageDiagnostics(snapshot.diagnostics);
       setBackgroundHealthy(snapshot.backgroundOk);
     } catch {
       setErrorMessage("Unable to load popup state. Try reopening the popup.");
@@ -204,6 +216,7 @@ export function PopupApp() {
     try {
       await notifySettingsRefresh(activeTab.tabId);
       setBackgroundHealthy(await pingBackground());
+      setPageDiagnostics(await loadPageDiagnostics(activeTab.tabId));
     } catch {
       setErrorMessage("Could not request a tab refresh.");
     } finally {
@@ -287,6 +300,32 @@ export function PopupApp() {
         <p className="muted" style={{ marginTop: 12, marginBottom: 0 }}>
           Background service: {backgroundHealthy ? "online" : "waiting"}
         </p>
+      </section>
+
+      <section className="panel-card">
+        <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: "1.05rem" }}>
+          Current Page Diagnostics
+        </h2>
+        {pageDiagnostics ? (
+          <div style={{ display: "grid", gap: 8 }}>
+            <p style={{ margin: 0 }}>
+              Lexicon source:{" "}
+              <strong>{formatLexiconSource(pageDiagnostics.lexiconSource)}</strong> (
+              {pageDiagnostics.lexiconEntryCount.toLocaleString()} entries)
+            </p>
+            <p className="muted" style={{ margin: 0 }}>
+              Sentence candidates on page: {pageDiagnostics.sentenceCandidatesSeen}
+            </p>
+            <p className="muted" style={{ margin: 0 }}>
+              Sentence notes rendered: {pageDiagnostics.sentenceNotesRendered} (
+              visible now: {pageDiagnostics.sentenceNotesVisible})
+            </p>
+          </div>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            Page diagnostics unavailable. Open and refresh a supported page.
+          </p>
+        )}
       </section>
 
       <section className="panel-card">
@@ -391,4 +430,24 @@ function Metric({ label, value }: MetricProps) {
       <p style={{ margin: "4px 0 0", fontSize: "1.15rem", fontWeight: 600 }}>{value}</p>
     </div>
   );
+}
+
+function formatLexiconSource(source: string): string {
+  if (source === "storage-wrapped-asset") {
+    return "Imported asset (storage)";
+  }
+
+  if (source === "storage-legacy-array") {
+    return "Legacy array (storage)";
+  }
+
+  if (source === "bundled-asset") {
+    return "Bundled generated asset";
+  }
+
+  if (source === "fallback") {
+    return "Emergency fallback";
+  }
+
+  return source;
 }

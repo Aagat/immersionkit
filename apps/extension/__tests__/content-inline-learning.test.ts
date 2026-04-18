@@ -1,4 +1,4 @@
-import { RuntimeMessageType } from "@immersionkit/shared";
+import { RuntimeMessageType, hashSentence } from "@immersionkit/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { installChromeStub } from "./helpers/chrome-stub";
@@ -268,6 +268,61 @@ describe("content inline learning loop", () => {
 
           expect(document.querySelector("[data-ik-sentence-note='true']")).toBeNull();
           expect(getInjectedTokens(document).length).toBe(0);
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("renders sentence notes for canonical sentence hashes from background delivery", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "The city is important for every visitor.";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": {
+            discoveryRate: 1,
+            sentenceTranslationEnabled: true,
+            provider: "openai"
+          },
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:17:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          await chromeStub.dispatchRuntimeMessage({
+            type: RuntimeMessageType.SentenceTranslationResult,
+            results: [
+              {
+                sentenceHash: hashSentence(sourceSentence),
+                sourceText: sourceSentence,
+                translatedText: "La ciudad es importante para cada visitante.",
+                grammarNote: "Present tense for a general statement."
+              }
+            ]
+          });
+          await wait(20);
+
+          const renderedNote = document.querySelector(
+            `[data-ik-sentence-note='true'][data-ik-sentence-hash='${hashSentence(
+              sourceSentence
+            )}']`
+          );
+          expect(renderedNote).toBeTruthy();
         } finally {
           chromeStub.restore();
         }

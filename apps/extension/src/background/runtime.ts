@@ -11,6 +11,7 @@ import {
   type QueueSentenceCandidatesResponse,
   type SentenceTranslationDelivery
 } from "./sentence-queue";
+import { ensureSeedLexiconReady } from "./seed-lexicon";
 
 type RefreshActiveTabResponse =
   | {
@@ -55,9 +56,11 @@ export class BackgroundRuntimeCoordinator {
     }
 
     this.isBooted = true;
+    void this.bootstrapSeedLexicon();
 
     chrome.runtime.onInstalled.addListener(() => {
       console.info("ImmersionKit background service worker installed.");
+      void this.bootstrapSeedLexicon();
     });
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -165,6 +168,19 @@ export class BackgroundRuntimeCoordinator {
         }
       })
     );
+  }
+
+  private async bootstrapSeedLexicon() {
+    try {
+      const result = await ensureSeedLexiconReady();
+      console.info("ImmersionKit seed lexicon ready.", {
+        source: result.source,
+        entryCount: result.entryCount,
+        assetVersion: result.assetVersion
+      });
+    } catch (error) {
+      console.warn("ImmersionKit failed to bootstrap seed lexicon.", error);
+    }
   }
 }
 

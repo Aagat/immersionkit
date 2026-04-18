@@ -6,13 +6,17 @@ import type {
   VocabStatus
 } from "@immersionkit/shared";
 
+import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
 import {
   DEFAULT_DISCOVERY_RATE,
   DEFAULT_SETTINGS,
   FALLBACK_SEED_LEXICON,
-  SAFE_POS,
   STORAGE_KEYS
 } from "./constants";
+import {
+  isLikelyFallbackSeedLexicon,
+  parseSeedLexiconInput
+} from "../seed/seed-lexicon";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -24,12 +28,26 @@ type VocabEntryRecord = {
   updatedAt?: unknown;
 };
 
+export type LexiconLoadSource =
+  | "storage-wrapped-asset"
+  | "storage-legacy-array"
+  | "bundled-asset"
+  | "fallback";
+
+export type LexiconLoadInfo = {
+  source: LexiconLoadSource;
+  entryCount: number;
+  assetVersion: string | null;
+  isFallback: boolean;
+};
+
 export type ProcessingContext = {
   settings: ExtensionSettings;
   discoveryRate: number;
   siteSetting: SiteSetting | null;
   siteEnabled: boolean;
   lexicon: SeedLexiconEntry[];
+  lexiconInfo: LexiconLoadInfo;
   vocabByLemmaId: Map<string, UserVocabEntry>;
 };
 
@@ -64,14 +82,22 @@ export async function loadProcessingContext(
     siteSetting?.discoveryRate ?? settings.discoveryRate ?? DEFAULT_DISCOVERY_RATE
   );
 
+  const lexiconInfo = resolveLexicon(
+    pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon)
+  );
+
   return {
     settings,
     discoveryRate,
     siteSetting,
     siteEnabled: siteSetting?.enabled ?? true,
-    lexicon: parseLexiconEntries(
-      pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon)
-    ),
+    lexicon: lexiconInfo.entries,
+    lexiconInfo: {
+      source: lexiconInfo.source,
+      entryCount: lexiconInfo.entries.length,
+      assetVersion: lexiconInfo.assetVersion,
+      isFallback: lexiconInfo.isFallback
+    },
     vocabByLemmaId: parseVocabEntries(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
     )
@@ -188,17 +214,7 @@ function parseSiteSetting(input: unknown, hostname: string): SiteSetting | null 
   return null;
 }
 
-function parseLexiconEntries(input: unknown): SeedLexiconEntry[] {
-  if (!Array.isArray(input)) {
-    return FALLBACK_SEED_LEXICON;
-  }
-
-  const parsed = input
-    .map((entry) => normalizeSeedEntry(entry))
-    .filter((entry): entry is SeedLexiconEntry => Boolean(entry));
-
-  return parsed.length > 0 ? parsed : FALLBACK_SEED_LEXICON;
-}
+const BUNDLED_SEED_LEXICON = parseSeedLexiconInput(bundledSeedLexiconAsset);
 
 function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
   const entries: UserVocabEntry[] = [];
@@ -234,32 +250,43 @@ function serializeVocabEntries(
   return serialized;
 }
 
-function normalizeSeedEntry(input: unknown): SeedLexiconEntry | null {
-  if (!isRecord(input)) {
-    return null;
+function resolveLexicon(input: unknown): {
+  entries: SeedLexiconEntry[];
+  source: LexiconLoadSource;
+  assetVersion: string | null;
+  isFallback: boolean;
+} {
+  const parsedStorageLexicon = parseSeedLexiconInput(input);
+  if (
+    parsedStorageLexicon &&
+    parsedStorageLexicon.entries.length > 0 &&
+    !isLikelyFallbackSeedLexicon(parsedStorageLexicon.entries)
+  ) {
+    return {
+      entries: parsedStorageLexicon.entries,
+      source:
+        parsedStorageLexicon.format === "legacy-object-array"
+          ? "storage-legacy-array"
+          : "storage-wrapped-asset",
+      assetVersion: parsedStorageLexicon.assetVersion,
+      isFallback: false
+    };
   }
 
-  const sourceLemma = readString(input.sourceLemma);
-  const targetLemma = readString(input.targetLemma);
-  const lemmaId = readString(input.lemmaId);
-  const pos = readString(input.pos) as SeedLexiconEntry["pos"];
-  if (!lemmaId || !sourceLemma || !targetLemma || !SAFE_POS.has(pos)) {
-    return null;
+  if (BUNDLED_SEED_LEXICON && BUNDLED_SEED_LEXICON.entries.length > 0) {
+    return {
+      entries: BUNDLED_SEED_LEXICON.entries,
+      source: "bundled-asset",
+      assetVersion: BUNDLED_SEED_LEXICON.assetVersion,
+      isFallback: false
+    };
   }
 
   return {
-    lemmaId,
-    sourceLemma,
-    targetLemma,
-    pos,
-    frequencyRank:
-      typeof input.frequencyRank === "number" && Number.isFinite(input.frequencyRank)
-        ? input.frequencyRank
-        : null,
-    confidence: readNumber(input.confidence, 0.9),
-    inflections: Array.isArray(input.inflections)
-      ? input.inflections.filter((value): value is string => typeof value === "string")
-      : undefined
+    entries: FALLBACK_SEED_LEXICON,
+    source: "fallback",
+    assetVersion: null,
+    isFallback: true
   };
 }
 

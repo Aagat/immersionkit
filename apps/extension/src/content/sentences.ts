@@ -1,4 +1,8 @@
-import { hashString, isGoldilocksSentence, scoreSentenceByKnownWords } from "@immersionkit/shared";
+import {
+  hashSentence,
+  isGoldilocksSentence,
+  scoreSentenceByKnownWords
+} from "@immersionkit/shared";
 
 import { DEFAULT_SENTENCE_THRESHOLD } from "./constants";
 import type { SentenceCandidateMetadata } from "./contracts";
@@ -38,7 +42,7 @@ export function segmentSentences(text: string): SentenceSegment[] {
       text: normalizedText,
       start,
       end,
-      hash: hashString(normalizedText.toLowerCase()),
+      hash: hashSentence(normalizedText),
       words
     });
   }

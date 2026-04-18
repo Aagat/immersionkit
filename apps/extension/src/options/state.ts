@@ -9,6 +9,10 @@ import {
   type SiteSetting,
   type VocabStatus
 } from "@immersionkit/shared";
+import {
+  PAGE_DIAGNOSTICS_MESSAGE_TYPE,
+  type PageDiagnosticsSnapshot
+} from "../diagnostics/page-diagnostics";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -102,6 +106,8 @@ export type SentenceStats = {
   cacheSize: number;
   pendingCount: number;
 };
+
+export type PageDiagnostics = PageDiagnosticsSnapshot;
 
 export async function loadSettingsState(): Promise<SettingsState> {
   const storage = await getStorageValues([
@@ -304,6 +310,20 @@ export async function loadActiveTabContext(): Promise<ActiveTabContext> {
     isSupportedPage: true,
     supportMessage: parsedUrl.hostname
   };
+}
+
+export async function loadPageDiagnostics(
+  tabId: number | null | undefined
+): Promise<PageDiagnostics | null> {
+  if (typeof tabId !== "number") {
+    return null;
+  }
+
+  const diagnostics = await sendTabMessage<PageDiagnostics>(tabId, {
+    type: PAGE_DIAGNOSTICS_MESSAGE_TYPE
+  });
+
+  return diagnostics;
 }
 
 export async function pingBackground(): Promise<boolean> {
@@ -547,14 +567,22 @@ async function sendRuntimeMessage<TResponse>(message: unknown): Promise<TRespons
   });
 }
 
-async function sendTabMessage(tabId: number, message: unknown): Promise<void> {
+async function sendTabMessage<TResponse>(
+  tabId: number,
+  message: unknown
+): Promise<TResponse | null> {
   if (typeof chrome === "undefined" || !chrome.tabs?.sendMessage) {
-    return;
+    return null;
   }
 
-  await new Promise<void>((resolve) => {
-    chrome.tabs.sendMessage(tabId, message, () => {
-      resolve();
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, message, (response: TResponse | undefined) => {
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+
+      resolve(response ?? null);
     });
   });
 }

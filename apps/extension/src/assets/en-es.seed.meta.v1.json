@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "assetVersion": "2026.04.18-seed2",
+  "languagePair": "en-es",
+  "generatedAt": "2026-04-18T22:03:43+00:00",
+  "generator": {
+    "script": "tools/importers/scripts/prepare_seed_lexicon.py",
+    "pipelineVersion": "1.0.0"
+  },
+  "inputs": [
+    {
+      "id": "language-learning-decks/spanish.json",
+      "path": "/Users/aagat/.codex/worktrees/6ea8/language/tools/importers/inputs/external/language-learning-decks/spanish.json",
+      "sha256": "784efaa88f041919486e95434bc771b7695535e23076f58390c7e94603693888",
+      "sourceUrl": "https://raw.githubusercontent.com/vbvss199/Language-Learning-decks/main/spanish/spanish.json",
+      "rowCount": 16392
+    }
+  ],
+  "config": {
+    "supportedPos": [
+      "adjective",
+      "adverb",
+      "noun"
+    ],
+    "dedupeKey": [
+      "sourceLemma",
+      "pos"
+    ],
+    "entryEncoding": "array",
+    "maxEntries": 3000,
+    "lowConfidenceThreshold": 0.85,
+    "minConfidenceToEmit": 0.7,
+    "validationSampleLimit": 50
+  },
+  "stats": {
+    "sourceRows": 16392,
+    "candidateRows": 14492,
+    "dedupedRows": 11155,
+    "seedRows": 3000,
+    "droppedByMinConfidence": 0,
+    "droppedByMaxEntries": 8155,
+    "skippedRowsDuringNormalization": 1
+  },
+  "validationSummary": {
+    "duplicateKeyCount": 2123,
+    "unsupportedPosRowCount": 1899,
+    "lowConfidenceRowCount": 56
+  },
+  "validationReportFile": "tools/importers/outputs/generated/en-es.seed.validation.v1.json"
+}

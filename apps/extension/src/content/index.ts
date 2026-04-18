@@ -5,6 +5,10 @@ import type {
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
+import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
+import {
+  isPageDiagnosticsMessage
+} from "../diagnostics/page-diagnostics";
 
 import {
   applyTokenStatusUpdate,
@@ -45,6 +49,10 @@ type ProcessingState = {
   lexiconLookup: Map<string, SeedLexiconEntry>;
   vocabByLemmaId: Map<string, UserVocabEntry>;
   seenSentenceHashes: Set<string>;
+  processedTextNodes: number;
+  injectedTokens: number;
+  sentenceCandidatesQueued: number;
+  sentenceNotesRendered: number;
   pendingRoots: Set<ParentNode>;
   flushHandle: number | null;
   observer: MutationObserver | null;
@@ -58,12 +66,14 @@ type RuntimeState = {
   activeToken: HTMLElement | null;
   popover: HTMLDivElement | null;
   popoverCleanup: (() => void) | null;
+  diagnostics: PageDiagnosticsSnapshot;
 };
 
 type InteractiveVocabStatus = Exclude<VocabStatus, "new">;
 
 const POPOVER_ATTRIBUTE = "data-ik-popover";
 const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
+const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const STATUS_BUTTONS: readonly {
   status: InteractiveVocabStatus;
   label: string;
@@ -97,7 +107,8 @@ async function boot() {
     refreshPromise: null,
     activeToken: null,
     popover: null,
-    popoverCleanup: null
+    popoverCleanup: null,
+    diagnostics: createDefaultDiagnostics()
   };
 
   setupInteractionHooks(runtimeState);
@@ -190,11 +201,20 @@ function setupRefreshHook(runtimeState: RuntimeState) {
     return;
   }
 
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (isPageDiagnosticsMessage(message)) {
+      sendResponse(readPageDiagnostics(runtimeState));
+      return false;
+    }
+
     if (isSentenceTranslationResultMessage(message)) {
       const results = parseSentenceTranslationResults(message.results);
       if (results.length > 0) {
-        renderSentenceTranslations(results);
+        const renderedCount = renderSentenceTranslations(results);
+        if (runtimeState.processing) {
+          runtimeState.processing.sentenceNotesRendered += renderedCount;
+        }
+        updateDiagnostics(runtimeState);
       }
 
       return false;
@@ -216,6 +236,42 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 
   runtimeState.refreshPromise = (async () => {
     const processingContext = await loadProcessingContext(window.location.hostname);
+    const sentenceTranslationEnabled = isSentenceTranslationEnabled(
+      processingContext.settings.sentenceTranslationEnabled,
+      processingContext.settings.provider
+    );
+
+    runtimeState.diagnostics = {
+      pageUrl: window.location.href,
+      pageHostname: window.location.hostname,
+      pagePathname: window.location.pathname,
+      siteEnabled: processingContext.siteEnabled,
+      sentenceTranslationEnabled,
+      lexiconSource: processingContext.lexiconInfo.source,
+      lexiconEntryCount: processingContext.lexiconInfo.entryCount,
+      lexiconAssetVersion: processingContext.lexiconInfo.assetVersion,
+      fallbackLexicon: processingContext.lexiconInfo.isFallback,
+      processedTextNodes: 0,
+      injectedTokens: 0,
+      sentenceCandidatesSeen: 0,
+      sentenceCandidatesQueued: 0,
+      sentenceNotesRendered: 0,
+      sentenceNotesVisible: countSentenceNotes(),
+      updatedAt: new Date().toISOString()
+    };
+
+    console.info("ImmersionKit lexicon loaded for page.", {
+      source: processingContext.lexiconInfo.source,
+      entryCount: processingContext.lexiconInfo.entryCount,
+      assetVersion: processingContext.lexiconInfo.assetVersion,
+      fallback: processingContext.lexiconInfo.isFallback
+    });
+    if (processingContext.lexiconInfo.isFallback) {
+      console.warn(
+        "ImmersionKit is using emergency fallback lexicon; check bundled/generated seed asset loading."
+      );
+    }
+
     if (!processingContext.siteEnabled) {
       stopProcessing(runtimeState);
       console.info("ImmersionKit disabled for site.", {
@@ -238,14 +294,15 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       lexiconLookup,
       vocabByLemmaId: processingContext.vocabByLemmaId,
       seenSentenceHashes: new Set<string>(),
+      processedTextNodes: 0,
+      injectedTokens: 0,
+      sentenceCandidatesQueued: 0,
+      sentenceNotesRendered: 0,
       pendingRoots: new Set<ParentNode>(),
       flushHandle: null,
       observer: null,
       nodeSequence: 0,
-      sentenceTranslationEnabled: isSentenceTranslationEnabled(
-        processingContext.settings.sentenceTranslationEnabled,
-        processingContext.settings.provider
-      )
+      sentenceTranslationEnabled
     };
 
     runtimeState.processing = state;
@@ -256,6 +313,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 
     processRoots(state, [document.body]);
     setupMutationObserver(state);
+    updateDiagnostics(runtimeState);
   })().finally(() => {
     runtimeState.refreshPromise = null;
   });
@@ -266,6 +324,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 function stopProcessing(runtimeState: RuntimeState) {
   const state = runtimeState.processing;
   clearSentenceTranslations(document);
+  runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
+  runtimeState.diagnostics.updatedAt = new Date().toISOString();
 
   if (!state) {
     closePopover(runtimeState);
@@ -285,6 +345,7 @@ function stopProcessing(runtimeState: RuntimeState) {
 
   closePopover(runtimeState);
   restoreAnnotatedNodes(document);
+  updateDiagnostics(runtimeState);
 }
 
 function setupMutationObserver(state: ProcessingState) {
@@ -362,6 +423,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
   }
 
   const queuedSentences: string[] = [];
+  let processedNodes = 0;
+  let injectedTokens = 0;
 
   for (const root of roots) {
     const nodes = collectEligibleTextNodes(root);
@@ -379,6 +442,9 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
       if (!result.replaced) {
         continue;
       }
+
+      processedNodes += 1;
+      injectedTokens += result.injectedCount;
 
       if (!state.sentenceTranslationEnabled) {
         continue;
@@ -399,6 +465,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
     }
   }
 
+  state.processedTextNodes += processedNodes;
+  state.injectedTokens += injectedTokens;
   queueSentenceCandidates(state, queuedSentences);
 }
 
@@ -416,6 +484,8 @@ function queueSentenceCandidates(state: ProcessingState, sentences: string[]) {
     return;
   }
 
+  state.sentenceCandidatesQueued += uniqueSentences.length;
+
   chrome.runtime.sendMessage(
     {
       type: RuntimeMessageType.QueueSentenceCandidates,
@@ -428,7 +498,7 @@ function queueSentenceCandidates(state: ProcessingState, sentences: string[]) {
 
       const cachedResults = readCachedResultsFromQueueResponse(response);
       if (cachedResults.length > 0) {
-        renderSentenceTranslations(cachedResults);
+        state.sentenceNotesRendered += renderSentenceTranslations(cachedResults);
       }
     }
   );
@@ -800,6 +870,51 @@ function isSentenceTranslationEnabled(
   provider: string
 ): boolean {
   return sentenceTranslationEnabled && provider === "openai";
+}
+
+function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
+  return {
+    pageUrl: window.location.href,
+    pageHostname: window.location.hostname,
+    pagePathname: window.location.pathname,
+    siteEnabled: true,
+    sentenceTranslationEnabled: false,
+    lexiconSource: "unknown",
+    lexiconEntryCount: 0,
+    lexiconAssetVersion: null,
+    fallbackLexicon: true,
+    processedTextNodes: 0,
+    injectedTokens: 0,
+    sentenceCandidatesSeen: 0,
+    sentenceCandidatesQueued: 0,
+    sentenceNotesRendered: 0,
+    sentenceNotesVisible: countSentenceNotes(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function readPageDiagnostics(runtimeState: RuntimeState): PageDiagnosticsSnapshot {
+  updateDiagnostics(runtimeState);
+  return { ...runtimeState.diagnostics };
+}
+
+function updateDiagnostics(runtimeState: RuntimeState) {
+  const processing = runtimeState.processing;
+  if (processing) {
+    runtimeState.diagnostics.processedTextNodes = processing.processedTextNodes;
+    runtimeState.diagnostics.injectedTokens = processing.injectedTokens;
+    runtimeState.diagnostics.sentenceCandidatesSeen = processing.seenSentenceHashes.size;
+    runtimeState.diagnostics.sentenceCandidatesQueued =
+      processing.sentenceCandidatesQueued;
+    runtimeState.diagnostics.sentenceNotesRendered = processing.sentenceNotesRendered;
+  }
+
+  runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
+  runtimeState.diagnostics.updatedAt = new Date().toISOString();
+}
+
+function countSentenceNotes(): number {
+  return document.querySelectorAll(SENTENCE_NOTE_SELECTOR).length;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
