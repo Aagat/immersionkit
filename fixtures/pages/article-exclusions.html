@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Fixture - Exclusions and Privacy</title>
+    <style>
+      .offscreen {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article id="visible-story">
+        <h1>Harbor Volunteers Prepare Spring Cleanup</h1>
+        <p>
+          Organizers shared practical tips so first-time volunteers can bring simple
+          tools, move carefully, and coordinate with local teams.
+        </p>
+      </article>
+
+      <form id="login-form">
+        <label>
+          Password
+          <input type="password" value="hunter2" />
+        </label>
+      </form>
+
+      <textarea>Draft note: account number 881122 should stay private.</textarea>
+      <div contenteditable="true">Editable draft with billing code 7719.</div>
+      <div role="textbox">Support note with one-time code 123456.</div>
+
+      <pre>const token = "sk-live-never-collect";</pre>
+      <code>curl -H "Authorization: Bearer secret" https://api.example.test</code>
+
+      <p class="offscreen">Hidden paragraph with credit card 5555 4444 3333 2222.</p>
+      <p aria-hidden="true">Aria-hidden password reminder text.</p>
+      <p data-immersionkit-ignore="true">Ignore this annotation island.</p>
+
+      <div data-ik-node-id="ikn-existing">
+        Previously annotated content that should not be reprocessed.
+      </div>
+
+      <p>
+        Public summary: teams meet at sunrise, sort supplies, and leave each path
+        cleaner than before.
+      </p>
+    </main>
+  </body>
+</html>

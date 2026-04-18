@@ -9,16 +9,53 @@
     <main>
       <article id="feed">
         <h1>Live Community Bulletin</h1>
+        <p>
+          Residents began the morning with simple updates about weather, traffic, and
+          cleanup plans near the old bridge.
+        </p>
       </article>
+
+      <section id="private-drafts" contenteditable="true" aria-label="Private drafts">
+        Internal draft area for moderators.
+      </section>
     </main>
+
+    <template data-ik-fixture-target="#feed" data-ik-fixture-delay-ms="60">
+      <p data-dynamic-kind="public">
+        Neighbors shared helpful updates about the clean park, the quiet library, and
+        the weekly market downtown.
+      </p>
+    </template>
+
+    <template data-ik-fixture-target="#private-drafts" data-ik-fixture-delay-ms="90">
+      <p data-dynamic-kind="private">
+        Private draft: card number 4242 4242 4242 4242 and password reset details.
+      </p>
+    </template>
+
     <script>
-      window.setTimeout(() => {
-        const paragraph = document.createElement("p");
-        paragraph.textContent =
-          "Neighbors shared helpful updates about the clean park, the quiet library, and the weekly market downtown.";
-        document.querySelector("#feed")?.appendChild(paragraph);
-      }, 250);
+      (() => {
+        const templates = Array.from(
+          document.querySelectorAll("template[data-ik-fixture-target]")
+        );
+
+        for (const template of templates) {
+          const targetSelector = template.getAttribute("data-ik-fixture-target");
+          const target = targetSelector ? document.querySelector(targetSelector) : null;
+          const delay = Number.parseInt(
+            template.getAttribute("data-ik-fixture-delay-ms") ?? "0",
+            10
+          );
+
+          if (!target) {
+            continue;
+          }
+
+          window.setTimeout(() => {
+            target.append(template.content.cloneNode(true));
+          }, Number.isFinite(delay) ? delay : 0);
+        }
+      })();
     </script>
   </body>
 </html>
-

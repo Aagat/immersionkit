@@ -19,6 +19,25 @@ describe("sentence scoring", () => {
     });
   });
 
+  it("sanitizes non-finite and negative counts before scoring", () => {
+    expect(
+      scoreSentence({
+        knownWordCount: -4,
+        learningWordCount: Number.NaN,
+        ignoredWordCount: 2.8,
+        totalWordCount: -10
+      })
+    ).toEqual({
+      knownWordCount: 0,
+      learningWordCount: 0,
+      ignoredWordCount: 2,
+      unknownWordCount: 0,
+      totalWordCount: 2,
+      knownRatio: 0,
+      familiarRatio: 0
+    });
+  });
+
   it("guards against invalid totals by inferring minimum total count", () => {
     expect(
       scoreSentence({
@@ -68,6 +87,21 @@ describe("goldilocks selection", () => {
         minimumWordCount: 4
       })
     ).toBe(true);
+  });
+
+  it("respects maximum known ratio and minimum word count constraints", () => {
+    const mostlyKnown = scoreSentenceByKnownWords(5, 5);
+    expect(
+      isGoldilocksSentence(mostlyKnown, {
+        maximumKnownRatio: 0.9
+      })
+    ).toBe(false);
+
+    expect(
+      isGoldilocksSentence(mostlyKnown, {
+        minimumWordCount: 6
+      })
+    ).toBe(false);
   });
 
   it("can require at least one unknown word", () => {

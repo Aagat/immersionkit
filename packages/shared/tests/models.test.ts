@@ -9,6 +9,8 @@ import {
 describe("settings model helpers", () => {
   it("clamps unit-interval numbers safely", () => {
     expect(clampUnitInterval(undefined, 0.5)).toBe(0.5);
+    expect(clampUnitInterval(Number.NaN, 0.5)).toBe(0.5);
+    expect(clampUnitInterval(Number.POSITIVE_INFINITY, 0.5)).toBe(0.5);
     expect(clampUnitInterval(-2, 0.5)).toBe(0);
     expect(clampUnitInterval(2, 0.5)).toBe(1);
   });
@@ -36,6 +38,33 @@ describe("settings model helpers", () => {
       discoveryRate: 1,
       goldilocksThreshold: 0,
       sentenceBatchSize: 5
+    });
+  });
+
+  it("falls back to defaults when settings are null", () => {
+    expect(resolveExtensionSettings(null)).toEqual(DEFAULT_EXTENSION_SETTINGS);
+  });
+
+  it("retains explicit flags while clamping noisy numeric inputs", () => {
+    expect(
+      resolveExtensionSettings({
+        enabled: false,
+        provider: "openai",
+        sourceLanguage: "en",
+        sentenceTranslationEnabled: true,
+        discoveryRate: Number.NaN,
+        goldilocksThreshold: Number.POSITIVE_INFINITY,
+        sentenceBatchSize: 1.2
+      })
+    ).toEqual({
+      ...DEFAULT_EXTENSION_SETTINGS,
+      enabled: false,
+      provider: "openai",
+      sourceLanguage: "en",
+      sentenceTranslationEnabled: true,
+      discoveryRate: DEFAULT_EXTENSION_SETTINGS.discoveryRate,
+      goldilocksThreshold: DEFAULT_EXTENSION_SETTINGS.goldilocksThreshold,
+      sentenceBatchSize: 1
     });
   });
 });
