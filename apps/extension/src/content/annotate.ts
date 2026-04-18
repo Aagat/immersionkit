@@ -142,8 +142,7 @@ export function processTextNode(
 }
 
 export function restoreAnnotatedNodes(root: ParentNode = document): number {
-  const queryRoot =
-    root instanceof Document || root instanceof Element ? root : document;
+  const queryRoot = isQueryRoot(root) ? root : document;
 
   const wrappers = queryRoot.querySelectorAll<HTMLElement>(
     `[${IMMERSIONKIT_NODE_ATTRIBUTE}][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
@@ -346,6 +345,12 @@ function normalizeStatus(status: string): VocabStatus {
   }
 
   return "new";
+}
+
+function isQueryRoot(
+  value: ParentNode
+): value is ParentNode & Pick<Document, "querySelectorAll"> {
+  return typeof (value as { querySelectorAll?: unknown }).querySelectorAll === "function";
 }
 
 function emptyResult(): ProcessTextNodeResult {

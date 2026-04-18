@@ -31,6 +31,7 @@ import {
 } from "./dom";
 import { buildLexiconLookup } from "./lexicon";
 import {
+  clearSentenceTranslations,
   parseSentenceTranslationResults,
   renderSentenceTranslations,
   toggleSentenceSourceReveal
@@ -179,6 +180,7 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
 
   window.addEventListener(IMMERSIONKIT_RESTORE_EVENT, () => {
     closePopover(runtimeState);
+    clearSentenceTranslations(document);
     restoreAnnotatedNodes(document);
   });
 }
@@ -263,6 +265,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 
 function stopProcessing(runtimeState: RuntimeState) {
   const state = runtimeState.processing;
+  clearSentenceTranslations(document);
+
   if (!state) {
     closePopover(runtimeState);
     return;

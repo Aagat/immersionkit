@@ -71,6 +71,17 @@ export function toggleSentenceSourceReveal(target: EventTarget | null): boolean 
   return true;
 }
 
+export function clearSentenceTranslations(root: ParentNode = document): number {
+  const queryRoot = isQueryRoot(root) ? root : document;
+  const notes = queryRoot.querySelectorAll<HTMLElement>(SENTENCE_NOTE_SELECTOR);
+
+  for (const note of notes) {
+    note.remove();
+  }
+
+  return notes.length;
+}
+
 function collectSentenceAnchors(
   sentenceHash: string
 ): {
@@ -217,4 +228,10 @@ function readNonEmptyString(value: unknown): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isQueryRoot(
+  value: ParentNode
+): value is ParentNode & Pick<Document, "querySelectorAll"> {
+  return typeof (value as { querySelectorAll?: unknown }).querySelectorAll === "function";
 }

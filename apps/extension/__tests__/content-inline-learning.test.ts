@@ -203,6 +203,77 @@ describe("content inline learning loop", () => {
       }
     );
   });
+
+  it("removes sentence notes when processing is disabled on refresh", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        document.body.innerHTML = "<p>The city is important for every visitor.</p>";
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": {
+            discoveryRate: 1,
+            sentenceTranslationEnabled: true,
+            provider: "openai"
+          },
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:14:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const token = document.querySelector<HTMLElement>("[data-ik-token-id]");
+          expect(token).toBeTruthy();
+
+          await chromeStub.dispatchRuntimeMessage({
+            type: RuntimeMessageType.SentenceTranslationResult,
+            results: [
+              {
+                sentenceHash: token?.getAttribute("data-ik-sentence-hash"),
+                sourceText: "The city is important for every visitor.",
+                translatedText: "La ciudad es importante para cada visitante.",
+                grammarNote: "Present tense for a general statement."
+              }
+            ]
+          });
+          await wait(20);
+
+          expect(document.querySelector("[data-ik-sentence-note='true']")).toBeTruthy();
+
+          chromeStub.setStorageValues({
+            "immersionkit.siteSettings": {
+              [HOSTNAME]: {
+                hostname: HOSTNAME,
+                enabled: false,
+                discoveryRate: 1,
+                updatedAt: "2026-04-18T10:15:00.000Z"
+              }
+            }
+          });
+
+          await chromeStub.dispatchRuntimeMessage({
+            type: RuntimeMessageType.RefreshActiveTab
+          });
+          await wait(30);
+
+          expect(document.querySelector("[data-ik-sentence-note='true']")).toBeNull();
+          expect(getInjectedTokens(document).length).toBe(0);
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
 });
 
 function getInjectedTokens(document: Document): HTMLElement[] {
