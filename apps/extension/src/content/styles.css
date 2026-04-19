@@ -178,6 +178,43 @@ html[data-ik-ui-theme="dark"] {
   line-height: 1.35;
 }
 
+.ik-popover__sentence-detail {
+  margin-top: 0.52rem;
+  padding-top: 0.48rem;
+  border-top: 1px solid rgba(28, 44, 58, 0.08);
+}
+
+.ik-popover__sentence-detail-label {
+  margin: 0;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #6a5b35;
+}
+
+.ik-popover__sentence-detail-text {
+  margin: 0.16rem 0 0;
+  font-size: 0.77rem;
+  line-height: 1.35;
+  color: #2a3a45;
+}
+
+.ik-popover__sentence-detail-list {
+  margin-top: 0.16rem;
+}
+
+.ik-popover__sentence-detail-line {
+  margin: 0.14rem 0 0;
+  font-size: 0.77rem;
+  line-height: 1.35;
+  color: #2a3a45;
+}
+
+.ik-popover__sentence-detail-line:first-child {
+  margin-top: 0;
+}
+
 .ik-popover__actions {
   margin-top: 0.62rem;
   display: flex;

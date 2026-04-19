@@ -1,4 +1,8 @@
-import { RuntimeMessageType, hashSentence } from "@immersionkit/shared";
+import {
+  RuntimeMessageType,
+  type SentenceLearningNote,
+  hashSentence
+} from "@immersionkit/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { installChromeStub } from "./helpers/chrome-stub";
@@ -308,7 +312,7 @@ describe("content inline learning loop", () => {
                 sentenceHash: token?.getAttribute("data-ik-sentence-hash"),
                 sourceText: "The city is important for every visitor.",
                 translatedText: "La ciudad es importante para cada visitante.",
-                grammarNote: "Present tense for a general statement."
+                learningNote: createLearningNote("Present tense for a general statement.")
               }
             ]
           });
@@ -377,7 +381,7 @@ describe("content inline learning loop", () => {
                 sentenceHash: hashSentence(sourceSentence),
                 sourceText: sourceSentence,
                 translatedText: "La ciudad es importante para cada visitante.",
-                grammarNote: "Present tense for a general statement."
+                learningNote: createLearningNote("Present tense for a general statement.")
               }
             ]
           });
@@ -403,7 +407,17 @@ describe("content inline learning loop", () => {
       async ({ document, window, wait }) => {
         const sourceSentence = "The city is important for every visitor.";
         const translatedSentence = "La ciudad es importante para cada visitante.";
-        const grammarNote = "Present tense for a general statement.";
+        const learningNote = createLearningNote(
+          "Spanish naturally phrases this as \"para cada visitante\".",
+          {
+            literalGloss:
+              "\"la ciudad\" = the city\n\"es importante\" = is important\n\"para cada visitante\" = for each visitor",
+            keyPhrase: "\"cada visitante\" = each visitor",
+            canonicalUsage:
+              "The natural Spanish phrasing keeps the same idea with \"para cada visitante\".",
+            grammarFocus: "The sentence uses the present tense for a general statement."
+          }
+        );
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
@@ -434,7 +448,7 @@ describe("content inline learning loop", () => {
                 sentenceHash: hashSentence(sourceSentence),
                 sourceText: sourceSentence,
                 translatedText: translatedSentence,
-                grammarNote
+                learningNote
               }
             ]
           });
@@ -460,7 +474,22 @@ describe("content inline learning loop", () => {
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover).toBeTruthy();
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
-          expect(popover?.textContent).toContain(grammarNote);
+          expect(popover?.textContent).toContain(learningNote.summary);
+          expect(popover?.textContent).toContain("Word-by-word");
+          const glossLines = [
+            ...document.querySelectorAll<HTMLElement>(".ik-popover__sentence-detail-line")
+          ].map((node) => node.textContent);
+          expect(glossLines).toEqual([
+            "\"la ciudad\" = the city",
+            "\"es importante\" = is important",
+            "\"para cada visitante\" = for each visitor"
+          ]);
+          expect(popover?.textContent).toContain("Phrase");
+          expect(popover?.textContent).toContain(learningNote.keyPhrase);
+          expect(popover?.textContent).toContain("Natural Spanish");
+          expect(popover?.textContent).toContain(learningNote.canonicalUsage);
+          expect(popover?.textContent).toContain("Grammar");
+          expect(popover?.textContent).toContain(learningNote.grammarFocus);
           expect(popover?.textContent).not.toContain(translatedSentence);
           expect(popover?.textContent).not.toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
@@ -508,6 +537,20 @@ describe("content inline learning loop", () => {
 
 function getInjectedTokens(document: Document): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>("[data-ik-token-id]"));
+}
+
+function createLearningNote(
+  summary: string,
+  overrides: Partial<SentenceLearningNote> = {}
+): SentenceLearningNote {
+  return {
+    summary,
+    literalGloss: "",
+    keyPhrase: "",
+    canonicalUsage: "",
+    grammarFocus: "",
+    ...overrides
+  };
 }
 
 async function bootContentScript() {

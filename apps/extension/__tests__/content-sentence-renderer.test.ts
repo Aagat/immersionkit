@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SentenceLearningNote } from "@immersionkit/shared";
 
 import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
@@ -39,7 +40,7 @@ describe("sentence translation rendering", () => {
           sentenceHash,
           sourceText: "The train arrives soon.",
           translatedText: "El tren llega pronto.",
-          grammarNote: "Present tense for a current statement."
+          learningNote: createLearningNote("Present tense for a current statement.")
         }
       ]);
 
@@ -60,7 +61,7 @@ describe("sentence translation rendering", () => {
       expect(metadata?.sentenceHash).toBe(sentenceHash);
       expect(metadata?.sourceText).toBe("The train arrives soon.");
       expect(metadata?.translatedText).toBe("El tren llega pronto.");
-      expect(metadata?.grammarNote).toBe(
+      expect(metadata?.learningNote.summary).toBe(
         "Present tense for a current statement."
       );
 
@@ -97,13 +98,13 @@ describe("sentence translation rendering", () => {
           sentenceHash: "hash-near-1",
           sourceText: "First source sentence.",
           translatedText: "Primera frase.",
-          grammarNote: "Note one."
+          learningNote: createLearningNote("Note one.")
         },
         {
           sentenceHash: "hash-near-2",
           sourceText: "Second source sentence.",
           translatedText: "Segunda frase.",
-          grammarNote: "Note two."
+          learningNote: createLearningNote("Note two.")
         }
       ]);
 
@@ -141,13 +142,13 @@ describe("sentence translation rendering", () => {
           sentenceHash: "hash-far-1",
           sourceText: "First source sentence.",
           translatedText: "Primera frase.",
-          grammarNote: "Note one."
+          learningNote: createLearningNote("Note one.")
         },
         {
           sentenceHash: "hash-far-2",
           sourceText: "Second source sentence.",
           translatedText: "Segunda frase.",
-          grammarNote: "Note two."
+          learningNote: createLearningNote("Note two.")
         }
       ]);
 
@@ -179,4 +180,14 @@ function createSentenceAnchor(input: {
   wrapper.append(token);
 
   return wrapper;
+}
+
+function createLearningNote(summary: string): SentenceLearningNote {
+  return {
+    summary,
+    literalGloss: "",
+    keyPhrase: "",
+    canonicalUsage: "",
+    grammarFocus: ""
+  };
 }

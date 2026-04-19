@@ -1,6 +1,7 @@
 import {
   DEFAULT_EXTENSION_SETTINGS,
   RuntimeMessageType,
+  type SentenceLearningNote,
   hashSentence,
   type SentenceCacheEntry,
   type SentenceCacheRepository
@@ -8,6 +9,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { SentenceProviderClient } from "../src/background/provider-client";
+import { OPENAI_SENTENCE_PROMPT_VERSION } from "../src/background/provider-client";
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
 import {
   SentenceQueueOrchestrator,
@@ -18,12 +20,13 @@ describe("sentence queue orchestration", () => {
   it("returns cache hits immediately in queue response", async () => {
     const sourceText = "The station opens early in the morning.";
     const sentenceHash = hashSentence(sourceText);
+    const learningNote = createLearningNote("Routine present tense for a recurring action.");
     const cache = new InMemorySentenceCache([
       createCacheEntry({
         sentenceHash,
         sourceText,
         translatedText: "La estacion abre temprano por la manana.",
-        grammarNote: "Present tense states a routine action."
+        learningNote
       })
     ]);
 
@@ -56,7 +59,8 @@ describe("sentence queue orchestration", () => {
         sentenceHash,
         sourceText,
         translatedText: "La estacion abre temprano por la manana.",
-        grammarNote: "Present tense states a routine action."
+        learningNote,
+        grammarNote: learningNote.summary
       }
     ]);
     expect(providerCalls).not.toHaveBeenCalled();
@@ -68,7 +72,13 @@ describe("sentence queue orchestration", () => {
     const cache = new InMemorySentenceCache();
 
     const translatedText = "El museo ofrece visitas guiadas los domingos.";
-    const grammarNote = "Present tense and plural noun agreement.";
+    const learningNote = createLearningNote(
+      "The reusable chunk here is \"visitas guiadas\" for guided tours.",
+      {
+        keyPhrase: "\"visitas guiadas\" = guided tours",
+        grammarFocus: "Spanish uses the plural noun phrase for a standing offering."
+      }
+    );
 
     const providerCalls = vi.fn();
     const deliveryPromise = createDeferred<SentenceTranslationDelivery[]>();
@@ -83,7 +93,7 @@ describe("sentence queue orchestration", () => {
             sentenceHash,
             sourceText,
             translatedText,
-            grammarNote
+            learningNote
           }
         ]);
       },
@@ -116,11 +126,72 @@ describe("sentence queue orchestration", () => {
             sentenceHash,
             sourceText,
             translatedText,
-            grammarNote
+            learningNote,
+            grammarNote: learningNote.summary
           }
         ]
       }
     ]);
+  });
+
+  it("treats stale prompt-version cache entries as misses and refreshes them", async () => {
+    const sourceText = "The embassy released a careful statement.";
+    const sentenceHash = hashSentence(sourceText);
+    const staleCache = new InMemorySentenceCache([
+      {
+        ...createCacheEntry({
+          sentenceHash,
+          sourceText,
+          translatedText: "La embajada emitio una declaracion cuidadosa.",
+          learningNote: createLearningNote("Old cached note.")
+        }),
+        promptVersion: "openai-sentence-v2"
+      }
+    ]);
+
+    const refreshedNote = createLearningNote(
+      "To say \"released a statement,\" Spanish often uses \"emitio una declaracion\"."
+    );
+    const providerCalls = vi.fn();
+    const deliveryPromise = createDeferred<SentenceTranslationDelivery[]>();
+
+    const orchestrator = new SentenceQueueOrchestrator({
+      sentenceCache: staleCache,
+      loadRuntimeConfig: () => Promise.resolve(createReadyConfig()),
+      createProviderClient: () => {
+        providerCalls();
+        return createProviderClientMock([
+          {
+            sentenceHash,
+            sourceText,
+            translatedText: "La embajada emitio una declaracion cuidadosa.",
+            learningNote: refreshedNote
+          }
+        ]);
+      },
+      notifyFreshTranslations: (deliveries) => {
+        deliveryPromise.resolve(deliveries);
+      },
+      flushDelayMs: 0
+    });
+
+    const response = await orchestrator.queueMessage(
+      {
+        type: RuntimeMessageType.QueueSentenceCandidates,
+        sentences: [sourceText]
+      },
+      44
+    );
+
+    expect(response.cacheHits).toBe(0);
+    expect(response.queued).toBe(1);
+
+    const deliveries = await withTimeout(deliveryPromise.promise, 800);
+    expect(providerCalls).toHaveBeenCalledTimes(1);
+    expect(deliveries[0]?.results[0]?.learningNote.summary).toBe(refreshedNote.summary);
+    expect((await staleCache.getByHash(sentenceHash))?.promptVersion).toBe(
+      OPENAI_SENTENCE_PROMPT_VERSION
+    );
   });
 
   it("skips sentence translation work when the feature is disabled", async () => {
@@ -249,7 +320,7 @@ function createProviderClientMock(
     sentenceHash: string;
     sourceText: string;
     translatedText: string;
-    grammarNote: string;
+    learningNote: SentenceLearningNote;
   }[]
 ): SentenceProviderClient {
   return {
@@ -263,7 +334,7 @@ function createProviderClientMock(
           sentenceHash: string;
           sourceText: string;
           translatedText: string;
-          grammarNote: string;
+          learningNote: SentenceLearningNote;
           model: string;
           promptVersion: string;
         }[]
@@ -277,9 +348,9 @@ function createProviderClientMock(
           sentenceHash: translation.sentenceHash,
           sourceText: translation.sourceText,
           translatedText: translation.translatedText,
-          grammarNote: translation.grammarNote,
+          learningNote: translation.learningNote,
           model: "test-model",
-          promptVersion: "test-prompt-v1"
+          promptVersion: OPENAI_SENTENCE_PROMPT_VERSION
         });
         return rows;
       }, []);
@@ -306,17 +377,32 @@ function createReadyConfig(
 function createCacheEntry(
   input: Pick<
     SentenceCacheEntry,
-    "sentenceHash" | "sourceText" | "translatedText" | "grammarNote"
+    "sentenceHash" | "sourceText" | "translatedText" | "learningNote"
   >
 ): SentenceCacheEntry {
   return {
     ...input,
+    grammarNote: input.learningNote.summary,
     targetLanguage: "es",
     sourceLanguage: "en",
     model: "cached-model",
-    promptVersion: "cached-prompt-v1",
+    promptVersion: OPENAI_SENTENCE_PROMPT_VERSION,
     provider: "openai",
     createdAt: "2026-04-17T10:00:00.000Z",
     lastAccessedAt: "2026-04-17T10:00:00.000Z"
+  };
+}
+
+function createLearningNote(
+  summary: string,
+  overrides: Partial<SentenceLearningNote> = {}
+): SentenceLearningNote {
+  return {
+    summary,
+    literalGloss: "",
+    keyPhrase: "",
+    canonicalUsage: "",
+    grammarFocus: "",
+    ...overrides
   };
 }

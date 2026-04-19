@@ -1,15 +1,98 @@
 import type {
   ProviderName,
+  SentenceLearningNote,
   SupportedSourceLanguage,
   SupportedTargetLanguage
+} from "@immersionkit/shared";
+import {
+  createSentenceLearningNote,
+  hasSentenceLearningNoteContent
 } from "@immersionkit/shared";
 
 import type { ProviderCredentials } from "./settings";
 import { isRecord, readString } from "./storage";
 
 const OPENAI_CHAT_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-const OPENAI_SENTENCE_PROMPT_VERSION = "openai-sentence-v1";
+export const OPENAI_SENTENCE_PROMPT_VERSION = "openai-sentence-v4";
 const DEFAULT_OPENAI_MODEL = "gpt-5.4-nano";
+const OPENAI_SENTENCE_SYSTEM_PROMPT = `
+Translate English sentences into natural, learner-friendly Spanish.
+
+For each sentence:
+- translatedText should be idiomatic Spanish a native speaker would naturally say.
+- learningNote.summary should be the single most useful takeaway for a learner, written in English. Prefer the format: "To say X, use Y" or "Spanish expresses X with Y".
+- learningNote.literalGloss should be written in English and give a short chunk-by-chunk gloss only when it helps explain the Spanish structure. Format each chunk as "Spanish chunk" = English meaning, with one chunk per line.
+- learningNote.keyPhrase should highlight the most reusable Spanish phrase, collocation, or fixed expression from the sentence, and explain it in English.
+- learningNote.canonicalUsage should explain in English the canonical or natural Spanish way to express the idea when it differs from direct English wording.
+- learningNote.grammarFocus should explain in English one important grammar point only when it truly helps, and it must describe the actual form used in translatedText.
+
+Rules:
+- Keep each field concise.
+- Use empty strings for fields that are not useful for the sentence.
+- Prefer reusable phrases and natural wording over abstract grammar labels.
+- All explanatory text must be in English. Spanish may appear only as the translated sentence or as quoted example phrases/chunks being explained.
+- For learningNote.literalGloss, do not write slash-separated prose. Use newline-separated chunks instead.
+- If there is no real grammar point worth teaching, leave learningNote.grammarFocus empty instead of forcing one.
+- Do not repeat the same content across multiple fields unless needed for clarity.
+`.trim();
+const OPENAI_SENTENCE_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "sentence_translations",
+    strict: true,
+    schema: {
+      type: "object",
+      properties: {
+        translations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              sentenceHash: {
+                type: "string"
+              },
+              translatedText: {
+                type: "string"
+              },
+              learningNote: {
+                type: "object",
+                properties: {
+                  summary: {
+                    type: "string"
+                  },
+                  literalGloss: {
+                    type: "string"
+                  },
+                  keyPhrase: {
+                    type: "string"
+                  },
+                  canonicalUsage: {
+                    type: "string"
+                  },
+                  grammarFocus: {
+                    type: "string"
+                  }
+                },
+                required: [
+                  "summary",
+                  "literalGloss",
+                  "keyPhrase",
+                  "canonicalUsage",
+                  "grammarFocus"
+                ],
+                additionalProperties: false
+              }
+            },
+            required: ["sentenceHash", "translatedText", "learningNote"],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ["translations"],
+      additionalProperties: false
+    }
+  }
+} as const;
 
 export type ProviderSentenceCandidate = {
   sentenceHash: string;
@@ -20,7 +103,7 @@ export type ProviderSentenceTranslation = {
   sentenceHash: string;
   sourceText: string;
   translatedText: string;
-  grammarNote: string;
+  learningNote: SentenceLearningNote;
   model: string;
   promptVersion: string;
 };
@@ -70,30 +153,32 @@ class OpenAiSentenceProviderClient implements SentenceProviderClient {
       body: JSON.stringify({
         model: DEFAULT_OPENAI_MODEL,
         temperature: 0.2,
-        response_format: { type: "json_object" },
+        response_format: OPENAI_SENTENCE_RESPONSE_FORMAT,
         messages: [
           {
             role: "system",
-            content:
-              "Translate English sentences into Spanish and return concise grammar notes. Return strict JSON with a translations array."
+            content: OPENAI_SENTENCE_SYSTEM_PROMPT
           },
           {
             role: "user",
             content: JSON.stringify({
               sourceLanguage: input.sourceLanguage,
               targetLanguage: input.targetLanguage,
-              translations: input.candidates.map((candidate) => ({
+              sentences: input.candidates.map((candidate) => ({
                 sentenceHash: candidate.sentenceHash,
                 sourceText: candidate.sourceText
               })),
-              outputSchema: {
-                translations: [
-                  {
-                    sentenceHash: "string",
-                    translatedText: "string",
-                    grammarNote: "string"
-                  }
-                ]
+              noteStyle: {
+                summary:
+                  "The most useful high-level takeaway in one short English sentence, ideally in a form like: To say X, use Y.",
+                literalGloss:
+                  "A selective chunk-by-chunk gloss in English when it clarifies Spanish structure. Use one chunk per line in the format: Spanish chunk = English meaning.",
+                keyPhrase:
+                  "A frequent reusable Spanish phrase or expression from the sentence, explained in English.",
+                canonicalUsage:
+                  "In English, explain how Spanish naturally phrases the idea when it differs from literal English.",
+                grammarFocus:
+                  "In English, explain one important grammar point only when it meaningfully helps the learner. Leave empty if none."
               }
             })
           }
@@ -130,7 +215,7 @@ class OpenAiSentenceProviderClient implements SentenceProviderClient {
         sentenceHash: candidate.sentenceHash,
         sourceText: candidate.sourceText,
         translatedText: translation.translatedText,
-        grammarNote: translation.grammarNote,
+        learningNote: translation.learningNote,
         model: DEFAULT_OPENAI_MODEL,
         promptVersion: OPENAI_SENTENCE_PROMPT_VERSION
       });
@@ -143,7 +228,7 @@ class OpenAiSentenceProviderClient implements SentenceProviderClient {
 type ParsedTranslationRow = {
   sentenceHash: string;
   translatedText: string;
-  grammarNote: string;
+  learningNote: SentenceLearningNote;
 };
 
 function parseTranslationPayload(content: string): ParsedTranslationRow[] {
@@ -171,19 +256,35 @@ function parseTranslationPayload(content: string): ParsedTranslationRow[] {
 
     const sentenceHash = readString(row.sentenceHash);
     const translatedText = readString(row.translatedText);
-    const grammarNote = readString(row.grammarNote);
-    if (!sentenceHash || !translatedText || !grammarNote) {
+    const learningNote = parseLearningNote(row.learningNote);
+    if (!sentenceHash || !translatedText || !learningNote) {
       continue;
     }
 
     rows.push({
       sentenceHash,
       translatedText,
-      grammarNote
+      learningNote
     });
   }
 
   return rows;
+}
+
+function parseLearningNote(value: unknown): SentenceLearningNote | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const learningNote = createSentenceLearningNote({
+    summary: readString(value.summary) ?? undefined,
+    literalGloss: readString(value.literalGloss) ?? undefined,
+    keyPhrase: readString(value.keyPhrase) ?? undefined,
+    canonicalUsage: readString(value.canonicalUsage) ?? undefined,
+    grammarFocus: readString(value.grammarFocus) ?? undefined
+  });
+
+  return hasSentenceLearningNoteContent(learningNote) ? learningNote : null;
 }
 
 function extractChatCompletionContent(payload: unknown): string | null {
@@ -194,6 +295,11 @@ function extractChatCompletionContent(payload: unknown): string | null {
   for (const choice of payload.choices) {
     if (!isRecord(choice) || !isRecord(choice.message)) {
       continue;
+    }
+
+    const refusal = readString(choice.message.refusal);
+    if (refusal) {
+      throw new Error(`OpenAI refused the structured response: ${refusal}`);
     }
 
     const content = choice.message.content;
@@ -236,4 +342,3 @@ async function readFailedResponseDetail(response: Response): Promise<string> {
     return response.statusText;
   }
 }
-

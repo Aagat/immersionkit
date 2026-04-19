@@ -814,10 +814,41 @@ function renderSentencePopover(
   popover.setAttribute("role", "dialog");
   popover.setAttribute("aria-live", "polite");
 
-  const grammar = document.createElement("p");
-  grammar.className = "ik-popover__sentence";
-  grammar.textContent = detail.grammarNote;
-  popover.append(grammar);
+  const summary = document.createElement("p");
+  summary.className = "ik-popover__sentence";
+  summary.textContent = detail.learningNote.summary;
+  popover.append(summary);
+
+  for (const section of collectSentencePopoverSections(detail)) {
+    const block = document.createElement("section");
+    block.className = "ik-popover__sentence-detail";
+
+    const label = document.createElement("p");
+    label.className = "ik-popover__sentence-detail-label";
+    label.textContent = section.label;
+    block.append(label);
+
+    if (section.lines.length === 1) {
+      const text = document.createElement("p");
+      text.className = "ik-popover__sentence-detail-text";
+      text.textContent = section.lines[0] ?? "";
+      block.append(text);
+    } else {
+      const list = document.createElement("div");
+      list.className = "ik-popover__sentence-detail-list";
+
+      for (const line of section.lines) {
+        const item = document.createElement("p");
+        item.className = "ik-popover__sentence-detail-line";
+        item.textContent = line;
+        list.append(item);
+      }
+
+      block.append(list);
+    }
+
+    popover.append(block);
+  }
 
   const actions = document.createElement("div");
   actions.className = "ik-popover__actions";
@@ -828,6 +859,70 @@ function renderSentencePopover(
   syncSentencePopoverActions(popover, noteElement);
 
   return popover;
+}
+
+function collectSentencePopoverSections(
+  detail: SentenceNoteMetadata
+): { label: string; lines: string[] }[] {
+  const summaryKey = normalizeSentencePopoverText(detail.learningNote.summary);
+  const seen = new Set(summaryKey ? [summaryKey] : []);
+  const sections = [
+    {
+      label: "Word-by-word",
+      lines: splitGlossLines(detail.learningNote.literalGloss)
+    },
+    {
+      label: "Phrase",
+      lines: toSentencePopoverLines(detail.learningNote.keyPhrase)
+    },
+    {
+      label: "Natural Spanish",
+      lines: toSentencePopoverLines(detail.learningNote.canonicalUsage)
+    },
+    {
+      label: "Grammar",
+      lines: toSentencePopoverLines(detail.learningNote.grammarFocus)
+    }
+  ];
+
+  return sections.filter((section) => {
+    const key = normalizeSentencePopoverText(section.lines.join("\n"));
+    if (!key || seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function normalizeSentencePopoverText(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function toSentencePopoverLines(value: string): string[] {
+  const text = value.trim();
+  return text ? [text] : [];
+}
+
+function splitGlossLines(value: string): string[] {
+  const text = value.trim();
+  if (!text) {
+    return [];
+  }
+
+  const newlineLines = text
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (newlineLines.length > 1) {
+    return newlineLines;
+  }
+
+  return text
+    .split(/\s+\/\s+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function positionPopover(popover: HTMLDivElement, tokenElement: HTMLElement) {

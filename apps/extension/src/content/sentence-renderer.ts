@@ -1,4 +1,12 @@
-import type { SentenceTranslationResult } from "@immersionkit/shared";
+import type {
+  SentenceLearningNote,
+  SentenceTranslationResult
+} from "@immersionkit/shared";
+import {
+  createLegacySentenceLearningNote,
+  createSentenceLearningNote,
+  hasSentenceLearningNoteContent
+} from "@immersionkit/shared";
 
 import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
@@ -8,6 +16,7 @@ import {
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
 const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
+const SENTENCE_LEARNING_NOTE_ATTRIBUTE = "data-ik-sentence-learning-note";
 const SENTENCE_GRAMMAR_NOTE_ATTRIBUTE = "data-ik-sentence-grammar-note";
 const SENTENCE_KIND_ATTRIBUTE = "data-ik-sentence-kind";
 const MIN_SENTENCE_NOTE_CHAR_GAP = 180;
@@ -17,7 +26,7 @@ export type SentenceNoteMetadata = {
   sentenceHash: string;
   sourceText: string;
   translatedText: string;
-  grammarNote: string;
+  learningNote: SentenceLearningNote;
 };
 
 export function parseSentenceTranslationResults(
@@ -106,9 +115,9 @@ export function readSentenceNoteMetadata(
   const translatedText = readNonEmptyString(
     note.getAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE)
   );
-  const grammarNote = readNonEmptyString(note.getAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE));
+  const learningNote = readSentenceLearningNote(note);
 
-  if (!sentenceHash || !sourceText || !translatedText || !grammarNote) {
+  if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
   }
 
@@ -117,7 +126,7 @@ export function readSentenceNoteMetadata(
     sentenceHash,
     sourceText,
     translatedText,
-    grammarNote
+    learningNote
   };
 }
 
@@ -232,7 +241,14 @@ function updateSentenceNote(
   note.setAttribute(SENTENCE_KIND_ATTRIBUTE, sentenceKind);
   note.setAttribute(SENTENCE_SOURCE_TEXT_ATTRIBUTE, result.sourceText);
   note.setAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE, result.translatedText);
-  note.setAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE, result.grammarNote);
+  note.setAttribute(
+    SENTENCE_LEARNING_NOTE_ATTRIBUTE,
+    JSON.stringify(result.learningNote)
+  );
+  note.setAttribute(
+    SENTENCE_GRAMMAR_NOTE_ATTRIBUTE,
+    result.learningNote.summary || result.grammarNote || ""
+  );
 
   const translated = ensureChild(note, "ik-sentence-note__translated");
   translated.textContent = result.translatedText;
@@ -356,9 +372,12 @@ function normalizeSentenceTranslationResult(
   const sentenceHash = readNonEmptyString(value.sentenceHash);
   const sourceText = readNonEmptyString(value.sourceText);
   const translatedText = readNonEmptyString(value.translatedText);
-  const grammarNote = readNonEmptyString(value.grammarNote);
+  const learningNote = normalizeSentenceLearningNote(
+    value.learningNote,
+    readNonEmptyString(value.grammarNote)
+  );
 
-  if (!sentenceHash || !sourceText || !translatedText || !grammarNote) {
+  if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
   }
 
@@ -366,7 +385,8 @@ function normalizeSentenceTranslationResult(
     sentenceHash,
     sourceText,
     translatedText,
-    grammarNote
+    learningNote,
+    grammarNote: learningNote.summary
   };
 }
 
@@ -393,6 +413,48 @@ function escapeSelectorValue(value: string): string {
 
 function readNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readSentenceLearningNote(note: HTMLElement): SentenceLearningNote | null {
+  const encodedLearningNote = note.getAttribute(SENTENCE_LEARNING_NOTE_ATTRIBUTE);
+  const legacyGrammarNote = readNonEmptyString(
+    note.getAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE)
+  );
+
+  if (encodedLearningNote) {
+    try {
+      const parsed = JSON.parse(encodedLearningNote) as unknown;
+      const learningNote = normalizeSentenceLearningNote(parsed, legacyGrammarNote);
+      if (learningNote) {
+        return learningNote;
+      }
+    } catch {
+      // Ignore malformed legacy attributes and fall through to the summary fallback.
+    }
+  }
+
+  return legacyGrammarNote ? createLegacySentenceLearningNote(legacyGrammarNote) : null;
+}
+
+function normalizeSentenceLearningNote(
+  value: unknown,
+  legacyGrammarNote?: string | null
+): SentenceLearningNote | null {
+  if (isRecord(value)) {
+    const learningNote = createSentenceLearningNote({
+      summary: readNonEmptyString(value.summary) ?? undefined,
+      literalGloss: readNonEmptyString(value.literalGloss) ?? undefined,
+      keyPhrase: readNonEmptyString(value.keyPhrase) ?? undefined,
+      canonicalUsage: readNonEmptyString(value.canonicalUsage) ?? undefined,
+      grammarFocus: readNonEmptyString(value.grammarFocus) ?? undefined
+    });
+
+    if (hasSentenceLearningNoteContent(learningNote)) {
+      return learningNote;
+    }
+  }
+
+  return legacyGrammarNote ? createLegacySentenceLearningNote(legacyGrammarNote) : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

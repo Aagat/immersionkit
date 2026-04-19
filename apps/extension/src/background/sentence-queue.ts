@@ -8,6 +8,7 @@ import type {
 
 import {
   createSentenceProviderClient,
+  OPENAI_SENTENCE_PROMPT_VERSION,
   type ProviderSentenceCandidate
 } from "./provider-client";
 import { ChromeStorageSentenceCacheRepository } from "./sentence-cache";
@@ -109,7 +110,7 @@ export class SentenceQueueOrchestrator {
 
     const config = await this.loadRuntimeConfig();
     const translationAvailability = resolveTranslationAvailability(config);
-    const cacheHits = await this.findCachedEntries(candidates);
+    const cacheHits = await this.findCachedEntries(candidates, config);
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
     const uncachedCandidates = candidates.filter(
       (candidate) => !cachedByHash.has(candidate.sentenceHash)
@@ -245,8 +246,13 @@ export class SentenceQueueOrchestrator {
       const cachedEntries = await this.sentenceCache.getByHashes(
         batch.map((candidate) => candidate.sentenceHash)
       );
-      await this.notifyQueuedTabs(batch, cachedEntries);
-      const cachedHashes = new Set(cachedEntries.map((entry) => entry.sentenceHash));
+      const compatibleCachedEntries = cachedEntries.filter((entry) =>
+        isSentenceCacheEntryCompatible(entry, config)
+      );
+      await this.notifyQueuedTabs(batch, compatibleCachedEntries);
+      const cachedHashes = new Set(
+        compatibleCachedEntries.map((entry) => entry.sentenceHash)
+      );
       const uncachedBatch = batch.filter(
         (candidate) => !cachedHashes.has(candidate.sentenceHash)
       );
@@ -273,7 +279,8 @@ export class SentenceQueueOrchestrator {
         sentenceHash: translation.sentenceHash,
         sourceText: translation.sourceText,
         translatedText: translation.translatedText,
-        grammarNote: translation.grammarNote,
+        learningNote: translation.learningNote,
+        grammarNote: translation.learningNote.summary,
         targetLanguage: config.settings.targetLanguage,
         sourceLanguage: config.settings.sourceLanguage,
         model: translation.model,
@@ -340,14 +347,17 @@ export class SentenceQueueOrchestrator {
   }
 
   private async findCachedEntries(
-    candidates: readonly ProviderSentenceCandidate[]
+    candidates: readonly ProviderSentenceCandidate[],
+    config: BackgroundRuntimeConfig
   ): Promise<SentenceCacheEntry[]> {
     if (candidates.length === 0) {
       return [];
     }
 
     const hashes = candidates.map((candidate) => candidate.sentenceHash);
-    const hits = await this.sentenceCache.getByHashes(hashes);
+    const hits = (await this.sentenceCache.getByHashes(hashes)).filter((entry) =>
+      isSentenceCacheEntryCompatible(entry, config)
+    );
     if (hits.length === 0) {
       return hits;
     }
@@ -480,6 +490,22 @@ function toCachedSentenceResult(entry: SentenceCacheEntry): CachedSentenceResult
     sentenceHash: entry.sentenceHash,
     sourceText: entry.sourceText,
     translatedText: entry.translatedText,
-    grammarNote: entry.grammarNote
+    learningNote: entry.learningNote,
+    grammarNote: entry.learningNote.summary
   };
+}
+
+function isSentenceCacheEntryCompatible(
+  entry: SentenceCacheEntry,
+  config: BackgroundRuntimeConfig
+): boolean {
+  if (config.settings.provider !== "openai") {
+    return true;
+  }
+
+  if (entry.provider && entry.provider !== "openai") {
+    return false;
+  }
+
+  return entry.promptVersion === OPENAI_SENTENCE_PROMPT_VERSION;
 }

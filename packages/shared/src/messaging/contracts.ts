@@ -1,3 +1,5 @@
+import type { SentenceLearningNote } from "../domain/models";
+
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
   RefreshActiveTab = "settings/refresh-active-tab",
@@ -22,7 +24,8 @@ export type SentenceTranslationResult = {
   sentenceHash: string;
   sourceText: string;
   translatedText: string;
-  grammarNote: string;
+  learningNote: SentenceLearningNote;
+  grammarNote?: string;
 };
 
 export type SentenceTranslationResultMessage = {

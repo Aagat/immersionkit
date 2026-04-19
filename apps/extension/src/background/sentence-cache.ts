@@ -1,4 +1,13 @@
-import type { SentenceCacheEntry, SentenceCacheRepository } from "@immersionkit/shared";
+import type {
+  SentenceCacheEntry,
+  SentenceCacheRepository,
+  SentenceLearningNote
+} from "@immersionkit/shared";
+import {
+  createLegacySentenceLearningNote,
+  createSentenceLearningNote,
+  hasSentenceLearningNoteContent
+} from "@immersionkit/shared";
 
 import {
   isRecord,
@@ -125,6 +134,7 @@ function normalizeSentenceCacheEntry(
   const sourceText = readString(value.sourceText);
   const translatedText = readString(value.translatedText);
   const grammarNote = readString(value.grammarNote);
+  const learningNote = normalizeSentenceLearningNote(value.learningNote, grammarNote);
   const model = readString(value.model);
   const promptVersion = readString(value.promptVersion);
   const createdAt = readString(value.createdAt);
@@ -133,7 +143,7 @@ function normalizeSentenceCacheEntry(
     !sentenceHash ||
     !sourceText ||
     !translatedText ||
-    !grammarNote ||
+    !learningNote ||
     !model ||
     !promptVersion ||
     !createdAt
@@ -150,11 +160,12 @@ function normalizeSentenceCacheEntry(
     sentenceHash,
     sourceText,
     translatedText,
-    grammarNote,
+    learningNote,
     model,
     promptVersion,
     createdAt,
     targetLanguage,
+    grammarNote: learningNote.summary,
     sourceLanguage: value.sourceLanguage === "en" ? "en" : undefined,
     provider:
       value.provider === "openai" || value.provider === "none"
@@ -164,3 +175,27 @@ function normalizeSentenceCacheEntry(
   };
 }
 
+function normalizeSentenceLearningNote(
+  value: unknown,
+  legacyGrammarNote: string | undefined | null
+): SentenceLearningNote | null {
+  if (isRecord(value)) {
+    const learningNote = createSentenceLearningNote({
+      summary: readString(value.summary) ?? undefined,
+      literalGloss: readString(value.literalGloss) ?? undefined,
+      keyPhrase: readString(value.keyPhrase) ?? undefined,
+      canonicalUsage: readString(value.canonicalUsage) ?? undefined,
+      grammarFocus: readString(value.grammarFocus) ?? undefined
+    });
+
+    if (hasSentenceLearningNoteContent(learningNote)) {
+      return learningNote;
+    }
+  }
+
+  if (legacyGrammarNote) {
+    return createLegacySentenceLearningNote(legacyGrammarNote);
+  }
+
+  return null;
+}

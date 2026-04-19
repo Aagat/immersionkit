@@ -55,15 +55,24 @@ export type UserVocabEntry = {
   createdAt?: IsoTimestamp;
 };
 
+export type SentenceLearningNote = {
+  summary: string;
+  literalGloss: string;
+  keyPhrase: string;
+  canonicalUsage: string;
+  grammarFocus: string;
+};
+
 export type SentenceCacheEntry = {
   sentenceHash: string;
   sourceText: string;
   translatedText: string;
-  grammarNote: string;
+  learningNote: SentenceLearningNote;
   targetLanguage: SupportedTargetLanguage;
   model: string;
   promptVersion: string;
   createdAt: IsoTimestamp;
+  grammarNote?: string;
   sourceLanguage?: SupportedSourceLanguage;
   provider?: ProviderName;
   lastAccessedAt?: IsoTimestamp;
@@ -128,6 +137,41 @@ export function clampSentenceBatchSize(
   return Math.min(5, Math.max(1, Math.round(value)));
 }
 
+export function createSentenceLearningNote(
+  input: Partial<SentenceLearningNote> | null | undefined
+): SentenceLearningNote {
+  const note = {
+    summary: normalizeLearningNoteField(input?.summary),
+    literalGloss: normalizeLearningNoteField(input?.literalGloss),
+    keyPhrase: normalizeLearningNoteField(input?.keyPhrase),
+    canonicalUsage: normalizeLearningNoteField(input?.canonicalUsage),
+    grammarFocus: normalizeLearningNoteField(input?.grammarFocus)
+  };
+
+  if (!note.summary) {
+    note.summary =
+      note.canonicalUsage || note.keyPhrase || note.grammarFocus || note.literalGloss;
+  }
+
+  return note;
+}
+
+export function createLegacySentenceLearningNote(summary: string): SentenceLearningNote {
+  return createSentenceLearningNote({
+    summary
+  });
+}
+
+export function hasSentenceLearningNoteContent(note: SentenceLearningNote): boolean {
+  return Boolean(
+    note.summary ||
+      note.literalGloss ||
+      note.keyPhrase ||
+      note.canonicalUsage ||
+      note.grammarFocus
+  );
+}
+
 export function resolveExtensionSettings(
   settings: Partial<ExtensionSettings> | null | undefined
 ): ResolvedExtensionSettings {
@@ -151,4 +195,8 @@ export function resolveExtensionSettings(
     ),
     sentenceBatchSize: clampSentenceBatchSize(draft.sentenceBatchSize)
   };
+}
+
+function normalizeLearningNoteField(value: string | undefined): string {
+  return typeof value === "string" ? value.trim() : "";
 }

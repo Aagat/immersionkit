@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  createLegacySentenceLearningNote,
+  createSentenceLearningNote,
   DEFAULT_EXTENSION_SETTINGS,
   clampSentenceBatchSize,
   clampUnitInterval,
+  hasSentenceLearningNoteContent,
   resolveExtensionSettings
 } from "../src/domain/models";
 
@@ -66,5 +69,32 @@ describe("settings model helpers", () => {
       goldilocksThreshold: DEFAULT_EXTENSION_SETTINGS.goldilocksThreshold,
       sentenceBatchSize: 1
     });
+  });
+
+  it("backfills learning note summaries from more specific fields", () => {
+    expect(
+      createSentenceLearningNote({
+        keyPhrase: "\"darse cuenta de\" = to realize"
+      })
+    ).toEqual({
+      summary: "\"darse cuenta de\" = to realize",
+      literalGloss: "",
+      keyPhrase: "\"darse cuenta de\" = to realize",
+      canonicalUsage: "",
+      grammarFocus: ""
+    });
+  });
+
+  it("wraps legacy grammar notes into the structured learning-note shape", () => {
+    const legacy = createLegacySentenceLearningNote("Present tense for habitual actions.");
+
+    expect(legacy).toEqual({
+      summary: "Present tense for habitual actions.",
+      literalGloss: "",
+      keyPhrase: "",
+      canonicalUsage: "",
+      grammarFocus: ""
+    });
+    expect(hasSentenceLearningNoteContent(legacy)).toBe(true);
   });
 });
