@@ -37,9 +37,11 @@ import { buildLexiconLookup } from "./lexicon";
 import {
   clearSentenceTranslations,
   parseSentenceTranslationResults,
+  readSentenceNoteMetadata,
   renderSentenceTranslations,
   toggleSentenceSourceReveal
 } from "./sentence-renderer";
+import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { loadProcessingContext, persistVocabStatus } from "./storage";
 import "./styles.css";
 
@@ -120,12 +122,12 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
   document.addEventListener(
     "click",
     (event) => {
-      if (toggleSentenceSourceReveal(event.target)) {
-        event.preventDefault();
+      if (isWithinPopover(event.target)) {
         return;
       }
 
-      if (isWithinPopover(event.target)) {
+      if (emitSentenceNoteActivated(runtimeState, event.target)) {
+        event.preventDefault();
         return;
       }
 
@@ -151,7 +153,7 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
         return;
       }
 
-      if (toggleSentenceSourceReveal(event.target)) {
+      if (emitSentenceNoteActivated(runtimeState, event.target)) {
         event.preventDefault();
         return;
       }
@@ -161,6 +163,19 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
       }
 
       event.preventDefault();
+    },
+    true
+  );
+
+  document.addEventListener(
+    "dblclick",
+    (event) => {
+      if (!toggleSentenceSourceReveal(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      closePopover(runtimeState);
     },
     true
   );
@@ -536,6 +551,19 @@ function emitTokenActivatedEvent(
   return true;
 }
 
+function emitSentenceNoteActivated(
+  runtimeState: RuntimeState,
+  target: EventTarget | null
+): boolean {
+  const detail = readSentenceNoteMetadata(target);
+  if (!detail) {
+    return false;
+  }
+
+  openSentencePopover(runtimeState, detail.note, detail);
+  return true;
+}
+
 function createNodeId(state: ProcessingState): string {
   state.nodeSequence += 1;
 
@@ -607,6 +635,37 @@ function openPopover(
   };
 }
 
+function openSentencePopover(
+  runtimeState: RuntimeState,
+  noteElement: HTMLElement,
+  detail: SentenceNoteMetadata
+) {
+  if (runtimeState.activeToken === noteElement && runtimeState.popover) {
+    closePopover(runtimeState);
+    return;
+  }
+
+  closePopover(runtimeState);
+  setActiveToken(runtimeState, noteElement);
+
+  const popover = renderSentencePopover(detail);
+  document.body.append(popover);
+  positionPopover(popover, noteElement);
+
+  const closeOnViewportChange = () => {
+    closePopover(runtimeState);
+  };
+
+  window.addEventListener("scroll", closeOnViewportChange, true);
+  window.addEventListener("resize", closeOnViewportChange);
+
+  runtimeState.popover = popover;
+  runtimeState.popoverCleanup = () => {
+    window.removeEventListener("scroll", closeOnViewportChange, true);
+    window.removeEventListener("resize", closeOnViewportChange);
+  };
+}
+
 async function handlePopoverStatusAction(
   runtimeState: RuntimeState,
   detail: TokenActivatedDetail,
@@ -647,6 +706,7 @@ function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
   const popover = document.createElement("div");
   popover.className = "ik-popover";
   popover.setAttribute(POPOVER_ATTRIBUTE, "true");
+  popover.setAttribute("data-immersionkit-ignore", "true");
   popover.setAttribute("role", "dialog");
   popover.setAttribute("aria-live", "polite");
 
@@ -691,6 +751,37 @@ function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
   }
 
   popover.append(actions);
+  return popover;
+}
+
+function renderSentencePopover(detail: SentenceNoteMetadata): HTMLDivElement {
+  const popover = document.createElement("div");
+  popover.className = "ik-popover";
+  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
+  popover.setAttribute("data-immersionkit-ignore", "true");
+  popover.setAttribute("role", "dialog");
+  popover.setAttribute("aria-live", "polite");
+
+  const heading = document.createElement("p");
+  heading.className = "ik-popover__meta";
+  heading.textContent = "Sentence translation";
+  popover.append(heading);
+
+  const translated = document.createElement("p");
+  translated.className = "ik-popover__sentence";
+  translated.textContent = detail.translatedText;
+  popover.append(translated);
+
+  const grammar = document.createElement("p");
+  grammar.className = "ik-popover__sentence";
+  grammar.textContent = `Grammar: ${detail.grammarNote}`;
+  popover.append(grammar);
+
+  const tip = document.createElement("p");
+  tip.className = "ik-popover__meta";
+  tip.textContent = "Double-click the inline sentence to reveal the original text.";
+  popover.append(tip);
+
   return popover;
 }
 

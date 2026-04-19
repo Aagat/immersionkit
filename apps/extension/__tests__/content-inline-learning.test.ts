@@ -124,6 +124,12 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).toContain("city");
           expect(popover?.textContent).toContain("ciudad");
           expect(popover?.textContent).toContain("Lemma: city");
+          expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
+
+          await wait(220);
+          expect(
+            popover?.querySelector("[data-ik-token-id], [data-ik-sentence-note='true']")
+          ).toBeNull();
         } finally {
           chromeStub.restore();
         }
@@ -323,6 +329,94 @@ describe("content inline learning loop", () => {
             )}']`
           );
           expect(renderedNote).toBeTruthy();
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("opens sentence details on click and reveals original sentence on double click", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, window, wait }) => {
+        const sourceSentence = "The city is important for every visitor.";
+        const translatedSentence = "La ciudad es importante para cada visitante.";
+        const grammarNote = "Present tense for a general statement.";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": {
+            discoveryRate: 1,
+            sentenceTranslationEnabled: true,
+            provider: "openai"
+          },
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:18:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          await chromeStub.dispatchRuntimeMessage({
+            type: RuntimeMessageType.SentenceTranslationResult,
+            results: [
+              {
+                sentenceHash: hashSentence(sourceSentence),
+                sourceText: sourceSentence,
+                translatedText: translatedSentence,
+                grammarNote
+              }
+            ]
+          });
+          await wait(20);
+
+          const note = document.querySelector<HTMLElement>(
+            `[data-ik-sentence-note='true'][data-ik-sentence-hash='${hashSentence(
+              sourceSentence
+            )}']`
+          );
+          expect(note).toBeTruthy();
+          expect(note?.textContent).toContain(translatedSentence);
+          expect(note?.textContent).not.toContain("Grammar:");
+
+          note?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
+          expect(popover).toBeTruthy();
+          expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
+          expect(popover?.textContent).toContain("Sentence translation");
+          expect(popover?.textContent).toContain(translatedSentence);
+          expect(popover?.textContent).toContain(`Grammar: ${grammarNote}`);
+          expect(popover?.textContent).not.toContain(sourceSentence);
+          expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
+
+          note?.dispatchEvent(
+            new window.MouseEvent("dblclick", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("true");
+          expect(note?.textContent).toContain(sourceSentence);
+          expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
         } finally {
           chromeStub.restore();
         }

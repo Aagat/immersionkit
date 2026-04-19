@@ -5,13 +5,14 @@ import {
   IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE
 } from "../src/content/constants";
 import {
+  readSentenceNoteMetadata,
   renderSentenceTranslations,
   toggleSentenceSourceReveal
 } from "../src/content/sentence-renderer";
 import { withFixtureDom } from "./helpers/fixture-dom";
 
 describe("sentence translation rendering", () => {
-  it("renders translated sentence and grammar note, with source reveal toggle", async () => {
+  it("renders inline translated sentence, exposes popup metadata, and toggles source on reveal", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const nodeId = "ikn-note-test";
       const sentenceHash = "hash-train-sentence";
@@ -49,16 +50,23 @@ describe("sentence translation rendering", () => {
       );
       expect(note).toBeTruthy();
       expect(note?.textContent).toContain("El tren llega pronto.");
-      expect(note?.textContent).toContain(
-        "Grammar: Present tense for a current statement."
-      );
-      expect(note?.querySelector(".ik-sentence-note__source")?.textContent).toContain(
-        "Original: The train arrives soon."
+      expect(note?.textContent).not.toContain("Grammar:");
+      expect(note?.querySelector(".ik-sentence-note__source")?.textContent).toBe(
+        "The train arrives soon."
       );
       expect(note?.getAttribute("data-ik-source-visible")).toBe("false");
 
+      const metadata = readSentenceNoteMetadata(note);
+      expect(metadata?.sentenceHash).toBe(sentenceHash);
+      expect(metadata?.sourceText).toBe("The train arrives soon.");
+      expect(metadata?.translatedText).toBe("El tren llega pronto.");
+      expect(metadata?.grammarNote).toBe(
+        "Present tense for a current statement."
+      );
+
       expect(toggleSentenceSourceReveal(note)).toBe(true);
       expect(note?.getAttribute("data-ik-source-visible")).toBe("true");
+      expect(note?.textContent).toContain("The train arrives soon.");
     });
   });
 });

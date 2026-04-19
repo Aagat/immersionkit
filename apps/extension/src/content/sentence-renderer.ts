@@ -6,6 +6,17 @@ import {
 } from "./constants";
 
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
+const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
+const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
+const SENTENCE_GRAMMAR_NOTE_ATTRIBUTE = "data-ik-sentence-grammar-note";
+
+export type SentenceNoteMetadata = {
+  note: HTMLElement;
+  sentenceHash: string;
+  sourceText: string;
+  translatedText: string;
+  grammarNote: string;
+};
 
 export function parseSentenceTranslationResults(
   input: unknown
@@ -69,6 +80,38 @@ export function toggleSentenceSourceReveal(target: EventTarget | null): boolean 
   const nextVisible = note.getAttribute("data-ik-source-visible") !== "true";
   note.setAttribute("data-ik-source-visible", String(nextVisible));
   return true;
+}
+
+export function readSentenceNoteMetadata(
+  target: EventTarget | null
+): SentenceNoteMetadata | null {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  const note = target.closest<HTMLElement>(SENTENCE_NOTE_SELECTOR);
+  if (!note) {
+    return null;
+  }
+
+  const sentenceHash = readNonEmptyString(note.getAttribute("data-ik-sentence-hash"));
+  const sourceText = readNonEmptyString(note.getAttribute(SENTENCE_SOURCE_TEXT_ATTRIBUTE));
+  const translatedText = readNonEmptyString(
+    note.getAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE)
+  );
+  const grammarNote = readNonEmptyString(note.getAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE));
+
+  if (!sentenceHash || !sourceText || !translatedText || !grammarNote) {
+    return null;
+  }
+
+  return {
+    note,
+    sentenceHash,
+    sourceText,
+    translatedText,
+    grammarNote
+  };
 }
 
 export function clearSentenceTranslations(root: ParentNode = document): number {
@@ -137,8 +180,8 @@ function createSentenceNote(
   note.className = "ik-sentence-note";
   note.tabIndex = 0;
   note.setAttribute("role", "button");
-  note.setAttribute("title", `Original: ${result.sourceText}`);
-  note.setAttribute("aria-label", "Toggle original English sentence");
+  note.setAttribute("title", "Click for details. Double-click to reveal original.");
+  note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-note", "true");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
   note.setAttribute("data-ik-source-visible", "false");
@@ -152,17 +195,21 @@ function updateSentenceNote(
   note: HTMLElement,
   result: SentenceTranslationResult
 ): void {
-  note.setAttribute("title", `Original: ${result.sourceText}`);
+  note.setAttribute("title", "Click for details. Double-click to reveal original.");
+  note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
+  note.setAttribute(SENTENCE_SOURCE_TEXT_ATTRIBUTE, result.sourceText);
+  note.setAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE, result.translatedText);
+  note.setAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE, result.grammarNote);
 
   const translated = ensureChild(note, "ik-sentence-note__translated");
   translated.textContent = result.translatedText;
 
-  const grammar = ensureChild(note, "ik-sentence-note__grammar");
-  grammar.textContent = `Grammar: ${result.grammarNote}`;
-
   const source = ensureChild(note, "ik-sentence-note__source");
-  source.textContent = `Original: ${result.sourceText}`;
+  source.textContent = result.sourceText;
+
+  const legacyGrammar = note.querySelector<HTMLElement>(".ik-sentence-note__grammar");
+  legacyGrammar?.remove();
 }
 
 function ensureChild(note: HTMLElement, className: string): HTMLElement {
