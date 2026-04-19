@@ -199,7 +199,9 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
     status: safeStatus,
     wordKind: safeWordKind,
     sentence: tokenElement.getAttribute("data-ik-sentence"),
-    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash")
+    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash"),
+    exampleSentenceEnglish: tokenElement.getAttribute("data-ik-example-sentence-english"),
+    exampleSentenceNative: tokenElement.getAttribute("data-ik-example-sentence-native")
   };
 }
 
@@ -281,6 +283,20 @@ function createTokenElement(input: {
     "aria-label",
     `${input.sourceToken} translated to ${input.targetToken}`
   );
+
+  if (input.lexiconEntry.exampleSentenceEnglish) {
+    element.setAttribute(
+      "data-ik-example-sentence-english",
+      input.lexiconEntry.exampleSentenceEnglish
+    );
+  }
+
+  if (input.lexiconEntry.exampleSentenceNative) {
+    element.setAttribute(
+      "data-ik-example-sentence-native",
+      input.lexiconEntry.exampleSentenceNative
+    );
+  }
 
   if (input.sentence) {
     element.setAttribute(

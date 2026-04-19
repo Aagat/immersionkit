@@ -25,6 +25,8 @@ export type TokenMetadata = {
   wordKind: InjectedWordKind;
   sentence: string | null;
   sentenceHash: string | null;
+  exampleSentenceEnglish: string | null;
+  exampleSentenceNative: string | null;
 };
 
 export type TokenActivatedDetail = TokenMetadata & {

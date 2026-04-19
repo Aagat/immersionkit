@@ -8,7 +8,9 @@ const DEFAULT_ARRAY_COLUMNS = [
   "targetLemma",
   "pos",
   "frequencyRank",
-  "confidence"
+  "confidence",
+  "exampleSentenceEnglish",
+  "exampleSentenceNative"
 ] as const;
 
 type SeedLexiconStorageRecord = Record<string, unknown>;
@@ -96,6 +98,8 @@ function parseArrayEntries(
   const posIndex = resolveColumnIndex(columnLookup, "pos", 3);
   const frequencyRankIndex = resolveColumnIndex(columnLookup, "frequencyRank", 4);
   const confidenceIndex = resolveColumnIndex(columnLookup, "confidence", 5);
+  const exampleSentenceEnglishIndex = columnLookup.get("exampleSentenceEnglish");
+  const exampleSentenceNativeIndex = columnLookup.get("exampleSentenceNative");
 
   const entries: SeedLexiconEntry[] = [];
   for (const row of rows) {
@@ -109,7 +113,15 @@ function parseArrayEntries(
       targetLemma: row[targetLemmaIndex],
       pos: row[posIndex],
       frequencyRank: row[frequencyRankIndex],
-      confidence: row[confidenceIndex]
+      confidence: row[confidenceIndex],
+      exampleSentenceEnglish:
+        typeof exampleSentenceEnglishIndex === "number"
+          ? row[exampleSentenceEnglishIndex]
+          : undefined,
+      exampleSentenceNative:
+        typeof exampleSentenceNativeIndex === "number"
+          ? row[exampleSentenceNativeIndex]
+          : undefined
     });
 
     if (!normalizedEntry) {
@@ -158,6 +170,8 @@ function normalizeSeedEntry(input: unknown): SeedLexiconEntry | null {
     pos,
     frequencyRank: readFiniteNumberOrNull(input.frequencyRank),
     confidence: readFiniteNumber(input.confidence, 0.9),
+    exampleSentenceEnglish: readString(input.exampleSentenceEnglish) ?? undefined,
+    exampleSentenceNative: readString(input.exampleSentenceNative) ?? undefined,
     inflections: Array.isArray(input.inflections)
       ? input.inflections.filter((value): value is string => typeof value === "string")
       : undefined

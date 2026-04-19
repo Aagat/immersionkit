@@ -89,7 +89,7 @@ function shouldRefreshStoredLexicon(
     currentAssetVersion &&
     BUNDLED_SEED_LEXICON.assetVersion &&
     currentAssetVersion !== BUNDLED_SEED_LEXICON.assetVersion &&
-    currentEntryCount < bundledEntryCount
+    currentEntryCount <= bundledEntryCount
   ) {
     return true;
   }

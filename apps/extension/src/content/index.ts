@@ -755,10 +755,26 @@ function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
   pair.append(createTokenPill("ik-popover__target", detail.targetToken));
   popover.append(pair);
 
-  if (detail.sentence) {
+  const nativeExample = readNonEmptyString(detail.exampleSentenceNative);
+  const englishExample = readNonEmptyString(detail.exampleSentenceEnglish);
+  const pageSentence = readNonEmptyString(detail.sentence);
+
+  if (nativeExample) {
     const sentence = document.createElement("p");
     sentence.className = "ik-popover__sentence";
-    sentence.textContent = detail.sentence;
+    sentence.textContent = nativeExample;
+    popover.append(sentence);
+  }
+
+  if (englishExample) {
+    const sentence = document.createElement("p");
+    sentence.className = nativeExample ? "ik-popover__meta" : "ik-popover__sentence";
+    sentence.textContent = englishExample;
+    popover.append(sentence);
+  } else if (pageSentence) {
+    const sentence = document.createElement("p");
+    sentence.className = "ik-popover__sentence";
+    sentence.textContent = pageSentence;
     popover.append(sentence);
   }
 
@@ -989,6 +1005,10 @@ function readSentencePopoverAction(
   }
 
   return null;
+}
+
+function readNonEmptyString(value: string | null | undefined): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
 function isWithinPopover(target: EventTarget | null): boolean {

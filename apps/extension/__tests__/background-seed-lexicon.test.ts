@@ -44,10 +44,44 @@ describe("background seed lexicon bootstrap", () => {
       chromeStub.restore();
     }
   });
+
+  it("refreshes an older same-sized storage lexicon when the bundled asset version changes", async () => {
+    const existingAsset = createAssetWithRows(3000, {
+      assetVersion: "2026.04.18-seed2"
+    });
+    const chromeStub = installChromeStub({
+      "immersionkit.seedLexicon": existingAsset
+    });
+
+    try {
+      const result = await ensureSeedLexiconReady();
+      expect(result.source).toBe("seeded");
+      expect(result.entryCount).toBeGreaterThan(100);
+
+      const storageSnapshot = chromeStub.getStorageSnapshot();
+      expect(storageSnapshot["immersionkit.seedLexicon"]).not.toEqual(existingAsset);
+    } finally {
+      chromeStub.restore();
+    }
+  });
 });
 
 function createAssetWithRows(count: number): {
   schemaVersion: string;
+  assetVersion?: string;
+  entryEncoding: string;
+  columns: string[];
+  entries: [string, string, string, string, number, number][];
+};
+
+function createAssetWithRows(
+  count: number,
+  options: {
+    assetVersion?: string;
+  } = {}
+): {
+  schemaVersion: string;
+  assetVersion?: string;
   entryEncoding: string;
   columns: string[];
   entries: [string, string, string, string, number, number][];
@@ -66,6 +100,7 @@ function createAssetWithRows(count: number): {
 
   return {
     schemaVersion: "1.0.0",
+    assetVersion: options.assetVersion,
     entryEncoding: "array",
     columns: [
       "lemmaId",

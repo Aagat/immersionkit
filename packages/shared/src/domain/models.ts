@@ -30,6 +30,8 @@ export type SeedLexiconEntry = {
   pos: SupportedPos;
   frequencyRank: number | null;
   confidence: number;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
   inflections?: string[];
   sourceLanguage?: SupportedSourceLanguage;
   targetLanguage?: SupportedTargetLanguage;

@@ -20,7 +20,9 @@ const SEED_LEXICON = [
     targetLemma: "ciudad",
     pos: "noun",
     frequencyRank: 12,
-    confidence: 0.98
+    confidence: 0.98,
+    exampleSentenceEnglish: "The city welcomes visitors every spring.",
+    exampleSentenceNative: "La ciudad recibe a los visitantes cada primavera."
   },
   {
     lemmaId: "lemma-important",
@@ -123,6 +125,15 @@ describe("content inline learning loop", () => {
           expect(popover).toBeTruthy();
           expect(popover?.textContent).toContain("city");
           expect(popover?.textContent).toContain("ciudad");
+          expect(popover?.textContent).toContain(
+            "La ciudad recibe a los visitantes cada primavera."
+          );
+          expect(popover?.textContent).toContain(
+            "The city welcomes visitors every spring."
+          );
+          expect(popover?.textContent).not.toContain(
+            "The city is important for every visitor."
+          );
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
 
           await wait(220);
@@ -202,6 +213,56 @@ describe("content inline learning loop", () => {
 
           expect(vocabEntries["lemma-city"].status).toBe("ignored");
           expect(vocabEntries["lemma-city"].exposureCount).toBe(1);
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("falls back to the page sentence when the lexicon has no example sentence", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, window, wait }) => {
+        document.body.innerHTML = "<p>The city is important for every visitor.</p>";
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:11:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const token = document.querySelector<HTMLElement>(
+            "[data-ik-lemma-id='lemma-important']"
+          );
+          expect(token).toBeTruthy();
+
+          token?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
+          expect(popover?.textContent).toContain("important");
+          expect(popover?.textContent).toContain("importante");
+          expect(popover?.textContent).toContain(
+            "The city is important for every visitor."
+          );
         } finally {
           chromeStub.restore();
         }
