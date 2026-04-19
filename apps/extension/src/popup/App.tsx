@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  PROFICIENCY_SEED_OPTIONS,
   getSiteEnabledForHost,
-  isProviderKeyValid,
   loadActiveTabContext,
-  loadPageDiagnostics,
-  loadSentenceStats,
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
-  normalizeDiscoveryRate,
   notifySettingsRefresh,
-  pingBackground,
-  saveSettingsState,
   upsertSiteEnabledState,
   type ActiveTabContext,
-  type PageDiagnostics,
-  type SentenceStats,
   type SettingsState,
   type SiteSettingsMap,
   type VocabStats
@@ -29,17 +22,12 @@ const EMPTY_STATS: VocabStats = {
   ignored: 0
 };
 
-const EMPTY_SENTENCE_STATS: SentenceStats = {
-  cacheSize: 0,
-  pendingCount: 0
-};
-
 const DEFAULT_TAB_CONTEXT: ActiveTabContext = {
   tabId: null,
   hostname: null,
   url: null,
   isSupportedPage: false,
-  supportMessage: "Open an HTTP(S) page to configure site controls."
+  supportMessage: "Open an HTTP(S) page to manage this site."
 };
 
 export function PopupApp() {
@@ -47,41 +35,23 @@ export function PopupApp() {
   const [settingsState, setSettingsState] = useState<SettingsState | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettingsMap>({});
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
-  const [sentenceStats, setSentenceStats] = useState<SentenceStats>(EMPTY_SENTENCE_STATS);
-  const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
-  const [backgroundHealthy, setBackgroundHealthy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isRefreshingTab, setIsRefreshingTab] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadSnapshot = useCallback(async () => {
     const tabContext = await loadActiveTabContext();
-    const [
-      loadedSettingsState,
-      loadedSiteSettings,
-      loadedVocabStats,
-      loadedSentenceStats,
-      backgroundOk,
-      diagnostics
-    ] = await Promise.all([
+    const [loadedSettingsState, loadedSiteSettings, loadedVocabStats] = await Promise.all([
       loadSettingsState(),
       loadSiteSettingsMap(),
-      loadVocabStats(),
-      loadSentenceStats(),
-      pingBackground(),
-      loadPageDiagnostics(tabContext.tabId)
+      loadVocabStats()
     ]);
 
     return {
       tabContext,
       loadedSettingsState,
       loadedSiteSettings,
-      loadedVocabStats,
-      loadedSentenceStats,
-      backgroundOk,
-      diagnostics
+      loadedVocabStats
     };
   }, []);
 
@@ -95,11 +65,8 @@ export function PopupApp() {
       setSettingsState(snapshot.loadedSettingsState);
       setSiteSettings(snapshot.loadedSiteSettings);
       setVocabStats(snapshot.loadedVocabStats);
-      setSentenceStats(snapshot.loadedSentenceStats);
-      setPageDiagnostics(snapshot.diagnostics);
-      setBackgroundHealthy(snapshot.backgroundOk);
     } catch {
-      setErrorMessage("Unable to load popup state. Try reopening the popup.");
+      setErrorMessage("Unable to load your reading controls right now.");
     } finally {
       setIsLoading(false);
     }
@@ -109,120 +76,30 @@ export function PopupApp() {
     void refreshSnapshot();
   }, [refreshSnapshot]);
 
-  const handleSiteToggle = useCallback(
-    async (nextEnabled: boolean) => {
-      if (!activeTab.hostname) {
-        return;
-      }
+  const handleSiteToggle = useCallback(async () => {
+    if (!activeTab.hostname) {
+      return;
+    }
 
-      setErrorMessage(null);
-      setIsSavingSite(true);
-
-      try {
-        const nextSiteSettings = await upsertSiteEnabledState(
-          activeTab.hostname,
-          nextEnabled,
-          siteSettings
-        );
-
-        setSiteSettings(nextSiteSettings);
-        await notifySettingsRefresh(activeTab.tabId);
-      } catch {
-        setErrorMessage("Could not update the site toggle.");
-      } finally {
-        setIsSavingSite(false);
-      }
-    },
-    [activeTab.hostname, activeTab.tabId, siteSettings]
-  );
-
-  const handleDiscoveryRateChange = useCallback(
-    async (nextPercent: number) => {
-      if (!settingsState) {
-        return;
-      }
-
-      const nextRate = normalizeDiscoveryRate(nextPercent / 100);
-      const nextState: SettingsState = {
-        ...settingsState,
-        settings: {
-          ...settingsState.settings,
-          discoveryRate: nextRate
-        }
-      };
-
-      setSettingsState(nextState);
-      setErrorMessage(null);
-      setIsSavingSettings(true);
-
-      try {
-        const savedState = await saveSettingsState(nextState);
-        setSettingsState(savedState);
-        await notifySettingsRefresh(activeTab.tabId);
-      } catch {
-        setErrorMessage("Discovery rate could not be saved.");
-      } finally {
-        setIsSavingSettings(false);
-      }
-    },
-    [activeTab.tabId, settingsState]
-  );
-
-  const handleSentenceTranslationToggle = useCallback(
-    async (nextEnabled: boolean) => {
-      if (!settingsState) {
-        return;
-      }
-
-      if (
-        nextEnabled &&
-        !isProviderKeyValid(settingsState.settings.provider, settingsState.providerApiKey)
-      ) {
-        setErrorMessage(
-          "Add a valid provider key in Settings before enabling sentence translation."
-        );
-        return;
-      }
-
-      const nextState: SettingsState = {
-        ...settingsState,
-        settings: {
-          ...settingsState.settings,
-          sentenceTranslationEnabled: nextEnabled
-        }
-      };
-
-      setSettingsState(nextState);
-      setErrorMessage(null);
-      setIsSavingSettings(true);
-
-      try {
-        const savedState = await saveSettingsState(nextState);
-        setSettingsState(savedState);
-        await notifySettingsRefresh(activeTab.tabId);
-      } catch {
-        setErrorMessage("Sentence translation preference could not be saved.");
-      } finally {
-        setIsSavingSettings(false);
-      }
-    },
-    [activeTab.tabId, settingsState]
-  );
-
-  const handleRefreshActiveTab = useCallback(async () => {
     setErrorMessage(null);
-    setIsRefreshingTab(true);
+    setIsSavingSite(true);
 
     try {
+      const nextEnabled = !getSiteEnabledForHost(siteSettings, activeTab.hostname);
+      const nextSiteSettings = await upsertSiteEnabledState(
+        activeTab.hostname,
+        nextEnabled,
+        siteSettings
+      );
+
+      setSiteSettings(nextSiteSettings);
       await notifySettingsRefresh(activeTab.tabId);
-      setBackgroundHealthy(await pingBackground());
-      setPageDiagnostics(await loadPageDiagnostics(activeTab.tabId));
     } catch {
-      setErrorMessage("Could not request a tab refresh.");
+      setErrorMessage("Could not update this site's reading mode.");
     } finally {
-      setIsRefreshingTab(false);
+      setIsSavingSite(false);
     }
-  }, [activeTab.tabId]);
+  }, [activeTab.hostname, activeTab.tabId, siteSettings]);
 
   const handleOpenOptions = useCallback(() => {
     if (typeof chrome === "undefined" || !chrome.runtime?.openOptionsPage) {
@@ -233,221 +110,211 @@ export function PopupApp() {
   }, []);
 
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
-  const providerReady = settingsState
-    ? isProviderKeyValid(settingsState.settings.provider, settingsState.providerApiKey)
-    : false;
-
-  const discoveryRatePercent = Math.round(
-    (settingsState?.settings.discoveryRate ?? 0) * 100
-  );
-
-  const sentenceToggleDisabled =
-    !settingsState ||
-    settingsState.settings.provider === "none" ||
-    !providerReady ||
-    isSavingSettings;
+  const proficiencyLabel =
+    PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
+      ?.label ?? "Beginner";
+  const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
+  const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
+  const pageStatus = getPageStatus({
+    activeTab,
+    isLoading,
+    siteEnabled
+  });
 
   return (
-    <main className="panel-shell" style={{ width: 360, boxSizing: "border-box" }}>
-      <header className="panel-header">
-        <p className="eyebrow">ImmersionKit</p>
-        <h1>Session Controls</h1>
-        <p className="muted" style={{ marginTop: 8 }}>
-          {activeTab.isSupportedPage
-            ? `Current site: ${activeTab.supportMessage}`
-            : activeTab.supportMessage}
-        </p>
-      </header>
-
-      <section className="panel-card" aria-live="polite">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Site Toggle</h2>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "0.9rem" }}>Enabled</span>
-            <input
-              type="checkbox"
-              checked={siteEnabled}
-              disabled={!activeTab.isSupportedPage || isSavingSite || isLoading}
-              onChange={(event) => {
-                void handleSiteToggle(event.target.checked);
-              }}
-            />
-          </label>
-        </div>
-        <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
-          {activeTab.isSupportedPage
-            ? "Control whether ImmersionKit injects Spanish vocabulary on this hostname."
-            : "Open a normal web page to enable the per-site toggle."}
-        </p>
-      </section>
-
-      <section className="panel-card">
-        <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: "1.05rem" }}>Snapshot</h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 10
-          }}
+    <main className="panel-shell popup-shell">
+      <div className="popup-topbar">
+        <div className="brand-mark">ImmersionKit</div>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Open settings"
+          onClick={handleOpenOptions}
         >
-          <Metric label="Known" value={vocabStats.known} />
-          <Metric label="Learning" value={vocabStats.learning} />
-          <Metric label="Ignored" value={vocabStats.ignored} />
-          <Metric label="Tracked Words" value={vocabStats.total} />
-          <Metric label="Cached Sentences" value={sentenceStats.cacheSize} />
-          <Metric label="Pending Sentences" value={sentenceStats.pendingCount} />
-        </div>
-        <p className="muted" style={{ marginTop: 12, marginBottom: 0 }}>
-          Background service: {backgroundHealthy ? "online" : "waiting"}
-        </p>
-      </section>
+          <SettingsIcon />
+        </button>
+      </div>
 
-      <section className="panel-card">
-        <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: "1.05rem" }}>
-          Current Page Diagnostics
-        </h2>
-        {pageDiagnostics ? (
-          <div style={{ display: "grid", gap: 8 }}>
-            <p style={{ margin: 0 }}>
-              Lexicon source:{" "}
-              <strong>{formatLexiconSource(pageDiagnostics.lexiconSource)}</strong> (
-              {pageDiagnostics.lexiconEntryCount.toLocaleString()} entries)
-            </p>
-            <p className="muted" style={{ margin: 0 }}>
-              Sentence candidates on page: {pageDiagnostics.sentenceCandidatesSeen}
-            </p>
-            <p className="muted" style={{ margin: 0 }}>
-              Sentence notes rendered: {pageDiagnostics.sentenceNotesRendered} (
-              visible now: {pageDiagnostics.sentenceNotesVisible})
-            </p>
-          </div>
-        ) : (
-          <p className="muted" style={{ margin: 0 }}>
-            Page diagnostics unavailable. Open and refresh a supported page.
+      <section className="panel-card hero-card" aria-live="polite">
+        <div className="hero-copy">
+          <span className={pageStatus.badgeClass}>{pageStatus.badgeLabel}</span>
+          <h1 className="hero-title">{pageStatus.title}</h1>
+          <p className="hero-text muted">{pageStatus.description}</p>
+        </div>
+
+        <div className="hero-toggle">
+          <button
+            type="button"
+            className={`power-toggle${siteEnabled ? " is-on" : ""}`}
+            role="switch"
+            aria-checked={siteEnabled}
+            aria-label={siteEnabled ? "Pause reading mode on this site" : "Enable reading mode on this site"}
+            disabled={!activeTab.isSupportedPage || isLoading || isSavingSite}
+            onClick={() => {
+              void handleSiteToggle();
+            }}
+          >
+            <PowerIcon />
+          </button>
+          <p className="toggle-caption">
+            {isSavingSite
+              ? "Saving..."
+              : siteEnabled
+                ? "On for this site"
+                : "Off for this site"}
           </p>
-        )}
+        </div>
       </section>
 
       <section className="panel-card">
-        <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: "1.05rem" }}>Quick Controls</h2>
-
-        <label htmlFor="popup-discovery-rate" style={{ display: "grid", gap: 6 }}>
-          <span>
-            Discovery Rate <strong>{discoveryRatePercent}%</strong>
-          </span>
-          <input
-            id="popup-discovery-rate"
-            type="range"
-            min={0}
-            max={20}
-            step={1}
-            disabled={!settingsState || isSavingSettings}
-            value={discoveryRatePercent}
-            onChange={(event) => {
-              void handleDiscoveryRateChange(Number(event.target.value));
-            }}
-          />
-        </label>
-
-        <label
-          style={{
-            marginTop: 12,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12
-          }}
-        >
-          <span>Sentence Translation</span>
-          <input
-            type="checkbox"
-            disabled={sentenceToggleDisabled}
-            checked={Boolean(settingsState?.settings.sentenceTranslationEnabled)}
-            onChange={(event) => {
-              void handleSentenceTranslationToggle(event.target.checked);
-            }}
-          />
-        </label>
-
-        <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>
-          Provider: {settingsState?.settings.provider ?? "none"}. Configure API key in
-          Settings.
-        </p>
-
-        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <button type="button" onClick={handleOpenOptions} style={{ flex: 1 }}>
-            Open Settings
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void handleRefreshActiveTab();
-            }}
-            disabled={isRefreshingTab || !activeTab.isSupportedPage}
-            style={{ flex: 1 }}
-          >
-            {isRefreshingTab ? "Refreshing..." : "Refresh Tab"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void refreshSnapshot();
-            }}
-            disabled={isLoading}
-            style={{ flex: 1 }}
-          >
-            Reload
-          </button>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Your Progress</p>
+            <h2>Learning snapshot</h2>
+          </div>
+          <span className="badge-soft">{discoverySummary}</span>
         </div>
+
+        <div className="metric-grid metric-grid--compact">
+          <MetricCard label="Current level" value={proficiencyLabel} />
+          <MetricCard label="Known words" value={formatCount(vocabStats.known)} />
+          <MetricCard label="Learning now" value={formatCount(vocabStats.learning)} />
+          <MetricCard label="Tracked words" value={formatCount(vocabStats.total)} />
+        </div>
+
+        <p className="support-line muted">
+          {translationEnabled
+            ? "Sentence help is enabled globally."
+            : "Sentence help is currently off."}{" "}
+          Fine-tune the rest in{" "}
+          <button type="button" className="inline-link" onClick={handleOpenOptions}>
+            settings
+          </button>
+          .
+        </p>
       </section>
 
       {errorMessage ? (
-        <section className="panel-card" role="status">
-          <p style={{ margin: 0 }}>{errorMessage}</p>
+        <section className="status-banner status-banner--error" role="status">
+          <p>{errorMessage}</p>
         </section>
       ) : null}
     </main>
   );
 }
 
-type MetricProps = {
+type MetricCardProps = {
   label: string;
-  value: number;
+  value: number | string;
 };
 
-function Metric({ label, value }: MetricProps) {
+function MetricCard({ label, value }: MetricCardProps) {
+  const valueIsText = typeof value === "string";
+
   return (
-    <div
-      style={{
-        padding: "10px 12px",
-        borderRadius: 12,
-        background: "rgba(25, 48, 64, 0.06)"
-      }}
-    >
-      <p className="muted" style={{ margin: 0, fontSize: "0.75rem", textTransform: "uppercase" }}>
-        {label}
-      </p>
-      <p style={{ margin: "4px 0 0", fontSize: "1.15rem", fontWeight: 600 }}>{value}</p>
+    <div className="metric-card">
+      <p className="metric-label">{label}</p>
+      <p className={`metric-value${valueIsText ? " metric-value--text" : ""}`}>{value}</p>
     </div>
   );
 }
 
-function formatLexiconSource(source: string): string {
-  if (source === "storage-wrapped-asset") {
-    return "Imported asset (storage)";
+function describeDiscoveryRate(rate: number): string {
+  const percent = Math.round(rate * 100);
+
+  if (percent <= 5) {
+    return "Gentle pace";
   }
 
-  if (source === "storage-legacy-array") {
-    return "Legacy array (storage)";
+  if (percent <= 12) {
+    return "Balanced pace";
   }
 
-  if (source === "bundled-asset") {
-    return "Bundled generated asset";
+  return "Bold pace";
+}
+
+function formatCount(value: number): string {
+  return value.toLocaleString();
+}
+
+function getPageStatus(input: {
+  activeTab: ActiveTabContext;
+  isLoading: boolean;
+  siteEnabled: boolean;
+}): {
+  badgeClass: string;
+  badgeLabel: string;
+  title: string;
+  description: string;
+} {
+  if (input.isLoading) {
+    return {
+      badgeClass: "status-badge status-badge--warning",
+      badgeLabel: "Checking",
+      title: "Getting your current page ready.",
+      description: "Loading your reading controls and saved progress."
+    };
   }
 
-  if (source === "fallback") {
-    return "Emergency fallback";
+  if (!input.activeTab.isSupportedPage) {
+    return {
+      badgeClass: "status-badge status-badge--warning",
+      badgeLabel: "Unavailable",
+      title: "Open a regular webpage to use the site toggle.",
+      description: input.activeTab.supportMessage
+    };
   }
 
-  return source;
+  if (input.siteEnabled) {
+    return {
+      badgeClass: "status-badge status-badge--on",
+      badgeLabel: "Active",
+      title: "Spanish hints are live while you read.",
+      description: "Use the power button any time a page feels too busy."
+    };
+  }
+
+  return {
+    badgeClass: "status-badge status-badge--off",
+    badgeLabel: "Paused",
+    title: "This site is taking a break.",
+    description: "Turn it back on whenever you want vocabulary support here again."
+  };
+}
+
+function PowerIcon() {
+  return (
+    <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3.5V11.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.2 5.8C5.2 7.2 4 9.5 4 12C4 16.4 7.6 20 12 20C16.4 20 20 16.4 20 12C20 9.5 18.8 7.2 16.8 5.8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 8.75C10.2 8.75 8.75 10.2 8.75 12C8.75 13.8 10.2 15.25 12 15.25C13.8 15.25 15.25 13.8 15.25 12C15.25 10.2 13.8 8.75 12 8.75Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M4.7 13.2L3.5 12L4.7 10.8L5.1 9.2L6.8 8.8L8 7.6L9.6 8L11.1 7.3L12 5.8L12.9 7.3L14.4 8L16 7.6L17.2 8.8L18.9 9.2L19.3 10.8L20.5 12L19.3 13.2L18.9 14.8L17.2 15.2L16 16.4L14.4 16L12.9 16.7L12 18.2L11.1 16.7L9.6 16L8 16.4L6.8 15.2L5.1 14.8L4.7 13.2Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
