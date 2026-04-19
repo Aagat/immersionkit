@@ -69,4 +69,114 @@ describe("sentence translation rendering", () => {
       expect(note?.textContent).toContain("The train arrives soon.");
     });
   });
+
+  it("suppresses sentence notes when they are too close together in the same block", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const paragraph = document.createElement("p");
+
+      const first = createSentenceAnchor({
+        document,
+        nodeId: "ikn-near-1",
+        sentenceHash: "hash-near-1",
+        token: "uno"
+      });
+      const second = createSentenceAnchor({
+        document,
+        nodeId: "ikn-near-2",
+        sentenceHash: "hash-near-2",
+        token: "dos"
+      });
+
+      paragraph.append(first);
+      paragraph.append(" Short bridge text between candidate sentences. ");
+      paragraph.append(second);
+      document.body.append(paragraph);
+
+      const rendered = renderSentenceTranslations([
+        {
+          sentenceHash: "hash-near-1",
+          sourceText: "First source sentence.",
+          translatedText: "Primera frase.",
+          grammarNote: "Note one."
+        },
+        {
+          sentenceHash: "hash-near-2",
+          sourceText: "Second source sentence.",
+          translatedText: "Segunda frase.",
+          grammarNote: "Note two."
+        }
+      ]);
+
+      expect(rendered).toBe(1);
+      expect(document.querySelectorAll("[data-ik-sentence-note='true']")).toHaveLength(1);
+    });
+  });
+
+  it("allows sentence notes that are sufficiently spaced apart", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const paragraph = document.createElement("p");
+
+      const first = createSentenceAnchor({
+        document,
+        nodeId: "ikn-far-1",
+        sentenceHash: "hash-far-1",
+        token: "uno"
+      });
+      const second = createSentenceAnchor({
+        document,
+        nodeId: "ikn-far-2",
+        sentenceHash: "hash-far-2",
+        token: "dos"
+      });
+
+      paragraph.append(first);
+      paragraph.append(
+        " This section intentionally includes a long amount of filler content so the second translated sentence candidate appears much farther away and should still be rendered by the spacing guard in the sentence renderer."
+      );
+      paragraph.append(second);
+      document.body.append(paragraph);
+
+      const rendered = renderSentenceTranslations([
+        {
+          sentenceHash: "hash-far-1",
+          sourceText: "First source sentence.",
+          translatedText: "Primera frase.",
+          grammarNote: "Note one."
+        },
+        {
+          sentenceHash: "hash-far-2",
+          sourceText: "Second source sentence.",
+          translatedText: "Segunda frase.",
+          grammarNote: "Note two."
+        }
+      ]);
+
+      expect(rendered).toBe(2);
+      expect(document.querySelectorAll("[data-ik-sentence-note='true']")).toHaveLength(2);
+    });
+  });
 });
+
+function createSentenceAnchor(input: {
+  document: Document;
+  nodeId: string;
+  sentenceHash: string;
+  token: string;
+}): HTMLElement {
+  const wrapper = input.document.createElement("span");
+  wrapper.className = "ik-node";
+  wrapper.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
+  wrapper.setAttribute(
+    IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE,
+    encodeURIComponent(`${input.token} source text`)
+  );
+
+  const token = input.document.createElement("span");
+  token.className = "ik-word";
+  token.textContent = input.token;
+  token.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
+  token.setAttribute("data-ik-sentence-hash", input.sentenceHash);
+  wrapper.append(token);
+
+  return wrapper;
+}

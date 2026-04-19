@@ -10,6 +10,7 @@ const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
 const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
 const SENTENCE_GRAMMAR_NOTE_ATTRIBUTE = "data-ik-sentence-grammar-note";
 const SENTENCE_KIND_ATTRIBUTE = "data-ik-sentence-kind";
+const MIN_SENTENCE_NOTE_CHAR_GAP = 180;
 
 export type SentenceNoteMetadata = {
   note: HTMLElement;
@@ -46,6 +47,7 @@ export function renderSentenceTranslations(
   }
 
   const dedupedResults = dedupeBySentenceHash(results);
+  const spacingGuard = createSentenceSpacingGuard(MIN_SENTENCE_NOTE_CHAR_GAP);
   let renderedCount = 0;
 
   for (const result of dedupedResults) {
@@ -56,6 +58,10 @@ export function renderSentenceTranslations(
       if (existingNote) {
         updateSentenceNote(existingNote, result, anchor.sentenceKind);
         renderedCount += 1;
+        continue;
+      }
+
+      if (!spacingGuard.canPlace(anchor.wrapper)) {
         continue;
       }
 
@@ -248,6 +254,96 @@ function ensureChild(note: HTMLElement, className: string): HTMLElement {
   child.className = className;
   note.append(child);
   return child;
+}
+
+function createSentenceSpacingGuard(minCharGap: number): {
+  canPlace: (wrapper: HTMLElement) => boolean;
+} {
+  const offsetsByContainer = new Map<HTMLElement, number[]>();
+
+  return {
+    canPlace(wrapper) {
+      const container = findSentenceContainer(wrapper);
+      const wrapperOffset = readTextOffsetWithin(container, wrapper);
+      if (wrapperOffset === null) {
+        return true;
+      }
+
+      let offsets = offsetsByContainer.get(container);
+      if (!offsets) {
+        offsets = readExistingSentenceOffsets(container);
+        offsetsByContainer.set(container, offsets);
+      }
+
+      for (const offset of offsets) {
+        if (Math.abs(offset - wrapperOffset) < minCharGap) {
+          return false;
+        }
+      }
+
+      offsets.push(wrapperOffset);
+      return true;
+    }
+  };
+}
+
+function readExistingSentenceOffsets(container: HTMLElement): number[] {
+  const offsets: number[] = [];
+  const notes = container.querySelectorAll<HTMLElement>(SENTENCE_NOTE_SELECTOR);
+
+  for (const note of notes) {
+    const offset = readTextOffsetWithin(container, note);
+    if (offset === null) {
+      continue;
+    }
+
+    offsets.push(offset);
+  }
+
+  return offsets;
+}
+
+function findSentenceContainer(wrapper: HTMLElement): HTMLElement {
+  let current: HTMLElement | null = wrapper.parentElement;
+
+  while (current && current !== document.body) {
+    if (isBlockContainer(current)) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  if (document.body) {
+    return document.body;
+  }
+
+  return document.documentElement;
+}
+
+function isBlockContainer(element: HTMLElement): boolean {
+  const display = window.getComputedStyle(element).display;
+  return display !== "contents" && !display.startsWith("inline");
+}
+
+function readTextOffsetWithin(
+  container: HTMLElement,
+  node: Node
+): number | null {
+  if (!container.contains(node)) {
+    return null;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(container);
+
+  try {
+    range.setEndBefore(node);
+  } catch {
+    return null;
+  }
+
+  return range.toString().length;
 }
 
 function normalizeSentenceTranslationResult(
