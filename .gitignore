@@ -7,4 +7,4 @@ release/
 .vscode/
 *.log
 tools/importers/outputs/generated/
-
+.env
