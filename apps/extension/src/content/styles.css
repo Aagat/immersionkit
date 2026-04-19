@@ -1,24 +1,60 @@
 :root {
-  --ik-known-fg: #0d4e87;
-  --ik-known-bg: rgba(19, 92, 156, 0.12);
-  --ik-known-hover-bg: rgba(19, 92, 156, 0.2);
-  --ik-known-active-bg: rgba(19, 92, 156, 0.28);
-  --ik-discovery-bg: #f6df8f;
-  --ik-discovery-hover-bg: #f0d273;
-  --ik-discovery-active-bg: #e7c55e;
-  --ik-discovery-fg: #2f2600;
-  --ik-discovery-border: rgba(113, 83, 6, 0.38);
+  --ik-known-bg: rgba(75, 142, 230, 0.06);
+  --ik-known-hover-bg: rgba(75, 142, 230, 0.16);
+  --ik-known-active-bg: rgba(75, 142, 230, 0.24);
+  --ik-known-underline: rgba(75, 142, 230, 0.92);
+  --ik-known-underline-hover: rgba(57, 124, 210, 0.98);
+  --ik-known-underline-active: rgba(39, 103, 186, 1);
+  --ik-discovery-bg: rgba(233, 81, 126, 0.05);
+  --ik-discovery-hover-bg: rgba(233, 81, 126, 0.15);
+  --ik-discovery-active-bg: rgba(233, 81, 126, 0.23);
+  --ik-discovery-underline: rgba(227, 74, 121, 0.94);
+  --ik-discovery-underline-hover: rgba(208, 49, 99, 1);
+  --ik-discovery-underline-active: rgba(182, 35, 82, 1);
   --ik-ignored-hover-bg: rgba(109, 122, 132, 0.14);
   --ik-ignored-active-bg: rgba(109, 122, 132, 0.2);
-  --ik-focus-ring: rgba(31, 97, 158, 0.62);
   --ik-muted-fg: #6d7a84;
   --ik-sentence-bg: rgba(11, 76, 48, 0.08);
-  --ik-sentence-underline: rgba(16, 79, 53, 0.62);
-  --ik-sentence-underline-hover: rgba(16, 79, 53, 0.78);
+  --ik-sentence-known-underline: rgba(58, 173, 141, 0.88);
+  --ik-sentence-known-underline-hover: rgba(30, 151, 118, 0.98);
+  --ik-sentence-unknown-underline: rgba(247, 148, 68, 0.9);
+  --ik-sentence-unknown-underline-hover: rgba(232, 122, 34, 0.98);
+  --ik-sentence-source-underline: rgba(70, 104, 88, 0.72);
   --ik-sentence-fg: #104f35;
   --ik-popover-bg: #fffdf7;
   --ik-border: rgba(28, 44, 58, 0.14);
   --ik-shadow: 0 16px 40px rgba(16, 38, 56, 0.16);
+  --ik-popover-source-fg: #0d4e87;
+  --ik-popover-source-bg: rgba(13, 78, 135, 0.11);
+  --ik-popover-target-fg: #173d00;
+  --ik-popover-target-bg: rgba(114, 170, 25, 0.2);
+}
+
+html[data-ik-ui-theme="dark"] {
+  --ik-known-bg: rgba(106, 174, 255, 0.12);
+  --ik-known-hover-bg: rgba(106, 174, 255, 0.24);
+  --ik-known-active-bg: rgba(106, 174, 255, 0.32);
+  --ik-known-underline: rgba(132, 193, 255, 0.98);
+  --ik-known-underline-hover: rgba(162, 210, 255, 1);
+  --ik-known-underline-active: rgba(191, 224, 255, 1);
+  --ik-discovery-bg: rgba(255, 120, 160, 0.11);
+  --ik-discovery-hover-bg: rgba(255, 120, 160, 0.2);
+  --ik-discovery-active-bg: rgba(255, 120, 160, 0.3);
+  --ik-discovery-underline: rgba(255, 149, 184, 0.98);
+  --ik-discovery-underline-hover: rgba(255, 173, 202, 1);
+  --ik-discovery-underline-active: rgba(255, 194, 219, 1);
+  --ik-ignored-hover-bg: rgba(185, 196, 205, 0.14);
+  --ik-ignored-active-bg: rgba(185, 196, 205, 0.24);
+  --ik-sentence-bg: rgba(255, 255, 255, 0.08);
+  --ik-sentence-known-underline: rgba(116, 236, 203, 0.95);
+  --ik-sentence-known-underline-hover: rgba(146, 247, 220, 1);
+  --ik-sentence-unknown-underline: rgba(255, 186, 122, 0.96);
+  --ik-sentence-unknown-underline-hover: rgba(255, 205, 153, 1);
+  --ik-sentence-source-underline: rgba(173, 200, 187, 0.82);
+  --ik-popover-source-fg: #124b77;
+  --ik-popover-source-bg: rgba(84, 151, 206, 0.19);
+  --ik-popover-target-fg: #29500f;
+  --ik-popover-target-bg: rgba(131, 179, 52, 0.26);
 }
 
 .ik-node {
@@ -33,32 +69,41 @@
   margin: 0;
   cursor: pointer;
   font-weight: 600;
-  text-decoration: none;
-  border: 1px solid transparent;
-  transition: background-color 120ms ease, color 120ms ease;
+  border: none;
+  background: var(--ik-word-bg, transparent);
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-color: var(--ik-word-underline, currentColor);
+  text-decoration-thickness: 0.13em;
+  text-underline-offset: 0.13em;
+  text-decoration-skip-ink: none;
+  transition: background-color 120ms ease, color 120ms ease, text-decoration-color 120ms ease;
 }
 
 .ik-word--known {
-  color: var(--ik-known-fg);
-  background: var(--ik-known-bg);
-  border-color: rgba(13, 78, 135, 0.18);
+  color: inherit;
+  --ik-word-bg: var(--ik-known-bg);
   --ik-word-hover-bg: var(--ik-known-hover-bg);
   --ik-word-active-bg: var(--ik-known-active-bg);
+  --ik-word-underline: var(--ik-known-underline);
+  --ik-word-underline-hover: var(--ik-known-underline-hover);
+  --ik-word-underline-active: var(--ik-known-underline-active);
 }
 
 .ik-word--discovery {
-  background: var(--ik-discovery-bg);
-  color: var(--ik-discovery-fg);
-  border-color: var(--ik-discovery-border);
+  color: inherit;
+  --ik-word-bg: var(--ik-discovery-bg);
   --ik-word-hover-bg: var(--ik-discovery-hover-bg);
   --ik-word-active-bg: var(--ik-discovery-active-bg);
+  --ik-word-underline: var(--ik-discovery-underline);
+  --ik-word-underline-hover: var(--ik-discovery-underline-hover);
+  --ik-word-underline-active: var(--ik-discovery-underline-active);
 }
 
 .ik-word--ignored {
-  color: var(--ik-muted-fg);
+  color: inherit;
   background: transparent;
-  border-color: transparent;
-  text-decoration: line-through;
+  text-decoration-line: line-through;
   --ik-word-hover-bg: var(--ik-ignored-hover-bg);
   --ik-word-active-bg: var(--ik-ignored-active-bg);
 }
@@ -66,11 +111,16 @@
 .ik-word:hover,
 .ik-word:focus-visible {
   outline: none;
-  background: var(--ik-word-hover-bg);
+  background: var(--ik-word-hover-bg, var(--ik-word-bg, transparent));
+  text-decoration-color: var(--ik-word-underline-hover, var(--ik-word-underline, currentColor));
 }
 
 .ik-word[data-ik-active="true"] {
-  background: var(--ik-word-active-bg);
+  background: var(--ik-word-active-bg, var(--ik-word-hover-bg, var(--ik-word-bg, transparent)));
+  text-decoration-color: var(
+    --ik-word-underline-active,
+    var(--ik-word-underline-hover, var(--ik-word-underline, currentColor))
+  );
 }
 
 .ik-popover {
@@ -101,13 +151,13 @@
 }
 
 .ik-popover__source {
-  color: var(--ik-known-fg);
-  background: rgba(13, 78, 135, 0.11);
+  color: var(--ik-popover-source-fg);
+  background: var(--ik-popover-source-bg);
 }
 
 .ik-popover__target {
-  color: #173d00;
-  background: rgba(114, 170, 25, 0.2);
+  color: var(--ik-popover-target-fg);
+  background: var(--ik-popover-target-bg);
 }
 
 .ik-popover__arrow {
@@ -158,41 +208,59 @@
 }
 
 .ik-sentence-note {
+  --ik-sentence-note-underline: var(--ik-sentence-known-underline);
+  --ik-sentence-note-underline-hover: var(--ik-sentence-known-underline-hover);
   display: inline;
   margin-left: 0.22rem;
   padding: 0 0.08rem;
   border-radius: 0.24rem;
-  color: var(--ik-sentence-fg);
+  color: inherit;
   cursor: pointer;
   vertical-align: baseline;
   font-size: 0.95em;
   line-height: inherit;
   text-decoration-line: underline;
-  text-decoration-color: var(--ik-sentence-underline);
-  text-decoration-thickness: 0.14em;
-  text-underline-offset: 0.14em;
+  text-decoration-color: var(--ik-sentence-note-underline);
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.15em;
+  text-decoration-skip-ink: none;
+}
+
+.ik-sentence-note[data-ik-sentence-kind="known"] {
+  --ik-sentence-note-underline: var(--ik-sentence-known-underline);
+  --ik-sentence-note-underline-hover: var(--ik-sentence-known-underline-hover);
+}
+
+.ik-sentence-note[data-ik-sentence-kind="unknown"] {
+  --ik-sentence-note-underline: var(--ik-sentence-unknown-underline);
+  --ik-sentence-note-underline-hover: var(--ik-sentence-unknown-underline-hover);
 }
 
 .ik-sentence-note:hover,
 .ik-sentence-note:focus-visible {
   outline: none;
   background: var(--ik-sentence-bg);
-  text-decoration-color: var(--ik-sentence-underline-hover);
+  text-decoration-color: var(--ik-sentence-note-underline-hover);
 }
 
 .ik-sentence-note__translated {
-  font-weight: 600;
+  font-weight: inherit;
   display: inline;
 }
 
 .ik-sentence-note__source {
   display: none;
-  color: #466858;
+  color: inherit;
+  opacity: 0.9;
   font-style: italic;
 }
 
 .ik-sentence-note[data-ik-source-visible="true"] .ik-sentence-note__translated {
   display: none;
+}
+
+.ik-sentence-note[data-ik-source-visible="true"] {
+  text-decoration-color: var(--ik-sentence-source-underline);
 }
 
 .ik-sentence-note[data-ik-source-visible="true"] .ik-sentence-note__source {

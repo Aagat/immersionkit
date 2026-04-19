@@ -9,6 +9,7 @@ const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
 const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
 const SENTENCE_GRAMMAR_NOTE_ATTRIBUTE = "data-ik-sentence-grammar-note";
+const SENTENCE_KIND_ATTRIBUTE = "data-ik-sentence-kind";
 
 export type SentenceNoteMetadata = {
   note: HTMLElement;
@@ -53,12 +54,12 @@ export function renderSentenceTranslations(
     for (const anchor of anchors) {
       const existingNote = findSentenceNote(anchor.nodeId, result.sentenceHash);
       if (existingNote) {
-        updateSentenceNote(existingNote, result);
+        updateSentenceNote(existingNote, result, anchor.sentenceKind);
         renderedCount += 1;
         continue;
       }
 
-      const note = createSentenceNote(result, anchor.nodeId);
+      const note = createSentenceNote(result, anchor.nodeId, anchor.sentenceKind);
       anchor.wrapper.after(note);
       renderedCount += 1;
     }
@@ -130,32 +131,53 @@ function collectSentenceAnchors(
 ): {
   nodeId: string;
   wrapper: HTMLElement;
+  sentenceKind: "known" | "unknown";
 }[] {
   const escapedHash = escapeSelectorValue(sentenceHash);
   const tokenMatches = document.querySelectorAll<HTMLElement>(
     `[data-ik-sentence-hash="${escapedHash}"][${IMMERSIONKIT_NODE_ATTRIBUTE}]`
   );
 
-  const anchors = new Map<string, HTMLElement>();
+  const anchors = new Map<
+    string,
+    {
+      wrapper: HTMLElement;
+      hasUnknownToken: boolean;
+    }
+  >();
   for (const match of tokenMatches) {
     const nodeId = match.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
-    if (!nodeId || anchors.has(nodeId)) {
+    if (!nodeId) {
       continue;
     }
 
-    const escapedNodeId = escapeSelectorValue(nodeId);
-    const wrapper = document.querySelector<HTMLElement>(
-      `[${IMMERSIONKIT_NODE_ATTRIBUTE}="${escapedNodeId}"][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
-    );
+    let entry = anchors.get(nodeId);
+    if (!entry) {
+      const escapedNodeId = escapeSelectorValue(nodeId);
+      const wrapper = document.querySelector<HTMLElement>(
+        `[${IMMERSIONKIT_NODE_ATTRIBUTE}="${escapedNodeId}"][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
+      );
 
-    if (wrapper) {
-      anchors.set(nodeId, wrapper);
+      if (!wrapper) {
+        continue;
+      }
+
+      entry = {
+        wrapper,
+        hasUnknownToken: false
+      };
+      anchors.set(nodeId, entry);
+    }
+
+    if (match.getAttribute("data-ik-word-kind") !== "known") {
+      entry.hasUnknownToken = true;
     }
   }
 
-  return [...anchors.entries()].map(([nodeId, wrapper]) => ({
+  return [...anchors.entries()].map(([nodeId, entry]) => ({
     nodeId,
-    wrapper
+    wrapper: entry.wrapper,
+    sentenceKind: entry.hasUnknownToken ? "unknown" : "known"
   }));
 }
 
@@ -173,7 +195,8 @@ function findSentenceNote(
 
 function createSentenceNote(
   result: SentenceTranslationResult,
-  nodeId: string
+  nodeId: string,
+  sentenceKind: "known" | "unknown"
 ): HTMLElement {
   const note = document.createElement("span");
 
@@ -185,19 +208,22 @@ function createSentenceNote(
   note.setAttribute("data-ik-sentence-note", "true");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
   note.setAttribute("data-ik-source-visible", "false");
+  note.setAttribute(SENTENCE_KIND_ATTRIBUTE, sentenceKind);
   note.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, nodeId);
 
-  updateSentenceNote(note, result);
+  updateSentenceNote(note, result, sentenceKind);
   return note;
 }
 
 function updateSentenceNote(
   note: HTMLElement,
-  result: SentenceTranslationResult
+  result: SentenceTranslationResult,
+  sentenceKind: "known" | "unknown"
 ): void {
   note.setAttribute("title", "Click for details. Double-click to reveal original.");
   note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
+  note.setAttribute(SENTENCE_KIND_ATTRIBUTE, sentenceKind);
   note.setAttribute(SENTENCE_SOURCE_TEXT_ATTRIBUTE, result.sourceText);
   note.setAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE, result.translatedText);
   note.setAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE, result.grammarNote);
