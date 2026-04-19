@@ -123,7 +123,6 @@ describe("content inline learning loop", () => {
           expect(popover).toBeTruthy();
           expect(popover?.textContent).toContain("city");
           expect(popover?.textContent).toContain("ciudad");
-          expect(popover?.textContent).toContain("Lemma: city");
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
 
           await wait(220);
@@ -400,11 +399,32 @@ describe("content inline learning loop", () => {
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover).toBeTruthy();
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
-          expect(popover?.textContent).toContain("Sentence translation");
-          expect(popover?.textContent).toContain(translatedSentence);
-          expect(popover?.textContent).toContain(`Grammar: ${grammarNote}`);
+          expect(popover?.textContent).toContain(grammarNote);
+          expect(popover?.textContent).not.toContain(translatedSentence);
           expect(popover?.textContent).not.toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
+          expect(popover?.querySelector("[data-ik-sentence-action]")).toBeTruthy();
+
+          const toggleButton = popover?.querySelector<HTMLButtonElement>(
+            "[data-ik-sentence-action='toggle-source']"
+          );
+          expect(toggleButton).toBeTruthy();
+          expect(toggleButton?.textContent).toBe("Show Original");
+
+          toggleButton?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("true");
+
+          const toggledButton = document.querySelector<HTMLButtonElement>(
+            "[data-ik-sentence-action='toggle-source']"
+          );
+          expect(toggledButton?.textContent).toBe("Show Translation");
 
           note?.dispatchEvent(
             new window.MouseEvent("dblclick", {
@@ -414,8 +434,8 @@ describe("content inline learning loop", () => {
           );
           await wait(20);
 
-          expect(note?.getAttribute("data-ik-source-visible")).toBe("true");
-          expect(note?.textContent).toContain(sourceSentence);
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("false");
+          expect(note?.textContent).toContain(translatedSentence);
           expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
         } finally {
           chromeStub.restore();

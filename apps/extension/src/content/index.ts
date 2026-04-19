@@ -73,9 +73,11 @@ type RuntimeState = {
 
 type InteractiveVocabStatus = Exclude<VocabStatus, "new">;
 type UiTheme = "light" | "dark";
+type SentencePopoverAction = "toggle-source" | "close";
 
 const POPOVER_ATTRIBUTE = "data-ik-popover";
 const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
+const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const UI_THEME_ATTRIBUTE = "data-ik-ui-theme";
 const STATUS_BUTTONS: readonly {
@@ -653,7 +655,38 @@ function openSentencePopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, noteElement);
 
-  const popover = renderSentencePopover(detail);
+  const popover = renderSentencePopover(noteElement, detail);
+  popover.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const actionButton = event.target.closest<HTMLButtonElement>(
+      `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}]`
+    );
+    if (!actionButton) {
+      return;
+    }
+
+    const action = readSentencePopoverAction(
+      actionButton.getAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE)
+    );
+    if (!action) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (action === "toggle-source") {
+      const sourceVisible = noteElement.getAttribute("data-ik-source-visible") === "true";
+      noteElement.setAttribute("data-ik-source-visible", String(!sourceVisible));
+      syncSentencePopoverActions(popover, noteElement);
+      return;
+    }
+
+    closePopover(runtimeState);
+  });
+
   document.body.append(popover);
   positionPopover(popover, noteElement);
 
@@ -722,11 +755,6 @@ function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
   pair.append(createTokenPill("ik-popover__target", detail.targetToken));
   popover.append(pair);
 
-  const lemma = document.createElement("p");
-  lemma.className = "ik-popover__meta";
-  lemma.textContent = `Lemma: ${detail.sourceLemma}`;
-  popover.append(lemma);
-
   if (detail.sentence) {
     const sentence = document.createElement("p");
     sentence.className = "ik-popover__sentence";
@@ -759,7 +787,10 @@ function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
   return popover;
 }
 
-function renderSentencePopover(detail: SentenceNoteMetadata): HTMLDivElement {
+function renderSentencePopover(
+  noteElement: HTMLElement,
+  detail: SentenceNoteMetadata
+): HTMLDivElement {
   const popover = document.createElement("div");
   popover.className = "ik-popover";
   popover.setAttribute(POPOVER_ATTRIBUTE, "true");
@@ -767,25 +798,18 @@ function renderSentencePopover(detail: SentenceNoteMetadata): HTMLDivElement {
   popover.setAttribute("role", "dialog");
   popover.setAttribute("aria-live", "polite");
 
-  const heading = document.createElement("p");
-  heading.className = "ik-popover__meta";
-  heading.textContent = "Sentence translation";
-  popover.append(heading);
-
-  const translated = document.createElement("p");
-  translated.className = "ik-popover__sentence";
-  translated.textContent = detail.translatedText;
-  popover.append(translated);
-
   const grammar = document.createElement("p");
   grammar.className = "ik-popover__sentence";
-  grammar.textContent = `Grammar: ${detail.grammarNote}`;
+  grammar.textContent = detail.grammarNote;
   popover.append(grammar);
 
-  const tip = document.createElement("p");
-  tip.className = "ik-popover__meta";
-  tip.textContent = "Double-click the inline sentence to reveal the original text.";
-  popover.append(tip);
+  const actions = document.createElement("div");
+  actions.className = "ik-popover__actions";
+  actions.append(createSentencePopoverActionButton("toggle-source"));
+  actions.append(createSentencePopoverActionButton("close"));
+  popover.append(actions);
+
+  syncSentencePopoverActions(popover, noteElement);
 
   return popover;
 }
@@ -919,6 +943,48 @@ function createArrow(): HTMLSpanElement {
 
 function readInteractiveStatus(value: string | null): InteractiveVocabStatus | null {
   if (value === "known" || value === "learning" || value === "ignored") {
+    return value;
+  }
+
+  return null;
+}
+
+function createSentencePopoverActionButton(
+  action: SentencePopoverAction
+): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "ik-popover__action";
+  button.setAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE, action);
+  return button;
+}
+
+function syncSentencePopoverActions(
+  popover: HTMLElement,
+  noteElement: HTMLElement
+) {
+  const toggleButton = popover.querySelector<HTMLButtonElement>(
+    `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}="toggle-source"]`
+  );
+  if (toggleButton) {
+    const sourceVisible = noteElement.getAttribute("data-ik-source-visible") === "true";
+    toggleButton.textContent = sourceVisible ? "Show Translation" : "Show Original";
+    toggleButton.setAttribute("aria-pressed", sourceVisible ? "true" : "false");
+  }
+
+  const closeButton = popover.querySelector<HTMLButtonElement>(
+    `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}="close"]`
+  );
+  if (closeButton) {
+    closeButton.textContent = "Close";
+    closeButton.removeAttribute("aria-pressed");
+  }
+}
+
+function readSentencePopoverAction(
+  value: string | null
+): SentencePopoverAction | null {
+  if (value === "toggle-source" || value === "close") {
     return value;
   }
 

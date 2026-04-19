@@ -21,6 +21,7 @@ const EXCLUDED_ANCESTOR_SELECTOR = [
   "option",
   "button",
   "label",
+  "a",
   "svg",
   "math",
   "canvas",

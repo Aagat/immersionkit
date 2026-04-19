@@ -135,6 +135,23 @@ describe("eligible text-node collection", () => {
       }
     );
   });
+
+  it("excludes anchor text so links are not translated inline", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      document.body.innerHTML = `
+        <main>
+          <p>Visible article text remains eligible.</p>
+          <p>
+            <a href="https://example.test/path">https://example.test/path with anchor words</a>
+          </p>
+        </main>
+      `;
+
+      const combinedText = joinText(collectEligibleTextNodes(document.body));
+      expect(combinedText).toContain("Visible article text remains eligible.");
+      expect(combinedText).not.toContain("https://example.test/path with anchor words");
+    });
+  });
 });
 
 function joinText(nodes: Text[]): string {
