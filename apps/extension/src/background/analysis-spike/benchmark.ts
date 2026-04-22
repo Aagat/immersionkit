@@ -1,12 +1,16 @@
 import { hashSentence, hashString } from "@immersionkit/shared";
 
 import { listAvailableAnalyzerFactories } from "./analyzers";
-import { loadNlpPerformanceFixtures } from "./fixtures";
+import {
+  loadNlpPerformanceFixtures,
+  parseNlpBenchmarkInputProfile
+} from "./fixtures";
 import type {
   AnalyzerBenchmarkMetrics,
   AnalyzerBenchmarkResult,
   BenchmarkAssertion,
   BenchmarkFixtureCatalog,
+  NlpBenchmarkInputProfile,
   NlpPerformanceBenchmarkRun,
   SentenceAnalysisEngine,
   SentenceAnalyzerSnapshot
@@ -14,11 +18,48 @@ import type {
 
 type BenchmarkRunOptions = {
   includeWinkNlp?: boolean;
+  inputProfile?: NlpBenchmarkInputProfile | string;
 };
 
-const HOT_SENTENCE_SAMPLE_COUNT = 140;
-const SMALL_BATCH_SIZE = 10;
-const MEDIUM_BATCH_SIZE = 48;
+type WorkloadConfig = {
+  hotSentenceSampleCount: number;
+  smallBatchSize: number;
+  mediumBatchSize: number;
+};
+
+const WORKLOAD_BY_PROFILE: Record<NlpBenchmarkInputProfile, WorkloadConfig> = {
+  tiny: {
+    hotSentenceSampleCount: 32,
+    smallBatchSize: 4,
+    mediumBatchSize: 16
+  },
+  small: {
+    hotSentenceSampleCount: 80,
+    smallBatchSize: 8,
+    mediumBatchSize: 32
+  },
+  baseline: {
+    hotSentenceSampleCount: 140,
+    smallBatchSize: 10,
+    mediumBatchSize: 48
+  },
+  large: {
+    hotSentenceSampleCount: 600,
+    smallBatchSize: 24,
+    mediumBatchSize: 180
+  },
+  xlarge: {
+    hotSentenceSampleCount: 1800,
+    smallBatchSize: 48,
+    mediumBatchSize: 540
+  },
+  xxlarge: {
+    hotSentenceSampleCount: 5000,
+    smallBatchSize: 120,
+    mediumBatchSize: 1500
+  }
+};
+
 const SAMPLE_SNAPSHOT_COUNT = 6;
 const DETERMINISM_ROUNDS = 3;
 
@@ -28,7 +69,11 @@ export async function runNlpPerformanceSpikeBenchmark(
   options: BenchmarkRunOptions = {}
 ): Promise<NlpPerformanceBenchmarkRun> {
   const includeWinkNlp = options.includeWinkNlp ?? true;
-  const fixtures = loadNlpPerformanceFixtures();
+  const inputProfile = parseNlpBenchmarkInputProfile(options.inputProfile);
+  const workload = resolveWorkload(inputProfile);
+  const fixtures = loadNlpPerformanceFixtures({
+    profile: inputProfile
+  });
   const factories = listAvailableAnalyzerFactories(includeWinkNlp);
 
   const analyzerResults: AnalyzerBenchmarkResult[] = [];
@@ -36,7 +81,7 @@ export async function runNlpPerformanceSpikeBenchmark(
   for (const factory of factories) {
     try {
       const engine = await factory.create();
-      const metrics = await benchmarkAnalyzer(engine, fixtures);
+      const metrics = await benchmarkAnalyzer(engine, fixtures, workload);
       analyzerResults.push(metrics);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -67,9 +112,16 @@ export async function runNlpPerformanceSpikeBenchmark(
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "unknown-timezone"
     },
     runOptions: {
-      includeWinkNlp
+      includeWinkNlp,
+      inputProfile
+    },
+    workload: {
+      hotSentenceSampleCount: workload.hotSentenceSampleCount,
+      smallBatchSize: workload.smallBatchSize,
+      mediumBatchSize: workload.mediumBatchSize
     },
     fixtures: {
+      profile: fixtures.profile,
       syntheticSentenceCount: fixtures.syntheticSentences.length,
       pageSentenceCount: fixtures.pageSentences.length,
       cacheReplaySentenceCount: fixtures.cacheReplay.sentences.length,
@@ -82,7 +134,8 @@ export async function runNlpPerformanceSpikeBenchmark(
 
 async function benchmarkAnalyzer(
   engine: SentenceAnalysisEngine,
-  fixtures: BenchmarkFixtureCatalog
+  fixtures: BenchmarkFixtureCatalog,
+  workload: WorkloadConfig
 ): Promise<AnalyzerBenchmarkMetrics> {
   const combinedUniqueSentences = uniqueValues([
     ...fixtures.syntheticSentences,
@@ -94,14 +147,17 @@ async function benchmarkAnalyzer(
     engine.analyzeSentence(coldStartInput);
   });
 
-  const hotSample = repeatToLength(combinedUniqueSentences, HOT_SENTENCE_SAMPLE_COUNT);
+  const hotSample = repeatToLength(
+    combinedUniqueSentences,
+    workload.hotSentenceSampleCount
+  );
   const hotTiming = timed(() => {
     for (const sentence of hotSample) {
       engine.analyzeSentence(sentence);
     }
   });
 
-  const smallBatchInput = combinedUniqueSentences.slice(0, SMALL_BATCH_SIZE);
+  const smallBatchInput = combinedUniqueSentences.slice(0, workload.smallBatchSize);
   const smallBatchTiming = timed(() => {
     for (const sentence of smallBatchInput) {
       engine.analyzeSentence(sentence);
@@ -109,7 +165,7 @@ async function benchmarkAnalyzer(
   });
 
   const beforeHeap = readUsedHeapSize();
-  const mediumBatchInput = combinedUniqueSentences.slice(0, MEDIUM_BATCH_SIZE);
+  const mediumBatchInput = combinedUniqueSentences.slice(0, workload.mediumBatchSize);
   const mediumBatchSnapshots: SentenceAnalyzerSnapshot[] = [];
   const mediumBatchTiming = timed(() => {
     for (const sentence of mediumBatchInput) {
@@ -372,6 +428,10 @@ function nowMs(): number {
   }
 
   return Date.now();
+}
+
+function resolveWorkload(profile: NlpBenchmarkInputProfile): WorkloadConfig {
+  return WORKLOAD_BY_PROFILE[profile] ?? WORKLOAD_BY_PROFILE.baseline;
 }
 
 function repeatToLength(values: string[], targetLength: number): string[] {

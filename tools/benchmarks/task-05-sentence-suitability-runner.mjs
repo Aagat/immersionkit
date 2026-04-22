@@ -2,12 +2,12 @@
 
 import { spawn } from "node:child_process";
 import http from "node:http";
+import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
-
-import { chromium } from "playwright";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +46,8 @@ try {
 
   await waitForHttpReady(validationUrl, 45_000, serverProcess);
 
+  const playwright = await loadPlaywright();
+  const { chromium } = playwright;
   const browser = await chromium.launch({ headless: true });
 
   const captured = await runValidationInBrowser(browser, validationUrl);
@@ -81,6 +83,47 @@ try {
   process.exitCode = 1;
 } finally {
   await stopServer(serverProcess);
+}
+
+async function loadPlaywright() {
+  try {
+    return await import("playwright");
+  } catch {
+    const candidate = resolvePlaywrightFallbackPath();
+    if (!candidate) {
+      throw new Error(
+        "Unable to import playwright. Install it locally or set IK_PLAYWRIGHT_INDEX to index.mjs."
+      );
+    }
+
+    return await import(pathToFileURL(candidate).href);
+  }
+}
+
+function resolvePlaywrightFallbackPath() {
+  const envPath = process.env.IK_PLAYWRIGHT_INDEX;
+  if (envPath && existsSync(envPath)) {
+    return envPath;
+  }
+
+  const home = os.homedir();
+  const codexBundled = path.join(
+    home,
+    ".cache",
+    "codex-runtimes",
+    "codex-primary-runtime",
+    "dependencies",
+    "node",
+    "node_modules",
+    "playwright",
+    "index.mjs"
+  );
+
+  if (existsSync(codexBundled)) {
+    return codexBundled;
+  }
+
+  return null;
 }
 
 async function runValidationInBrowser(browser, url) {

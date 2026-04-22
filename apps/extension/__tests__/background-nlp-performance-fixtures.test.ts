@@ -25,4 +25,24 @@ describe("background NLP performance fixtures", () => {
     expect(uniqueHashes.size).toBe(fixtures.cacheReplay.expectedUniqueSentenceCount);
     expect(hitRate).toBeGreaterThanOrEqual(fixtures.cacheReplay.expectedMinimumCacheHitRate);
   });
+
+  it("supports scalable fixture profiles from tiny to xxlarge", () => {
+    const tiny = loadNlpPerformanceFixtures({ profile: "tiny" });
+    const large = loadNlpPerformanceFixtures({ profile: "xxlarge" });
+
+    expect(tiny.profile).toBe("tiny");
+    expect(large.profile).toBe("xxlarge");
+
+    expect(large.syntheticSentences.length).toBeGreaterThan(tiny.syntheticSentences.length);
+    expect(large.pageSentences.length).toBeGreaterThan(tiny.pageSentences.length);
+    expect(large.cacheReplay.sentences.length).toBeGreaterThan(tiny.cacheReplay.sentences.length);
+
+    const tinyUnique = new Set(tiny.cacheReplay.sentences.map((sentence) => hashSentence(sentence)));
+    const largeUnique = new Set(
+      large.cacheReplay.sentences.map((sentence) => hashSentence(sentence))
+    );
+
+    expect(tinyUnique.size).toBe(tiny.cacheReplay.expectedUniqueSentenceCount);
+    expect(largeUnique.size).toBe(large.cacheReplay.expectedUniqueSentenceCount);
+  });
 });

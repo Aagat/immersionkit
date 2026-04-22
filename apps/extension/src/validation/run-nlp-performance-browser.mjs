@@ -15,6 +15,7 @@ const outputDirectory = path.resolve(
 );
 
 const includeWinkNlp = process.env.IK_INCLUDE_WINK_NLP !== "0";
+const inputProfile = process.env.IK_BENCHMARK_INPUT_PROFILE ?? "baseline";
 const port = Number.parseInt(process.env.IK_VALIDATION_PORT ?? "4173", 10);
 
 async function run() {
@@ -37,9 +38,9 @@ async function run() {
 
   try {
     const page = await browser.newPage();
-    const benchmarkUrl = `http://127.0.0.1:${port}/validation.html?task=nlp-performance&autorun=1${
-      includeWinkNlp ? "" : "&includeWink=0"
-    }`;
+    const benchmarkUrl = `http://127.0.0.1:${port}/validation.html?task=nlp-performance&autorun=1&inputProfile=${encodeURIComponent(
+      inputProfile
+    )}${includeWinkNlp ? "" : "&includeWink=0"}`;
 
     await page.goto(benchmarkUrl, {
       waitUntil: "domcontentloaded"
@@ -115,6 +116,7 @@ async function run() {
 function printSummary(result, summaryPath, snapshotsPath) {
   console.log("ImmersionKit NLP benchmark completed.");
   console.log(`Generated at: ${result.generatedAt}`);
+  console.log(`Input profile: ${result.runOptions.inputProfile}`);
   console.log(`Summary JSON: ${summaryPath}`);
   console.log(`Sample snapshots: ${snapshotsPath}`);
 

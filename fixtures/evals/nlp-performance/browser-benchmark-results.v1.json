@@ -1,62 +1,69 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-21T22:13:44.243Z",
+  "generatedAt": "2026-04-22T20:50:51.913Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
-    "locationHref": "http://127.0.0.1:4173/validation.html?task=nlp-performance&autorun=1",
+    "locationHref": "http://127.0.0.1:4173/validation.html?task=nlp-performance&autorun=1&inputProfile=tiny",
     "timezone": "Europe/Madrid"
   },
   "runOptions": {
-    "includeWinkNlp": true
+    "includeWinkNlp": true,
+    "inputProfile": "tiny"
+  },
+  "workload": {
+    "hotSentenceSampleCount": 32,
+    "smallBatchSize": 4,
+    "mediumBatchSize": 16
   },
   "fixtures": {
-    "syntheticSentenceCount": 36,
-    "pageSentenceCount": 35,
-    "cacheReplaySentenceCount": 60,
-    "cacheReplayExpectedUniqueSentenceCount": 12
+    "profile": "tiny",
+    "syntheticSentenceCount": 8,
+    "pageSentenceCount": 8,
+    "cacheReplaySentenceCount": 12,
+    "cacheReplayExpectedUniqueSentenceCount": 6
   },
   "analyzerResults": [
     {
       "analyzerId": "compromise-two",
       "datasetSizes": {
-        "synthetic": 36,
-        "fixture-pages": 35,
-        "cache-replay": 60
+        "synthetic": 8,
+        "fixture-pages": 8,
+        "cache-replay": 12
       },
-      "coldStartLatencyMs": 14.199999809265137,
-      "hotPerSentenceLatencyMs": 0.3385714292526245,
+      "coldStartLatencyMs": 13.300000190734863,
+      "hotPerSentenceLatencyMs": 0.4468750059604645,
       "smallBatch": {
-        "sentenceCount": 10,
-        "totalLatencyMs": 2.3000001907348633,
-        "perSentenceLatencyMs": 0.23000001907348633
+        "sentenceCount": 4,
+        "totalLatencyMs": 1.1999998092651367,
+        "perSentenceLatencyMs": 0.2999999523162842
       },
       "mediumBatch": {
-        "sentenceCount": 48,
-        "totalLatencyMs": 11.800000190734863,
-        "perSentenceLatencyMs": 0.24583333730697632
+        "sentenceCount": 16,
+        "totalLatencyMs": 4.800000190734863,
+        "perSentenceLatencyMs": 0.30000001192092896
       },
       "payload": {
-        "averageBytesPerSentence": 1006.25,
+        "averageBytesPerSentence": 1060.9375,
         "maxBytesPerSentence": 2100,
-        "sampleSentenceCount": 48
+        "sampleSentenceCount": 16
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 23100000,
-        "afterUsedHeapBytes": 23100000,
+        "beforeUsedHeapBytes": 19300000,
+        "afterUsedHeapBytes": 19300000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
-        "comparedSentenceCount": 24,
+        "comparedSentenceCount": 12,
         "stableRate": 1
       },
       "cacheReplay": {
-        "replaySentenceCount": 60,
-        "uniqueSentenceCount": 12,
-        "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 20.699999809265137,
-        "withCacheLatencyMs": 4.800000190734863,
-        "savedLatencyMs": 15.899999618530273
+        "replaySentenceCount": 12,
+        "uniqueSentenceCount": 6,
+        "simulatedHitRate": 0.5,
+        "noCacheLatencyMs": 3.5,
+        "withCacheLatencyMs": 2,
+        "savedLatencyMs": 1.5
       },
       "assertions": [
         {
@@ -702,43 +709,43 @@
     {
       "analyzerId": "compromise-three",
       "datasetSizes": {
-        "synthetic": 36,
-        "fixture-pages": 35,
-        "cache-replay": 60
+        "synthetic": 8,
+        "fixture-pages": 8,
+        "cache-replay": 12
       },
       "coldStartLatencyMs": 1.5999999046325684,
-      "hotPerSentenceLatencyMs": 0.5028571435383388,
+      "hotPerSentenceLatencyMs": 0.5562500059604645,
       "smallBatch": {
-        "sentenceCount": 10,
-        "totalLatencyMs": 4,
-        "perSentenceLatencyMs": 0.4
+        "sentenceCount": 4,
+        "totalLatencyMs": 1.5999999046325684,
+        "perSentenceLatencyMs": 0.3999999761581421
       },
       "mediumBatch": {
-        "sentenceCount": 48,
-        "totalLatencyMs": 21.5,
-        "perSentenceLatencyMs": 0.4479166666666667
+        "sentenceCount": 16,
+        "totalLatencyMs": 8.199999809265137,
+        "perSentenceLatencyMs": 0.512499988079071
       },
       "payload": {
-        "averageBytesPerSentence": 1075.4583333333333,
+        "averageBytesPerSentence": 1130.9375,
         "maxBytesPerSentence": 2238,
-        "sampleSentenceCount": 48
+        "sampleSentenceCount": 16
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 23100000,
-        "afterUsedHeapBytes": 23100000,
+        "beforeUsedHeapBytes": 19300000,
+        "afterUsedHeapBytes": 19300000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
-        "comparedSentenceCount": 24,
+        "comparedSentenceCount": 12,
         "stableRate": 1
       },
       "cacheReplay": {
-        "replaySentenceCount": 60,
-        "uniqueSentenceCount": 12,
-        "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 36.69999980926514,
-        "withCacheLatencyMs": 8.5,
-        "savedLatencyMs": 28.199999809265137
+        "replaySentenceCount": 12,
+        "uniqueSentenceCount": 6,
+        "simulatedHitRate": 0.5,
+        "noCacheLatencyMs": 7.5,
+        "withCacheLatencyMs": 3.4000000953674316,
+        "savedLatencyMs": 4.099999904632568
       },
       "assertions": [
         {
@@ -1422,43 +1429,43 @@
     {
       "analyzerId": "wink-nlp",
       "datasetSizes": {
-        "synthetic": 36,
-        "fixture-pages": 35,
-        "cache-replay": 60
+        "synthetic": 8,
+        "fixture-pages": 8,
+        "cache-replay": 12
       },
-      "coldStartLatencyMs": 0.8999996185302734,
-      "hotPerSentenceLatencyMs": 0.06571428775787354,
+      "coldStartLatencyMs": 1.299999713897705,
+      "hotPerSentenceLatencyMs": 0.11875000596046448,
       "smallBatch": {
-        "sentenceCount": 10,
+        "sentenceCount": 4,
         "totalLatencyMs": 0.09999990463256836,
-        "perSentenceLatencyMs": 0.009999990463256836
+        "perSentenceLatencyMs": 0.02499997615814209
       },
       "mediumBatch": {
-        "sentenceCount": 48,
-        "totalLatencyMs": 1,
-        "perSentenceLatencyMs": 0.020833333333333332
+        "sentenceCount": 16,
+        "totalLatencyMs": 0.40000009536743164,
+        "perSentenceLatencyMs": 0.025000005960464478
       },
       "payload": {
-        "averageBytesPerSentence": 918.2708333333334,
+        "averageBytesPerSentence": 963.5,
         "maxBytesPerSentence": 1911,
-        "sampleSentenceCount": 48
+        "sampleSentenceCount": 16
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 23100000,
-        "afterUsedHeapBytes": 23100000,
+        "beforeUsedHeapBytes": 19300000,
+        "afterUsedHeapBytes": 19300000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
-        "comparedSentenceCount": 24,
+        "comparedSentenceCount": 12,
         "stableRate": 1
       },
       "cacheReplay": {
-        "replaySentenceCount": 60,
-        "uniqueSentenceCount": 12,
-        "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 1.4000000953674316,
-        "withCacheLatencyMs": 0.5,
-        "savedLatencyMs": 0.9000000953674316
+        "replaySentenceCount": 12,
+        "uniqueSentenceCount": 6,
+        "simulatedHitRate": 0.5,
+        "noCacheLatencyMs": 0.3000001907348633,
+        "withCacheLatencyMs": 0.19999980926513672,
+        "savedLatencyMs": 0.10000038146972656
       },
       "assertions": [
         {

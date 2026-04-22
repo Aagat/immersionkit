@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-04-22T20:51:01.644Z",
+  "browserContext": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36",
+    "language": "en-US",
+    "platform": "MacIntel"
+  },
+  "corpusVersion": "2026-04-21",
+  "overall": {
+    "truePositives": 18,
+    "falsePositives": 1,
+    "falseNegatives": 1,
+    "precision": 0.9474,
+    "recall": 0.9474
+  },
+  "categoryMetrics": [
+    {
+      "category": "fixed-idiom",
+      "truePositives": 3,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "category": "function-phrase",
+      "truePositives": 6,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "category": "grammar-carrier",
+      "truePositives": 4,
+      "falsePositives": 0,
+      "falseNegatives": 1,
+      "precision": 1,
+      "recall": 0.8
+    },
+    {
+      "category": "adjective-noun",
+      "truePositives": 2,
+      "falsePositives": 1,
+      "falseNegatives": 0,
+      "precision": 0.6667,
+      "recall": 1
+    },
+    {
+      "category": "noun-chunk",
+      "truePositives": 3,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1
+    }
+  ],
+  "assertions": [
+    {
+      "name": "Selected spans are non-overlapping",
+      "passed": true,
+      "details": "No overlap collisions after resolution."
+    },
+    {
+      "name": "Long fixed phrase outranks overlapping adjective+noun span",
+      "passed": true,
+      "details": "Selected phrase is only \"on the other hand\"."
+    },
+    {
+      "name": "Coherent noun chunk outranks nested adjective+noun",
+      "passed": true,
+      "details": "Nested adjective+noun span suppressed as expected."
+    },
+    {
+      "name": "Canonical key is deterministic for repeated phrases",
+      "passed": true,
+      "details": "All repeated \"at least\" matches map to phrase:fixed-phrase:at-least."
+    }
+  ],
+  "representativeFalsePositives": [
+    {
+      "type": "false-positive",
+      "category": "adjective-noun",
+      "caseId": "adjective-noun-noise-fp",
+      "sourceText": "He clicked the blue button quickly.",
+      "candidate": {
+        "sourceKind": "pattern-match",
+        "category": "adjective-noun",
+        "lane": "grammar-chunk",
+        "ruleId": "pattern-adjective-noun-shell-v1",
+        "sourceText": "blue button",
+        "normalizedSourceText": "blue button",
+        "canonicalPhraseKey": "phrase:pattern-match:blue-button",
+        "confidence": 0.66,
+        "ruleStrength": 0.66,
+        "span": {
+          "startToken": 3,
+          "endToken": 5,
+          "startChar": 15,
+          "endChar": 26,
+          "tokenLength": 2
+        }
+      }
+    }
+  ],
+  "representativeFalseNegatives": [
+    {
+      "type": "false-negative",
+      "category": "grammar-carrier",
+      "caseId": "grammar-have-been-adjective-fn",
+      "sourceText": "She has been very patient lately.",
+      "expected": {
+        "id": "grammar-has-been-main-adj",
+        "category": "grammar-carrier",
+        "sourceKind": "pattern-match",
+        "startToken": 1,
+        "endToken": 3,
+        "normalizedSourceText": "has been"
+      }
+    }
+  ]
+}

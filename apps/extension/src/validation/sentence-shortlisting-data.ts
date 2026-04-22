@@ -233,6 +233,128 @@ export const SENTENCE_SHORTLISTING_SCENARIOS: SentenceShortlistingScenario[] = [
   }
 ];
 
+export type SentenceShortlistingInputProfile =
+  | "tiny"
+  | "small"
+  | "baseline"
+  | "large"
+  | "xlarge"
+  | "xxlarge";
+
+const SHORTLISTING_STRESS_SIZE: Record<
+  Exclude<SentenceShortlistingInputProfile, "baseline" | "tiny" | "small">,
+  number
+> = {
+  large: 280,
+  xlarge: 1200,
+  xxlarge: 4200
+};
+
+const TINY_SCENARIO_IDS = new Set([
+  "fixture-article-basic",
+  "repeated-content-blocks",
+  "dynamic-rerender-same-hash"
+]);
+
+const SMALL_SCENARIO_IDS = new Set([
+  "fixture-article-basic",
+  "fixture-article-dynamic",
+  "repeated-content-blocks",
+  "longform-overflow-nodes",
+  "dynamic-rerender-same-hash"
+]);
+
+export function resolveSentenceShortlistingInputProfile(
+  value: string | null | undefined
+): SentenceShortlistingInputProfile {
+  const normalized = value?.trim().toLowerCase();
+
+  if (
+    normalized === "tiny" ||
+    normalized === "small" ||
+    normalized === "baseline" ||
+    normalized === "large" ||
+    normalized === "xlarge" ||
+    normalized === "xxlarge"
+  ) {
+    return normalized;
+  }
+
+  return "baseline";
+}
+
+export function getSentenceShortlistingScenarios(
+  profile: SentenceShortlistingInputProfile
+): SentenceShortlistingScenario[] {
+  if (profile === "baseline") {
+    return SENTENCE_SHORTLISTING_SCENARIOS;
+  }
+
+  if (profile === "tiny") {
+    return SENTENCE_SHORTLISTING_SCENARIOS.filter((scenario) =>
+      TINY_SCENARIO_IDS.has(scenario.id)
+    );
+  }
+
+  if (profile === "small") {
+    return SENTENCE_SHORTLISTING_SCENARIOS.filter((scenario) =>
+      SMALL_SCENARIO_IDS.has(scenario.id)
+    );
+  }
+
+  const stressSentenceCount = SHORTLISTING_STRESS_SIZE[profile];
+  const stressScenario = createGeneratedStressScenario(profile, stressSentenceCount);
+
+  return [...SENTENCE_SHORTLISTING_SCENARIOS, stressScenario];
+}
+
+function createGeneratedStressScenario(
+  profile: "large" | "xlarge" | "xxlarge",
+  sentenceCount: number
+): SentenceShortlistingScenario {
+  const stressSentences = buildStressSentences(sentenceCount);
+  const stressHtml = `<main>${stressSentences
+    .map((sentence) => `<p>${sentence}</p>`)
+    .join("")}</main>`;
+
+  return {
+    id: `generated-stress-${profile}`,
+    label: `Generated stress scenario (${profile})`,
+    source: `generated://sentence-shortlisting/${profile}`,
+    urlPath: `/generated/sentence-shortlisting/${profile}.html`,
+    passes: [
+      {
+        id: "generated-pass-1",
+        label: "Generated stress corpus",
+        html: stressHtml,
+        usefulSentences: stressSentences.slice(0, Math.min(5, stressSentences.length))
+      }
+    ]
+  };
+}
+
+function buildStressSentences(count: number): string[] {
+  const baseSentences = [
+    "As soon as we arrive at the station, we take care of tools before lunch.",
+    "The quiet library opens early and the friendly guide shares simple lessons each morning.",
+    "At least one volunteer reviews each route update before the weekly workshop begins.",
+    "Neighbors shared helpful updates about the clean park and the local market downtown.",
+    "The city team publishes short updates so new volunteers can plan a simple route.",
+    "Officials added clearer signs and reduced long transfer waits for visitors."
+  ];
+
+  const output: string[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const sentence = baseSentences[index % baseSentences.length];
+    const iteration = Math.floor(index / baseSentences.length) + 1;
+    output.push(
+      `${sentence.replace(/[.!?]+$/g, "")} (generated stress sample ${iteration}).`
+    );
+  }
+
+  return output;
+}
+
 function createEntry(
   lemmaId: string,
   sourceLemma: string,

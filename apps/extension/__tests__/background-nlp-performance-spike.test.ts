@@ -5,10 +5,13 @@ import { runNlpPerformanceSpikeBenchmark } from "../src/background/analysis-spik
 describe("background NLP performance benchmark runner", () => {
   it("produces benchmark metrics with passing integrity assertions", async () => {
     const result = await runNlpPerformanceSpikeBenchmark({
-      includeWinkNlp: false
+      includeWinkNlp: false,
+      inputProfile: "tiny"
     });
 
     expect(result.schemaVersion).toBe("v1");
+    expect(result.runOptions.inputProfile).toBe("tiny");
+    expect(result.workload.hotSentenceSampleCount).toBeGreaterThan(0);
     expect(result.assertions.every((assertion) => assertion.pass)).toBe(true);
 
     const compromiseThreeResult = result.analyzerResults.find(

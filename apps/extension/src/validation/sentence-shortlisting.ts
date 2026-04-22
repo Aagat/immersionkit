@@ -7,12 +7,13 @@ import type {
 } from "../content/validation/shortlisting";
 
 import {
+  getSentenceShortlistingScenarios,
+  resolveSentenceShortlistingInputProfile,
   SENTENCE_SHORTLISTING_DISCOVERY_RATE,
   SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
   SENTENCE_SHORTLISTING_LEXICON,
   SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE,
   SENTENCE_SHORTLISTING_PHRASE_HINTS,
-  SENTENCE_SHORTLISTING_SCENARIOS,
   SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID
 } from "./sentence-shortlisting-data";
 
@@ -30,6 +31,11 @@ const scenarioContainer = requireElement<HTMLElement>("#shortlisting-scenarios")
 const assertionList = requireElement<HTMLElement>("#shortlisting-assertions");
 const jsonOutput = requireElement<HTMLElement>("#shortlisting-json-output");
 const contextOutput = requireElement<HTMLElement>("#shortlisting-context");
+const params = new URLSearchParams(window.location.search);
+const shortlistingInputProfile = resolveSentenceShortlistingInputProfile(
+  params.get("inputProfile") ?? params.get("sizeProfile")
+);
+const shortlistingScenarios = getSentenceShortlistingScenarios(shortlistingInputProfile);
 
 runButton.addEventListener("click", () => {
   executeBenchmark();
@@ -44,7 +50,7 @@ function executeBenchmark() {
   try {
     const result = runSentenceShortlistingBenchmark({
       document,
-      scenarios: SENTENCE_SHORTLISTING_SCENARIOS,
+      scenarios: shortlistingScenarios,
       lexicon: SENTENCE_SHORTLISTING_LEXICON,
       vocabByLemmaId: SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID,
       discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
@@ -67,8 +73,9 @@ function executeBenchmark() {
 
 function renderContext() {
   const contextLines = [
+    `Input Profile: ${shortlistingInputProfile}`,
     `User Agent: ${window.navigator.userAgent}`,
-    `Scenarios: ${SENTENCE_SHORTLISTING_SCENARIOS.length}`,
+    `Scenarios: ${shortlistingScenarios.length}`,
     `Discovery Rate: ${SENTENCE_SHORTLISTING_DISCOVERY_RATE}`,
     `Goldilocks Threshold: ${SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD}`,
     `Phrase Hints: ${SENTENCE_SHORTLISTING_PHRASE_HINTS.join(", ")}`

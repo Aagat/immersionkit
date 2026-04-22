@@ -1,8 +1,10 @@
 import {
+  parseNlpBenchmarkInputProfile,
   createPortableSnapshots,
   runNlpPerformanceSpikeBenchmark,
   type AnalyzerBenchmarkMetrics,
   type AnalyzerBenchmarkResult,
+  type NlpBenchmarkInputProfile,
   type NlpPerformanceBenchmarkRun
 } from "../background/analysis-spike";
 
@@ -27,6 +29,7 @@ type RenderContext = {
   raw: HTMLPreElement;
   runButton: HTMLButtonElement;
   includeWinkCheckbox: HTMLInputElement;
+  nlpInputProfile: NlpBenchmarkInputProfile;
 };
 
 declare global {
@@ -57,6 +60,9 @@ async function initializeTask(taskId: ValidationTaskId, searchParams: URLSearchP
     case "nlp-performance": {
       document.title = "ImmersionKit Validation - Task 01 NLP Performance";
       const context = createNlpLayout(root);
+      context.nlpInputProfile = parseNlpBenchmarkInputProfile(
+        searchParams.get("inputProfile") ?? searchParams.get("sizeProfile")
+      );
       bindNlpActions(context);
 
       if (searchParams.get("includeWink") === "0") {
@@ -237,7 +243,8 @@ function createNlpLayout(container: HTMLDivElement): RenderContext {
     results,
     raw,
     runButton,
-    includeWinkCheckbox
+    includeWinkCheckbox,
+    nlpInputProfile: "baseline"
   };
 }
 
@@ -249,12 +256,16 @@ function bindNlpActions(context: RenderContext) {
 
 async function runNlpBenchmark(context: RenderContext) {
   context.runButton.disabled = true;
-  context.status.textContent = "Running benchmark inside browser runtime...";
+  context.status.textContent =
+    `Running benchmark inside browser runtime (input profile: ${context.nlpInputProfile})...`;
   context.results.innerHTML = "";
 
   try {
     const includeWinkNlp = context.includeWinkCheckbox.checked;
-    const result = await runNlpPerformanceSpikeBenchmark({ includeWinkNlp });
+    const result = await runNlpPerformanceSpikeBenchmark({
+      includeWinkNlp,
+      inputProfile: context.nlpInputProfile
+    });
 
     window.__IK_NLP_PERFORMANCE_RESULT__ = result;
     document.body.setAttribute("data-validation-status", "pass");
@@ -310,7 +321,7 @@ function renderNlpStatus(result: NlpPerformanceBenchmarkRun): string {
     (entry) => !("skipped" in entry)
   ).length;
 
-  return `Completed ${analyzerCount} analyzer run(s); ${successfulAnalyzers} finished. Global assertions: ${passingAssertions}/${totalAssertions} passing.`;
+  return `Completed ${analyzerCount} analyzer run(s); ${successfulAnalyzers} finished. Global assertions: ${passingAssertions}/${totalAssertions} passing. Input profile: ${result.runOptions.inputProfile}.`;
 }
 
 function renderNlpResultPanels(result: NlpPerformanceBenchmarkRun): string {
@@ -365,8 +376,8 @@ function renderNlpAnalyzerMetrics(entry: AnalyzerBenchmarkMetrics): string {
         <tbody>
           <tr><th>Cold Start (ms)</th><td>${formatMs(entry.coldStartLatencyMs)}</td></tr>
           <tr><th>Hot Per Sentence (ms)</th><td>${formatMs(entry.hotPerSentenceLatencyMs)}</td></tr>
-          <tr><th>Small Batch (10) (ms)</th><td>${formatMs(entry.smallBatch.totalLatencyMs)}</td></tr>
-          <tr><th>Medium Batch (48) (ms)</th><td>${formatMs(entry.mediumBatch.totalLatencyMs)}</td></tr>
+          <tr><th>Small Batch (${entry.smallBatch.sentenceCount}) (ms)</th><td>${formatMs(entry.smallBatch.totalLatencyMs)}</td></tr>
+          <tr><th>Medium Batch (${entry.mediumBatch.sentenceCount}) (ms)</th><td>${formatMs(entry.mediumBatch.totalLatencyMs)}</td></tr>
           <tr><th>Payload Avg (bytes/sentence)</th><td>${entry.payload.averageBytesPerSentence.toFixed(1)}</td></tr>
           <tr><th>Cache Replay Hit Rate</th><td>${(entry.cacheReplay.simulatedHitRate * 100).toFixed(1)}%</td></tr>
           <tr><th>Determinism Stability</th><td>${(entry.determinism.stableRate * 100).toFixed(1)}%</td></tr>

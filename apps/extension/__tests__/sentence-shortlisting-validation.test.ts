@@ -4,6 +4,8 @@ import {
   runSentenceShortlistingBenchmark
 } from "../src/content/validation/shortlisting";
 import {
+  getSentenceShortlistingScenarios,
+  resolveSentenceShortlistingInputProfile,
   SENTENCE_SHORTLISTING_DISCOVERY_RATE,
   SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
   SENTENCE_SHORTLISTING_LEXICON,
@@ -16,11 +18,36 @@ import { withFixtureDom } from "./helpers/fixture-dom";
 import browserBenchmarkOutput from "../../../fixtures/evals/sentence-shortlisting/browser-benchmark-output.json";
 
 describe("sentence shortlisting benchmark harness", () => {
+  const benchmarkInputProfile = resolveSentenceShortlistingInputProfile(
+    process.env.IK_BENCHMARK_INPUT_PROFILE ?? "baseline"
+  );
+  const benchmarkScenarios =
+    benchmarkInputProfile === "baseline"
+      ? SENTENCE_SHORTLISTING_SCENARIOS
+      : getSentenceShortlistingScenarios(benchmarkInputProfile);
+
+  it("builds profile-specific scenario sets from tiny to xxlarge", () => {
+    const tiny = getSentenceShortlistingScenarios("tiny");
+    const baseline = getSentenceShortlistingScenarios("baseline");
+    const xxlarge = getSentenceShortlistingScenarios("xxlarge");
+
+    expect(resolveSentenceShortlistingInputProfile("SMALL")).toBe("small");
+    expect(resolveSentenceShortlistingInputProfile("not-a-profile")).toBe("baseline");
+    expect(tiny.length).toBeLessThan(baseline.length);
+    expect(xxlarge.length).toBeGreaterThan(baseline.length);
+    expect(
+      tiny.some((scenario) => scenario.id === "dynamic-rerender-same-hash")
+    ).toBe(true);
+    expect(
+      xxlarge.some((scenario) => scenario.id === "generated-stress-xxlarge")
+    ).toBe(true);
+  });
+
   it("reports deterministic shortlist economics across validation scenarios", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const result = runSentenceShortlistingBenchmark({
         document,
-        scenarios: SENTENCE_SHORTLISTING_SCENARIOS,
+        scenarios: benchmarkScenarios,
         lexicon: SENTENCE_SHORTLISTING_LEXICON,
         vocabByLemmaId: SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID,
         discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
@@ -35,7 +62,7 @@ describe("sentence shortlisting benchmark harness", () => {
       const injectedLengthDedupe = policyById.get("injected-token-length-dedupe");
       const phraseAware = policyById.get("phrase-aware-shortlist");
 
-      expect(result.scenarios.length).toBe(SENTENCE_SHORTLISTING_SCENARIOS.length);
+      expect(result.scenarios.length).toBe(benchmarkScenarios.length);
       expect(baseline?.estimatedAnalysisCalls).toBeGreaterThan(0);
       expect(current?.estimatedAnalysisCalls).toBeLessThanOrEqual(
         baseline?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER
@@ -56,9 +83,12 @@ describe("sentence shortlisting benchmark harness", () => {
 
       expect(rerenderCurrent?.cacheHits).toBeGreaterThan(0);
       expect(result.assertions.every((assertion) => assertion.passed)).toBe(true);
-      expect(result.policies).toEqual(browserBenchmarkOutput.policies);
-      expect(result.scenarios).toEqual(browserBenchmarkOutput.scenarios);
-      expect(result.assertions).toEqual(browserBenchmarkOutput.assertions);
+
+      if (benchmarkInputProfile === "baseline") {
+        expect(result.policies).toEqual(browserBenchmarkOutput.policies);
+        expect(result.scenarios).toEqual(browserBenchmarkOutput.scenarios);
+        expect(result.assertions).toEqual(browserBenchmarkOutput.assertions);
+      }
     });
   });
 });

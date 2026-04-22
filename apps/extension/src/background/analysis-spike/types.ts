@@ -2,6 +2,14 @@ export type BenchmarkDatasetId = "synthetic" | "fixture-pages" | "cache-replay";
 
 export type AnalyzerId = "compromise-two" | "compromise-three" | "wink-nlp";
 
+export type NlpBenchmarkInputProfile =
+  | "tiny"
+  | "small"
+  | "baseline"
+  | "large"
+  | "xlarge"
+  | "xxlarge";
+
 export type AnalyzerTokenSnapshot = {
   text: string;
   normalized: string;
@@ -29,6 +37,7 @@ export type AnalyzerEngineFactory = {
 };
 
 export type BenchmarkFixtureCatalog = {
+  profile: NlpBenchmarkInputProfile;
   syntheticSentences: string[];
   pageSentences: {
     sourceFile: string;
@@ -109,8 +118,15 @@ export type NlpPerformanceBenchmarkRun = {
   };
   runOptions: {
     includeWinkNlp: boolean;
+    inputProfile: NlpBenchmarkInputProfile;
+  };
+  workload: {
+    hotSentenceSampleCount: number;
+    smallBatchSize: number;
+    mediumBatchSize: number;
   };
   fixtures: {
+    profile: NlpBenchmarkInputProfile;
     syntheticSentenceCount: number;
     pageSentenceCount: number;
     cacheReplaySentenceCount: number;

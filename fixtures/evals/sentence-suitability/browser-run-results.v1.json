@@ -1,0 +1,1167 @@
+{
+  "capturedAt": "2026-04-22T20:51:17.953Z",
+  "validationUrl": "http://127.0.0.1:5173/validation.html?task=sentence-suitability&autorun=1",
+  "checks": {
+    "evaluations": [
+      {
+        "profileId": "beginner_a2",
+        "metricLabel": "Pairwise accuracy lift",
+        "minimum": 0.08,
+        "actual": 0.44354838709677424,
+        "pass": true,
+        "message": "Beginner (A2-ish) Pairwise accuracy lift: 44.4% (min 8.0%)"
+      },
+      {
+        "profileId": "beginner_a2",
+        "metricLabel": "NDCG@5 lift",
+        "minimum": 0.05,
+        "actual": 0.19856569534033508,
+        "pass": true,
+        "message": "Beginner (A2-ish) NDCG@5 lift: 19.9% (min 5.0%)"
+      },
+      {
+        "profileId": "intermediate_b1",
+        "metricLabel": "Pairwise accuracy lift",
+        "minimum": 0.06,
+        "actual": 0.253968253968254,
+        "pass": true,
+        "message": "Intermediate (B1-ish) Pairwise accuracy lift: 25.4% (min 6.0%)"
+      },
+      {
+        "profileId": "intermediate_b1",
+        "metricLabel": "NDCG@5 lift",
+        "minimum": 0.04,
+        "actual": 0.24098422119882032,
+        "pass": true,
+        "message": "Intermediate (B1-ish) NDCG@5 lift: 24.1% (min 4.0%)"
+      }
+    ],
+    "failures": [],
+    "pass": true
+  },
+  "results": [
+    {
+      "profileId": "beginner_a2",
+      "profileDisplayName": "Beginner (A2-ish)",
+      "baselineMetrics": {
+        "ndcgAt5": 0.7801891443889293,
+        "ndcgAt10": 0.7354131077584377,
+        "pairwiseAccuracy": 0.5241935483870968,
+        "spearmanRho": 0.08353495392203326,
+        "precisionAt5": 0.6
+      },
+      "prototypeMetrics": {
+        "ndcgAt5": 0.9787548397292644,
+        "ndcgAt10": 0.9801875615475569,
+        "pairwiseAccuracy": 0.967741935483871,
+        "spearmanRho": 0.940357423386484,
+        "precisionAt5": 1
+      },
+      "deltas": {
+        "ndcgAt5": 0.19856569534033508,
+        "ndcgAt10": 0.24477445378911922,
+        "pairwiseAccuracy": 0.44354838709677424,
+        "spearmanRho": 0.8568224694644507,
+        "precisionAt5": 0.4
+      },
+      "rows": [
+        {
+          "id": "s01_daily_habit",
+          "sentence": "I drink water every morning.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 5,
+          "rationale": "Very comprehensible and low-risk for beginners.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.7394000000000001,
+            "normalizedScore": 0.8130508474576272,
+            "stretchAlignment": 0.8300000000000001,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.285,
+              "grammarFit": 0.1504,
+              "structuralSimplicity": 0.192,
+              "dueTargetValue": 0.03,
+              "chunkUsefulness": 0.020000000000000004,
+              "stretchAlignment": 0.0664,
+              "ambiguityPenalty": 0.0044
+            }
+          }
+        },
+        {
+          "id": "s02_red_book",
+          "sentence": "She has a red book on the table.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 5,
+          "rationale": "Simple noun phrase structure and transparent meaning.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.7382000000000001,
+            "normalizedScore": 0.8120338983050849,
+            "stretchAlignment": 0.87,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.279,
+              "grammarFit": 0.1472,
+              "structuralSimplicity": 0.188,
+              "dueTargetValue": 0.036,
+              "chunkUsefulness": 0.025,
+              "stretchAlignment": 0.0696,
+              "ambiguityPenalty": 0.0066
+            }
+          }
+        },
+        {
+          "id": "s03_going_to_market",
+          "sentence": "We are going to the market now.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 5,
+          "rationale": "High-value phrase with manageable structure.",
+          "baselineKnownRatio": 0.8571428571428571,
+          "prototypeScore": {
+            "score": 0.773,
+            "normalizedScore": 0.8415254237288136,
+            "stretchAlignment": 0.97,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.258,
+              "grammarFit": 0.1344,
+              "structuralSimplicity": 0.17600000000000002,
+              "dueTargetValue": 0.066,
+              "chunkUsefulness": 0.072,
+              "stretchAlignment": 0.0776,
+              "ambiguityPenalty": 0.011000000000000001
+            }
+          }
+        },
+        {
+          "id": "s04_at_least_try",
+          "sentence": "At least we can try again.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "rationale": "Useful chunk, but short context limits robustness.",
+          "baselineKnownRatio": 0.8333333333333334,
+          "prototypeScore": {
+            "score": 0.7412000000000001,
+            "normalizedScore": 0.8145762711864407,
+            "stretchAlignment": 0.99,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.24599999999999997,
+              "grammarFit": 0.128,
+              "structuralSimplicity": 0.17,
+              "dueTargetValue": 0.0576,
+              "chunkUsefulness": 0.07800000000000001,
+              "stretchAlignment": 0.0792,
+              "ambiguityPenalty": 0.0176
+            }
+          }
+        },
+        {
+          "id": "s05_take_care_of",
+          "sentence": "Take care of your little brother.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 5,
+          "rationale": "Highly reusable phrase despite moderate lexical stretch.",
+          "baselineKnownRatio": 0.7142857142857143,
+          "prototypeScore": {
+            "score": 0.7498,
+            "normalizedScore": 0.8218644067796611,
+            "stretchAlignment": 0.97,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.23399999999999999,
+              "grammarFit": 0.13119999999999998,
+              "structuralSimplicity": 0.16000000000000003,
+              "dueTargetValue": 0.0744,
+              "chunkUsefulness": 0.08800000000000001,
+              "stretchAlignment": 0.0776,
+              "ambiguityPenalty": 0.015400000000000002
+            }
+          }
+        },
+        {
+          "id": "s06_used_to_station",
+          "sentence": "I used to live near the station.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "rationale": "Great grammar carrier but requires some support for A2.",
+          "baselineKnownRatio": 0.5714285714285714,
+          "prototypeScore": {
+            "score": 0.7068,
+            "normalizedScore": 0.7854237288135594,
+            "stretchAlignment": 0.89,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.222,
+              "grammarFit": 0.12,
+              "structuralSimplicity": 0.15200000000000002,
+              "dueTargetValue": 0.0816,
+              "chunkUsefulness": 0.082,
+              "stretchAlignment": 0.0712,
+              "ambiguityPenalty": 0.022000000000000002
+            }
+          }
+        },
+        {
+          "id": "s07_passive_team",
+          "sentence": "The plan was carried out by a small team.",
+          "category": "borderline",
+          "goldLabel": 2,
+          "rationale": "Passive construction is usually too heavy at this stage.",
+          "baselineKnownRatio": 0.7,
+          "prototypeScore": {
+            "score": 0.5297999999999999,
+            "normalizedScore": 0.6354237288135592,
+            "stretchAlignment": 0.63,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.21,
+              "grammarFit": 0.07200000000000001,
+              "structuralSimplicity": 0.10400000000000001,
+              "dueTargetValue": 0.0792,
+              "chunkUsefulness": 0.045000000000000005,
+              "stretchAlignment": 0.0504,
+              "ambiguityPenalty": 0.030800000000000004
+            }
+          }
+        },
+        {
+          "id": "s08_if_you_call",
+          "sentence": "If you call early, we can meet before lunch.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "rationale": "Slightly stretched, but still practical and interpretable.",
+          "baselineKnownRatio": 0.8,
+          "prototypeScore": {
+            "score": 0.6588,
+            "normalizedScore": 0.7447457627118644,
+            "stretchAlignment": 0.85,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.22799999999999998,
+              "grammarFit": 0.11199999999999999,
+              "structuralSimplicity": 0.144,
+              "dueTargetValue": 0.0768,
+              "chunkUsefulness": 0.052000000000000005,
+              "stretchAlignment": 0.068,
+              "ambiguityPenalty": 0.022000000000000002
+            }
+          }
+        },
+        {
+          "id": "s09_nested_city_team",
+          "sentence": "The city the team from the north of the valley supports won.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "rationale": "Lexically easy, but structural nesting makes it poor learning material.",
+          "baselineKnownRatio": 0.8666666666666667,
+          "prototypeScore": {
+            "score": 0.3546,
+            "normalizedScore": 0.4869491525423729,
+            "stretchAlignment": 0.47,
+            "difficultyBand": "defer",
+            "contributions": {
+              "vocabularyFit": 0.252,
+              "grammarFit": 0.048,
+              "structuralSimplicity": 0.03,
+              "dueTargetValue": 0.024,
+              "chunkUsefulness": 0.018,
+              "stretchAlignment": 0.0376,
+              "ambiguityPenalty": 0.055
+            }
+          }
+        },
+        {
+          "id": "s10_person_called_yesterday",
+          "sentence": "The thing that the person who called yesterday wanted is here.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "rationale": "High known-ratio but severe chunking burden.",
+          "baselineKnownRatio": 0.8571428571428571,
+          "prototypeScore": {
+            "score": 0.29480000000000006,
+            "normalizedScore": 0.436271186440678,
+            "stretchAlignment": 0.39,
+            "difficultyBand": "defer",
+            "contributions": {
+              "vocabularyFit": 0.24,
+              "grammarFit": 0.0352,
+              "structuralSimplicity": 0.020000000000000004,
+              "dueTargetValue": 0.018,
+              "chunkUsefulness": 0.012,
+              "stretchAlignment": 0.031200000000000002,
+              "ambiguityPenalty": 0.06160000000000001
+            }
+          }
+        },
+        {
+          "id": "s11_report_revised_twice",
+          "sentence": "The report, which had been revised twice, was finally approved.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 1,
+          "rationale": "Contains useful targets but too dense for beginner sentence learning.",
+          "baselineKnownRatio": 0.8333333333333334,
+          "prototypeScore": {
+            "score": 0.5152,
+            "normalizedScore": 0.6230508474576271,
+            "stretchAlignment": 0.43000000000000005,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.216,
+              "grammarFit": 0.0672,
+              "structuralSimplicity": 0.068,
+              "dueTargetValue": 0.102,
+              "chunkUsefulness": 0.054000000000000006,
+              "stretchAlignment": 0.03440000000000001,
+              "ambiguityPenalty": 0.0264
+            }
+          }
+        },
+        {
+          "id": "s12_by_the_time_arrived",
+          "sentence": "By the time we arrived, they had already been eating.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 1,
+          "rationale": "Too much tense layering for A2 despite useful target grammar.",
+          "baselineKnownRatio": 0.8181818181818182,
+          "prototypeScore": {
+            "score": 0.5004,
+            "normalizedScore": 0.6105084745762711,
+            "stretchAlignment": 0.37,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.21,
+              "grammarFit": 0.0608,
+              "structuralSimplicity": 0.05600000000000001,
+              "dueTargetValue": 0.108,
+              "chunkUsefulness": 0.057999999999999996,
+              "stretchAlignment": 0.0296,
+              "ambiguityPenalty": 0.022000000000000002
+            }
+          }
+        },
+        {
+          "id": "s13_if_i_had_known",
+          "sentence": "If I had known, I would have left earlier.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 1,
+          "rationale": "Important pattern but too advanced as a sentence target for beginners.",
+          "baselineKnownRatio": 0.8,
+          "prototypeScore": {
+            "score": 0.5008,
+            "normalizedScore": 0.6108474576271187,
+            "stretchAlignment": 0.35,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.20400000000000001,
+              "grammarFit": 0.055999999999999994,
+              "structuralSimplicity": 0.06,
+              "dueTargetValue": 0.1104,
+              "chunkUsefulness": 0.06,
+              "stretchAlignment": 0.027999999999999997,
+              "ambiguityPenalty": 0.0176
+            }
+          }
+        },
+        {
+          "id": "s14_give_me_a_hand",
+          "sentence": "He gave me a hand at work.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 3,
+          "rationale": "Useful phrase, but idiomatic ambiguity requires careful handling.",
+          "baselineKnownRatio": 0.875,
+          "prototypeScore": {
+            "score": 0.6998,
+            "normalizedScore": 0.7794915254237288,
+            "stretchAlignment": 0.9099999999999999,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.237,
+              "grammarFit": 0.1184,
+              "structuralSimplicity": 0.15400000000000003,
+              "dueTargetValue": 0.08399999999999999,
+              "chunkUsefulness": 0.082,
+              "stretchAlignment": 0.07279999999999999,
+              "ambiguityPenalty": 0.0484
+            }
+          }
+        },
+        {
+          "id": "s15_light_right_bank",
+          "sentence": "The light right by the bank can change quickly.",
+          "category": "ambiguity_or_chunking_penalty",
+          "goldLabel": 1,
+          "rationale": "Ambiguous chunks and senses should be deprioritized for A2.",
+          "baselineKnownRatio": 0.8,
+          "prototypeScore": {
+            "score": 0.3214,
+            "normalizedScore": 0.45881355932203394,
+            "stretchAlignment": 0.67,
+            "difficultyBand": "defer",
+            "contributions": {
+              "vocabularyFit": 0.22499999999999998,
+              "grammarFit": 0.064,
+              "structuralSimplicity": 0.06999999999999999,
+              "dueTargetValue": 0.043199999999999995,
+              "chunkUsefulness": 0.024,
+              "stretchAlignment": 0.0536,
+              "ambiguityPenalty": 0.15839999999999999
+            }
+          }
+        },
+        {
+          "id": "s16_right_after_class",
+          "sentence": "Right after class, he wrote down what the coach had pointed out.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 2,
+          "rationale": "Valuable but generally too dense as a beginner sentence target.",
+          "baselineKnownRatio": 0.7857142857142857,
+          "prototypeScore": {
+            "score": 0.5922,
+            "normalizedScore": 0.6883050847457627,
+            "stretchAlignment": 0.51,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.219,
+              "grammarFit": 0.08800000000000001,
+              "structuralSimplicity": 0.096,
+              "dueTargetValue": 0.1056,
+              "chunkUsefulness": 0.07800000000000001,
+              "stretchAlignment": 0.0408,
+              "ambiguityPenalty": 0.0352
+            }
+          }
+        },
+        {
+          "id": "s17_can_on_shelf",
+          "sentence": "The can on the shelf is empty.",
+          "category": "ambiguity_or_chunking_penalty",
+          "goldLabel": 3,
+          "rationale": "Good only when noun sense is confirmed; otherwise should drop.",
+          "baselineKnownRatio": 0.75,
+          "prototypeScore": {
+            "score": 0.6579999999999999,
+            "normalizedScore": 0.7440677966101694,
+            "stretchAlignment": 0.95,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.24599999999999997,
+              "grammarFit": 0.12480000000000001,
+              "structuralSimplicity": 0.15800000000000003,
+              "dueTargetValue": 0.0528,
+              "chunkUsefulness": 0.04000000000000001,
+              "stretchAlignment": 0.076,
+              "ambiguityPenalty": 0.039599999999999996
+            }
+          }
+        },
+        {
+          "id": "s18_if_you_help",
+          "sentence": "I can finish this if you help me.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "rationale": "Useful modal-plus-condition structure at manageable complexity.",
+          "baselineKnownRatio": 0.8,
+          "prototypeScore": {
+            "score": 0.6876000000000001,
+            "normalizedScore": 0.7691525423728814,
+            "stretchAlignment": 0.89,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.24,
+              "grammarFit": 0.1184,
+              "structuralSimplicity": 0.15200000000000002,
+              "dueTargetValue": 0.08639999999999999,
+              "chunkUsefulness": 0.046000000000000006,
+              "stretchAlignment": 0.0712,
+              "ambiguityPenalty": 0.0264
+            }
+          }
+        }
+      ],
+      "baselineOrder": [
+        "s01_daily_habit",
+        "s02_red_book",
+        "s14_give_me_a_hand",
+        "s09_nested_city_team",
+        "s03_going_to_market",
+        "s10_person_called_yesterday",
+        "s04_at_least_try",
+        "s11_report_revised_twice",
+        "s12_by_the_time_arrived",
+        "s08_if_you_call",
+        "s13_if_i_had_known",
+        "s15_light_right_bank",
+        "s18_if_you_help",
+        "s16_right_after_class",
+        "s17_can_on_shelf",
+        "s05_take_care_of",
+        "s07_passive_team",
+        "s06_used_to_station"
+      ],
+      "prototypeOrder": [
+        "s03_going_to_market",
+        "s05_take_care_of",
+        "s04_at_least_try",
+        "s01_daily_habit",
+        "s02_red_book",
+        "s06_used_to_station",
+        "s14_give_me_a_hand",
+        "s18_if_you_help",
+        "s08_if_you_call",
+        "s17_can_on_shelf",
+        "s16_right_after_class",
+        "s07_passive_team",
+        "s11_report_revised_twice",
+        "s13_if_i_had_known",
+        "s12_by_the_time_arrived",
+        "s09_nested_city_team",
+        "s15_light_right_bank",
+        "s10_person_called_yesterday"
+      ],
+      "strongestImprovements": [
+        {
+          "id": "s05_take_care_of",
+          "sentence": "Take care of your little brother.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 5,
+          "baselineRank": 16,
+          "prototypeRank": 2,
+          "deltaAbsoluteError": 13
+        },
+        {
+          "id": "s06_used_to_station",
+          "sentence": "I used to live near the station.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "baselineRank": 18,
+          "prototypeRank": 6,
+          "deltaAbsoluteError": 11
+        },
+        {
+          "id": "s09_nested_city_team",
+          "sentence": "The city the team from the north of the valley supports won.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "baselineRank": 4,
+          "prototypeRank": 16,
+          "deltaAbsoluteError": 11
+        },
+        {
+          "id": "s10_person_called_yesterday",
+          "sentence": "The thing that the person who called yesterday wanted is here.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "baselineRank": 6,
+          "prototypeRank": 18,
+          "deltaAbsoluteError": 7
+        },
+        {
+          "id": "s12_by_the_time_arrived",
+          "sentence": "By the time we arrived, they had already been eating.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 1,
+          "baselineRank": 9,
+          "prototypeRank": 15,
+          "deltaAbsoluteError": 6
+        }
+      ],
+      "strongestRegressions": [
+        {
+          "id": "s04_at_least_try",
+          "sentence": "At least we can try again.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "baselineRank": 7,
+          "prototypeRank": 3,
+          "deltaAbsoluteError": -3
+        },
+        {
+          "id": "s02_red_book",
+          "sentence": "She has a red book on the table.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 5,
+          "baselineRank": 2,
+          "prototypeRank": 5,
+          "deltaAbsoluteError": -2
+        }
+      ]
+    },
+    {
+      "profileId": "intermediate_b1",
+      "profileDisplayName": "Intermediate (B1-ish)",
+      "baselineMetrics": {
+        "ndcgAt5": 0.2197386352351516,
+        "ndcgAt10": 0.33152230701759794,
+        "pairwiseAccuracy": 0.3968253968253968,
+        "spearmanRho": -0.31494962255866593,
+        "precisionAt5": 0.2
+      },
+      "prototypeMetrics": {
+        "ndcgAt5": 0.46072285643397193,
+        "ndcgAt10": 0.5599862055178851,
+        "pairwiseAccuracy": 0.6507936507936508,
+        "spearmanRho": 0.34352771533573245,
+        "precisionAt5": 0.6
+      },
+      "deltas": {
+        "ndcgAt5": 0.24098422119882032,
+        "ndcgAt10": 0.2284638985002872,
+        "pairwiseAccuracy": 0.253968253968254,
+        "spearmanRho": 0.6584773378943984,
+        "precisionAt5": 0.39999999999999997
+      },
+      "rows": [
+        {
+          "id": "s01_daily_habit",
+          "sentence": "I drink water every morning.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 2,
+          "rationale": "Accurate but too easy to be high value for B1 review.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.6134000000000001,
+            "normalizedScore": 0.6667241379310346,
+            "stretchAlignment": 0.45999999999999996,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.19,
+              "grammarFit": 0.1692,
+              "structuralSimplicity": 0.1152,
+              "dueTargetValue": 0.055,
+              "chunkUsefulness": 0.032,
+              "stretchAlignment": 0.05519999999999999,
+              "ambiguityPenalty": 0.0032
+            }
+          }
+        },
+        {
+          "id": "s02_red_book",
+          "sentence": "She has a red book on the table.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 2,
+          "rationale": "Low stretch and low new learning value for intermediate learners.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.6256,
+            "normalizedScore": 0.6772413793103449,
+            "stretchAlignment": 0.5,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.18600000000000003,
+              "grammarFit": 0.1656,
+              "structuralSimplicity": 0.11279999999999998,
+              "dueTargetValue": 0.066,
+              "chunkUsefulness": 0.04,
+              "stretchAlignment": 0.06,
+              "ambiguityPenalty": 0.0048
+            }
+          }
+        },
+        {
+          "id": "s03_going_to_market",
+          "sentence": "We are going to the market now.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 3,
+          "rationale": "Still useful but not very stretching for B1.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.729,
+            "normalizedScore": 0.7663793103448276,
+            "stretchAlignment": 0.6,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.17200000000000001,
+              "grammarFit": 0.1512,
+              "structuralSimplicity": 0.1056,
+              "dueTargetValue": 0.12100000000000001,
+              "chunkUsefulness": 0.1152,
+              "stretchAlignment": 0.072,
+              "ambiguityPenalty": 0.008
+            }
+          }
+        },
+        {
+          "id": "s04_at_least_try",
+          "sentence": "At least we can try again.",
+          "category": "borderline",
+          "goldLabel": 3,
+          "rationale": "Good chunk reinforcement but low grammatical depth.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.702,
+            "normalizedScore": 0.743103448275862,
+            "stretchAlignment": 0.62,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.164,
+              "grammarFit": 0.144,
+              "structuralSimplicity": 0.102,
+              "dueTargetValue": 0.1056,
+              "chunkUsefulness": 0.12480000000000001,
+              "stretchAlignment": 0.0744,
+              "ambiguityPenalty": 0.0128
+            }
+          }
+        },
+        {
+          "id": "s05_take_care_of",
+          "sentence": "Take care of your little brother.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "rationale": "Strong chunk value for fluency-focused review.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.7448,
+            "normalizedScore": 0.7800000000000001,
+            "stretchAlignment": 0.66,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.15600000000000003,
+              "grammarFit": 0.14759999999999998,
+              "structuralSimplicity": 0.096,
+              "dueTargetValue": 0.1364,
+              "chunkUsefulness": 0.1408,
+              "stretchAlignment": 0.0792,
+              "ambiguityPenalty": 0.011200000000000002
+            }
+          }
+        },
+        {
+          "id": "s06_used_to_station",
+          "sentence": "I used to live near the station.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "rationale": "Good balance of phrase value and manageable complexity.",
+          "baselineKnownRatio": 0.8571428571428571,
+          "prototypeScore": {
+            "score": 0.7278,
+            "normalizedScore": 0.765344827586207,
+            "stretchAlignment": 0.74,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.148,
+              "grammarFit": 0.135,
+              "structuralSimplicity": 0.0912,
+              "dueTargetValue": 0.1496,
+              "chunkUsefulness": 0.13119999999999998,
+              "stretchAlignment": 0.08879999999999999,
+              "ambiguityPenalty": 0.016
+            }
+          }
+        },
+        {
+          "id": "s07_passive_team",
+          "sentence": "The plan was carried out by a small team.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "rationale": "Useful passive target with acceptable complexity for B1.",
+          "baselineKnownRatio": 0.9,
+          "prototypeScore": {
+            "score": 0.5982,
+            "normalizedScore": 0.6536206896551724,
+            "stretchAlignment": 1,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.13999999999999999,
+              "grammarFit": 0.081,
+              "structuralSimplicity": 0.0624,
+              "dueTargetValue": 0.1452,
+              "chunkUsefulness": 0.07200000000000001,
+              "stretchAlignment": 0.12,
+              "ambiguityPenalty": 0.022400000000000003
+            }
+          }
+        },
+        {
+          "id": "s08_if_you_call",
+          "sentence": "If you call early, we can meet before lunch.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "rationale": "Solid form-meaning mapping for useful conditional language.",
+          "baselineKnownRatio": 0.9,
+          "prototypeScore": {
+            "score": 0.666,
+            "normalizedScore": 0.7120689655172415,
+            "stretchAlignment": 0.78,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.15200000000000002,
+              "grammarFit": 0.126,
+              "structuralSimplicity": 0.08639999999999999,
+              "dueTargetValue": 0.1408,
+              "chunkUsefulness": 0.08320000000000001,
+              "stretchAlignment": 0.0936,
+              "ambiguityPenalty": 0.016
+            }
+          }
+        },
+        {
+          "id": "s09_nested_city_team",
+          "sentence": "The city the team from the north of the valley supports won.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "rationale": "Complex attachment with weak pedagogical payoff.",
+          "baselineKnownRatio": 0.9333333333333333,
+          "prototypeScore": {
+            "score": 0.3736,
+            "normalizedScore": 0.46,
+            "stretchAlignment": 0.84,
+            "difficultyBand": "defer",
+            "contributions": {
+              "vocabularyFit": 0.168,
+              "grammarFit": 0.054,
+              "structuralSimplicity": 0.018,
+              "dueTargetValue": 0.044000000000000004,
+              "chunkUsefulness": 0.0288,
+              "stretchAlignment": 0.10079999999999999,
+              "ambiguityPenalty": 0.04
+            }
+          }
+        },
+        {
+          "id": "s10_person_called_yesterday",
+          "sentence": "The thing that the person who called yesterday wanted is here.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "rationale": "Noisy structure with limited reusable value.",
+          "baselineKnownRatio": 0.9285714285714286,
+          "prototypeScore": {
+            "score": 0.31020000000000003,
+            "normalizedScore": 0.405344827586207,
+            "stretchAlignment": 0.76,
+            "difficultyBand": "defer",
+            "contributions": {
+              "vocabularyFit": 0.16000000000000003,
+              "grammarFit": 0.039599999999999996,
+              "structuralSimplicity": 0.012,
+              "dueTargetValue": 0.033,
+              "chunkUsefulness": 0.0192,
+              "stretchAlignment": 0.0912,
+              "ambiguityPenalty": 0.044800000000000006
+            }
+          }
+        },
+        {
+          "id": "s11_report_revised_twice",
+          "sentence": "The report, which had been revised twice, was finally approved.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 4,
+          "rationale": "High-value grammar despite higher structural demand.",
+          "baselineKnownRatio": 0.9166666666666666,
+          "prototypeScore": {
+            "score": 0.6105999999999999,
+            "normalizedScore": 0.6643103448275862,
+            "stretchAlignment": 0.8,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.144,
+              "grammarFit": 0.0756,
+              "structuralSimplicity": 0.0408,
+              "dueTargetValue": 0.187,
+              "chunkUsefulness": 0.0864,
+              "stretchAlignment": 0.096,
+              "ambiguityPenalty": 0.0192
+            }
+          }
+        },
+        {
+          "id": "s12_by_the_time_arrived",
+          "sentence": "By the time we arrived, they had already been eating.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 5,
+          "rationale": "Excellent due-target sentence for upper-intermediate progression.",
+          "baselineKnownRatio": 0.9090909090909091,
+          "prototypeScore": {
+            "score": 0.6055999999999999,
+            "normalizedScore": 0.66,
+            "stretchAlignment": 0.74,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.13999999999999999,
+              "grammarFit": 0.0684,
+              "structuralSimplicity": 0.033600000000000005,
+              "dueTargetValue": 0.198,
+              "chunkUsefulness": 0.0928,
+              "stretchAlignment": 0.08879999999999999,
+              "ambiguityPenalty": 0.016
+            }
+          }
+        },
+        {
+          "id": "s13_if_i_had_known",
+          "sentence": "If I had known, I would have left earlier.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 5,
+          "rationale": "High-value grammar target with reusable communication payoff.",
+          "baselineKnownRatio": 0.9,
+          "prototypeScore": {
+            "score": 0.607,
+            "normalizedScore": 0.6612068965517242,
+            "stretchAlignment": 0.72,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.136,
+              "grammarFit": 0.063,
+              "structuralSimplicity": 0.036,
+              "dueTargetValue": 0.2024,
+              "chunkUsefulness": 0.096,
+              "stretchAlignment": 0.08639999999999999,
+              "ambiguityPenalty": 0.0128
+            }
+          }
+        },
+        {
+          "id": "s14_give_me_a_hand",
+          "sentence": "He gave me a hand at work.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "rationale": "Good idiomatic chunk with manageable risk at B1.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.72,
+            "normalizedScore": 0.7586206896551725,
+            "stretchAlignment": 0.72,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.15800000000000003,
+              "grammarFit": 0.13319999999999999,
+              "structuralSimplicity": 0.0924,
+              "dueTargetValue": 0.154,
+              "chunkUsefulness": 0.13119999999999998,
+              "stretchAlignment": 0.08639999999999999,
+              "ambiguityPenalty": 0.0352
+            }
+          }
+        },
+        {
+          "id": "s15_light_right_bank",
+          "sentence": "The light right by the bank can change quickly.",
+          "category": "ambiguity_or_chunking_penalty",
+          "goldLabel": 1,
+          "rationale": "Ambiguity outweighs any grammar value here.",
+          "baselineKnownRatio": 0.9,
+          "prototypeScore": {
+            "score": 0.38160000000000005,
+            "normalizedScore": 0.466896551724138,
+            "stretchAlignment": 0.96,
+            "difficultyBand": "defer",
+            "contributions": {
+              "vocabularyFit": 0.15000000000000002,
+              "grammarFit": 0.072,
+              "structuralSimplicity": 0.041999999999999996,
+              "dueTargetValue": 0.07919999999999999,
+              "chunkUsefulness": 0.0384,
+              "stretchAlignment": 0.1152,
+              "ambiguityPenalty": 0.1152
+            }
+          }
+        },
+        {
+          "id": "s16_right_after_class",
+          "sentence": "Right after class, he wrote down what the coach had pointed out.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 5,
+          "rationale": "Excellent for B1 due to phrasal chunks and contextual grammar.",
+          "baselineKnownRatio": 0.9285714285714286,
+          "prototypeScore": {
+            "score": 0.7010000000000001,
+            "normalizedScore": 0.742241379310345,
+            "stretchAlignment": 0.88,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.146,
+              "grammarFit": 0.099,
+              "structuralSimplicity": 0.0576,
+              "dueTargetValue": 0.1936,
+              "chunkUsefulness": 0.12480000000000001,
+              "stretchAlignment": 0.1056,
+              "ambiguityPenalty": 0.0256
+            }
+          }
+        },
+        {
+          "id": "s17_can_on_shelf",
+          "sentence": "The can on the shelf is empty.",
+          "category": "ambiguity_or_chunking_penalty",
+          "goldLabel": 2,
+          "rationale": "Low challenge and moderate ambiguity for intermediate users.",
+          "baselineKnownRatio": 1,
+          "prototypeScore": {
+            "score": 0.6128,
+            "normalizedScore": 0.6662068965517243,
+            "stretchAlignment": 0.6799999999999999,
+            "difficultyBand": "stretch",
+            "contributions": {
+              "vocabularyFit": 0.164,
+              "grammarFit": 0.1404,
+              "structuralSimplicity": 0.0948,
+              "dueTargetValue": 0.0968,
+              "chunkUsefulness": 0.064,
+              "stretchAlignment": 0.08159999999999999,
+              "ambiguityPenalty": 0.0288
+            }
+          }
+        },
+        {
+          "id": "s18_if_you_help",
+          "sentence": "I can finish this if you help me.",
+          "category": "borderline",
+          "goldLabel": 3,
+          "rationale": "Still useful, but lower incremental value than richer targets.",
+          "baselineKnownRatio": 0.9,
+          "prototypeScore": {
+            "score": 0.6859999999999999,
+            "normalizedScore": 0.7293103448275863,
+            "stretchAlignment": 0.74,
+            "difficultyBand": "core",
+            "contributions": {
+              "vocabularyFit": 0.16000000000000003,
+              "grammarFit": 0.13319999999999999,
+              "structuralSimplicity": 0.0912,
+              "dueTargetValue": 0.15839999999999999,
+              "chunkUsefulness": 0.0736,
+              "stretchAlignment": 0.08879999999999999,
+              "ambiguityPenalty": 0.0192
+            }
+          }
+        }
+      ],
+      "baselineOrder": [
+        "s01_daily_habit",
+        "s02_red_book",
+        "s03_going_to_market",
+        "s04_at_least_try",
+        "s05_take_care_of",
+        "s14_give_me_a_hand",
+        "s17_can_on_shelf",
+        "s09_nested_city_team",
+        "s10_person_called_yesterday",
+        "s16_right_after_class",
+        "s11_report_revised_twice",
+        "s12_by_the_time_arrived",
+        "s07_passive_team",
+        "s08_if_you_call",
+        "s13_if_i_had_known",
+        "s15_light_right_bank",
+        "s18_if_you_help",
+        "s06_used_to_station"
+      ],
+      "prototypeOrder": [
+        "s05_take_care_of",
+        "s03_going_to_market",
+        "s06_used_to_station",
+        "s14_give_me_a_hand",
+        "s04_at_least_try",
+        "s16_right_after_class",
+        "s18_if_you_help",
+        "s08_if_you_call",
+        "s02_red_book",
+        "s01_daily_habit",
+        "s17_can_on_shelf",
+        "s11_report_revised_twice",
+        "s13_if_i_had_known",
+        "s12_by_the_time_arrived",
+        "s07_passive_team",
+        "s15_light_right_bank",
+        "s09_nested_city_team",
+        "s10_person_called_yesterday"
+      ],
+      "strongestImprovements": [
+        {
+          "id": "s01_daily_habit",
+          "sentence": "I drink water every morning.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 2,
+          "baselineRank": 1,
+          "prototypeRank": 10,
+          "deltaAbsoluteError": 9
+        },
+        {
+          "id": "s09_nested_city_team",
+          "sentence": "The city the team from the north of the valley supports won.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "baselineRank": 8,
+          "prototypeRank": 17,
+          "deltaAbsoluteError": 9
+        },
+        {
+          "id": "s06_used_to_station",
+          "sentence": "I used to live near the station.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "baselineRank": 18,
+          "prototypeRank": 3,
+          "deltaAbsoluteError": 8
+        },
+        {
+          "id": "s02_red_book",
+          "sentence": "She has a red book on the table.",
+          "category": "clearly_beginner_friendly",
+          "goldLabel": 2,
+          "baselineRank": 2,
+          "prototypeRank": 9,
+          "deltaAbsoluteError": 7
+        },
+        {
+          "id": "s10_person_called_yesterday",
+          "sentence": "The thing that the person who called yesterday wanted is here.",
+          "category": "vocab_easy_structurally_awkward",
+          "goldLabel": 1,
+          "baselineRank": 9,
+          "prototypeRank": 18,
+          "deltaAbsoluteError": 7
+        }
+      ],
+      "strongestRegressions": [
+        {
+          "id": "s05_take_care_of",
+          "sentence": "Take care of your little brother.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "baselineRank": 5,
+          "prototypeRank": 1,
+          "deltaAbsoluteError": -4
+        },
+        {
+          "id": "s07_passive_team",
+          "sentence": "The plan was carried out by a small team.",
+          "category": "borderline",
+          "goldLabel": 4,
+          "baselineRank": 13,
+          "prototypeRank": 15,
+          "deltaAbsoluteError": -2
+        },
+        {
+          "id": "s12_by_the_time_arrived",
+          "sentence": "By the time we arrived, they had already been eating.",
+          "category": "due_target_high_complexity",
+          "goldLabel": 5,
+          "baselineRank": 12,
+          "prototypeRank": 14,
+          "deltaAbsoluteError": -2
+        },
+        {
+          "id": "s14_give_me_a_hand",
+          "sentence": "He gave me a hand at work.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 4,
+          "baselineRank": 6,
+          "prototypeRank": 4,
+          "deltaAbsoluteError": -2
+        },
+        {
+          "id": "s03_going_to_market",
+          "sentence": "We are going to the market now.",
+          "category": "reusable_phrase_value",
+          "goldLabel": 3,
+          "baselineRank": 3,
+          "prototypeRank": 2,
+          "deltaAbsoluteError": -1
+        }
+      ]
+    }
+  ]
+}
