@@ -1,0 +1,514 @@
+{
+  "version": "2026-04-21",
+  "description": "Gold corpus for validating two-lane phrase detection with fixed phrases plus grammar/chunk rules.",
+  "cases": [
+    {
+      "id": "fixed-by-the-way",
+      "sourceText": "By the way, the meeting starts at noon.",
+      "tokens": [
+        { "surface": "By", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "way", "pos": "NOUN" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "meeting", "pos": "NOUN" },
+        { "surface": "starts", "pos": "VERB" },
+        { "surface": "at", "pos": "PREP" },
+        { "surface": "noon", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-by-the-way-main",
+          "category": "fixed-idiom",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 3,
+          "normalizedSourceText": "by the way"
+        }
+      ]
+    },
+    {
+      "id": "fixed-as-soon-as",
+      "sourceText": "As soon as we arrive, call me.",
+      "tokens": [
+        { "surface": "As", "pos": "SCONJ" },
+        { "surface": "soon", "pos": "ADV" },
+        { "surface": "as", "pos": "SCONJ" },
+        { "surface": "we", "pos": "PRON" },
+        { "surface": "arrive", "pos": "VERB" },
+        { "surface": "call", "pos": "VERB" },
+        { "surface": "me", "pos": "PRON" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-as-soon-as-main",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 3,
+          "normalizedSourceText": "as soon as"
+        }
+      ]
+    },
+    {
+      "id": "fixed-at-least-a",
+      "sourceText": "At least we finished the draft.",
+      "tokens": [
+        { "surface": "At", "pos": "PREP" },
+        { "surface": "least", "pos": "ADV" },
+        { "surface": "we", "pos": "PRON" },
+        { "surface": "finished", "pos": "VERB" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "draft", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-at-least-main-a",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 2,
+          "normalizedSourceText": "at least"
+        }
+      ]
+    },
+    {
+      "id": "fixed-at-least-b",
+      "sourceText": "At least they apologized for the delay.",
+      "tokens": [
+        { "surface": "At", "pos": "PREP" },
+        { "surface": "least", "pos": "ADV" },
+        { "surface": "they", "pos": "PRON" },
+        { "surface": "apologized", "pos": "VERB" },
+        { "surface": "for", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "delay", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-at-least-main-b",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 2,
+          "normalizedSourceText": "at least"
+        }
+      ]
+    },
+    {
+      "id": "fixed-take-care-of",
+      "sourceText": "Please take care of your passport.",
+      "tokens": [
+        { "surface": "Please", "pos": "ADV" },
+        { "surface": "take", "pos": "VERB" },
+        { "surface": "care", "pos": "NOUN" },
+        { "surface": "of", "pos": "PREP" },
+        { "surface": "your", "pos": "DET" },
+        { "surface": "passport", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-take-care-of-main",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 1,
+          "endToken": 4,
+          "normalizedSourceText": "take care of"
+        }
+      ]
+    },
+    {
+      "id": "fixed-in-order-to",
+      "sourceText": "In order to leave early, we skipped dessert.",
+      "tokens": [
+        { "surface": "In", "pos": "PREP" },
+        { "surface": "order", "pos": "NOUN" },
+        { "surface": "to", "pos": "PART" },
+        { "surface": "leave", "pos": "VERB" },
+        { "surface": "early", "pos": "ADV" },
+        { "surface": "we", "pos": "PRON" },
+        { "surface": "skipped", "pos": "VERB" },
+        { "surface": "dessert", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-in-order-to-main",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 3,
+          "normalizedSourceText": "in order to"
+        }
+      ]
+    },
+    {
+      "id": "overlap-fixed-other-hand",
+      "sourceText": "On the other hand, we can wait.",
+      "tokens": [
+        { "surface": "On", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "other", "pos": "ADJ" },
+        { "surface": "hand", "pos": "NOUN" },
+        { "surface": "we", "pos": "PRON" },
+        { "surface": "can", "pos": "AUX" },
+        { "surface": "wait", "pos": "VERB" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-on-the-other-hand-main",
+          "category": "fixed-idiom",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 4,
+          "normalizedSourceText": "on the other hand"
+        }
+      ]
+    },
+    {
+      "id": "grammar-going-to",
+      "sourceText": "They are going to travel tomorrow.",
+      "tokens": [
+        { "surface": "They", "pos": "PRON" },
+        { "surface": "are", "pos": "AUX" },
+        { "surface": "going", "pos": "VERB" },
+        { "surface": "to", "pos": "PART" },
+        { "surface": "travel", "pos": "VERB" },
+        { "surface": "tomorrow", "pos": "ADV" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "grammar-going-to-main",
+          "category": "grammar-carrier",
+          "sourceKind": "pattern-match",
+          "startToken": 2,
+          "endToken": 4,
+          "normalizedSourceText": "going to"
+        }
+      ]
+    },
+    {
+      "id": "grammar-used-to",
+      "sourceText": "I used to play tennis every weekend.",
+      "tokens": [
+        { "surface": "I", "pos": "PRON" },
+        { "surface": "used", "pos": "VERB" },
+        { "surface": "to", "pos": "PART" },
+        { "surface": "play", "pos": "VERB" },
+        { "surface": "tennis", "pos": "NOUN" },
+        { "surface": "every", "pos": "DET" },
+        { "surface": "weekend", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "grammar-used-to-main",
+          "category": "grammar-carrier",
+          "sourceKind": "pattern-match",
+          "startToken": 1,
+          "endToken": 3,
+          "normalizedSourceText": "used to"
+        }
+      ]
+    },
+    {
+      "id": "grammar-have-been-progressive",
+      "sourceText": "We have been waiting for an hour.",
+      "tokens": [
+        { "surface": "We", "pos": "PRON" },
+        { "surface": "have", "pos": "AUX" },
+        { "surface": "been", "pos": "VERB" },
+        { "surface": "waiting", "pos": "VERB" },
+        { "surface": "for", "pos": "PREP" },
+        { "surface": "an", "pos": "DET" },
+        { "surface": "hour", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "grammar-have-been-main-progressive",
+          "category": "grammar-carrier",
+          "sourceKind": "pattern-match",
+          "startToken": 1,
+          "endToken": 3,
+          "normalizedSourceText": "have been"
+        }
+      ]
+    },
+    {
+      "id": "grammar-have-been-to",
+      "sourceText": "They have been to Madrid twice.",
+      "tokens": [
+        { "surface": "They", "pos": "PRON" },
+        { "surface": "have", "pos": "AUX" },
+        { "surface": "been", "pos": "VERB" },
+        { "surface": "to", "pos": "PREP" },
+        { "surface": "Madrid", "pos": "PROPN" },
+        { "surface": "twice", "pos": "ADV" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "grammar-have-been-main-to",
+          "category": "grammar-carrier",
+          "sourceKind": "pattern-match",
+          "startToken": 1,
+          "endToken": 3,
+          "normalizedSourceText": "have been"
+        }
+      ]
+    },
+    {
+      "id": "grammar-used-to-negative",
+      "sourceText": "I am used to noise now.",
+      "tokens": [
+        { "surface": "I", "pos": "PRON" },
+        { "surface": "am", "pos": "AUX" },
+        { "surface": "used", "pos": "ADJ" },
+        { "surface": "to", "pos": "PREP" },
+        { "surface": "noise", "pos": "NOUN" },
+        { "surface": "now", "pos": "ADV" }
+      ],
+      "expectedPhrases": []
+    },
+    {
+      "id": "adjective-noun-red-bicycle",
+      "sourceText": "She bought a red bicycle yesterday.",
+      "tokens": [
+        { "surface": "She", "pos": "PRON" },
+        { "surface": "bought", "pos": "VERB" },
+        { "surface": "a", "pos": "DET" },
+        { "surface": "red", "pos": "ADJ" },
+        { "surface": "bicycle", "pos": "NOUN" },
+        { "surface": "yesterday", "pos": "ADV" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "adj-noun-red-bicycle-main",
+          "category": "adjective-noun",
+          "sourceKind": "pattern-match",
+          "startToken": 3,
+          "endToken": 5,
+          "normalizedSourceText": "red bicycle"
+        }
+      ]
+    },
+    {
+      "id": "adjective-noun-stone-bridge",
+      "sourceText": "We visited the ancient stone bridge.",
+      "tokens": [
+        { "surface": "We", "pos": "PRON" },
+        { "surface": "visited", "pos": "VERB" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "ancient", "pos": "ADJ" },
+        { "surface": "stone", "pos": "NOUN" },
+        { "surface": "bridge", "pos": "NOUN" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "adj-noun-ancient-stone-bridge-main",
+          "category": "adjective-noun",
+          "sourceKind": "pattern-match",
+          "startToken": 3,
+          "endToken": 6,
+          "normalizedSourceText": "ancient stone bridge"
+        }
+      ]
+    },
+    {
+      "id": "chunk-overlap-new-captain",
+      "sourceText": "The new captain of the football team spoke calmly.",
+      "tokens": [
+        { "surface": "The", "pos": "DET" },
+        { "surface": "new", "pos": "ADJ" },
+        { "surface": "captain", "pos": "NOUN" },
+        { "surface": "of", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "football", "pos": "NOUN" },
+        { "surface": "team", "pos": "NOUN" },
+        { "surface": "spoke", "pos": "VERB" },
+        { "surface": "calmly", "pos": "ADV" }
+      ],
+      "chunks": [
+        {
+          "kind": "noun-chunk",
+          "startToken": 1,
+          "endToken": 7
+        }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "chunk-new-captain-main",
+          "category": "noun-chunk",
+          "sourceKind": "chunk",
+          "startToken": 1,
+          "endToken": 7,
+          "normalizedSourceText": "new captain of the football team"
+        }
+      ]
+    },
+    {
+      "id": "noun-chunk-captain-football-team",
+      "sourceText": "She is the captain of the football team.",
+      "tokens": [
+        { "surface": "She", "pos": "PRON" },
+        { "surface": "is", "pos": "AUX" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "captain", "pos": "NOUN" },
+        { "surface": "of", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "football", "pos": "NOUN" },
+        { "surface": "team", "pos": "NOUN" }
+      ],
+      "chunks": [
+        {
+          "kind": "noun-chunk",
+          "startToken": 3,
+          "endToken": 8
+        }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "chunk-captain-football-team-main",
+          "category": "noun-chunk",
+          "sourceKind": "chunk",
+          "startToken": 3,
+          "endToken": 8,
+          "normalizedSourceText": "captain of the football team"
+        }
+      ]
+    },
+    {
+      "id": "noun-chunk-manager-restaurant",
+      "sourceText": "The manager of the local restaurant resigned.",
+      "tokens": [
+        { "surface": "The", "pos": "DET" },
+        { "surface": "manager", "pos": "NOUN" },
+        { "surface": "of", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "local", "pos": "ADJ" },
+        { "surface": "restaurant", "pos": "NOUN" },
+        { "surface": "resigned", "pos": "VERB" }
+      ],
+      "chunks": [
+        {
+          "kind": "noun-chunk",
+          "startToken": 1,
+          "endToken": 6
+        }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "chunk-manager-restaurant-main",
+          "category": "noun-chunk",
+          "sourceKind": "chunk",
+          "startToken": 1,
+          "endToken": 6,
+          "normalizedSourceText": "manager of the local restaurant"
+        }
+      ]
+    },
+    {
+      "id": "noun-chunk-pronoun-negative",
+      "sourceText": "The edge of it was sharp.",
+      "tokens": [
+        { "surface": "The", "pos": "DET" },
+        { "surface": "edge", "pos": "NOUN" },
+        { "surface": "of", "pos": "PREP" },
+        { "surface": "it", "pos": "PRON" },
+        { "surface": "was", "pos": "AUX" },
+        { "surface": "sharp", "pos": "ADJ" }
+      ],
+      "chunks": [
+        {
+          "kind": "noun-chunk",
+          "startToken": 1,
+          "endToken": 4
+        }
+      ],
+      "expectedPhrases": []
+    },
+    {
+      "id": "noun-chunk-generic-head-negative",
+      "sourceText": "The thing in the picture is blue.",
+      "tokens": [
+        { "surface": "The", "pos": "DET" },
+        { "surface": "thing", "pos": "NOUN" },
+        { "surface": "in", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "picture", "pos": "NOUN" },
+        { "surface": "is", "pos": "AUX" },
+        { "surface": "blue", "pos": "ADJ" }
+      ],
+      "chunks": [
+        {
+          "kind": "noun-chunk",
+          "startToken": 1,
+          "endToken": 5
+        }
+      ],
+      "expectedPhrases": []
+    },
+    {
+      "id": "multi-fixed-phrases",
+      "sourceText": "At least, by the way, we tried.",
+      "tokens": [
+        { "surface": "At", "pos": "PREP" },
+        { "surface": "least", "pos": "ADV" },
+        { "surface": "by", "pos": "PREP" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "way", "pos": "NOUN" },
+        { "surface": "we", "pos": "PRON" },
+        { "surface": "tried", "pos": "VERB" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "multi-fixed-at-least",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 0,
+          "endToken": 2,
+          "normalizedSourceText": "at least"
+        },
+        {
+          "id": "multi-fixed-by-the-way",
+          "category": "fixed-idiom",
+          "sourceKind": "fixed-phrase",
+          "startToken": 2,
+          "endToken": 5,
+          "normalizedSourceText": "by the way"
+        }
+      ]
+    },
+    {
+      "id": "grammar-have-been-adjective-fn",
+      "sourceText": "She has been very patient lately.",
+      "tokens": [
+        { "surface": "She", "pos": "PRON" },
+        { "surface": "has", "pos": "AUX" },
+        { "surface": "been", "pos": "VERB" },
+        { "surface": "very", "pos": "ADV" },
+        { "surface": "patient", "pos": "ADJ" },
+        { "surface": "lately", "pos": "ADV" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "grammar-has-been-main-adj",
+          "category": "grammar-carrier",
+          "sourceKind": "pattern-match",
+          "startToken": 1,
+          "endToken": 3,
+          "normalizedSourceText": "has been"
+        }
+      ]
+    },
+    {
+      "id": "adjective-noun-noise-fp",
+      "sourceText": "He clicked the blue button quickly.",
+      "tokens": [
+        { "surface": "He", "pos": "PRON" },
+        { "surface": "clicked", "pos": "VERB" },
+        { "surface": "the", "pos": "DET" },
+        { "surface": "blue", "pos": "ADJ" },
+        { "surface": "button", "pos": "NOUN" },
+        { "surface": "quickly", "pos": "ADV" }
+      ],
+      "expectedPhrases": []
+    }
+  ]
+}

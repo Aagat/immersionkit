@@ -7,11 +7,12 @@
     "dev": "pnpm --filter @immersionkit/extension dev",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "benchmark:task-03": "node tools/benchmarks/task-03-phrase-detection.mjs",
+    "benchmark:task-03:phrase-detection": "pnpm benchmark:task-03"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }
 }
-
