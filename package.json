@@ -7,11 +7,12 @@
     "dev": "pnpm --filter @immersionkit/extension dev",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "benchmark:task-05": "pnpm --filter @immersionkit/shared exec vitest run tests/sentence-suitability-validation.test.ts --reporter=verbose",
+    "benchmark:task-05:browser": "pnpm --filter @immersionkit/extension dev --open /validation.html"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }
 }
-

@@ -1,0 +1,542 @@
+{
+  "version": 1,
+  "description": "Labeled suitability corpus for comparing known-ratio sentence ranking against a tunable multi-signal scorer.",
+  "profiles": [
+    {
+      "id": "beginner_a2",
+      "displayName": "Beginner (A2-ish)",
+      "description": "Needs high comprehensibility and simple sentence shape; can tolerate only light stretch.",
+      "stretchTolerance": 0.25
+    },
+    {
+      "id": "intermediate_b1",
+      "displayName": "Intermediate (B1-ish)",
+      "description": "Can absorb moderate structural stretch when the sentence carries useful grammar or phrase value.",
+      "stretchTolerance": 0.62
+    }
+  ],
+  "sentences": [
+    {
+      "id": "s01_daily_habit",
+      "sentence": "I drink water every morning.",
+      "category": "clearly_beginner_friendly",
+      "tags": ["high-frequency", "clear-syntax"],
+      "signals": {
+        "vocabularyFit": 0.95,
+        "grammarFit": 0.94,
+        "structuralSimplicity": 0.96,
+        "dueTargetValue": 0.25,
+        "ambiguityPenalty": 0.02,
+        "chunkUsefulness": 0.2,
+        "stretchDemand": 0.08
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 5,
+          "totalWordCount": 5,
+          "label": 5,
+          "rationale": "Very comprehensible and low-risk for beginners."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 5,
+          "totalWordCount": 5,
+          "label": 2,
+          "rationale": "Accurate but too easy to be high value for B1 review."
+        }
+      }
+    },
+    {
+      "id": "s02_red_book",
+      "sentence": "She has a red book on the table.",
+      "category": "clearly_beginner_friendly",
+      "tags": ["high-frequency", "clear-syntax"],
+      "signals": {
+        "vocabularyFit": 0.93,
+        "grammarFit": 0.92,
+        "structuralSimplicity": 0.94,
+        "dueTargetValue": 0.3,
+        "ambiguityPenalty": 0.03,
+        "chunkUsefulness": 0.25,
+        "stretchDemand": 0.12
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 8,
+          "totalWordCount": 8,
+          "label": 5,
+          "rationale": "Simple noun phrase structure and transparent meaning."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 8,
+          "totalWordCount": 8,
+          "label": 2,
+          "rationale": "Low stretch and low new learning value for intermediate learners."
+        }
+      }
+    },
+    {
+      "id": "s03_going_to_market",
+      "sentence": "We are going to the market now.",
+      "category": "reusable_phrase_value",
+      "tags": ["grammar-carrier", "future-intent"],
+      "signals": {
+        "vocabularyFit": 0.86,
+        "grammarFit": 0.84,
+        "structuralSimplicity": 0.88,
+        "dueTargetValue": 0.55,
+        "ambiguityPenalty": 0.05,
+        "chunkUsefulness": 0.72,
+        "stretchDemand": 0.22
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 6,
+          "totalWordCount": 7,
+          "label": 5,
+          "rationale": "High-value phrase with manageable structure."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 7,
+          "totalWordCount": 7,
+          "label": 3,
+          "rationale": "Still useful but not very stretching for B1."
+        }
+      }
+    },
+    {
+      "id": "s04_at_least_try",
+      "sentence": "At least we can try again.",
+      "category": "borderline",
+      "tags": ["reusable-phrase", "short-sentence"],
+      "signals": {
+        "vocabularyFit": 0.82,
+        "grammarFit": 0.8,
+        "structuralSimplicity": 0.85,
+        "dueTargetValue": 0.48,
+        "ambiguityPenalty": 0.08,
+        "chunkUsefulness": 0.78,
+        "stretchDemand": 0.24
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 5,
+          "totalWordCount": 6,
+          "label": 4,
+          "rationale": "Useful chunk, but short context limits robustness."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 6,
+          "totalWordCount": 6,
+          "label": 3,
+          "rationale": "Good chunk reinforcement but low grammatical depth."
+        }
+      }
+    },
+    {
+      "id": "s05_take_care_of",
+      "sentence": "Take care of your little brother.",
+      "category": "reusable_phrase_value",
+      "tags": ["imperative", "multiword-expression"],
+      "signals": {
+        "vocabularyFit": 0.78,
+        "grammarFit": 0.82,
+        "structuralSimplicity": 0.8,
+        "dueTargetValue": 0.62,
+        "ambiguityPenalty": 0.07,
+        "chunkUsefulness": 0.88,
+        "stretchDemand": 0.28
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 5,
+          "totalWordCount": 7,
+          "label": 5,
+          "rationale": "Highly reusable phrase despite moderate lexical stretch."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 7,
+          "totalWordCount": 7,
+          "label": 4,
+          "rationale": "Strong chunk value for fluency-focused review."
+        }
+      }
+    },
+    {
+      "id": "s06_used_to_station",
+      "sentence": "I used to live near the station.",
+      "category": "reusable_phrase_value",
+      "tags": ["grammar-carrier", "past-habit"],
+      "signals": {
+        "vocabularyFit": 0.74,
+        "grammarFit": 0.75,
+        "structuralSimplicity": 0.76,
+        "dueTargetValue": 0.68,
+        "ambiguityPenalty": 0.1,
+        "chunkUsefulness": 0.82,
+        "stretchDemand": 0.36
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 4,
+          "totalWordCount": 7,
+          "label": 4,
+          "rationale": "Great grammar carrier but requires some support for A2."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 6,
+          "totalWordCount": 7,
+          "label": 4,
+          "rationale": "Good balance of phrase value and manageable complexity."
+        }
+      }
+    },
+    {
+      "id": "s07_passive_team",
+      "sentence": "The plan was carried out by a small team.",
+      "category": "borderline",
+      "tags": ["passive-voice", "academic-register"],
+      "signals": {
+        "vocabularyFit": 0.7,
+        "grammarFit": 0.45,
+        "structuralSimplicity": 0.52,
+        "dueTargetValue": 0.66,
+        "ambiguityPenalty": 0.14,
+        "chunkUsefulness": 0.45,
+        "stretchDemand": 0.62
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 7,
+          "totalWordCount": 10,
+          "label": 2,
+          "rationale": "Passive construction is usually too heavy at this stage."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 9,
+          "totalWordCount": 10,
+          "label": 4,
+          "rationale": "Useful passive target with acceptable complexity for B1."
+        }
+      }
+    },
+    {
+      "id": "s08_if_you_call",
+      "sentence": "If you call early, we can meet before lunch.",
+      "category": "borderline",
+      "tags": ["conditional", "schedule-language"],
+      "signals": {
+        "vocabularyFit": 0.76,
+        "grammarFit": 0.7,
+        "structuralSimplicity": 0.72,
+        "dueTargetValue": 0.64,
+        "ambiguityPenalty": 0.1,
+        "chunkUsefulness": 0.52,
+        "stretchDemand": 0.4
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 8,
+          "totalWordCount": 10,
+          "label": 4,
+          "rationale": "Slightly stretched, but still practical and interpretable."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 9,
+          "totalWordCount": 10,
+          "label": 4,
+          "rationale": "Solid form-meaning mapping for useful conditional language."
+        }
+      }
+    },
+    {
+      "id": "s09_nested_city_team",
+      "sentence": "The city the team from the north of the valley supports won.",
+      "category": "vocab_easy_structurally_awkward",
+      "tags": ["center-embedding", "chunking-risk"],
+      "signals": {
+        "vocabularyFit": 0.84,
+        "grammarFit": 0.3,
+        "structuralSimplicity": 0.15,
+        "dueTargetValue": 0.2,
+        "ambiguityPenalty": 0.25,
+        "chunkUsefulness": 0.18,
+        "stretchDemand": 0.78
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 13,
+          "totalWordCount": 15,
+          "label": 1,
+          "rationale": "Lexically easy, but structural nesting makes it poor learning material."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 14,
+          "totalWordCount": 15,
+          "label": 1,
+          "rationale": "Complex attachment with weak pedagogical payoff."
+        }
+      }
+    },
+    {
+      "id": "s10_person_called_yesterday",
+      "sentence": "The thing that the person who called yesterday wanted is here.",
+      "category": "vocab_easy_structurally_awkward",
+      "tags": ["multiple-relative-clauses", "awkward-flow"],
+      "signals": {
+        "vocabularyFit": 0.8,
+        "grammarFit": 0.22,
+        "structuralSimplicity": 0.1,
+        "dueTargetValue": 0.15,
+        "ambiguityPenalty": 0.28,
+        "chunkUsefulness": 0.12,
+        "stretchDemand": 0.86
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 12,
+          "totalWordCount": 14,
+          "label": 1,
+          "rationale": "High known-ratio but severe chunking burden."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 13,
+          "totalWordCount": 14,
+          "label": 1,
+          "rationale": "Noisy structure with limited reusable value."
+        }
+      }
+    },
+    {
+      "id": "s11_report_revised_twice",
+      "sentence": "The report, which had been revised twice, was finally approved.",
+      "category": "due_target_high_complexity",
+      "tags": ["relative-clause", "passive-perfect"],
+      "signals": {
+        "vocabularyFit": 0.72,
+        "grammarFit": 0.42,
+        "structuralSimplicity": 0.34,
+        "dueTargetValue": 0.85,
+        "ambiguityPenalty": 0.12,
+        "chunkUsefulness": 0.54,
+        "stretchDemand": 0.82
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 10,
+          "totalWordCount": 12,
+          "label": 1,
+          "rationale": "Contains useful targets but too dense for beginner sentence learning."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 11,
+          "totalWordCount": 12,
+          "label": 4,
+          "rationale": "High-value grammar despite higher structural demand."
+        }
+      }
+    },
+    {
+      "id": "s12_by_the_time_arrived",
+      "sentence": "By the time we arrived, they had already been eating.",
+      "category": "due_target_high_complexity",
+      "tags": ["time-clause", "perfect-progressive"],
+      "signals": {
+        "vocabularyFit": 0.7,
+        "grammarFit": 0.38,
+        "structuralSimplicity": 0.28,
+        "dueTargetValue": 0.9,
+        "ambiguityPenalty": 0.1,
+        "chunkUsefulness": 0.58,
+        "stretchDemand": 0.88
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 9,
+          "totalWordCount": 11,
+          "label": 1,
+          "rationale": "Too much tense layering for A2 despite useful target grammar."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 10,
+          "totalWordCount": 11,
+          "label": 5,
+          "rationale": "Excellent due-target sentence for upper-intermediate progression."
+        }
+      }
+    },
+    {
+      "id": "s13_if_i_had_known",
+      "sentence": "If I had known, I would have left earlier.",
+      "category": "due_target_high_complexity",
+      "tags": ["third-conditional", "counterfactual"],
+      "signals": {
+        "vocabularyFit": 0.68,
+        "grammarFit": 0.35,
+        "structuralSimplicity": 0.3,
+        "dueTargetValue": 0.92,
+        "ambiguityPenalty": 0.08,
+        "chunkUsefulness": 0.6,
+        "stretchDemand": 0.9
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 8,
+          "totalWordCount": 10,
+          "label": 1,
+          "rationale": "Important pattern but too advanced as a sentence target for beginners."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 9,
+          "totalWordCount": 10,
+          "label": 5,
+          "rationale": "High-value grammar target with reusable communication payoff."
+        }
+      }
+    },
+    {
+      "id": "s14_give_me_a_hand",
+      "sentence": "He gave me a hand at work.",
+      "category": "reusable_phrase_value",
+      "tags": ["idiom", "phrase-priority"],
+      "signals": {
+        "vocabularyFit": 0.79,
+        "grammarFit": 0.74,
+        "structuralSimplicity": 0.77,
+        "dueTargetValue": 0.7,
+        "ambiguityPenalty": 0.22,
+        "chunkUsefulness": 0.82,
+        "stretchDemand": 0.34
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 7,
+          "totalWordCount": 8,
+          "label": 3,
+          "rationale": "Useful phrase, but idiomatic ambiguity requires careful handling."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 8,
+          "totalWordCount": 8,
+          "label": 4,
+          "rationale": "Good idiomatic chunk with manageable risk at B1."
+        }
+      }
+    },
+    {
+      "id": "s15_light_right_bank",
+      "sentence": "The light right by the bank can change quickly.",
+      "category": "ambiguity_or_chunking_penalty",
+      "tags": ["lexical-ambiguity", "attachment-ambiguity"],
+      "signals": {
+        "vocabularyFit": 0.75,
+        "grammarFit": 0.4,
+        "structuralSimplicity": 0.35,
+        "dueTargetValue": 0.36,
+        "ambiguityPenalty": 0.72,
+        "chunkUsefulness": 0.24,
+        "stretchDemand": 0.58
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 8,
+          "totalWordCount": 10,
+          "label": 1,
+          "rationale": "Ambiguous chunks and senses should be deprioritized for A2."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 9,
+          "totalWordCount": 10,
+          "label": 1,
+          "rationale": "Ambiguity outweighs any grammar value here."
+        }
+      }
+    },
+    {
+      "id": "s16_right_after_class",
+      "sentence": "Right after class, he wrote down what the coach had pointed out.",
+      "category": "due_target_high_complexity",
+      "tags": ["phrasal-verb", "reported-reference"],
+      "signals": {
+        "vocabularyFit": 0.73,
+        "grammarFit": 0.55,
+        "structuralSimplicity": 0.48,
+        "dueTargetValue": 0.88,
+        "ambiguityPenalty": 0.16,
+        "chunkUsefulness": 0.78,
+        "stretchDemand": 0.74
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 11,
+          "totalWordCount": 14,
+          "label": 2,
+          "rationale": "Valuable but generally too dense as a beginner sentence target."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 13,
+          "totalWordCount": 14,
+          "label": 5,
+          "rationale": "Excellent for B1 due to phrasal chunks and contextual grammar."
+        }
+      }
+    },
+    {
+      "id": "s17_can_on_shelf",
+      "sentence": "The can on the shelf is empty.",
+      "category": "ambiguity_or_chunking_penalty",
+      "tags": ["can-noun", "disambiguation-required"],
+      "signals": {
+        "vocabularyFit": 0.82,
+        "grammarFit": 0.78,
+        "structuralSimplicity": 0.79,
+        "dueTargetValue": 0.44,
+        "ambiguityPenalty": 0.18,
+        "chunkUsefulness": 0.4,
+        "stretchDemand": 0.3
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 6,
+          "totalWordCount": 8,
+          "label": 3,
+          "rationale": "Good only when noun sense is confirmed; otherwise should drop."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 8,
+          "totalWordCount": 8,
+          "label": 2,
+          "rationale": "Low challenge and moderate ambiguity for intermediate users."
+        }
+      }
+    },
+    {
+      "id": "s18_if_you_help",
+      "sentence": "I can finish this if you help me.",
+      "category": "borderline",
+      "tags": ["modal", "conditional-link"],
+      "signals": {
+        "vocabularyFit": 0.8,
+        "grammarFit": 0.74,
+        "structuralSimplicity": 0.76,
+        "dueTargetValue": 0.72,
+        "ambiguityPenalty": 0.12,
+        "chunkUsefulness": 0.46,
+        "stretchDemand": 0.36
+      },
+      "profiles": {
+        "beginner_a2": {
+          "knownWordCount": 8,
+          "totalWordCount": 10,
+          "label": 4,
+          "rationale": "Useful modal-plus-condition structure at manageable complexity."
+        },
+        "intermediate_b1": {
+          "knownWordCount": 9,
+          "totalWordCount": 10,
+          "label": 3,
+          "rationale": "Still useful, but lower incremental value than richer targets."
+        }
+      }
+    }
+  ]
+}
