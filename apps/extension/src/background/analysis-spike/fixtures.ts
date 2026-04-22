@@ -1,8 +1,15 @@
+import { normalizeToken } from "@immersionkit/shared";
+
 import syntheticFixture from "../../../../../fixtures/evals/nlp-performance/synthetic-sentences.v1.json";
 import pageFixture from "../../../../../fixtures/evals/nlp-performance/page-sentences.v1.json";
 import replayFixture from "../../../../../fixtures/evals/nlp-performance/cache-replay-sentences.v1.json";
+import qualityCorpusFixture from "../../../../../fixtures/evals/phrase-detection/phrase-detection-gold-corpus.json";
 
-import type { BenchmarkFixtureCatalog, NlpBenchmarkInputProfile } from "./types";
+import type {
+  AnalyzerQualityCase,
+  BenchmarkFixtureCatalog,
+  NlpBenchmarkInputProfile
+} from "./types";
 
 type SyntheticFixtureJson = {
   fixtureVersion: string;
@@ -26,6 +33,20 @@ type ReplayFixtureJson = {
   expectedMinimumCacheHitRate: number;
 };
 
+type QualityCorpusFixtureJson = {
+  version: string;
+  cases: {
+    id: string;
+    sourceText: string;
+    tokens?: {
+      surface?: string;
+    }[];
+    expectedPhrases?: {
+      normalizedSourceText?: string;
+    }[];
+  }[];
+};
+
 type FixtureLoadOptions = {
   profile?: NlpBenchmarkInputProfile;
 };
@@ -35,6 +56,7 @@ type FixtureProfileConfig = {
   pageTarget: number;
   replayUniqueTarget: number;
   replayRepetitions: number;
+  qualityTarget: number;
 };
 
 const PROFILE_CONFIGS: Record<Exclude<NlpBenchmarkInputProfile, "baseline">, FixtureProfileConfig> = {
@@ -42,31 +64,36 @@ const PROFILE_CONFIGS: Record<Exclude<NlpBenchmarkInputProfile, "baseline">, Fix
     syntheticTarget: 8,
     pageTarget: 8,
     replayUniqueTarget: 6,
-    replayRepetitions: 2
+    replayRepetitions: 2,
+    qualityTarget: 8
   },
   small: {
     syntheticTarget: 20,
     pageTarget: 20,
     replayUniqueTarget: 10,
-    replayRepetitions: 3
+    replayRepetitions: 3,
+    qualityTarget: 16
   },
   large: {
     syntheticTarget: 180,
     pageTarget: 180,
     replayUniqueTarget: 12,
-    replayRepetitions: 20
+    replayRepetitions: 20,
+    qualityTarget: 96
   },
   xlarge: {
     syntheticTarget: 720,
     pageTarget: 720,
     replayUniqueTarget: 12,
-    replayRepetitions: 80
+    replayRepetitions: 80,
+    qualityTarget: 320
   },
   xxlarge: {
     syntheticTarget: 2400,
     pageTarget: 2400,
     replayUniqueTarget: 12,
-    replayRepetitions: 240
+    replayRepetitions: 240,
+    qualityTarget: 1200
   }
 };
 
@@ -113,6 +140,7 @@ export function loadNlpPerformanceFixtures(
   const synthetic = syntheticFixture as SyntheticFixtureJson;
   const page = pageFixture as PageFixtureJson;
   const replay = replayFixture as ReplayFixtureJson;
+  const qualityCorpus = qualityCorpusFixture as QualityCorpusFixtureJson;
 
   const baselineSynthetic = normalizeSentenceList(synthetic.sentences);
   const baselinePage = page.sentences
@@ -122,6 +150,7 @@ export function loadNlpPerformanceFixtures(
     }))
     .filter((entry) => entry.sentence.length > 0);
   const baselineReplaySentences = normalizeSentenceList(replay.sentences);
+  const baselineQualityCases = toAnalyzerQualityCases(qualityCorpus);
 
   if (profile === "baseline") {
     return {
@@ -132,6 +161,10 @@ export function loadNlpPerformanceFixtures(
         sentences: baselineReplaySentences,
         expectedUniqueSentenceCount: replay.expectedUniqueSentenceCount,
         expectedMinimumCacheHitRate: replay.expectedMinimumCacheHitRate
+      },
+      qualityCorpus: {
+        version: qualityCorpus.version,
+        cases: baselineQualityCases
       }
     };
   }
@@ -162,6 +195,10 @@ export function loadNlpPerformanceFixtures(
     replayUniqueSentences.length,
     replaySentences.length
   );
+  const qualityCases = expandQualityCases(
+    baselineQualityCases,
+    profileConfig.qualityTarget
+  );
 
   return {
     profile,
@@ -171,6 +208,10 @@ export function loadNlpPerformanceFixtures(
       sentences: replaySentences,
       expectedUniqueSentenceCount: replayUniqueSentences.length,
       expectedMinimumCacheHitRate: replayHitRateFloor
+    },
+    qualityCorpus: {
+      version: qualityCorpus.version,
+      cases: qualityCases
     }
   };
 }
@@ -219,10 +260,63 @@ function expandPageSentenceList(
   return output;
 }
 
+function expandQualityCases(
+  qualityCases: AnalyzerQualityCase[],
+  targetCount: number
+): AnalyzerQualityCase[] {
+  if (targetCount <= 0 || qualityCases.length === 0) {
+    return [];
+  }
+
+  if (targetCount <= qualityCases.length) {
+    return qualityCases.slice(0, targetCount);
+  }
+
+  const output = [...qualityCases];
+  for (let index = qualityCases.length; index < targetCount; index += 1) {
+    const base = qualityCases[index % qualityCases.length];
+    const variantIteration = Math.floor(index / qualityCases.length);
+    output.push({
+      id: `${base.id}#expanded-${variantIteration + 1}`,
+      sentence: withVariantSuffix(base.sentence, variantIteration),
+      expectedNormalizedTokens: [...base.expectedNormalizedTokens],
+      expectedNormalizedPhrases: [...base.expectedNormalizedPhrases]
+    });
+  }
+
+  return output;
+}
+
+function toAnalyzerQualityCases(corpus: QualityCorpusFixtureJson): AnalyzerQualityCase[] {
+  return corpus.cases.map((entry) => {
+    const expectedNormalizedTokens = uniqueValues(
+      (entry.tokens ?? [])
+        .map((token) => normalizeToken(token.surface ?? ""))
+        .filter((token) => token.length > 0)
+    );
+    const expectedNormalizedPhrases = uniqueValues(
+      (entry.expectedPhrases ?? [])
+        .map((phrase) => normalizeComparablePhrase(phrase.normalizedSourceText ?? ""))
+        .filter((phrase) => phrase.length > 0)
+    );
+
+    return {
+      id: entry.id,
+      sentence: entry.sourceText.replace(/\s+/g, " ").trim(),
+      expectedNormalizedTokens,
+      expectedNormalizedPhrases
+    };
+  });
+}
+
 function withVariantSuffix(sentence: string, variantIteration: number): string {
   const suffix = VARIANT_SUFFIXES[variantIteration % VARIANT_SUFFIXES.length];
   const sentenceBody = sentence.replace(/[.!?]+$/g, "");
   return `${sentenceBody} (${suffix} ${variantIteration + 1}).`;
+}
+
+function normalizeComparablePhrase(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function repeatSentences(sentences: string[], repetitions: number): string[] {

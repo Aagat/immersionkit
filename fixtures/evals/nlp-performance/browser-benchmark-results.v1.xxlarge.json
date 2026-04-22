@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-22T21:01:26.955Z",
+  "generatedAt": "2026-04-22T21:50:59.382Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -21,7 +21,9 @@
     "syntheticSentenceCount": 2400,
     "pageSentenceCount": 2400,
     "cacheReplaySentenceCount": 2880,
-    "cacheReplayExpectedUniqueSentenceCount": 12
+    "cacheReplayExpectedUniqueSentenceCount": 12,
+    "qualityCaseCount": 1200,
+    "qualityCorpusVersion": "2026-04-21"
   },
   "analyzerResults": [
     {
@@ -31,17 +33,17 @@
         "fixture-pages": 2400,
         "cache-replay": 2880
       },
-      "coldStartLatencyMs": 12.599999904632568,
-      "hotPerSentenceLatencyMs": 0.3179800000190735,
+      "coldStartLatencyMs": 13.400000095367432,
+      "hotPerSentenceLatencyMs": 0.32654000005722045,
       "smallBatch": {
         "sentenceCount": 120,
-        "totalLatencyMs": 29.90000009536743,
-        "perSentenceLatencyMs": 0.24916666746139526
+        "totalLatencyMs": 28.40000009536743,
+        "perSentenceLatencyMs": 0.23666666746139525
       },
       "mediumBatch": {
         "sentenceCount": 1500,
-        "totalLatencyMs": 423.7999997138977,
-        "perSentenceLatencyMs": 0.2825333331425985
+        "totalLatencyMs": 423.19999980926514,
+        "perSentenceLatencyMs": 0.2821333332061768
       },
       "payload": {
         "averageBytesPerSentence": 1600.1533333333334,
@@ -49,8 +51,8 @@
         "sampleSentenceCount": 1500
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 31200000,
-        "afterUsedHeapBytes": 31200000,
+        "beforeUsedHeapBytes": 39600000,
+        "afterUsedHeapBytes": 39600000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -61,9 +63,307 @@
         "replaySentenceCount": 2880,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.9958333333333333,
-        "noCacheLatencyMs": 745,
+        "noCacheLatencyMs": 746.6999998092651,
         "withCacheLatencyMs": 13.300000190734863,
-        "savedLatencyMs": 731.6999998092651
+        "savedLatencyMs": 733.3999996185303
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 1200,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0.15869786368260427,
+        "evaluatedPhraseCaseCount": 983,
+        "matchedPhraseCaseCount": 156,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-progressive",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-red-bicycle",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-stone-bridge",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "chunk-overlap-new-captain",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-captain-football-team",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-manager-restaurant",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-pronoun-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-generic-head-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "multi-fixed-phrases",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 2,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-adjective-fn",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "adjective-noun-noise-fp",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-by-the-way#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to#expanded-2",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-progressive#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          }
+        ]
       },
       "assertions": [
         {
@@ -79,6 +379,21 @@
         {
           "id": "compromise-two:payload-emits",
           "message": "compromise-two emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-corpus-loaded",
+          "message": "compromise-two quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-token-coverage",
+          "message": "compromise-two preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-phrase-cases-present",
+          "message": "compromise-two quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -713,17 +1028,17 @@
         "fixture-pages": 2400,
         "cache-replay": 2880
       },
-      "coldStartLatencyMs": 1.4000000953674316,
-      "hotPerSentenceLatencyMs": 0.4561800000190735,
+      "coldStartLatencyMs": 1.5999999046325684,
+      "hotPerSentenceLatencyMs": 0.46562000007629395,
       "smallBatch": {
         "sentenceCount": 120,
-        "totalLatencyMs": 45,
-        "perSentenceLatencyMs": 0.375
+        "totalLatencyMs": 45.89999961853027,
+        "perSentenceLatencyMs": 0.3824999968210856
       },
       "mediumBatch": {
         "sentenceCount": 1500,
-        "totalLatencyMs": 649.0999999046326,
-        "perSentenceLatencyMs": 0.43273333326975505
+        "totalLatencyMs": 662.8999996185303,
+        "perSentenceLatencyMs": 0.44193333307902016
       },
       "payload": {
         "averageBytesPerSentence": 1719.8033333333333,
@@ -731,8 +1046,8 @@
         "sampleSentenceCount": 1500
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 31200000,
-        "afterUsedHeapBytes": 31200000,
+        "beforeUsedHeapBytes": 39600000,
+        "afterUsedHeapBytes": 39600000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -743,9 +1058,307 @@
         "replaySentenceCount": 2880,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.9958333333333333,
-        "noCacheLatencyMs": 1192.9000000953674,
-        "withCacheLatencyMs": 15.099999904632568,
-        "savedLatencyMs": 1177.8000001907349
+        "noCacheLatencyMs": 1215.7000002861023,
+        "withCacheLatencyMs": 15,
+        "savedLatencyMs": 1200.7000002861023
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 1200,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0.659206510681587,
+        "evaluatedPhraseCaseCount": 983,
+        "matchedPhraseCaseCount": 648,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-used-to",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-have-been-progressive",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-have-been-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-used-to-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-red-bicycle",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-stone-bridge",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "chunk-overlap-new-captain",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-captain-football-team",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-manager-restaurant",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-pronoun-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-generic-head-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "multi-fixed-phrases",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 2,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-adjective-fn",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-noise-fp",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-by-the-way#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-at-least-a#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to#expanded-2",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "overlap-fixed-other-hand#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-used-to#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-have-been-progressive#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          }
+        ]
       },
       "assertions": [
         {
@@ -761,6 +1374,21 @@
         {
           "id": "compromise-three:payload-emits",
           "message": "compromise-three emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-corpus-loaded",
+          "message": "compromise-three quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-token-coverage",
+          "message": "compromise-three preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-phrase-cases-present",
+          "message": "compromise-three quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -1433,17 +2061,17 @@
         "fixture-pages": 2400,
         "cache-replay": 2880
       },
-      "coldStartLatencyMs": 1.0999999046325684,
-      "hotPerSentenceLatencyMs": 0.030080000019073485,
+      "coldStartLatencyMs": 0.7999997138977051,
+      "hotPerSentenceLatencyMs": 0.030719999980926515,
       "smallBatch": {
         "sentenceCount": 120,
-        "totalLatencyMs": 2.5999999046325684,
-        "perSentenceLatencyMs": 0.02166666587193807
+        "totalLatencyMs": 2.8000001907348633,
+        "perSentenceLatencyMs": 0.02333333492279053
       },
       "mediumBatch": {
         "sentenceCount": 1500,
-        "totalLatencyMs": 41.200000286102295,
-        "perSentenceLatencyMs": 0.02746666685740153
+        "totalLatencyMs": 40.80000019073486,
+        "perSentenceLatencyMs": 0.027200000127156575
       },
       "payload": {
         "averageBytesPerSentence": 1509.5286666666666,
@@ -1451,8 +2079,8 @@
         "sampleSentenceCount": 1500
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 31200000,
-        "afterUsedHeapBytes": 31200000,
+        "beforeUsedHeapBytes": 39600000,
+        "afterUsedHeapBytes": 39600000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -1463,9 +2091,307 @@
         "replaySentenceCount": 2880,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.9958333333333333,
-        "noCacheLatencyMs": 59.60000038146973,
-        "withCacheLatencyMs": 9.799999713897705,
-        "savedLatencyMs": 49.80000066757202
+        "noCacheLatencyMs": 63.10000038146973,
+        "withCacheLatencyMs": 10.199999809265137,
+        "savedLatencyMs": 52.90000057220459
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 1200,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0,
+        "evaluatedPhraseCaseCount": 983,
+        "matchedPhraseCaseCount": 0,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-progressive",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-red-bicycle",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "adjective-noun-stone-bridge",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "chunk-overlap-new-captain",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-captain-football-team",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-manager-restaurant",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-pronoun-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-generic-head-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "multi-fixed-phrases",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 2,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-adjective-fn",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "adjective-noun-noise-fp",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-by-the-way#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to#expanded-2",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to#expanded-2",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-progressive#expanded-2",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          }
+        ]
       },
       "assertions": [
         {
@@ -1481,6 +2407,21 @@
         {
           "id": "wink-nlp:payload-emits",
           "message": "wink-nlp emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-corpus-loaded",
+          "message": "wink-nlp quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-token-coverage",
+          "message": "wink-nlp preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-phrase-cases-present",
+          "message": "wink-nlp quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -2120,6 +3061,11 @@
     {
       "id": "fixtures:replay-non-empty",
       "message": "Replay sentence fixtures are present.",
+      "pass": true
+    },
+    {
+      "id": "fixtures:quality-cases-non-empty",
+      "message": "Labeled quality corpus cases are present.",
       "pass": true
     },
     {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-22T21:00:14.737Z",
+  "generatedAt": "2026-04-22T21:50:35.527Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -21,7 +21,9 @@
     "syntheticSentenceCount": 8,
     "pageSentenceCount": 8,
     "cacheReplaySentenceCount": 12,
-    "cacheReplayExpectedUniqueSentenceCount": 6
+    "cacheReplayExpectedUniqueSentenceCount": 6,
+    "qualityCaseCount": 8,
+    "qualityCorpusVersion": "2026-04-21"
   },
   "analyzerResults": [
     {
@@ -31,12 +33,12 @@
         "fixture-pages": 8,
         "cache-replay": 12
       },
-      "coldStartLatencyMs": 13.099999904632568,
-      "hotPerSentenceLatencyMs": 0.4468750059604645,
+      "coldStartLatencyMs": 12.700000286102295,
+      "hotPerSentenceLatencyMs": 0.43437500298023224,
       "smallBatch": {
         "sentenceCount": 4,
-        "totalLatencyMs": 1.1999998092651367,
-        "perSentenceLatencyMs": 0.2999999523162842
+        "totalLatencyMs": 1.299999713897705,
+        "perSentenceLatencyMs": 0.32499992847442627
       },
       "mediumBatch": {
         "sentenceCount": 16,
@@ -61,9 +63,91 @@
         "replaySentenceCount": 12,
         "uniqueSentenceCount": 6,
         "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 3.6000003814697266,
+        "noCacheLatencyMs": 4.100000381469727,
         "withCacheLatencyMs": 1.8999996185302734,
-        "savedLatencyMs": 1.7000007629394531
+        "savedLatencyMs": 2.200000762939453
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 8,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0,
+        "evaluatedPhraseCaseCount": 8,
+        "matchedPhraseCaseCount": 0,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          }
+        ]
       },
       "assertions": [
         {
@@ -79,6 +163,21 @@
         {
           "id": "compromise-two:payload-emits",
           "message": "compromise-two emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-corpus-loaded",
+          "message": "compromise-two quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-token-coverage",
+          "message": "compromise-two preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-phrase-cases-present",
+          "message": "compromise-two quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -713,17 +812,17 @@
         "fixture-pages": 8,
         "cache-replay": 12
       },
-      "coldStartLatencyMs": 1.700000286102295,
-      "hotPerSentenceLatencyMs": 0.5843749940395355,
+      "coldStartLatencyMs": 1.5,
+      "hotPerSentenceLatencyMs": 0.5562499910593033,
       "smallBatch": {
         "sentenceCount": 4,
-        "totalLatencyMs": 1.5999999046325684,
-        "perSentenceLatencyMs": 0.3999999761581421
+        "totalLatencyMs": 1.700000286102295,
+        "perSentenceLatencyMs": 0.42500007152557373
       },
       "mediumBatch": {
         "sentenceCount": 16,
-        "totalLatencyMs": 8.200000286102295,
-        "perSentenceLatencyMs": 0.5125000178813934
+        "totalLatencyMs": 8,
+        "perSentenceLatencyMs": 0.5
       },
       "payload": {
         "averageBytesPerSentence": 1130.9375,
@@ -743,9 +842,91 @@
         "replaySentenceCount": 12,
         "uniqueSentenceCount": 6,
         "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 7.100000381469727,
-        "withCacheLatencyMs": 3.3999996185302734,
-        "savedLatencyMs": 3.700000762939453
+        "noCacheLatencyMs": 7.599999904632568,
+        "withCacheLatencyMs": 3.4000000953674316,
+        "savedLatencyMs": 4.199999809265137
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 8,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0.375,
+        "evaluatedPhraseCaseCount": 8,
+        "matchedPhraseCaseCount": 3,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          }
+        ]
       },
       "assertions": [
         {
@@ -761,6 +942,21 @@
         {
           "id": "compromise-three:payload-emits",
           "message": "compromise-three emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-corpus-loaded",
+          "message": "compromise-three quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-token-coverage",
+          "message": "compromise-three preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-phrase-cases-present",
+          "message": "compromise-three quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -1433,8 +1629,8 @@
         "fixture-pages": 8,
         "cache-replay": 12
       },
-      "coldStartLatencyMs": 1,
-      "hotPerSentenceLatencyMs": 0.12187500298023224,
+      "coldStartLatencyMs": 0.7999997138977051,
+      "hotPerSentenceLatencyMs": 0.09687499701976776,
       "smallBatch": {
         "sentenceCount": 4,
         "totalLatencyMs": 0.20000028610229492,
@@ -1442,8 +1638,8 @@
       },
       "mediumBatch": {
         "sentenceCount": 16,
-        "totalLatencyMs": 0.39999961853027344,
-        "perSentenceLatencyMs": 0.02499997615814209
+        "totalLatencyMs": 0.40000009536743164,
+        "perSentenceLatencyMs": 0.025000005960464478
       },
       "payload": {
         "averageBytesPerSentence": 963.5,
@@ -1463,9 +1659,91 @@
         "replaySentenceCount": 12,
         "uniqueSentenceCount": 6,
         "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 0.19999980926513672,
-        "withCacheLatencyMs": 0.20000028610229492,
-        "savedLatencyMs": -4.76837158203125e-7
+        "noCacheLatencyMs": 0.3000001907348633,
+        "withCacheLatencyMs": 0.09999990463256836,
+        "savedLatencyMs": 0.20000028610229492
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 8,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0,
+        "evaluatedPhraseCaseCount": 8,
+        "matchedPhraseCaseCount": 0,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          }
+        ]
       },
       "assertions": [
         {
@@ -1481,6 +1759,21 @@
         {
           "id": "wink-nlp:payload-emits",
           "message": "wink-nlp emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-corpus-loaded",
+          "message": "wink-nlp quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-token-coverage",
+          "message": "wink-nlp preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-phrase-cases-present",
+          "message": "wink-nlp quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -2120,6 +2413,11 @@
     {
       "id": "fixtures:replay-non-empty",
       "message": "Replay sentence fixtures are present.",
+      "pass": true
+    },
+    {
+      "id": "fixtures:quality-cases-non-empty",
+      "message": "Labeled quality corpus cases are present.",
       "pass": true
     },
     {

@@ -28,6 +28,9 @@ describe("background NLP performance benchmark runner", () => {
     expect(compromiseThreeResult.hotPerSentenceLatencyMs).toBeGreaterThan(0);
     expect(compromiseThreeResult.payload.averageBytesPerSentence).toBeGreaterThan(50);
     expect(compromiseThreeResult.sampleSnapshots.length).toBeGreaterThan(0);
+    expect(compromiseThreeResult.quality.caseCount).toBeGreaterThan(0);
+    expect(compromiseThreeResult.quality.averageTokenCoverage).toBeGreaterThan(0.4);
+    expect(compromiseThreeResult.quality.evaluatedPhraseCaseCount).toBeGreaterThan(0);
     expect(compromiseThreeResult.assertions.every((assertion) => assertion.pass)).toBe(
       true
     );

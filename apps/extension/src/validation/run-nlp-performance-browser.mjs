@@ -146,7 +146,11 @@ function printSummary(result, summaryPath, snapshotsPath) {
         1
       )}B, cache-hit=${(entry.cacheReplay.simulatedHitRate * 100).toFixed(
         1
-      )}%, deterministic=${(entry.determinism.stableRate * 100).toFixed(1)}%`
+      )}%, deterministic=${(entry.determinism.stableRate * 100).toFixed(
+        1
+      )}%, quality-token=${(entry.quality.averageTokenCoverage * 100).toFixed(
+        1
+      )}%, quality-phrase=${(entry.quality.averagePhraseRecall * 100).toFixed(1)}%`
     );
   }
 }

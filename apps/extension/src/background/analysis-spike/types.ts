@@ -48,6 +48,37 @@ export type BenchmarkFixtureCatalog = {
     expectedUniqueSentenceCount: number;
     expectedMinimumCacheHitRate: number;
   };
+  qualityCorpus: {
+    version: string;
+    cases: AnalyzerQualityCase[];
+  };
+};
+
+export type AnalyzerQualityCase = {
+  id: string;
+  sentence: string;
+  expectedNormalizedTokens: string[];
+  expectedNormalizedPhrases: string[];
+};
+
+export type AnalyzerQualityCaseMetrics = {
+  caseId: string;
+  expectedTokenCount: number;
+  matchedTokenCount: number;
+  tokenCoverage: number;
+  expectedPhraseCount: number;
+  matchedPhraseCount: number;
+  phraseRecall: number;
+};
+
+export type AnalyzerQualityMetrics = {
+  corpusVersion: string;
+  caseCount: number;
+  averageTokenCoverage: number;
+  averagePhraseRecall: number;
+  evaluatedPhraseCaseCount: number;
+  matchedPhraseCaseCount: number;
+  sampledCaseMetrics: AnalyzerQualityCaseMetrics[];
 };
 
 export type BenchmarkAssertion = {
@@ -93,6 +124,7 @@ export type AnalyzerBenchmarkMetrics = {
     withCacheLatencyMs: number;
     savedLatencyMs: number;
   };
+  quality: AnalyzerQualityMetrics;
   assertions: BenchmarkAssertion[];
   sampleSnapshots: SentenceAnalyzerSnapshot[];
 };
@@ -131,6 +163,8 @@ export type NlpPerformanceBenchmarkRun = {
     pageSentenceCount: number;
     cacheReplaySentenceCount: number;
     cacheReplayExpectedUniqueSentenceCount: number;
+    qualityCaseCount: number;
+    qualityCorpusVersion: string;
   };
   analyzerResults: AnalyzerBenchmarkResult[];
   assertions: BenchmarkAssertion[];

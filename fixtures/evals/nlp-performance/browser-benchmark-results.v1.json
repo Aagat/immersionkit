@@ -1,69 +1,279 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-22T20:50:51.913Z",
+  "generatedAt": "2026-04-22T21:50:23.390Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
-    "locationHref": "http://127.0.0.1:4173/validation.html?task=nlp-performance&autorun=1&inputProfile=tiny",
+    "locationHref": "http://127.0.0.1:4173/validation.html?task=nlp-performance&autorun=1&inputProfile=baseline",
     "timezone": "Europe/Madrid"
   },
   "runOptions": {
     "includeWinkNlp": true,
-    "inputProfile": "tiny"
+    "inputProfile": "baseline"
   },
   "workload": {
-    "hotSentenceSampleCount": 32,
-    "smallBatchSize": 4,
-    "mediumBatchSize": 16
+    "hotSentenceSampleCount": 140,
+    "smallBatchSize": 10,
+    "mediumBatchSize": 48
   },
   "fixtures": {
-    "profile": "tiny",
-    "syntheticSentenceCount": 8,
-    "pageSentenceCount": 8,
-    "cacheReplaySentenceCount": 12,
-    "cacheReplayExpectedUniqueSentenceCount": 6
+    "profile": "baseline",
+    "syntheticSentenceCount": 36,
+    "pageSentenceCount": 35,
+    "cacheReplaySentenceCount": 60,
+    "cacheReplayExpectedUniqueSentenceCount": 12,
+    "qualityCaseCount": 22,
+    "qualityCorpusVersion": "2026-04-21"
   },
   "analyzerResults": [
     {
       "analyzerId": "compromise-two",
       "datasetSizes": {
-        "synthetic": 8,
-        "fixture-pages": 8,
-        "cache-replay": 12
+        "synthetic": 36,
+        "fixture-pages": 35,
+        "cache-replay": 60
       },
-      "coldStartLatencyMs": 13.300000190734863,
-      "hotPerSentenceLatencyMs": 0.4468750059604645,
+      "coldStartLatencyMs": 13.199999809265137,
+      "hotPerSentenceLatencyMs": 0.337142859186445,
       "smallBatch": {
-        "sentenceCount": 4,
-        "totalLatencyMs": 1.1999998092651367,
-        "perSentenceLatencyMs": 0.2999999523162842
+        "sentenceCount": 10,
+        "totalLatencyMs": 2.3999996185302734,
+        "perSentenceLatencyMs": 0.23999996185302735
       },
       "mediumBatch": {
-        "sentenceCount": 16,
-        "totalLatencyMs": 4.800000190734863,
-        "perSentenceLatencyMs": 0.30000001192092896
+        "sentenceCount": 48,
+        "totalLatencyMs": 12.300000190734863,
+        "perSentenceLatencyMs": 0.256250003973643
       },
       "payload": {
-        "averageBytesPerSentence": 1060.9375,
+        "averageBytesPerSentence": 1006.25,
         "maxBytesPerSentence": 2100,
-        "sampleSentenceCount": 16
+        "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 19300000,
-        "afterUsedHeapBytes": 19300000,
+        "beforeUsedHeapBytes": 23100000,
+        "afterUsedHeapBytes": 23100000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
-        "comparedSentenceCount": 12,
+        "comparedSentenceCount": 24,
         "stableRate": 1
       },
       "cacheReplay": {
-        "replaySentenceCount": 12,
-        "uniqueSentenceCount": 6,
-        "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 3.5,
-        "withCacheLatencyMs": 2,
-        "savedLatencyMs": 1.5
+        "replaySentenceCount": 60,
+        "uniqueSentenceCount": 12,
+        "simulatedHitRate": 0.8,
+        "noCacheLatencyMs": 19.800000190734863,
+        "withCacheLatencyMs": 4.599999904632568,
+        "savedLatencyMs": 15.200000286102295
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 22,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0.16666666666666666,
+        "evaluatedPhraseCaseCount": 18,
+        "matchedPhraseCaseCount": 3,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-progressive",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-red-bicycle",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-stone-bridge",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "chunk-overlap-new-captain",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-captain-football-team",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-manager-restaurant",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-pronoun-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-generic-head-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "multi-fixed-phrases",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 2,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-adjective-fn",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "adjective-noun-noise-fp",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          }
+        ]
       },
       "assertions": [
         {
@@ -79,6 +289,21 @@
         {
           "id": "compromise-two:payload-emits",
           "message": "compromise-two emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-corpus-loaded",
+          "message": "compromise-two quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-token-coverage",
+          "message": "compromise-two preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-phrase-cases-present",
+          "message": "compromise-two quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -709,43 +934,251 @@
     {
       "analyzerId": "compromise-three",
       "datasetSizes": {
-        "synthetic": 8,
-        "fixture-pages": 8,
-        "cache-replay": 12
+        "synthetic": 36,
+        "fixture-pages": 35,
+        "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.5999999046325684,
-      "hotPerSentenceLatencyMs": 0.5562500059604645,
+      "coldStartLatencyMs": 1.5,
+      "hotPerSentenceLatencyMs": 0.4907142877578735,
       "smallBatch": {
-        "sentenceCount": 4,
-        "totalLatencyMs": 1.5999999046325684,
-        "perSentenceLatencyMs": 0.3999999761581421
+        "sentenceCount": 10,
+        "totalLatencyMs": 4.299999713897705,
+        "perSentenceLatencyMs": 0.42999997138977053
       },
       "mediumBatch": {
-        "sentenceCount": 16,
-        "totalLatencyMs": 8.199999809265137,
-        "perSentenceLatencyMs": 0.512499988079071
+        "sentenceCount": 48,
+        "totalLatencyMs": 20.899999618530273,
+        "perSentenceLatencyMs": 0.4354166587193807
       },
       "payload": {
-        "averageBytesPerSentence": 1130.9375,
+        "averageBytesPerSentence": 1075.4583333333333,
         "maxBytesPerSentence": 2238,
-        "sampleSentenceCount": 16
+        "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 19300000,
-        "afterUsedHeapBytes": 19300000,
+        "beforeUsedHeapBytes": 23100000,
+        "afterUsedHeapBytes": 23100000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
-        "comparedSentenceCount": 12,
+        "comparedSentenceCount": 24,
         "stableRate": 1
       },
       "cacheReplay": {
-        "replaySentenceCount": 12,
-        "uniqueSentenceCount": 6,
-        "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 7.5,
-        "withCacheLatencyMs": 3.4000000953674316,
-        "savedLatencyMs": 4.099999904632568
+        "replaySentenceCount": 60,
+        "uniqueSentenceCount": 12,
+        "simulatedHitRate": 0.8,
+        "noCacheLatencyMs": 36.299999713897705,
+        "withCacheLatencyMs": 8.600000381469727,
+        "savedLatencyMs": 27.69999933242798
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 22,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0.6666666666666666,
+        "evaluatedPhraseCaseCount": 18,
+        "matchedPhraseCaseCount": 12,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-used-to",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-have-been-progressive",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-have-been-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "grammar-used-to-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-red-bicycle",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-stone-bridge",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "chunk-overlap-new-captain",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-captain-football-team",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-manager-restaurant",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-pronoun-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-generic-head-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "multi-fixed-phrases",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 2,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-adjective-fn",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 1,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-noise-fp",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          }
+        ]
       },
       "assertions": [
         {
@@ -761,6 +1194,21 @@
         {
           "id": "compromise-three:payload-emits",
           "message": "compromise-three emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-corpus-loaded",
+          "message": "compromise-three quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-token-coverage",
+          "message": "compromise-three preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-phrase-cases-present",
+          "message": "compromise-three quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -1429,43 +1877,251 @@
     {
       "analyzerId": "wink-nlp",
       "datasetSizes": {
-        "synthetic": 8,
-        "fixture-pages": 8,
-        "cache-replay": 12
+        "synthetic": 36,
+        "fixture-pages": 35,
+        "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.299999713897705,
-      "hotPerSentenceLatencyMs": 0.11875000596046448,
+      "coldStartLatencyMs": 1,
+      "hotPerSentenceLatencyMs": 0.06499999931880406,
       "smallBatch": {
-        "sentenceCount": 4,
-        "totalLatencyMs": 0.09999990463256836,
-        "perSentenceLatencyMs": 0.02499997615814209
+        "sentenceCount": 10,
+        "totalLatencyMs": 0.19999980926513672,
+        "perSentenceLatencyMs": 0.019999980926513672
       },
       "mediumBatch": {
-        "sentenceCount": 16,
-        "totalLatencyMs": 0.40000009536743164,
-        "perSentenceLatencyMs": 0.025000005960464478
+        "sentenceCount": 48,
+        "totalLatencyMs": 3.5999999046325684,
+        "perSentenceLatencyMs": 0.07499999801317851
       },
       "payload": {
-        "averageBytesPerSentence": 963.5,
+        "averageBytesPerSentence": 918.2708333333334,
         "maxBytesPerSentence": 1911,
-        "sampleSentenceCount": 16
+        "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 19300000,
-        "afterUsedHeapBytes": 19300000,
+        "beforeUsedHeapBytes": 23100000,
+        "afterUsedHeapBytes": 23100000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
-        "comparedSentenceCount": 12,
+        "comparedSentenceCount": 24,
         "stableRate": 1
       },
       "cacheReplay": {
-        "replaySentenceCount": 12,
-        "uniqueSentenceCount": 6,
-        "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 0.3000001907348633,
-        "withCacheLatencyMs": 0.19999980926513672,
-        "savedLatencyMs": 0.10000038146972656
+        "replaySentenceCount": 60,
+        "uniqueSentenceCount": 12,
+        "simulatedHitRate": 0.8,
+        "noCacheLatencyMs": 7,
+        "withCacheLatencyMs": 0.7999997138977051,
+        "savedLatencyMs": 6.200000286102295
+      },
+      "quality": {
+        "corpusVersion": "2026-04-21",
+        "caseCount": 22,
+        "averageTokenCoverage": 1,
+        "averagePhraseRecall": 0,
+        "evaluatedPhraseCaseCount": 18,
+        "matchedPhraseCaseCount": 0,
+        "sampledCaseMetrics": [
+          {
+            "caseId": "fixed-by-the-way",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-as-soon-as",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-a",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-at-least-b",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-take-care-of",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "fixed-in-order-to",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "overlap-fixed-other-hand",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-going-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-progressive",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-to",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-used-to-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "adjective-noun-red-bicycle",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "adjective-noun-stone-bridge",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "chunk-overlap-new-captain",
+            "expectedTokenCount": 8,
+            "matchedTokenCount": 8,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-captain-football-team",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-manager-restaurant",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "noun-chunk-pronoun-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "noun-chunk-generic-head-negative",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          },
+          {
+            "caseId": "multi-fixed-phrases",
+            "expectedTokenCount": 7,
+            "matchedTokenCount": 7,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 2,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "grammar-have-been-adjective-fn",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 0
+          },
+          {
+            "caseId": "adjective-noun-noise-fp",
+            "expectedTokenCount": 6,
+            "matchedTokenCount": 6,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 0,
+            "matchedPhraseCount": 0,
+            "phraseRecall": 1
+          }
+        ]
       },
       "assertions": [
         {
@@ -1481,6 +2137,21 @@
         {
           "id": "wink-nlp:payload-emits",
           "message": "wink-nlp emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-corpus-loaded",
+          "message": "wink-nlp quality evaluation consumed labeled benchmark cases.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-token-coverage",
+          "message": "wink-nlp preserves expected token surfaces across the quality corpus.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-phrase-cases-present",
+          "message": "wink-nlp quality corpus includes expected-phrase recall probes.",
           "pass": true
         }
       ],
@@ -2120,6 +2791,11 @@
     {
       "id": "fixtures:replay-non-empty",
       "message": "Replay sentence fixtures are present.",
+      "pass": true
+    },
+    {
+      "id": "fixtures:quality-cases-non-empty",
+      "message": "Labeled quality corpus cases are present.",
       "pass": true
     },
     {
