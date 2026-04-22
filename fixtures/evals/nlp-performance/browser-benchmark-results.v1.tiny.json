@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-22T21:50:35.527Z",
+  "generatedAt": "2026-04-22T21:55:42.006Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -33,17 +33,17 @@
         "fixture-pages": 8,
         "cache-replay": 12
       },
-      "coldStartLatencyMs": 12.700000286102295,
-      "hotPerSentenceLatencyMs": 0.43437500298023224,
+      "coldStartLatencyMs": 13.400000095367432,
+      "hotPerSentenceLatencyMs": 0.4624999910593033,
       "smallBatch": {
         "sentenceCount": 4,
-        "totalLatencyMs": 1.299999713897705,
-        "perSentenceLatencyMs": 0.32499992847442627
+        "totalLatencyMs": 1.3000001907348633,
+        "perSentenceLatencyMs": 0.3250000476837158
       },
       "mediumBatch": {
         "sentenceCount": 16,
-        "totalLatencyMs": 5.200000286102295,
-        "perSentenceLatencyMs": 0.32500001788139343
+        "totalLatencyMs": 5.5,
+        "perSentenceLatencyMs": 0.34375
       },
       "payload": {
         "averageBytesPerSentence": 1060.9375,
@@ -63,15 +63,20 @@
         "replaySentenceCount": 12,
         "uniqueSentenceCount": 6,
         "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 4.100000381469727,
+        "noCacheLatencyMs": 3.5,
         "withCacheLatencyMs": 1.8999996185302734,
-        "savedLatencyMs": 2.200000762939453
+        "savedLatencyMs": 1.6000003814697266
       },
       "quality": {
         "corpusVersion": "2026-04-21",
         "caseCount": 8,
         "averageTokenCoverage": 1,
+        "phraseTruePositiveCount": 0,
+        "phraseFalsePositiveCount": 2,
+        "phraseFalseNegativeCount": 8,
+        "phrasePrecision": 0,
         "averagePhraseRecall": 0,
+        "phraseF1": 0,
         "evaluatedPhraseCaseCount": 8,
         "matchedPhraseCaseCount": 0,
         "sampledCaseMetrics": [
@@ -81,8 +86,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-as-soon-as",
@@ -90,8 +100,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-at-least-a",
@@ -99,8 +114,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-at-least-b",
@@ -108,8 +128,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-take-care-of",
@@ -117,8 +142,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-in-order-to",
@@ -126,8 +156,13 @@
             "matchedTokenCount": 8,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 1,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 1,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "overlap-fixed-other-hand",
@@ -135,8 +170,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 1,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 1,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "grammar-going-to",
@@ -144,8 +184,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           }
         ]
       },
@@ -178,6 +223,11 @@
         {
           "id": "compromise-two:quality-phrase-cases-present",
           "message": "compromise-two quality corpus includes expected-phrase recall probes.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:quality-phrase-truth-scored",
+          "message": "compromise-two quality run produced phrase-level TP/FP/FN counts.",
           "pass": true
         }
       ],
@@ -812,17 +862,17 @@
         "fixture-pages": 8,
         "cache-replay": 12
       },
-      "coldStartLatencyMs": 1.5,
-      "hotPerSentenceLatencyMs": 0.5562499910593033,
+      "coldStartLatencyMs": 1.6999998092651367,
+      "hotPerSentenceLatencyMs": 0.6000000089406967,
       "smallBatch": {
         "sentenceCount": 4,
-        "totalLatencyMs": 1.700000286102295,
-        "perSentenceLatencyMs": 0.42500007152557373
+        "totalLatencyMs": 1.9000000953674316,
+        "perSentenceLatencyMs": 0.4750000238418579
       },
       "mediumBatch": {
         "sentenceCount": 16,
-        "totalLatencyMs": 8,
-        "perSentenceLatencyMs": 0.5
+        "totalLatencyMs": 8.899999618530273,
+        "perSentenceLatencyMs": 0.5562499761581421
       },
       "payload": {
         "averageBytesPerSentence": 1130.9375,
@@ -842,15 +892,20 @@
         "replaySentenceCount": 12,
         "uniqueSentenceCount": 6,
         "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 7.599999904632568,
+        "noCacheLatencyMs": 8.099999904632568,
         "withCacheLatencyMs": 3.4000000953674316,
-        "savedLatencyMs": 4.199999809265137
+        "savedLatencyMs": 4.699999809265137
       },
       "quality": {
         "corpusVersion": "2026-04-21",
         "caseCount": 8,
         "averageTokenCoverage": 1,
+        "phraseTruePositiveCount": 3,
+        "phraseFalsePositiveCount": 37,
+        "phraseFalseNegativeCount": 5,
+        "phrasePrecision": 0.075,
         "averagePhraseRecall": 0.375,
+        "phraseF1": 0.12499999999999999,
         "evaluatedPhraseCaseCount": 8,
         "matchedPhraseCaseCount": 3,
         "sampledCaseMetrics": [
@@ -860,8 +915,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 6,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 6,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-as-soon-as",
@@ -869,8 +929,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 1,
-            "phraseRecall": 1
+            "predictedPhraseCount": 5,
+            "truePositivePhraseCount": 1,
+            "falsePositivePhraseCount": 4,
+            "falseNegativePhraseCount": 0,
+            "phrasePrecision": 0.2,
+            "phraseRecall": 1,
+            "phraseF1": 0.33333333333333337
           },
           {
             "caseId": "fixed-at-least-a",
@@ -878,8 +943,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 5,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 5,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-at-least-b",
@@ -887,8 +957,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 6,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 6,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-take-care-of",
@@ -896,8 +971,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 3,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 3,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-in-order-to",
@@ -905,8 +985,13 @@
             "matchedTokenCount": 8,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 1,
-            "phraseRecall": 1
+            "predictedPhraseCount": 7,
+            "truePositivePhraseCount": 1,
+            "falsePositivePhraseCount": 6,
+            "falseNegativePhraseCount": 0,
+            "phrasePrecision": 0.14285714285714285,
+            "phraseRecall": 1,
+            "phraseF1": 0.25
           },
           {
             "caseId": "overlap-fixed-other-hand",
@@ -914,8 +999,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 5,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 5,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "grammar-going-to",
@@ -923,8 +1013,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 1,
-            "phraseRecall": 1
+            "predictedPhraseCount": 3,
+            "truePositivePhraseCount": 1,
+            "falsePositivePhraseCount": 2,
+            "falseNegativePhraseCount": 0,
+            "phrasePrecision": 0.3333333333333333,
+            "phraseRecall": 1,
+            "phraseF1": 0.5
           }
         ]
       },
@@ -957,6 +1052,11 @@
         {
           "id": "compromise-three:quality-phrase-cases-present",
           "message": "compromise-three quality corpus includes expected-phrase recall probes.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:quality-phrase-truth-scored",
+          "message": "compromise-three quality run produced phrase-level TP/FP/FN counts.",
           "pass": true
         }
       ],
@@ -1629,17 +1729,17 @@
         "fixture-pages": 8,
         "cache-replay": 12
       },
-      "coldStartLatencyMs": 0.7999997138977051,
-      "hotPerSentenceLatencyMs": 0.09687499701976776,
+      "coldStartLatencyMs": 0.8999996185302734,
+      "hotPerSentenceLatencyMs": 0.10312500596046448,
       "smallBatch": {
         "sentenceCount": 4,
-        "totalLatencyMs": 0.20000028610229492,
-        "perSentenceLatencyMs": 0.05000007152557373
+        "totalLatencyMs": 0.09999990463256836,
+        "perSentenceLatencyMs": 0.02499997615814209
       },
       "mediumBatch": {
         "sentenceCount": 16,
-        "totalLatencyMs": 0.40000009536743164,
-        "perSentenceLatencyMs": 0.025000005960464478
+        "totalLatencyMs": 0.5,
+        "perSentenceLatencyMs": 0.03125
       },
       "payload": {
         "averageBytesPerSentence": 963.5,
@@ -1659,15 +1759,20 @@
         "replaySentenceCount": 12,
         "uniqueSentenceCount": 6,
         "simulatedHitRate": 0.5,
-        "noCacheLatencyMs": 0.3000001907348633,
-        "withCacheLatencyMs": 0.09999990463256836,
-        "savedLatencyMs": 0.20000028610229492
+        "noCacheLatencyMs": 0.19999980926513672,
+        "withCacheLatencyMs": 0.19999980926513672,
+        "savedLatencyMs": 0
       },
       "quality": {
         "corpusVersion": "2026-04-21",
         "caseCount": 8,
         "averageTokenCoverage": 1,
+        "phraseTruePositiveCount": 0,
+        "phraseFalsePositiveCount": 2,
+        "phraseFalseNegativeCount": 8,
+        "phrasePrecision": 0,
         "averagePhraseRecall": 0,
+        "phraseF1": 0,
         "evaluatedPhraseCaseCount": 8,
         "matchedPhraseCaseCount": 0,
         "sampledCaseMetrics": [
@@ -1677,8 +1782,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 1,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 1,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-as-soon-as",
@@ -1686,8 +1796,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-at-least-a",
@@ -1695,8 +1810,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-at-least-b",
@@ -1704,8 +1824,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-take-care-of",
@@ -1713,8 +1838,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "fixed-in-order-to",
@@ -1722,8 +1852,13 @@
             "matchedTokenCount": 8,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "overlap-fixed-other-hand",
@@ -1731,8 +1866,13 @@
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 0,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 0,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 1,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "grammar-going-to",
@@ -1740,8 +1880,13 @@
             "matchedTokenCount": 6,
             "tokenCoverage": 1,
             "expectedPhraseCount": 1,
-            "matchedPhraseCount": 0,
-            "phraseRecall": 0
+            "predictedPhraseCount": 1,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 1,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           }
         ]
       },
@@ -1774,6 +1919,11 @@
         {
           "id": "wink-nlp:quality-phrase-cases-present",
           "message": "wink-nlp quality corpus includes expected-phrase recall probes.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:quality-phrase-truth-scored",
+          "message": "wink-nlp quality run produced phrase-level TP/FP/FN counts.",
           "pass": true
         }
       ],
@@ -2428,6 +2578,11 @@
     {
       "id": "run:analyzers-passed-own-assertions",
       "message": "Every executed analyzer passed all local benchmark assertions.",
+      "pass": true
+    },
+    {
+      "id": "run:labeled-truth-compares-both-libraries",
+      "message": "When wink comparison is enabled, both compromise and wink analyzers are evaluated on labeled truth cases.",
       "pass": true
     }
   ]

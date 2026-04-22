@@ -35,4 +35,33 @@ describe("background NLP performance benchmark runner", () => {
       true
     );
   });
+
+  it("evaluates compromise and wink analyzers against labeled truth when wink is enabled", async () => {
+    const result = await runNlpPerformanceSpikeBenchmark({
+      includeWinkNlp: true,
+      inputProfile: "tiny"
+    });
+
+    expect(result.assertions.every((assertion) => assertion.pass)).toBe(true);
+
+    const compromiseResult = result.analyzerResults.find(
+      (entry) => entry.analyzerId === "compromise-three"
+    );
+    const winkResult = result.analyzerResults.find(
+      (entry) => entry.analyzerId === "wink-nlp"
+    );
+
+    if (!compromiseResult || "skipped" in compromiseResult) {
+      throw new Error("Expected compromise analyzer benchmark result to execute.");
+    }
+
+    if (!winkResult || "skipped" in winkResult) {
+      throw new Error("Expected wink benchmark result to execute.");
+    }
+
+    expect(compromiseResult.quality.caseCount).toBeGreaterThan(0);
+    expect(winkResult.quality.caseCount).toBeGreaterThan(0);
+    expect(compromiseResult.quality.phraseTruePositiveCount).toBeGreaterThanOrEqual(0);
+    expect(winkResult.quality.phraseTruePositiveCount).toBeGreaterThanOrEqual(0);
+  });
 });

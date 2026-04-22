@@ -95,7 +95,7 @@ export async function runNlpPerformanceSpikeBenchmark(
     }
   }
 
-  const assertions = buildRunAssertions(fixtures, analyzerResults);
+  const assertions = buildRunAssertions(fixtures, analyzerResults, includeWinkNlp);
 
   return {
     schemaVersion: "v1",
@@ -341,6 +341,9 @@ function runAnalyzerQualityBenchmark(
   let phraseRecallTotal = 0;
   let evaluatedPhraseCaseCount = 0;
   let matchedPhraseCaseCount = 0;
+  let phraseTruePositiveCount = 0;
+  let phraseFalsePositiveCount = 0;
+  let phraseFalseNegativeCount = 0;
 
   for (const qualityCase of fixtures.qualityCorpus.cases) {
     const snapshot = engine.analyzeSentence(qualityCase.sentence);
@@ -363,18 +366,35 @@ function runAnalyzerQualityBenchmark(
       .filter((phrase) => phrase.length > 0);
 
     const matchedTokenCount = expectedTokens.filter((token) => tokenSet.has(token)).length;
-    const matchedPhraseCount = expectedPhrases.filter((phrase) =>
-      phraseSetHasMatch(phraseSet, phrase)
-    ).length;
+    const predictedPhrases = [...phraseSet];
+    const matchedPairs = matchExpectedPhrases(expectedPhrases, predictedPhrases);
+    const truePositivePhraseCount = matchedPairs;
+    const falseNegativePhraseCount = Math.max(0, expectedPhrases.length - truePositivePhraseCount);
+    const falsePositivePhraseCount = Math.max(0, predictedPhrases.length - truePositivePhraseCount);
+    const phrasePrecision = ratioOrOne(
+      truePositivePhraseCount,
+      truePositivePhraseCount + falsePositivePhraseCount
+    );
 
     const tokenCoverage = ratio(matchedTokenCount, expectedTokens.length);
-    const phraseRecall = ratio(matchedPhraseCount, expectedPhrases.length);
+    const phraseRecall = ratio(
+      truePositivePhraseCount,
+      truePositivePhraseCount + falseNegativePhraseCount
+    );
+    const phraseF1 = ratioOrZero(
+      2 * phrasePrecision * phraseRecall,
+      phrasePrecision + phraseRecall
+    );
 
     tokenCoverageTotal += tokenCoverage;
+    phraseTruePositiveCount += truePositivePhraseCount;
+    phraseFalsePositiveCount += falsePositivePhraseCount;
+    phraseFalseNegativeCount += falseNegativePhraseCount;
+
     if (expectedPhrases.length > 0) {
       evaluatedPhraseCaseCount += 1;
       phraseRecallTotal += phraseRecall;
-      if (matchedPhraseCount > 0) {
+      if (truePositivePhraseCount > 0) {
         matchedPhraseCaseCount += 1;
       }
     }
@@ -386,17 +406,40 @@ function runAnalyzerQualityBenchmark(
         matchedTokenCount,
         tokenCoverage,
         expectedPhraseCount: expectedPhrases.length,
-        matchedPhraseCount,
-        phraseRecall
+        predictedPhraseCount: predictedPhrases.length,
+        truePositivePhraseCount,
+        falsePositivePhraseCount,
+        falseNegativePhraseCount,
+        phrasePrecision,
+        phraseRecall,
+        phraseF1
       });
     }
   }
+
+  const phrasePrecision = ratioOrZero(
+    phraseTruePositiveCount,
+    phraseTruePositiveCount + phraseFalsePositiveCount
+  );
+  const phraseRecall = ratio(
+    phraseTruePositiveCount,
+    phraseTruePositiveCount + phraseFalseNegativeCount
+  );
+  const phraseF1 = ratioOrZero(
+    2 * phrasePrecision * phraseRecall,
+    phrasePrecision + phraseRecall
+  );
 
   return {
     corpusVersion: fixtures.qualityCorpus.version,
     caseCount: fixtures.qualityCorpus.cases.length,
     averageTokenCoverage: ratio(tokenCoverageTotal, fixtures.qualityCorpus.cases.length),
+    phraseTruePositiveCount,
+    phraseFalsePositiveCount,
+    phraseFalseNegativeCount,
+    phrasePrecision,
     averagePhraseRecall: ratio(phraseRecallTotal, evaluatedPhraseCaseCount),
+    phraseF1,
     evaluatedPhraseCaseCount,
     matchedPhraseCaseCount,
     sampledCaseMetrics
@@ -458,17 +501,33 @@ function buildAnalyzerAssertions(
       id: `${analyzerId}:quality-phrase-cases-present`,
       message: `${analyzerId} quality corpus includes expected-phrase recall probes.`,
       pass: quality.evaluatedPhraseCaseCount > 0
+    },
+    {
+      id: `${analyzerId}:quality-phrase-truth-scored`,
+      message: `${analyzerId} quality run produced phrase-level TP/FP/FN counts.`,
+      pass:
+        quality.phraseTruePositiveCount +
+          quality.phraseFalsePositiveCount +
+          quality.phraseFalseNegativeCount >
+        0
     }
   ];
 }
 
 function buildRunAssertions(
   fixtures: BenchmarkFixtureCatalog,
-  results: AnalyzerBenchmarkResult[]
+  results: AnalyzerBenchmarkResult[],
+  includeWinkNlp: boolean
 ): BenchmarkAssertion[] {
   const executedResults = results.filter(
     (result): result is AnalyzerBenchmarkMetrics => !("skipped" in result)
   );
+  const executedAnalyzerIds = new Set(executedResults.map((result) => result.analyzerId));
+  const compromiseRan = executedResults.some((result) =>
+    result.analyzerId.startsWith("compromise")
+  );
+  const winkRan = executedAnalyzerIds.has("wink-nlp");
+  const qualityCoverageForAllRan = executedResults.every((result) => result.quality.caseCount > 0);
 
   return [
     {
@@ -500,6 +559,12 @@ function buildRunAssertions(
       id: "run:analyzers-passed-own-assertions",
       message: "Every executed analyzer passed all local benchmark assertions.",
       pass: executedResults.every((result) => result.assertions.every((assertion) => assertion.pass))
+    },
+    {
+      id: "run:labeled-truth-compares-both-libraries",
+      message:
+        "When wink comparison is enabled, both compromise and wink analyzers are evaluated on labeled truth cases.",
+      pass: includeWinkNlp ? compromiseRan && winkRan && qualityCoverageForAllRan : compromiseRan
     }
   ];
 }
@@ -560,23 +625,55 @@ function normalizeComparablePhrase(value: string): string {
     .trim();
 }
 
-function phraseSetHasMatch(phraseSet: Set<string>, expected: string): boolean {
-  if (phraseSet.has(expected)) {
-    return true;
+function matchExpectedPhrases(expectedPhrases: string[], predictedPhrases: string[]): number {
+  if (expectedPhrases.length === 0 || predictedPhrases.length === 0) {
+    return 0;
   }
 
-  for (const candidate of phraseSet) {
-    if (candidate.length > expected.length && candidate.includes(expected)) {
-      return true;
+  const consumedPredictedIndexes = new Set<number>();
+  let matchCount = 0;
+
+  for (const expected of expectedPhrases) {
+    const matchedIndex = predictedPhrases.findIndex((candidate, index) => {
+      if (consumedPredictedIndexes.has(index)) {
+        return false;
+      }
+
+      if (candidate === expected) {
+        return true;
+      }
+
+      return candidate.length > expected.length && candidate.includes(expected);
+    });
+
+    if (matchedIndex >= 0) {
+      consumedPredictedIndexes.add(matchedIndex);
+      matchCount += 1;
     }
   }
 
-  return false;
+  return matchCount;
 }
 
 function ratio(numerator: number, denominator: number): number {
   if (denominator <= 0) {
     return 1;
+  }
+
+  return numerator / denominator;
+}
+
+function ratioOrOne(numerator: number, denominator: number): number {
+  if (denominator <= 0) {
+    return 1;
+  }
+
+  return numerator / denominator;
+}
+
+function ratioOrZero(numerator: number, denominator: number): number {
+  if (denominator <= 0) {
+    return 0;
   }
 
   return numerator / denominator;

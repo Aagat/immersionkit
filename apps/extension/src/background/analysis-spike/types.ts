@@ -67,15 +67,25 @@ export type AnalyzerQualityCaseMetrics = {
   matchedTokenCount: number;
   tokenCoverage: number;
   expectedPhraseCount: number;
-  matchedPhraseCount: number;
+  predictedPhraseCount: number;
+  truePositivePhraseCount: number;
+  falsePositivePhraseCount: number;
+  falseNegativePhraseCount: number;
+  phrasePrecision: number;
   phraseRecall: number;
+  phraseF1: number;
 };
 
 export type AnalyzerQualityMetrics = {
   corpusVersion: string;
   caseCount: number;
   averageTokenCoverage: number;
+  phraseTruePositiveCount: number;
+  phraseFalsePositiveCount: number;
+  phraseFalseNegativeCount: number;
+  phrasePrecision: number;
   averagePhraseRecall: number;
+  phraseF1: number;
   evaluatedPhraseCaseCount: number;
   matchedPhraseCaseCount: number;
   sampledCaseMetrics: AnalyzerQualityCaseMetrics[];

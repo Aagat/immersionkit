@@ -150,7 +150,11 @@ function printSummary(result, summaryPath, snapshotsPath) {
         1
       )}%, quality-token=${(entry.quality.averageTokenCoverage * 100).toFixed(
         1
-      )}%, quality-phrase=${(entry.quality.averagePhraseRecall * 100).toFixed(1)}%`
+      )}%, quality-precision=${(entry.quality.phrasePrecision * 100).toFixed(
+        1
+      )}%, quality-recall=${(entry.quality.averagePhraseRecall * 100).toFixed(
+        1
+      )}%, quality-f1=${(entry.quality.phraseF1 * 100).toFixed(1)}%`
     );
   }
 }

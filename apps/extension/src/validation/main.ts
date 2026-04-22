@@ -384,7 +384,10 @@ function renderNlpAnalyzerMetrics(entry: AnalyzerBenchmarkMetrics): string {
           <tr><th>Heap Delta Proxy (bytes)</th><td>${formatNullableNumber(entry.memoryProxy.deltaUsedHeapBytes)}</td></tr>
           <tr><th>Quality Cases</th><td>${entry.quality.caseCount}</td></tr>
           <tr><th>Quality Avg Token Coverage</th><td>${formatPercent(entry.quality.averageTokenCoverage)}</td></tr>
+          <tr><th>Quality Phrase Precision</th><td>${formatPercent(entry.quality.phrasePrecision)}</td></tr>
           <tr><th>Quality Avg Phrase Recall</th><td>${formatPercent(entry.quality.averagePhraseRecall)}</td></tr>
+          <tr><th>Quality Phrase F1</th><td>${formatPercent(entry.quality.phraseF1)}</td></tr>
+          <tr><th>Phrase TP / FP / FN</th><td>${entry.quality.phraseTruePositiveCount} / ${entry.quality.phraseFalsePositiveCount} / ${entry.quality.phraseFalseNegativeCount}</td></tr>
           <tr><th>Phrase Cases With Match</th><td>${entry.quality.matchedPhraseCaseCount}/${entry.quality.evaluatedPhraseCaseCount}</td></tr>
         </tbody>
       </table>
