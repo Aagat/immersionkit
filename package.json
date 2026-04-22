@@ -10,14 +10,12 @@
     "test": "pnpm -r test",
     "benchmark": "node tools/benchmarks/run-browser-validation-suite.mjs",
     "benchmark:validation": "pnpm benchmark",
-    "benchmark:task-01": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",
-    "benchmark:task-02": "node tools/benchmarks/run-task-02-contextual-word-injection-benchmark.mjs",
-    "benchmark:task-03": "node tools/benchmarks/task-03-phrase-detection.mjs",
-    "benchmark:task-03:phrase-detection": "pnpm benchmark:task-03",
-    "benchmark:task-04": "node tools/benchmarks/task-04-sentence-shortlisting-runner.mjs",
-    "benchmark:task-05": "node tools/benchmarks/task-05-sentence-suitability-runner.mjs",
-    "benchmark:task-05:browser": "pnpm benchmark:task-05",
-    "benchmark:task-05:test": "pnpm --filter @immersionkit/shared exec vitest run tests/sentence-suitability-validation.test.ts --reporter=verbose"
+    "benchmark:nlp-performance": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",
+    "benchmark:contextual-word-injection": "node tools/benchmarks/run-task-02-contextual-word-injection-benchmark.mjs",
+    "benchmark:phrase-detection": "node tools/benchmarks/task-03-phrase-detection.mjs",
+    "benchmark:sentence-shortlisting": "node tools/benchmarks/task-04-sentence-shortlisting-runner.mjs",
+    "benchmark:sentence-suitability": "node tools/benchmarks/task-05-sentence-suitability-runner.mjs",
+    "benchmark:sentence-suitability:test": "pnpm --filter @immersionkit/shared exec vitest run tests/sentence-suitability-validation.test.ts --reporter=verbose"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

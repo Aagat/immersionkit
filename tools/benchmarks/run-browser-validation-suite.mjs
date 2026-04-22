@@ -12,29 +12,29 @@ const benchmarkEnv = inputProfile
 
 const tasks = [
   {
-    id: "task-01",
-    label: "Task 01: Background NLP performance",
-    command: [pnpmBinary, ["benchmark:task-01"]]
+    id: "nlp-performance",
+    label: "Background NLP performance",
+    command: [pnpmBinary, ["benchmark:nlp-performance"]]
   },
   {
-    id: "task-02",
-    label: "Task 02: Contextual word injection",
-    command: [pnpmBinary, ["benchmark:task-02"]]
+    id: "contextual-word-injection",
+    label: "Contextual word injection",
+    command: [pnpmBinary, ["benchmark:contextual-word-injection"]]
   },
   {
-    id: "task-03",
-    label: "Task 03: Phrase detection",
-    command: [pnpmBinary, ["benchmark:task-03"]]
+    id: "phrase-detection",
+    label: "Phrase detection",
+    command: [pnpmBinary, ["benchmark:phrase-detection"]]
   },
   {
-    id: "task-04",
-    label: "Task 04: Sentence shortlisting and cache",
-    command: [pnpmBinary, ["benchmark:task-04"]]
+    id: "sentence-shortlisting",
+    label: "Sentence shortlisting and cache",
+    command: [pnpmBinary, ["benchmark:sentence-shortlisting"]]
   },
   {
-    id: "task-05",
-    label: "Task 05: Sentence suitability scoring",
-    command: [pnpmBinary, ["benchmark:task-05"]]
+    id: "sentence-suitability",
+    label: "Sentence suitability scoring",
+    command: [pnpmBinary, ["benchmark:sentence-suitability"]]
   }
 ];
 
