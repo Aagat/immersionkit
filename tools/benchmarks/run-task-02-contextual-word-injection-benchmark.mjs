@@ -10,7 +10,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "../..");
-const VALIDATION_URL = "http://127.0.0.1:5174/validation.html";
+const VALIDATION_URL =
+  "http://127.0.0.1:5174/validation.html?task=contextual-word-injection&autorun=1";
 const OUTPUT_PATH = path.resolve(
   REPO_ROOT,
   "fixtures/evals/word-injection/browser-run-results.v1.json"

@@ -18,10 +18,12 @@ const configuredPort = process.env.IK_VALIDATION_PORT
   ? Number.parseInt(process.env.IK_VALIDATION_PORT, 10)
   : undefined;
 const basePort = configuredPort ?? 5173;
-const validationPath = process.env.IK_VALIDATION_PATH ?? "/validation.html";
+const validationPath =
+  process.env.IK_VALIDATION_PATH ??
+  "/validation.html?task=phrase-detection&autorun=1";
 const outputPath = path.resolve(
   projectRoot,
-  "fixtures/evals/phrase-detection/last-run.browser.json"
+  "fixtures/evals/phrase-detection/browser-run-results.v1.json"
 );
 
 let devServerProcess;

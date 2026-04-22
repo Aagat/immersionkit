@@ -7,7 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../..");
 
-const validationUrl = "http://127.0.0.1:5173/validation.html";
+const validationUrl =
+  "http://127.0.0.1:5173/validation.html?task=sentence-shortlisting&autorun=1";
 const playwrightSpecPath = path.join(
   workspaceRoot,
   "tools/benchmarks/task-04-shortlisting.playwright.spec.cjs"

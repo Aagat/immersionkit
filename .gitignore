@@ -8,4 +8,3 @@ release/
 *.log
 tools/importers/outputs/generated/
 .env
-fixtures/evals/phrase-detection/last-run.browser.json
