@@ -1,0 +1,582 @@
+{
+  "policies": [
+    {
+      "policyId": "analyze-every-segmented",
+      "policyLabel": "Analyze Every Segmented Sentence",
+      "shortlistedCandidates": 38,
+      "uniqueSentenceHashes": 32,
+      "estimatedAnalysisCalls": 32,
+      "estimatedAnalysisCallsSaved": 0,
+      "estimatedAnalysisCallsSavedRatio": 0,
+      "cacheHits": 6,
+      "cacheMisses": 32,
+      "cacheHitRate": 0.15789473684210525,
+      "falseNegativeCount": 1,
+      "falseNegatives": [
+        "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
+      ]
+    },
+    {
+      "policyId": "current-injected-token-gated",
+      "policyLabel": "Current Injected-Token-Gated Flow",
+      "shortlistedCandidates": 23,
+      "uniqueSentenceHashes": 20,
+      "estimatedAnalysisCalls": 20,
+      "estimatedAnalysisCallsSaved": 12,
+      "estimatedAnalysisCallsSavedRatio": 0.375,
+      "cacheHits": 3,
+      "cacheMisses": 20,
+      "cacheHitRate": 0.13043478260869565,
+      "falseNegativeCount": 2,
+      "falseNegatives": [
+        "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message.",
+        "As soon as we arrive at the station, we take care of tools before lunch."
+      ]
+    },
+    {
+      "policyId": "injected-token-length-dedupe",
+      "policyLabel": "Injected Token + Length + Dedupe",
+      "shortlistedCandidates": 23,
+      "uniqueSentenceHashes": 20,
+      "estimatedAnalysisCalls": 20,
+      "estimatedAnalysisCallsSaved": 12,
+      "estimatedAnalysisCallsSavedRatio": 0.375,
+      "cacheHits": 3,
+      "cacheMisses": 20,
+      "cacheHitRate": 0.13043478260869565,
+      "falseNegativeCount": 2,
+      "falseNegatives": [
+        "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message.",
+        "As soon as we arrive at the station, we take care of tools before lunch."
+      ]
+    },
+    {
+      "policyId": "phrase-aware-shortlist",
+      "policyLabel": "Phrase-Aware Shortlist",
+      "shortlistedCandidates": 24,
+      "uniqueSentenceHashes": 21,
+      "estimatedAnalysisCalls": 21,
+      "estimatedAnalysisCallsSaved": 11,
+      "estimatedAnalysisCallsSavedRatio": 0.34375,
+      "cacheHits": 3,
+      "cacheMisses": 21,
+      "cacheHitRate": 0.125,
+      "falseNegativeCount": 1,
+      "falseNegatives": [
+        "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenarioId": "fixture-article-basic",
+      "scenarioLabel": "Fixture: article-basic.html",
+      "source": "fixtures/pages/article-basic.html",
+      "eligibleTextNodes": 9,
+      "segmentedSentences": 9,
+      "segmentedSentencesLengthFiltered": 8,
+      "uniqueSegmentedSentenceHashes": 9,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 9,
+          "uniqueSentenceHashes": 9,
+          "estimatedAnalysisCalls": 9,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 9,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "fixture-article-exclusions",
+      "scenarioLabel": "Fixture: article-exclusions.html",
+      "source": "fixtures/pages/article-exclusions.html",
+      "eligibleTextNodes": 3,
+      "segmentedSentences": 3,
+      "segmentedSentencesLengthFiltered": 3,
+      "uniqueSegmentedSentenceHashes": 3,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 3,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 3,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 3,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 3,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "fixture-article-longform",
+      "scenarioLabel": "Fixture: article-longform.html",
+      "source": "fixtures/pages/article-longform.html",
+      "eligibleTextNodes": 9,
+      "segmentedSentences": 9,
+      "segmentedSentencesLengthFiltered": 5,
+      "uniqueSegmentedSentenceHashes": 9,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 9,
+          "uniqueSentenceHashes": 9,
+          "estimatedAnalysisCalls": 9,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 9,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "fixture-article-dynamic",
+      "scenarioLabel": "Fixture: article-dynamic.html",
+      "source": "fixtures/pages/article-dynamic.html",
+      "eligibleTextNodes": 5,
+      "segmentedSentences": 5,
+      "segmentedSentencesLengthFiltered": 3,
+      "uniqueSegmentedSentenceHashes": 3,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 3,
+          "cacheHitRate": 0.4,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.3333333333333333,
+          "cacheHits": 1,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.3333333333333333,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.3333333333333333,
+          "cacheHits": 1,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.3333333333333333,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.3333333333333333,
+          "cacheHits": 1,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.3333333333333333,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "repeated-content-blocks",
+      "scenarioLabel": "Eval: repeated content blocks",
+      "source": "fixtures/evals/sentence-shortlisting/repeated-content-blocks.html",
+      "eligibleTextNodes": 6,
+      "segmentedSentences": 6,
+      "segmentedSentencesLengthFiltered": 5,
+      "uniqueSegmentedSentenceHashes": 4,
+      "usefulSentenceCount": 3,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 6,
+          "uniqueSentenceHashes": 4,
+          "estimatedAnalysisCalls": 4,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 4,
+          "cacheHitRate": 0.3333333333333333,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 2,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 2,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 2,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as we arrive at the station, we take care of tools before lunch."
+          ]
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 2,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 2,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 2,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as we arrive at the station, we take care of tools before lunch."
+          ]
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.25,
+          "cacheHits": 0,
+          "cacheMisses": 3,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "longform-overflow-nodes",
+      "scenarioLabel": "Eval: longform overflow nodes",
+      "source": "fixtures/evals/sentence-shortlisting/longform-overflow.html",
+      "eligibleTextNodes": 2,
+      "segmentedSentences": 2,
+      "segmentedSentencesLengthFiltered": 1,
+      "uniqueSegmentedSentenceHashes": 2,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 2,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 2,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
+          ]
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 1,
+          "uniqueSentenceHashes": 1,
+          "estimatedAnalysisCalls": 1,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 1,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
+          ]
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 1,
+          "uniqueSentenceHashes": 1,
+          "estimatedAnalysisCalls": 1,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 1,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
+          ]
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 1,
+          "uniqueSentenceHashes": 1,
+          "estimatedAnalysisCalls": 1,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 1,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
+          ]
+        }
+      ]
+    },
+    {
+      "scenarioId": "dynamic-rerender-same-hash",
+      "scenarioLabel": "Eval: dynamic rerender same hash",
+      "source": "fixtures/evals/sentence-shortlisting/rerender-pass-*.html",
+      "eligibleTextNodes": 4,
+      "segmentedSentences": 4,
+      "segmentedSentencesLengthFiltered": 4,
+      "uniqueSegmentedSentenceHashes": 2,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "analysis-calls-reduced-vs-baseline",
+      "passed": true,
+      "message": "Current injected-token-gated flow should not exceed baseline analysis calls."
+    },
+    {
+      "id": "length-dedupe-reduces-or-matches-current-calls",
+      "passed": true,
+      "message": "Injected + length + dedupe should not require more analysis calls than current flow."
+    },
+    {
+      "id": "phrase-aware-does-not-increase-false-negatives",
+      "passed": true,
+      "message": "Phrase-aware shortlist should keep or reduce obvious false negatives."
+    },
+    {
+      "id": "rerender-cache-hits-observed",
+      "passed": true,
+      "message": "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
+    }
+  ]
+}

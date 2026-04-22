@@ -7,11 +7,11 @@
     "dev": "pnpm --filter @immersionkit/extension dev",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "benchmark:task-04": "node tools/benchmarks/task-04-sentence-shortlisting-runner.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }
 }
-

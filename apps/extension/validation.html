@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Validation - Sentence Shortlisting</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #102230;
+        --muted: #3c5566;
+        --line: #c8d6df;
+        --panel: #f5fbff;
+        --surface: #ffffff;
+        --accent: #0d6e91;
+        --good: #0b7a5a;
+        --bad: #9f2a2a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(160deg, #eef7fd 0%, #ffffff 45%, #f7fcff 100%);
+      }
+
+      main {
+        width: min(1280px, 96vw);
+        margin: 2rem auto 3rem;
+        display: grid;
+        gap: 1rem;
+      }
+
+      section {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+      }
+
+      p {
+        margin: 0.4rem 0;
+        color: var(--muted);
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        padding: 0.55rem 1rem;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.6rem;
+        background: #fff;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 0.45rem 0.5rem;
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.9rem;
+      }
+
+      th {
+        background: var(--panel);
+        font-weight: 700;
+      }
+
+      .numeric {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .scenario-card {
+        margin-top: 0.8rem;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.75rem;
+        background: #fff;
+      }
+
+      .scenario-source {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .scenario-stats {
+        color: var(--ink);
+        font-size: 0.86rem;
+      }
+
+      .scenario-table {
+        margin-top: 0.6rem;
+      }
+
+      .false-negative-cell {
+        color: var(--bad);
+        font-size: 0.8rem;
+      }
+
+      #shortlisting-assertions {
+        margin: 0.6rem 0 0;
+        padding-left: 1.2rem;
+      }
+
+      .assertion-pass {
+        color: var(--good);
+      }
+
+      .assertion-fail {
+        color: var(--bad);
+      }
+
+      #shortlisting-context,
+      #shortlisting-json-output {
+        margin-top: 0.8rem;
+        white-space: pre-wrap;
+        font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+        font-size: 0.82rem;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fcfeff;
+        padding: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>Sentence Shortlisting and Cache Validation</h1>
+        <p>
+          Browser benchmark harness for comparing sentence shortlisting policies against
+          fixture-backed DOM pages, repeated blocks, long-node skips, and rerender cache reuse.
+        </p>
+        <button id="run-shortlisting-benchmark" type="button">Run Benchmark</button>
+        <pre id="shortlisting-context"></pre>
+      </section>
+
+      <section>
+        <h2>Policy Summary</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Policy</th>
+              <th class="numeric">Shortlisted Candidates</th>
+              <th class="numeric">Unique Sentence Hashes</th>
+              <th class="numeric">Estimated Analysis Calls</th>
+              <th class="numeric">Analysis Calls Saved</th>
+              <th class="numeric">Simulated Cache Hit Rate</th>
+              <th class="numeric">False Negatives</th>
+            </tr>
+          </thead>
+          <tbody id="shortlisting-policy-table-body"></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Scenario Breakdown</h2>
+        <div id="shortlisting-scenarios"></div>
+      </section>
+
+      <section>
+        <h2>Benchmark Assertions</h2>
+        <ul id="shortlisting-assertions"></ul>
+      </section>
+
+      <section>
+        <h2>Raw JSON Output</h2>
+        <pre id="shortlisting-json-output"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="./src/validation/sentence-shortlisting.ts"></script>
+  </body>
+</html>
