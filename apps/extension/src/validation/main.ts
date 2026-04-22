@@ -183,7 +183,7 @@ function renderDashboard(): string {
         </article>
         <article class="task-card">
           <h2>Task 03: Phrase Detection</h2>
-          <p>Precision/recall validation for fixed-phrase + chunk/grammar phrase extraction.</p>
+          <p>Gold-corpus comparison for shared annotated logic versus compromise and wink-backed phrase extraction.</p>
           <a class="task-link" href="/validation.html?task=phrase-detection&amp;autorun=1">Open Task 03</a>
         </article>
         <article class="task-card">

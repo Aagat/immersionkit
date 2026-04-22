@@ -118,7 +118,7 @@ export function detectPhraseCandidates(
   };
 }
 
-function detectFixedPhraseLane(
+export function detectFixedPhraseLane(
   sourceText: string,
   tokens: readonly PhraseToken[],
   lexicon: readonly FixedPhraseLexiconEntry[]
@@ -163,7 +163,7 @@ function detectFixedPhraseLane(
   return candidates;
 }
 
-function detectGrammarCarrierPatterns(
+export function detectGrammarCarrierPatterns(
   sourceText: string,
   tokens: readonly PhraseToken[]
 ): PhraseCandidate[] {
@@ -244,7 +244,7 @@ function detectGrammarCarrierPatterns(
   return candidates;
 }
 
-function detectAdjectiveNounPatterns(
+export function detectAdjectiveNounPatterns(
   sourceText: string,
   tokens: readonly PhraseToken[]
 ): PhraseCandidate[] {
@@ -288,7 +288,7 @@ function detectAdjectiveNounPatterns(
   return candidates;
 }
 
-function detectCoherentChunks(
+export function detectCoherentChunks(
   sourceText: string,
   tokens: readonly PhraseToken[],
   chunks: readonly PhraseChunkAnnotation[]
@@ -350,6 +350,88 @@ function detectCoherentChunks(
         tokens
       })
     );
+  }
+
+  return candidates;
+}
+
+export function detectPosBackedNounChunks(
+  sourceText: string,
+  tokens: readonly PhraseToken[]
+): PhraseCandidate[] {
+  const candidates: PhraseCandidate[] = [];
+
+  for (let startToken = 0; startToken < tokens.length - 2; startToken += 1) {
+    const start = tokens[startToken];
+    if (start.pos === "PREP" || start.pos === "PRON" || start.pos === "VERB") {
+      continue;
+    }
+
+    let nounCount = start.pos === "NOUN" || start.pos === "PROPN" ? 1 : 0;
+    let prepositionCount = 0;
+
+    for (
+      let endToken = startToken + 1;
+      endToken < tokens.length && endToken - startToken < 7;
+      endToken += 1
+    ) {
+      const token = tokens[endToken];
+      const tokenLength = endToken - startToken + 1;
+
+      if (token.pos === "NOUN" || token.pos === "PROPN") {
+        nounCount += 1;
+      }
+
+      if (token.pos === "PREP") {
+        prepositionCount += 1;
+      }
+
+      if (!isChunkShellToken(token.pos)) {
+        break;
+      }
+
+      if (prepositionCount > 1) {
+        break;
+      }
+
+      const spanTokens = tokens.slice(startToken, endToken + 1);
+      const containsPronoun = spanTokens.some((entry) => entry.pos === "PRON");
+      const containsConnector = spanTokens.some((entry) =>
+        PREPOSITIONS.has(entry.normalized)
+      );
+      const headToken = [...spanTokens]
+        .reverse()
+        .find((entry) => entry.pos === "NOUN" || entry.pos === "PROPN");
+
+      if (containsPronoun || nounCount < 2 || !headToken || tokenLength < 3) {
+        continue;
+      }
+
+      if (GENERIC_CHUNK_HEADS.has(headToken.normalized)) {
+        continue;
+      }
+
+      if (!containsConnector && tokenLength < 4) {
+        continue;
+      }
+
+      candidates.push(
+        buildPhraseCandidate({
+          sourceKind: "chunk",
+          category: "noun-chunk",
+          lane: "grammar-chunk",
+          ruleId: "pattern-pos-backed-noun-chunk-v1",
+          confidence: Math.min(
+            0.88,
+            0.72 + Math.max(0, tokenLength - 3) * 0.04 + (containsConnector ? 0.04 : 0)
+          ),
+          startToken,
+          endToken: endToken + 1,
+          sourceText,
+          tokens
+        })
+      );
+    }
   }
 
   return candidates;
@@ -419,7 +501,7 @@ function overlaps(a: PhraseCandidate, b: PhraseCandidate): boolean {
   return a.span.startToken < b.span.endToken && b.span.startToken < a.span.endToken;
 }
 
-function resolveOverlaps(candidates: readonly PhraseCandidate[]): PhraseCandidate[] {
+export function resolveOverlaps(candidates: readonly PhraseCandidate[]): PhraseCandidate[] {
   const selected: PhraseCandidate[] = [];
   const candidatesByPriority = [...candidates].sort(compareForSelection);
 
@@ -431,4 +513,14 @@ function resolveOverlaps(candidates: readonly PhraseCandidate[]): PhraseCandidat
   }
 
   return selected.sort(compareBySpan);
+}
+
+function isChunkShellToken(pos: string): boolean {
+  return (
+    pos === "DET" ||
+    pos === "ADJ" ||
+    pos === "NOUN" ||
+    pos === "PROPN" ||
+    pos === "PREP"
+  );
 }

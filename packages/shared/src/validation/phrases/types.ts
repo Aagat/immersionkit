@@ -80,6 +80,24 @@ export type PhraseDetectionResult = {
   selectedCandidates: PhraseCandidate[];
 };
 
+export type PhraseDetectorImplementationId =
+  | "shared-annotated"
+  | "compromise-three"
+  | "wink-nlp";
+
+export type PhraseDetectorInputMode = "fixture-annotated" | "library-pos-from-raw";
+
+export type PhraseDetector = (
+  phraseCase: PhraseGoldCase
+) => PhraseDetectionResult | Promise<PhraseDetectionResult>;
+
+export type PhraseDetectorImplementation = {
+  implementationId: PhraseDetectorImplementationId;
+  label: string;
+  inputMode: PhraseDetectorInputMode;
+  detect: PhraseDetector;
+};
+
 export type PhraseCaseEvaluation = {
   caseId: string;
   sourceText: string;

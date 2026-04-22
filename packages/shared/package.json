@@ -13,9 +13,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "compromise": "^14.14.4",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "wink-nlp": "^2.4.0"
+  },
   "devDependencies": {
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }
 }
-

@@ -1,8 +1,10 @@
 import {
   buildCanonicalPhraseKey,
-  detectPhraseCandidates,
-  evaluatePhraseDetectorAgainstCorpus,
+  evaluatePhraseDetectorAgainstCorpusAsync,
   findCaseResult,
+  listPhraseDetectorImplementations,
+  type PhraseDetector,
+  type PhraseDetectorImplementationId,
   type PhraseEvaluationSummary,
   type PhraseGoldCorpus
 } from "@immersionkit/shared";
@@ -14,6 +16,23 @@ type ValidationAssertion = {
   details: string;
 };
 
+type PhraseImplementationPayload = {
+  implementationId: PhraseDetectorImplementationId;
+  label: string;
+  inputMode: "fixture-annotated" | "library-pos-from-raw";
+  runtime: {
+    totalMs: number;
+    averageCaseMs: number;
+    casesPerSecond: number;
+    repeatCount: number;
+  };
+  overall: PhraseEvaluationSummary["overall"];
+  categoryMetrics: PhraseEvaluationSummary["categoryMetrics"];
+  assertions: ValidationAssertion[];
+  representativeFalsePositives: PhraseEvaluationSummary["errors"];
+  representativeFalseNegatives: PhraseEvaluationSummary["errors"];
+};
+
 type PhraseValidationPayload = {
   generatedAt: string;
   browserContext: {
@@ -22,11 +41,13 @@ type PhraseValidationPayload = {
     platform: string;
   };
   corpusVersion: string;
-  overall: PhraseEvaluationSummary["overall"];
-  categoryMetrics: PhraseEvaluationSummary["categoryMetrics"];
   assertions: ValidationAssertion[];
-  representativeFalsePositives: PhraseEvaluationSummary["errors"];
-  representativeFalseNegatives: PhraseEvaluationSummary["errors"];
+  implementations: PhraseImplementationPayload[];
+};
+
+type PhraseValidationFailurePayload = {
+  generatedAt: string;
+  error: string;
 };
 
 declare global {
@@ -39,13 +60,17 @@ function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function formatMs(value: number): string {
+  return `${value.toFixed(3)} ms`;
+}
+
 function renderReport(payload: PhraseValidationPayload) {
   const root = document.querySelector<HTMLElement>("#app");
   if (!root) {
     return;
   }
 
-  const assertionMarkup = payload.assertions
+  const suiteAssertionMarkup = payload.assertions
     .map(
       (assertion) =>
         `<li><strong>${assertion.passed ? "PASS" : "FAIL"}</strong> ${assertion.name}: ${
@@ -54,6 +79,93 @@ function renderReport(payload: PhraseValidationPayload) {
     )
     .join("");
 
+  const summaryRows = payload.implementations
+    .map(
+      (implementation) =>
+        `<tr>
+          <td>${implementation.label}</td>
+          <td>${implementation.inputMode}</td>
+          <td>${formatMs(implementation.runtime.totalMs)}</td>
+          <td>${formatMs(implementation.runtime.averageCaseMs)}</td>
+          <td>${implementation.runtime.casesPerSecond.toFixed(2)}</td>
+          <td>${formatPercent(implementation.overall.precision)}</td>
+          <td>${formatPercent(implementation.overall.recall)}</td>
+          <td>${implementation.overall.truePositives}</td>
+          <td>${implementation.overall.falsePositives}</td>
+          <td>${implementation.overall.falseNegatives}</td>
+        </tr>`
+    )
+    .join("");
+
+  const implementationSections = payload.implementations
+    .map((implementation) => renderImplementationSection(implementation))
+    .join("");
+
+  root.innerHTML = `
+    <main>
+      <h1>Phrase Detection Validation</h1>
+      <p><strong>Generated:</strong> ${payload.generatedAt}</p>
+      <p><strong>Browser:</strong> ${payload.browserContext.userAgent}</p>
+      <p><strong>Language:</strong> ${payload.browserContext.language}</p>
+      <p><strong>Platform:</strong> ${payload.browserContext.platform}</p>
+      <p><strong>Corpus version:</strong> ${payload.corpusVersion}</p>
+
+      <section>
+        <h2>Implementation Summary</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Implementation</th>
+              <th>Input mode</th>
+              <th>Total runtime</th>
+              <th>Avg case runtime</th>
+              <th>Cases/sec</th>
+              <th>Precision</th>
+              <th>Recall</th>
+              <th>TP</th>
+              <th>FP</th>
+              <th>FN</th>
+            </tr>
+          </thead>
+          <tbody>${summaryRows}</tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Harness Assertions</h2>
+        <ul>${suiteAssertionMarkup}</ul>
+      </section>
+
+      ${implementationSections}
+
+      <section>
+        <h2>Machine Readable Output</h2>
+        <pre id="validation-json">${JSON.stringify(payload, null, 2)}</pre>
+      </section>
+    </main>
+  `;
+}
+
+function renderFailure(payload: PhraseValidationFailurePayload) {
+  const root = document.querySelector<HTMLElement>("#app");
+  if (!root) {
+    return;
+  }
+
+  root.innerHTML = `
+    <main>
+      <h1>Phrase Detection Validation Failed</h1>
+      <p><strong>Generated:</strong> ${payload.generatedAt}</p>
+      <p>${payload.error}</p>
+      <section>
+        <h2>Machine Readable Output</h2>
+        <pre id="validation-json">${JSON.stringify(payload, null, 2)}</pre>
+      </section>
+    </main>
+  `;
+}
+
+function renderImplementationSection(payload: PhraseImplementationPayload): string {
   const categoryRows = payload.categoryMetrics
     .map(
       (metrics) =>
@@ -65,6 +177,15 @@ function renderReport(payload: PhraseValidationPayload) {
           <td>${formatPercent(metrics.precision)}</td>
           <td>${formatPercent(metrics.recall)}</td>
         </tr>`
+    )
+    .join("");
+
+  const assertionMarkup = payload.assertions
+    .map(
+      (assertion) =>
+        `<li><strong>${assertion.passed ? "PASS" : "WARN"}</strong> ${assertion.name}: ${
+          assertion.details
+        }</li>`
     )
     .join("");
 
@@ -92,101 +213,107 @@ function renderReport(payload: PhraseValidationPayload) {
     })
     .join("");
 
-  root.innerHTML = `
-    <main>
-      <h1>Phrase Detection Validation</h1>
-      <p><strong>Generated:</strong> ${payload.generatedAt}</p>
-      <p><strong>Browser:</strong> ${payload.browserContext.userAgent}</p>
-      <p><strong>Language:</strong> ${payload.browserContext.language}</p>
-      <p><strong>Platform:</strong> ${payload.browserContext.platform}</p>
-      <p><strong>Corpus version:</strong> ${payload.corpusVersion}</p>
+  return `
+    <section>
+      <h2>${payload.label}</h2>
+      <p><strong>Input mode:</strong> ${payload.inputMode}</p>
+      <p><strong>Runtime:</strong> ${formatMs(payload.runtime.totalMs)} total, ${formatMs(
+        payload.runtime.averageCaseMs
+      )} per case across ${payload.runtime.repeatCount} repeated corpus passes, ${payload.runtime.casesPerSecond.toFixed(2)} cases/sec</p>
+      <ul>
+        <li>True positives: ${payload.overall.truePositives}</li>
+        <li>False positives: ${payload.overall.falsePositives}</li>
+        <li>False negatives: ${payload.overall.falseNegatives}</li>
+        <li>Precision: ${formatPercent(payload.overall.precision)}</li>
+        <li>Recall: ${formatPercent(payload.overall.recall)}</li>
+      </ul>
 
-      <section>
-        <h2>Overall Metrics</h2>
-        <ul>
-          <li>True positives: ${payload.overall.truePositives}</li>
-          <li>False positives: ${payload.overall.falsePositives}</li>
-          <li>False negatives: ${payload.overall.falseNegatives}</li>
-          <li>Precision: ${formatPercent(payload.overall.precision)}</li>
-          <li>Recall: ${formatPercent(payload.overall.recall)}</li>
-        </ul>
-      </section>
+      <h3>Category Metrics</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>TP</th>
+            <th>FP</th>
+            <th>FN</th>
+            <th>Precision</th>
+            <th>Recall</th>
+          </tr>
+        </thead>
+        <tbody>${categoryRows}</tbody>
+      </table>
 
-      <section>
-        <h2>Category Metrics</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>TP</th>
-              <th>FP</th>
-              <th>FN</th>
-              <th>Precision</th>
-              <th>Recall</th>
-            </tr>
-          </thead>
-          <tbody>${categoryRows}</tbody>
-        </table>
-      </section>
+      <h3>Implementation Checks</h3>
+      <ul>${assertionMarkup}</ul>
 
-      <section>
-        <h2>Browser Assertions</h2>
-        <ul>${assertionMarkup}</ul>
-      </section>
+      <h3>Representative False Positives</h3>
+      <ul>${falsePositiveMarkup || "<li>None</li>"}</ul>
 
-      <section>
-        <h2>Representative False Positives</h2>
-        <ul>${falsePositiveMarkup || "<li>None</li>"}</ul>
-      </section>
-
-      <section>
-        <h2>Representative False Negatives</h2>
-        <ul>${falseNegativeMarkup || "<li>None</li>"}</ul>
-      </section>
-
-      <section>
-        <h2>Machine Readable Output</h2>
-        <pre id="validation-json">${JSON.stringify(payload, null, 2)}</pre>
-      </section>
-    </main>
+      <h3>Representative False Negatives</h3>
+      <ul>${falseNegativeMarkup || "<li>None</li>"}</ul>
+    </section>
   `;
 }
 
-function runAssertions(
-  corpus: PhraseGoldCorpus,
+function buildHarnessAssertions(
+  implementations: PhraseImplementationPayload[],
+  corpus: PhraseGoldCorpus
+): ValidationAssertion[] {
+  const implementationIds = new Set(
+    implementations.map((implementation) => implementation.implementationId)
+  );
+
+  return [
+    {
+      name: "All configured implementations completed",
+      passed: implementations.length >= 2 && implementations.every((entry) => entry.runtime.totalMs > 0),
+      details: `${implementations.length} implementation runs captured for ${corpus.cases.length} cases.`
+    },
+    {
+      name: "Shared annotated baseline is present",
+      passed: implementationIds.has("shared-annotated"),
+      details: implementationIds.has("shared-annotated")
+        ? "Shared annotated baseline included in the comparison set."
+        : "Shared annotated baseline is missing."
+    },
+    {
+      name: "At least one library-backed implementation is present",
+      passed:
+        implementationIds.has("compromise-three") || implementationIds.has("wink-nlp"),
+      details:
+        implementationIds.has("compromise-three") || implementationIds.has("wink-nlp")
+          ? "Third-party library backed detector output is present."
+          : "No third-party library backed detector output was captured."
+    }
+  ];
+}
+
+function runImplementationAssertions(
   evaluation: PhraseEvaluationSummary
 ): ValidationAssertion[] {
-  const assertions: ValidationAssertion[] = [];
+  const overlapCaseIds = evaluation.caseResults
+    .filter((result) =>
+      result.detected.some((candidate, index) =>
+        result.detected.some(
+          (comparison, comparisonIndex) =>
+            comparisonIndex > index &&
+            candidate.span.startToken < comparison.span.endToken &&
+            comparison.span.startToken < candidate.span.endToken
+        )
+      )
+    )
+    .map((result) => result.caseId);
 
-  const overlapCaseIds: string[] = [];
-  for (const phraseCase of corpus.cases) {
-    const detection = detectPhraseCandidates(phraseCase);
-    for (let index = 0; index < detection.selectedCandidates.length; index += 1) {
-      const current = detection.selectedCandidates[index];
-      for (
-        let comparisonIndex = index + 1;
-        comparisonIndex < detection.selectedCandidates.length;
-        comparisonIndex += 1
-      ) {
-        const comparison = detection.selectedCandidates[comparisonIndex];
-        const overlaps =
-          current.span.startToken < comparison.span.endToken &&
-          comparison.span.startToken < current.span.endToken;
-        if (overlaps) {
-          overlapCaseIds.push(phraseCase.id);
-        }
-      }
+  const assertions: ValidationAssertion[] = [
+    {
+      name: "Selected spans are non-overlapping",
+      passed: overlapCaseIds.length === 0,
+      details:
+        overlapCaseIds.length === 0
+          ? "No overlap collisions after resolution."
+          : `Overlap remained in cases: ${overlapCaseIds.join(", ")}`
     }
-  }
-
-  assertions.push({
-    name: "Selected spans are non-overlapping",
-    passed: overlapCaseIds.length === 0,
-    details:
-      overlapCaseIds.length === 0
-        ? "No overlap collisions after resolution."
-        : `Overlap remained in cases: ${overlapCaseIds.join(", ")}`
-  });
+  ];
 
   const fixedOverlapCase = findCaseResult(evaluation, "overlap-fixed-other-hand");
   const keptFixedPhrase = fixedOverlapCase?.detected.some(
@@ -244,25 +371,42 @@ function runAssertions(
 
 function collectRepresentativeErrors(
   evaluation: PhraseEvaluationSummary
-): Pick<PhraseValidationPayload, "representativeFalsePositives" | "representativeFalseNegatives"> {
-  const falsePositives = evaluation.errors
-    .filter((entry) => entry.type === "false-positive")
-    .slice(0, 8);
-  const falseNegatives = evaluation.errors
-    .filter((entry) => entry.type === "false-negative")
-    .slice(0, 8);
-
+): Pick<PhraseImplementationPayload, "representativeFalsePositives" | "representativeFalseNegatives"> {
   return {
-    representativeFalsePositives: falsePositives,
-    representativeFalseNegatives: falseNegatives
+    representativeFalsePositives: evaluation.errors
+      .filter((entry) => entry.type === "false-positive")
+      .slice(0, 8),
+    representativeFalseNegatives: evaluation.errors
+      .filter((entry) => entry.type === "false-negative")
+      .slice(0, 8)
   };
 }
 
-function runValidation() {
+async function runValidation() {
   const corpus = phraseDetectionCorpus as PhraseGoldCorpus;
-  const evaluation = evaluatePhraseDetectorAgainstCorpus(corpus);
-  const assertions = runAssertions(corpus, evaluation);
-  const representativeErrors = collectRepresentativeErrors(evaluation);
+  const implementations = listPhraseDetectorImplementations(true);
+  const implementationResults: PhraseImplementationPayload[] = [];
+
+  for (const implementation of implementations) {
+    const evaluation = await evaluatePhraseDetectorAgainstCorpusAsync(
+      corpus,
+      implementation.detect
+    );
+    const assertions = runImplementationAssertions(evaluation);
+    const representativeErrors = collectRepresentativeErrors(evaluation);
+    const runtime = await measureImplementationRuntime(corpus, implementation.detect);
+
+    implementationResults.push({
+      implementationId: implementation.implementationId,
+      label: implementation.label,
+      inputMode: implementation.inputMode,
+      runtime,
+      overall: evaluation.overall,
+      categoryMetrics: evaluation.categoryMetrics,
+      assertions,
+      ...representativeErrors
+    });
+  }
 
   const payload: PhraseValidationPayload = {
     generatedAt: new Date().toISOString(),
@@ -272,14 +416,46 @@ function runValidation() {
       platform: navigator.platform
     },
     corpusVersion: corpus.version,
-    overall: evaluation.overall,
-    categoryMetrics: evaluation.categoryMetrics,
-    assertions,
-    ...representativeErrors
+    assertions: buildHarnessAssertions(implementationResults, corpus),
+    implementations: implementationResults
   };
 
+  const harnessPassed = payload.assertions.every((assertion) => assertion.passed);
+  document.body.setAttribute("data-validation-status", harnessPassed ? "pass" : "fail");
   window.__IK_PHRASE_DETECTION_VALIDATION__ = payload;
   renderReport(payload);
 }
 
-runValidation();
+async function measureImplementationRuntime(
+  corpus: PhraseGoldCorpus,
+  detect: PhraseDetector
+): Promise<PhraseImplementationPayload["runtime"]> {
+  const repeatCount = 25;
+  const startedAt = Date.now();
+
+  for (let repetition = 0; repetition < repeatCount; repetition += 1) {
+    for (const phraseCase of corpus.cases) {
+      await detect(phraseCase);
+    }
+  }
+
+  const totalMs = Math.max(Date.now() - startedAt, 0.001);
+  const totalCaseRuns = corpus.cases.length * repeatCount;
+
+  return {
+    totalMs,
+    averageCaseMs: totalMs / totalCaseRuns,
+    casesPerSecond: totalCaseRuns / Math.max(totalMs / 1000, 0.001),
+    repeatCount
+  };
+}
+
+void runValidation().catch((error) => {
+  const payload: PhraseValidationFailurePayload = {
+    generatedAt: new Date().toISOString(),
+    error: error instanceof Error ? error.message : String(error)
+  };
+
+  document.body.setAttribute("data-validation-status", "fail");
+  renderFailure(payload);
+});
