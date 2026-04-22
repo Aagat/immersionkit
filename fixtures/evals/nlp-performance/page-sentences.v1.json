@@ -1,0 +1,152 @@
+{
+  "fixtureVersion": "v1",
+  "description": "Sentence samples extracted from fixtures/pages/*.html content.",
+  "sources": [
+    "fixtures/pages/article-basic.html",
+    "fixtures/pages/article-dynamic.html",
+    "fixtures/pages/article-exclusions.html",
+    "fixtures/pages/article-longform.html"
+  ],
+  "sentences": [
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "City Garden Volunteers Expand Weekend Program"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "By Lena Ortiz | Community Desk"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "The local garden opens early on Saturday morning when volunteers bring tools, water the plants, and prepare fresh soil for new seeds."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "Families often visit the garden because the peaceful path, bright flowers, and friendly guide make the place easy to enjoy."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "The new weekend lessons help children learn carefully, ask better questions, and share ideas with neighbors."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "Morning cleanup begins at 8:00."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "Seed exchange opens at 9:30."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "Community lunch starts at 12:00."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-basic.html",
+      "sentence": "Published March 4, 2026"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-dynamic.html",
+      "sentence": "Live Community Bulletin"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-dynamic.html",
+      "sentence": "Residents began the morning with simple updates about weather, traffic, and cleanup plans near the old bridge."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-dynamic.html",
+      "sentence": "Internal draft area for moderators."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-dynamic.html",
+      "sentence": "Neighbors shared helpful updates about the clean park, the quiet library, and the weekly market downtown."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-dynamic.html",
+      "sentence": "Private draft: card number 4242 4242 4242 4242 and password reset details."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Harbor Volunteers Prepare Spring Cleanup"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Organizers shared practical tips so first-time volunteers can bring simple tools, move carefully, and coordinate with local teams."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Draft note: account number 881122 should stay private."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Editable draft with billing code 7719."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Support note with one-time code 123456."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "const token = \"sk-live-never-collect\";"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "curl -H \"Authorization: Bearer secret\" https://api.example.test"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Hidden paragraph with credit card 5555 4444 3333 2222."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Aria-hidden password reminder text."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Ignore this annotation island."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Previously annotated content that should not be reprocessed."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-exclusions.html",
+      "sentence": "Public summary: teams meet at sunrise, sort supplies, and leave each path cleaner than before."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "Regional Rail Service Adds New Coastal Stops"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "Transport Reporter: Noel Harper"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "A new timetable gives commuters faster options between the harbor district, the university quarter, and the northern suburbs."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "What Changed This Week"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "Officials added early departures, reduced long transfer waits, and posted clearer signs in stations that were often confusing for visitors."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "Riders said the updated routes feel more predictable because trains arrive steadily and announcements are easier to follow."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "Context"
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "The rail authority tested the same plan during winter storms and reported fewer late arrivals than expected."
+    },
+    {
+      "sourceFile": "fixtures/pages/article-longform.html",
+      "sentence": "Updated April 7, 2026"
+    }
+  ]
+}

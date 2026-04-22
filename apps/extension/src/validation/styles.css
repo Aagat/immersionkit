@@ -1,0 +1,156 @@
+:root {
+  color-scheme: light;
+  --ik-bg: #f4f7f3;
+  --ik-surface: #ffffff;
+  --ik-border: #d8e2d2;
+  --ik-ink: #1e2820;
+  --ik-muted: #4f6655;
+  --ik-accent: #235f48;
+  --ik-pass: #0f6a3b;
+  --ik-fail: #9f2f2f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top left, #edf6e9 0%, var(--ik-bg) 45%, #ebf0f6 100%);
+  color: var(--ik-ink);
+  font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.validation-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 20px 44px;
+  display: grid;
+  gap: 16px;
+}
+
+.validation-header h1 {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.validation-header p {
+  margin: 8px 0 0;
+  color: var(--ik-muted);
+  line-height: 1.5;
+}
+
+.validation-controls,
+.validation-status,
+.validation-results,
+.validation-raw {
+  background: var(--ik-surface);
+  border: 1px solid var(--ik-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.validation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ik-muted);
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(140deg, var(--ik-accent), #1d7a59);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 10px 16px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.validation-results {
+  display: grid;
+  gap: 14px;
+}
+
+.analyzer-card {
+  border: 1px solid var(--ik-border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.analyzer-card h3 {
+  margin: 0 0 10px;
+}
+
+.analyzer-card table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 10px;
+}
+
+.analyzer-card th,
+.analyzer-card td {
+  border-bottom: 1px solid #edf2ea;
+  padding: 6px 4px;
+  text-align: left;
+  font-size: 0.94rem;
+}
+
+.analyzer-card th {
+  width: 50%;
+  color: var(--ik-muted);
+  font-weight: 600;
+}
+
+.validation-results ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.assertion-pass {
+  color: var(--ik-pass);
+}
+
+.assertion-fail {
+  color: var(--ik-fail);
+}
+
+.validation-raw pre {
+  margin: 0;
+  max-height: 520px;
+  overflow: auto;
+  background: #172219;
+  color: #f6ffee;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .validation-shell {
+    padding: 14px 12px 20px;
+  }
+
+  .validation-controls {
+    align-items: stretch;
+  }
+
+  button {
+    width: 100%;
+  }
+}
