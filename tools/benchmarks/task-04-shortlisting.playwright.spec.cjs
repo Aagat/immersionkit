@@ -6,10 +6,7 @@ const inputProfile = process.env.IK_BENCHMARK_INPUT_PROFILE ?? "baseline";
 const validationUrl = `http://127.0.0.1:5173/validation.html?task=sentence-shortlisting&autorun=1&inputProfile=${encodeURIComponent(
   inputProfile
 )}`;
-const outputPath = path.resolve(
-  __dirname,
-  "../../fixtures/evals/sentence-shortlisting/browser-benchmark-output.json"
-);
+const outputPath = resolveOutputPath(inputProfile);
 
 test("task-04 sentence shortlisting benchmark", async ({ page }) => {
   await page.goto(validationUrl, { waitUntil: "networkidle" });
@@ -22,3 +19,13 @@ test("task-04 sentence shortlisting benchmark", async ({ page }) => {
 
   fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
 });
+
+function resolveOutputPath(profile) {
+  const normalized = String(profile).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  const suffix = normalized === "baseline" ? "" : `.${normalized}`;
+
+  return path.resolve(
+    __dirname,
+    `../../fixtures/evals/sentence-shortlisting/browser-benchmark-output${suffix}.json`
+  );
+}

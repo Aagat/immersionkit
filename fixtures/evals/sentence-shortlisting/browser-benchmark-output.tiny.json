@@ -1,0 +1,296 @@
+{
+  "policies": [
+    {
+      "policyId": "analyze-every-segmented",
+      "policyLabel": "Analyze Every Segmented Sentence",
+      "shortlistedCandidates": 19,
+      "uniqueSentenceHashes": 15,
+      "estimatedAnalysisCalls": 15,
+      "estimatedAnalysisCallsSaved": 0,
+      "estimatedAnalysisCallsSavedRatio": 0,
+      "cacheHits": 4,
+      "cacheMisses": 15,
+      "cacheHitRate": 0.21052631578947367,
+      "falseNegativeCount": 0,
+      "falseNegatives": []
+    },
+    {
+      "policyId": "current-injected-token-gated",
+      "policyLabel": "Current Injected-Token-Gated Flow",
+      "shortlistedCandidates": 11,
+      "uniqueSentenceHashes": 9,
+      "estimatedAnalysisCalls": 9,
+      "estimatedAnalysisCallsSaved": 6,
+      "estimatedAnalysisCallsSavedRatio": 0.4,
+      "cacheHits": 2,
+      "cacheMisses": 9,
+      "cacheHitRate": 0.18181818181818182,
+      "falseNegativeCount": 1,
+      "falseNegatives": [
+        "As soon as we arrive at the station, we take care of tools before lunch."
+      ]
+    },
+    {
+      "policyId": "injected-token-length-dedupe",
+      "policyLabel": "Injected Token + Length + Dedupe",
+      "shortlistedCandidates": 11,
+      "uniqueSentenceHashes": 9,
+      "estimatedAnalysisCalls": 9,
+      "estimatedAnalysisCallsSaved": 6,
+      "estimatedAnalysisCallsSavedRatio": 0.4,
+      "cacheHits": 2,
+      "cacheMisses": 9,
+      "cacheHitRate": 0.18181818181818182,
+      "falseNegativeCount": 1,
+      "falseNegatives": [
+        "As soon as we arrive at the station, we take care of tools before lunch."
+      ]
+    },
+    {
+      "policyId": "phrase-aware-shortlist",
+      "policyLabel": "Phrase-Aware Shortlist",
+      "shortlistedCandidates": 12,
+      "uniqueSentenceHashes": 10,
+      "estimatedAnalysisCalls": 10,
+      "estimatedAnalysisCallsSaved": 5,
+      "estimatedAnalysisCallsSavedRatio": 0.3333333333333333,
+      "cacheHits": 2,
+      "cacheMisses": 10,
+      "cacheHitRate": 0.16666666666666666,
+      "falseNegativeCount": 0,
+      "falseNegatives": []
+    }
+  ],
+  "scenarios": [
+    {
+      "scenarioId": "fixture-article-basic",
+      "scenarioLabel": "Fixture: article-basic.html",
+      "source": "fixtures/pages/article-basic.html",
+      "eligibleTextNodes": 9,
+      "segmentedSentences": 9,
+      "segmentedSentencesLengthFiltered": 8,
+      "uniqueSegmentedSentenceHashes": 9,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 9,
+          "uniqueSentenceHashes": 9,
+          "estimatedAnalysisCalls": 9,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 9,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.4444444444444444,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "repeated-content-blocks",
+      "scenarioLabel": "Eval: repeated content blocks",
+      "source": "fixtures/evals/sentence-shortlisting/repeated-content-blocks.html",
+      "eligibleTextNodes": 6,
+      "segmentedSentences": 6,
+      "segmentedSentencesLengthFiltered": 5,
+      "uniqueSegmentedSentenceHashes": 4,
+      "usefulSentenceCount": 3,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 6,
+          "uniqueSentenceHashes": 4,
+          "estimatedAnalysisCalls": 4,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 4,
+          "cacheHitRate": 0.3333333333333333,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 2,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 2,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 2,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as we arrive at the station, we take care of tools before lunch."
+          ]
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 2,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 2,
+          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "cacheHits": 0,
+          "cacheMisses": 2,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "As soon as we arrive at the station, we take care of tools before lunch."
+          ]
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 3,
+          "uniqueSentenceHashes": 3,
+          "estimatedAnalysisCalls": 3,
+          "estimatedAnalysisCallsSaved": 1,
+          "estimatedAnalysisCallsSavedRatio": 0.25,
+          "cacheHits": 0,
+          "cacheMisses": 3,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
+      "scenarioId": "dynamic-rerender-same-hash",
+      "scenarioLabel": "Eval: dynamic rerender same hash",
+      "source": "fixtures/evals/sentence-shortlisting/rerender-pass-*.html",
+      "eligibleTextNodes": 4,
+      "segmentedSentences": 4,
+      "segmentedSentencesLengthFiltered": 4,
+      "uniqueSegmentedSentenceHashes": 2,
+      "usefulSentenceCount": 2,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "current-injected-token-gated",
+          "policyLabel": "Current Injected-Token-Gated Flow",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 2,
+          "estimatedAnalysisCalls": 2,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 2,
+          "cacheMisses": 2,
+          "cacheHitRate": 0.5,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "analysis-calls-reduced-vs-baseline",
+      "passed": true,
+      "message": "Current injected-token-gated flow should not exceed baseline analysis calls."
+    },
+    {
+      "id": "length-dedupe-reduces-or-matches-current-calls",
+      "passed": true,
+      "message": "Injected + length + dedupe should not require more analysis calls than current flow."
+    },
+    {
+      "id": "phrase-aware-does-not-increase-false-negatives",
+      "passed": true,
+      "message": "Phrase-aware shortlist should keep or reduce obvious false negatives."
+    },
+    {
+      "id": "rerender-cache-hits-observed",
+      "passed": true,
+      "message": "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
+    }
+  ]
+}

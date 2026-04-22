@@ -17,6 +17,7 @@ const outputDirectory = path.resolve(
 const includeWinkNlp = process.env.IK_INCLUDE_WINK_NLP !== "0";
 const inputProfile = process.env.IK_BENCHMARK_INPUT_PROFILE ?? "baseline";
 const port = Number.parseInt(process.env.IK_VALIDATION_PORT ?? "4173", 10);
+const outputProfileSuffix = resolveProfileSuffix(inputProfile);
 
 async function run() {
   const server = await createServer({
@@ -58,7 +59,10 @@ async function run() {
       throw new Error("Benchmark page did not produce a result payload.");
     }
 
-    const summaryPath = path.resolve(outputDirectory, "browser-benchmark-results.v1.json");
+    const summaryPath = path.resolve(
+      outputDirectory,
+      `browser-benchmark-results.v1${outputProfileSuffix}.json`
+    );
     await writeFile(summaryPath, JSON.stringify(benchmarkResult, null, 2), "utf8");
 
     const compromiseThree = benchmarkResult.analyzerResults.find(
@@ -68,7 +72,7 @@ async function run() {
     const sampleSnapshots = compromiseThree?.sampleSnapshots ?? [];
     const snapshotsPath = path.resolve(
       outputDirectory,
-      "sample-analysis-snapshots.v1.json"
+      `sample-analysis-snapshots.v1${outputProfileSuffix}.json`
     );
 
     await writeFile(
@@ -111,6 +115,11 @@ async function run() {
     await browser.close();
     await server.close();
   }
+}
+
+function resolveProfileSuffix(profile) {
+  const normalized = String(profile).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  return normalized === "baseline" ? "" : `.${normalized}`;
 }
 
 function printSummary(result, summaryPath, snapshotsPath) {

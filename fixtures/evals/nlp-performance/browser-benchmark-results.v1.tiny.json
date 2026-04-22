@@ -1,0 +1,2136 @@
+{
+  "schemaVersion": "v1",
+  "generatedAt": "2026-04-22T21:00:14.737Z",
+  "runtime": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+    "language": "en-US",
+    "locationHref": "http://127.0.0.1:4173/validation.html?task=nlp-performance&autorun=1&inputProfile=tiny",
+    "timezone": "Europe/Madrid"
+  },
+  "runOptions": {
+    "includeWinkNlp": true,
+    "inputProfile": "tiny"
+  },
+  "workload": {
+    "hotSentenceSampleCount": 32,
+    "smallBatchSize": 4,
+    "mediumBatchSize": 16
+  },
+  "fixtures": {
+    "profile": "tiny",
+    "syntheticSentenceCount": 8,
+    "pageSentenceCount": 8,
+    "cacheReplaySentenceCount": 12,
+    "cacheReplayExpectedUniqueSentenceCount": 6
+  },
+  "analyzerResults": [
+    {
+      "analyzerId": "compromise-two",
+      "datasetSizes": {
+        "synthetic": 8,
+        "fixture-pages": 8,
+        "cache-replay": 12
+      },
+      "coldStartLatencyMs": 13.099999904632568,
+      "hotPerSentenceLatencyMs": 0.4468750059604645,
+      "smallBatch": {
+        "sentenceCount": 4,
+        "totalLatencyMs": 1.1999998092651367,
+        "perSentenceLatencyMs": 0.2999999523162842
+      },
+      "mediumBatch": {
+        "sentenceCount": 16,
+        "totalLatencyMs": 5.200000286102295,
+        "perSentenceLatencyMs": 0.32500001788139343
+      },
+      "payload": {
+        "averageBytesPerSentence": 1060.9375,
+        "maxBytesPerSentence": 2100,
+        "sampleSentenceCount": 16
+      },
+      "memoryProxy": {
+        "beforeUsedHeapBytes": 19300000,
+        "afterUsedHeapBytes": 19300000,
+        "deltaUsedHeapBytes": 0
+      },
+      "determinism": {
+        "comparedSentenceCount": 12,
+        "stableRate": 1
+      },
+      "cacheReplay": {
+        "replaySentenceCount": 12,
+        "uniqueSentenceCount": 6,
+        "simulatedHitRate": 0.5,
+        "noCacheLatencyMs": 3.6000003814697266,
+        "withCacheLatencyMs": 1.8999996185302734,
+        "savedLatencyMs": 1.7000007629394531
+      },
+      "assertions": [
+        {
+          "id": "compromise-two:determinism-check",
+          "message": "compromise-two keeps deterministic snapshots across repeated runs.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:cache-replay-shape",
+          "message": "compromise-two replay set contains enough duplicates to validate cache hits.",
+          "pass": true
+        },
+        {
+          "id": "compromise-two:payload-emits",
+          "message": "compromise-two emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        }
+      ],
+      "sampleSnapshots": [
+        {
+          "analyzerId": "compromise-two",
+          "sentence": "The quiet station opens before sunrise for early commuters.",
+          "sentenceHash": "v1:b7698144",
+          "tokenCount": 9,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "quiet",
+              "normalized": "quiet",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "station",
+              "normalized": "station",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "opens",
+              "normalized": "opens",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "sunrise",
+              "normalized": "sunrise",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "for",
+              "normalized": "for",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "early",
+              "normalized": "early",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "commuters",
+              "normalized": "commuters",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Plural"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "quiet station",
+            "early commuters.",
+            "sunrise for early commuters."
+          ]
+        },
+        {
+          "analyzerId": "compromise-two",
+          "sentence": "Neighbors bring hot soup when the winter winds turn sharp.",
+          "sentenceHash": "v1:41888084",
+          "tokenCount": 10,
+          "tokens": [
+            {
+              "text": "Neighbors",
+              "normalized": "neighbors",
+              "pos": "noun",
+              "tags": [
+                "Actor",
+                "Noun",
+                "Plural"
+              ]
+            },
+            {
+              "text": "bring",
+              "normalized": "bring",
+              "pos": "verb",
+              "tags": [
+                "Infinitive",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "hot",
+              "normalized": "hot",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "soup",
+              "normalized": "soup",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "when",
+              "normalized": "when",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "winter",
+              "normalized": "winter",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "winds",
+              "normalized": "winds",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "turn",
+              "normalized": "turn",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "sharp",
+              "normalized": "sharp",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "hot soup"
+          ]
+        },
+        {
+          "analyzerId": "compromise-two",
+          "sentence": "The science club meets every Thursday to build small robots.",
+          "sentenceHash": "v1:8284c186",
+          "tokenCount": 10,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "science",
+              "normalized": "science",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "club",
+              "normalized": "club",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "meets",
+              "normalized": "meets",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "every",
+              "normalized": "every",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "Thursday",
+              "normalized": "thursday",
+              "pos": "noun",
+              "tags": [
+                "Date",
+                "Noun",
+                "Singular",
+                "WeekDay"
+              ]
+            },
+            {
+              "text": "to",
+              "normalized": "to",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "build",
+              "normalized": "build",
+              "pos": "verb",
+              "tags": [
+                "Infinitive",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "small",
+              "normalized": "small",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "robots",
+              "normalized": "robots",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Plural"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "small robots."
+          ]
+        },
+        {
+          "analyzerId": "compromise-two",
+          "sentence": "A careful editor checks each headline before the paper is printed.",
+          "sentenceHash": "v1:4bf90b5d",
+          "tokenCount": 11,
+          "tokens": [
+            {
+              "text": "A",
+              "normalized": "a",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "careful",
+              "normalized": "careful",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "editor",
+              "normalized": "editor",
+              "pos": "noun",
+              "tags": [
+                "Actor",
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "checks",
+              "normalized": "checks",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "each",
+              "normalized": "each",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "headline",
+              "normalized": "headline",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "paper",
+              "normalized": "paper",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "is",
+              "normalized": "is",
+              "pos": "verb",
+              "tags": [
+                "Copula",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "printed",
+              "normalized": "printed",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "careful editor"
+          ]
+        },
+        {
+          "analyzerId": "compromise-two",
+          "sentence": "The can rolled under the bench after a sudden gust of wind.",
+          "sentenceHash": "v1:85d17e2d",
+          "tokenCount": 12,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "can",
+              "normalized": "can",
+              "pos": "verb",
+              "tags": [
+                "Auxiliary",
+                "Verb"
+              ]
+            },
+            {
+              "text": "rolled",
+              "normalized": "rolled",
+              "pos": "verb",
+              "tags": [
+                "PastTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "under",
+              "normalized": "under",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "bench",
+              "normalized": "bench",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "after",
+              "normalized": "after",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "a",
+              "normalized": "a",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "sudden",
+              "normalized": "sudden",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "gust",
+              "normalized": "gust",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "of",
+              "normalized": "of",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "wind",
+              "normalized": "wind",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "sudden gust",
+            "bench after a sudden gust"
+          ]
+        },
+        {
+          "analyzerId": "compromise-two",
+          "sentence": "I can finish this report before lunch if the data arrives soon.",
+          "sentenceHash": "v1:40d6c7c1",
+          "tokenCount": 12,
+          "tokens": [
+            {
+              "text": "I",
+              "normalized": "i",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Pronoun"
+              ]
+            },
+            {
+              "text": "can",
+              "normalized": "can",
+              "pos": "verb",
+              "tags": [
+                "Auxiliary",
+                "Modal",
+                "Verb"
+              ]
+            },
+            {
+              "text": "finish",
+              "normalized": "finish",
+              "pos": "verb",
+              "tags": [
+                "Infinitive",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "this",
+              "normalized": "this",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "report",
+              "normalized": "report",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "lunch",
+              "normalized": "lunch",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "if",
+              "normalized": "if",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "data",
+              "normalized": "data",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "arrives",
+              "normalized": "arrives",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "soon",
+              "normalized": "soon",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            }
+          ],
+          "phraseCandidates": []
+        }
+      ]
+    },
+    {
+      "analyzerId": "compromise-three",
+      "datasetSizes": {
+        "synthetic": 8,
+        "fixture-pages": 8,
+        "cache-replay": 12
+      },
+      "coldStartLatencyMs": 1.700000286102295,
+      "hotPerSentenceLatencyMs": 0.5843749940395355,
+      "smallBatch": {
+        "sentenceCount": 4,
+        "totalLatencyMs": 1.5999999046325684,
+        "perSentenceLatencyMs": 0.3999999761581421
+      },
+      "mediumBatch": {
+        "sentenceCount": 16,
+        "totalLatencyMs": 8.200000286102295,
+        "perSentenceLatencyMs": 0.5125000178813934
+      },
+      "payload": {
+        "averageBytesPerSentence": 1130.9375,
+        "maxBytesPerSentence": 2238,
+        "sampleSentenceCount": 16
+      },
+      "memoryProxy": {
+        "beforeUsedHeapBytes": 19300000,
+        "afterUsedHeapBytes": 19300000,
+        "deltaUsedHeapBytes": 0
+      },
+      "determinism": {
+        "comparedSentenceCount": 12,
+        "stableRate": 1
+      },
+      "cacheReplay": {
+        "replaySentenceCount": 12,
+        "uniqueSentenceCount": 6,
+        "simulatedHitRate": 0.5,
+        "noCacheLatencyMs": 7.100000381469727,
+        "withCacheLatencyMs": 3.3999996185302734,
+        "savedLatencyMs": 3.700000762939453
+      },
+      "assertions": [
+        {
+          "id": "compromise-three:determinism-check",
+          "message": "compromise-three keeps deterministic snapshots across repeated runs.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:cache-replay-shape",
+          "message": "compromise-three replay set contains enough duplicates to validate cache hits.",
+          "pass": true
+        },
+        {
+          "id": "compromise-three:payload-emits",
+          "message": "compromise-three emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        }
+      ],
+      "sampleSnapshots": [
+        {
+          "analyzerId": "compromise-three",
+          "sentence": "The quiet station opens before sunrise for early commuters.",
+          "sentenceHash": "v1:b7698144",
+          "tokenCount": 9,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "quiet",
+              "normalized": "quiet",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "station",
+              "normalized": "station",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "opens",
+              "normalized": "opens",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "sunrise",
+              "normalized": "sunrise",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "for",
+              "normalized": "for",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "early",
+              "normalized": "early",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "commuters",
+              "normalized": "commuters",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Plural"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "The quiet station",
+            "opens",
+            "before",
+            "sunrise",
+            "for",
+            "early commuters.",
+            "quiet station",
+            "sunrise for early commuters."
+          ]
+        },
+        {
+          "analyzerId": "compromise-three",
+          "sentence": "Neighbors bring hot soup when the winter winds turn sharp.",
+          "sentenceHash": "v1:41888084",
+          "tokenCount": 10,
+          "tokens": [
+            {
+              "text": "Neighbors",
+              "normalized": "neighbors",
+              "pos": "noun",
+              "tags": [
+                "Actor",
+                "Noun",
+                "Plural"
+              ]
+            },
+            {
+              "text": "bring",
+              "normalized": "bring",
+              "pos": "verb",
+              "tags": [
+                "Infinitive",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "hot",
+              "normalized": "hot",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "soup",
+              "normalized": "soup",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "when",
+              "normalized": "when",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "winter",
+              "normalized": "winter",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "winds",
+              "normalized": "winds",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "turn",
+              "normalized": "turn",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "sharp",
+              "normalized": "sharp",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "Neighbors",
+            "bring",
+            "hot soup",
+            "when",
+            "the winter",
+            "winds",
+            "turn sharp."
+          ]
+        },
+        {
+          "analyzerId": "compromise-three",
+          "sentence": "The science club meets every Thursday to build small robots.",
+          "sentenceHash": "v1:8284c186",
+          "tokenCount": 10,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "science",
+              "normalized": "science",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "club",
+              "normalized": "club",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "meets",
+              "normalized": "meets",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "every",
+              "normalized": "every",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "Thursday",
+              "normalized": "thursday",
+              "pos": "noun",
+              "tags": [
+                "Date",
+                "Noun",
+                "Singular",
+                "WeekDay"
+              ]
+            },
+            {
+              "text": "to",
+              "normalized": "to",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "build",
+              "normalized": "build",
+              "pos": "verb",
+              "tags": [
+                "Infinitive",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "small",
+              "normalized": "small",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "robots",
+              "normalized": "robots",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Plural"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "The science club",
+            "meets",
+            "every Thursday",
+            "to",
+            "build",
+            "small robots."
+          ]
+        },
+        {
+          "analyzerId": "compromise-three",
+          "sentence": "A careful editor checks each headline before the paper is printed.",
+          "sentenceHash": "v1:4bf90b5d",
+          "tokenCount": 11,
+          "tokens": [
+            {
+              "text": "A",
+              "normalized": "a",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "careful",
+              "normalized": "careful",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "editor",
+              "normalized": "editor",
+              "pos": "noun",
+              "tags": [
+                "Actor",
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "checks",
+              "normalized": "checks",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "each",
+              "normalized": "each",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "headline",
+              "normalized": "headline",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "paper",
+              "normalized": "paper",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "is",
+              "normalized": "is",
+              "pos": "verb",
+              "tags": [
+                "Copula",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "printed",
+              "normalized": "printed",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "A careful editor",
+            "checks",
+            "each headline",
+            "before",
+            "the paper",
+            "is",
+            "printed.",
+            "careful editor"
+          ]
+        },
+        {
+          "analyzerId": "compromise-three",
+          "sentence": "The can rolled under the bench after a sudden gust of wind.",
+          "sentenceHash": "v1:85d17e2d",
+          "tokenCount": 12,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "can",
+              "normalized": "can",
+              "pos": "verb",
+              "tags": [
+                "Auxiliary",
+                "Verb"
+              ]
+            },
+            {
+              "text": "rolled",
+              "normalized": "rolled",
+              "pos": "verb",
+              "tags": [
+                "PastTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "under",
+              "normalized": "under",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "bench",
+              "normalized": "bench",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "after",
+              "normalized": "after",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "a",
+              "normalized": "a",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "sudden",
+              "normalized": "sudden",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            },
+            {
+              "text": "gust",
+              "normalized": "gust",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "of",
+              "normalized": "of",
+              "pos": "preposition",
+              "tags": [
+                "Preposition"
+              ]
+            },
+            {
+              "text": "wind",
+              "normalized": "wind",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "The",
+            "can rolled",
+            "under the bench",
+            "after",
+            "a sudden gust of wind.",
+            "sudden gust",
+            "bench after a sudden gust"
+          ]
+        },
+        {
+          "analyzerId": "compromise-three",
+          "sentence": "I can finish this report before lunch if the data arrives soon.",
+          "sentenceHash": "v1:40d6c7c1",
+          "tokenCount": 12,
+          "tokens": [
+            {
+              "text": "I",
+              "normalized": "i",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Pronoun"
+              ]
+            },
+            {
+              "text": "can",
+              "normalized": "can",
+              "pos": "verb",
+              "tags": [
+                "Auxiliary",
+                "Modal",
+                "Verb"
+              ]
+            },
+            {
+              "text": "finish",
+              "normalized": "finish",
+              "pos": "verb",
+              "tags": [
+                "Infinitive",
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "this",
+              "normalized": "this",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "report",
+              "normalized": "report",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "lunch",
+              "normalized": "lunch",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "if",
+              "normalized": "if",
+              "pos": "conjunction",
+              "tags": [
+                "Conjunction"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "determiner",
+              "tags": [
+                "Determiner"
+              ]
+            },
+            {
+              "text": "data",
+              "normalized": "data",
+              "pos": "noun",
+              "tags": [
+                "Noun",
+                "Singular"
+              ]
+            },
+            {
+              "text": "arrives",
+              "normalized": "arrives",
+              "pos": "verb",
+              "tags": [
+                "PresentTense",
+                "Verb"
+              ]
+            },
+            {
+              "text": "soon",
+              "normalized": "soon",
+              "pos": "adjective",
+              "tags": [
+                "Adjective"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "I",
+            "can finish",
+            "this report",
+            "before",
+            "lunch",
+            "if",
+            "the data",
+            "arrives",
+            "soon."
+          ]
+        }
+      ]
+    },
+    {
+      "analyzerId": "wink-nlp",
+      "datasetSizes": {
+        "synthetic": 8,
+        "fixture-pages": 8,
+        "cache-replay": 12
+      },
+      "coldStartLatencyMs": 1,
+      "hotPerSentenceLatencyMs": 0.12187500298023224,
+      "smallBatch": {
+        "sentenceCount": 4,
+        "totalLatencyMs": 0.20000028610229492,
+        "perSentenceLatencyMs": 0.05000007152557373
+      },
+      "mediumBatch": {
+        "sentenceCount": 16,
+        "totalLatencyMs": 0.39999961853027344,
+        "perSentenceLatencyMs": 0.02499997615814209
+      },
+      "payload": {
+        "averageBytesPerSentence": 963.5,
+        "maxBytesPerSentence": 1911,
+        "sampleSentenceCount": 16
+      },
+      "memoryProxy": {
+        "beforeUsedHeapBytes": 19300000,
+        "afterUsedHeapBytes": 19300000,
+        "deltaUsedHeapBytes": 0
+      },
+      "determinism": {
+        "comparedSentenceCount": 12,
+        "stableRate": 1
+      },
+      "cacheReplay": {
+        "replaySentenceCount": 12,
+        "uniqueSentenceCount": 6,
+        "simulatedHitRate": 0.5,
+        "noCacheLatencyMs": 0.19999980926513672,
+        "withCacheLatencyMs": 0.20000028610229492,
+        "savedLatencyMs": -4.76837158203125e-7
+      },
+      "assertions": [
+        {
+          "id": "wink-nlp:determinism-check",
+          "message": "wink-nlp keeps deterministic snapshots across repeated runs.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:cache-replay-shape",
+          "message": "wink-nlp replay set contains enough duplicates to validate cache hits.",
+          "pass": true
+        },
+        {
+          "id": "wink-nlp:payload-emits",
+          "message": "wink-nlp emits non-empty snapshot payloads for medium batches.",
+          "pass": true
+        }
+      ],
+      "sampleSnapshots": [
+        {
+          "analyzerId": "wink-nlp",
+          "sentence": "The quiet station opens before sunrise for early commuters.",
+          "sentenceHash": "v1:b7698144",
+          "tokenCount": 10,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "quiet",
+              "normalized": "quiet",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": "station",
+              "normalized": "station",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "opens",
+              "normalized": "opens",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "sunrise",
+              "normalized": "sunrise",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "for",
+              "normalized": "for",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "early",
+              "normalized": "early",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": "commuters",
+              "normalized": "commuters",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": ".",
+              "normalized": ".",
+              "pos": "punct",
+              "tags": [
+                "PUNCT"
+              ]
+            }
+          ],
+          "phraseCandidates": []
+        },
+        {
+          "analyzerId": "wink-nlp",
+          "sentence": "Neighbors bring hot soup when the winter winds turn sharp.",
+          "sentenceHash": "v1:41888084",
+          "tokenCount": 11,
+          "tokens": [
+            {
+              "text": "Neighbors",
+              "normalized": "neighbors",
+              "pos": "propn",
+              "tags": [
+                "PROPN"
+              ]
+            },
+            {
+              "text": "bring",
+              "normalized": "bring",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "hot",
+              "normalized": "hot",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": "soup",
+              "normalized": "soup",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "when",
+              "normalized": "when",
+              "pos": "adv",
+              "tags": [
+                "ADV"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "winter",
+              "normalized": "winter",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "winds",
+              "normalized": "winds",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "turn",
+              "normalized": "turn",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "sharp",
+              "normalized": "sharp",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": ".",
+              "normalized": ".",
+              "pos": "punct",
+              "tags": [
+                "PUNCT"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "winter"
+          ]
+        },
+        {
+          "analyzerId": "wink-nlp",
+          "sentence": "The science club meets every Thursday to build small robots.",
+          "sentenceHash": "v1:8284c186",
+          "tokenCount": 11,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "science",
+              "normalized": "science",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "club",
+              "normalized": "club",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "meets",
+              "normalized": "meets",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "every",
+              "normalized": "every",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "Thursday",
+              "normalized": "thursday",
+              "pos": "propn",
+              "tags": [
+                "PROPN"
+              ]
+            },
+            {
+              "text": "to",
+              "normalized": "to",
+              "pos": "part",
+              "tags": [
+                "PART"
+              ]
+            },
+            {
+              "text": "build",
+              "normalized": "build",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "small",
+              "normalized": "small",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": "robots",
+              "normalized": "robots",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": ".",
+              "normalized": ".",
+              "pos": "punct",
+              "tags": [
+                "PUNCT"
+              ]
+            }
+          ],
+          "phraseCandidates": [
+            "Thursday"
+          ]
+        },
+        {
+          "analyzerId": "wink-nlp",
+          "sentence": "A careful editor checks each headline before the paper is printed.",
+          "sentenceHash": "v1:4bf90b5d",
+          "tokenCount": 12,
+          "tokens": [
+            {
+              "text": "A",
+              "normalized": "a",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "careful",
+              "normalized": "careful",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": "editor",
+              "normalized": "editor",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "checks",
+              "normalized": "checks",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "each",
+              "normalized": "each",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "headline",
+              "normalized": "headline",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "paper",
+              "normalized": "paper",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "is",
+              "normalized": "is",
+              "pos": "aux",
+              "tags": [
+                "AUX"
+              ]
+            },
+            {
+              "text": "printed",
+              "normalized": "printed",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": ".",
+              "normalized": ".",
+              "pos": "punct",
+              "tags": [
+                "PUNCT"
+              ]
+            }
+          ],
+          "phraseCandidates": []
+        },
+        {
+          "analyzerId": "wink-nlp",
+          "sentence": "The can rolled under the bench after a sudden gust of wind.",
+          "sentenceHash": "v1:85d17e2d",
+          "tokenCount": 13,
+          "tokens": [
+            {
+              "text": "The",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "can",
+              "normalized": "can",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "rolled",
+              "normalized": "rolled",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "under",
+              "normalized": "under",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "bench",
+              "normalized": "bench",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "after",
+              "normalized": "after",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "a",
+              "normalized": "a",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "sudden",
+              "normalized": "sudden",
+              "pos": "adj",
+              "tags": [
+                "ADJ"
+              ]
+            },
+            {
+              "text": "gust",
+              "normalized": "gust",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "of",
+              "normalized": "of",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "wind",
+              "normalized": "wind",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": ".",
+              "normalized": ".",
+              "pos": "punct",
+              "tags": [
+                "PUNCT"
+              ]
+            }
+          ],
+          "phraseCandidates": []
+        },
+        {
+          "analyzerId": "wink-nlp",
+          "sentence": "I can finish this report before lunch if the data arrives soon.",
+          "sentenceHash": "v1:40d6c7c1",
+          "tokenCount": 13,
+          "tokens": [
+            {
+              "text": "I",
+              "normalized": "i",
+              "pos": "pron",
+              "tags": [
+                "PRON"
+              ]
+            },
+            {
+              "text": "can",
+              "normalized": "can",
+              "pos": "aux",
+              "tags": [
+                "AUX"
+              ]
+            },
+            {
+              "text": "finish",
+              "normalized": "finish",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "this",
+              "normalized": "this",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "report",
+              "normalized": "report",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "before",
+              "normalized": "before",
+              "pos": "adp",
+              "tags": [
+                "ADP"
+              ]
+            },
+            {
+              "text": "lunch",
+              "normalized": "lunch",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "if",
+              "normalized": "if",
+              "pos": "sconj",
+              "tags": [
+                "SCONJ"
+              ]
+            },
+            {
+              "text": "the",
+              "normalized": "the",
+              "pos": "det",
+              "tags": [
+                "DET"
+              ]
+            },
+            {
+              "text": "data",
+              "normalized": "data",
+              "pos": "noun",
+              "tags": [
+                "NOUN"
+              ]
+            },
+            {
+              "text": "arrives",
+              "normalized": "arrives",
+              "pos": "verb",
+              "tags": [
+                "VERB"
+              ]
+            },
+            {
+              "text": "soon",
+              "normalized": "soon",
+              "pos": "adv",
+              "tags": [
+                "ADV"
+              ]
+            },
+            {
+              "text": ".",
+              "normalized": ".",
+              "pos": "punct",
+              "tags": [
+                "PUNCT"
+              ]
+            }
+          ],
+          "phraseCandidates": []
+        }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "fixtures:synthetic-non-empty",
+      "message": "Synthetic fixtures are present.",
+      "pass": true
+    },
+    {
+      "id": "fixtures:page-non-empty",
+      "message": "Fixture-derived page sentences are present.",
+      "pass": true
+    },
+    {
+      "id": "fixtures:replay-non-empty",
+      "message": "Replay sentence fixtures are present.",
+      "pass": true
+    },
+    {
+      "id": "run:at-least-one-analyzer-ran",
+      "message": "At least one analyzer completed benchmark execution.",
+      "pass": true
+    },
+    {
+      "id": "run:analyzers-passed-own-assertions",
+      "message": "Every executed analyzer passed all local benchmark assertions.",
+      "pass": true
+    }
+  ]
+}
