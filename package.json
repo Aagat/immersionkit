@@ -11,7 +11,9 @@
     "benchmark:task-01": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",
     "benchmark:task-03": "node tools/benchmarks/task-03-phrase-detection.mjs",
     "benchmark:task-03:phrase-detection": "pnpm benchmark:task-03",
-    "benchmark:task-04": "node tools/benchmarks/task-04-sentence-shortlisting-runner.mjs"
+    "benchmark:task-04": "node tools/benchmarks/task-04-sentence-shortlisting-runner.mjs",
+    "benchmark:task-05": "pnpm --filter @immersionkit/shared exec vitest run tests/sentence-suitability-validation.test.ts --reporter=verbose",
+    "benchmark:task-05:browser": "pnpm --filter @immersionkit/extension dev --open /validation.html"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
