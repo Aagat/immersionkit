@@ -1,0 +1,64 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  runSentenceShortlistingBenchmark
+} from "../src/content/validation/shortlisting";
+import {
+  SENTENCE_SHORTLISTING_DISCOVERY_RATE,
+  SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
+  SENTENCE_SHORTLISTING_LEXICON,
+  SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE,
+  SENTENCE_SHORTLISTING_PHRASE_HINTS,
+  SENTENCE_SHORTLISTING_SCENARIOS,
+  SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID
+} from "../src/validation/sentence-shortlisting-data";
+import { withFixtureDom } from "./helpers/fixture-dom";
+import browserBenchmarkOutput from "../../../fixtures/evals/sentence-shortlisting/browser-benchmark-output.json";
+
+describe("sentence shortlisting benchmark harness", () => {
+  it("reports deterministic shortlist economics across validation scenarios", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const result = runSentenceShortlistingBenchmark({
+        document,
+        scenarios: SENTENCE_SHORTLISTING_SCENARIOS,
+        lexicon: SENTENCE_SHORTLISTING_LEXICON,
+        vocabByLemmaId: SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID,
+        discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
+        goldilocksThreshold: SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
+        phraseHints: SENTENCE_SHORTLISTING_PHRASE_HINTS,
+        maxShortlistSize: SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE
+      });
+
+      const policyById = new Map(result.policies.map((policy) => [policy.policyId, policy]));
+      const baseline = policyById.get("analyze-every-segmented");
+      const current = policyById.get("current-injected-token-gated");
+      const injectedLengthDedupe = policyById.get("injected-token-length-dedupe");
+      const phraseAware = policyById.get("phrase-aware-shortlist");
+
+      expect(result.scenarios.length).toBe(SENTENCE_SHORTLISTING_SCENARIOS.length);
+      expect(baseline?.estimatedAnalysisCalls).toBeGreaterThan(0);
+      expect(current?.estimatedAnalysisCalls).toBeLessThanOrEqual(
+        baseline?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER
+      );
+      expect(injectedLengthDedupe?.estimatedAnalysisCalls).toBeLessThanOrEqual(
+        current?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER
+      );
+      expect(phraseAware?.falseNegativeCount).toBeLessThanOrEqual(
+        injectedLengthDedupe?.falseNegativeCount ?? Number.MAX_SAFE_INTEGER
+      );
+
+      const rerenderScenario = result.scenarios.find(
+        (scenario) => scenario.scenarioId === "dynamic-rerender-same-hash"
+      );
+      const rerenderCurrent = rerenderScenario?.policySummaries.find(
+        (policy) => policy.policyId === "current-injected-token-gated"
+      );
+
+      expect(rerenderCurrent?.cacheHits).toBeGreaterThan(0);
+      expect(result.assertions.every((assertion) => assertion.passed)).toBe(true);
+      expect(result.policies).toEqual(browserBenchmarkOutput.policies);
+      expect(result.scenarios).toEqual(browserBenchmarkOutput.scenarios);
+      expect(result.assertions).toEqual(browserBenchmarkOutput.assertions);
+    });
+  });
+});

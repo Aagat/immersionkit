@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Fixture - Dynamic Content (After Template Render)</title>
+  </head>
+  <body>
+    <main>
+      <article id="feed">
+        <h1>Live Community Bulletin</h1>
+        <p>
+          Residents began the morning with simple updates about weather, traffic, and
+          cleanup plans near the old bridge.
+        </p>
+        <p data-dynamic-kind="public">
+          Neighbors shared helpful updates about the clean park, the quiet library, and
+          the weekly market downtown.
+        </p>
+      </article>
+
+      <section id="private-drafts" contenteditable="true" aria-label="Private drafts">
+        Internal draft area for moderators.
+        <p data-dynamic-kind="private">
+          Private draft: card number 4242 4242 4242 4242 and password reset details.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
