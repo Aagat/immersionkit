@@ -1,7 +1,9 @@
 import {
   evaluateContextAwareDecision,
   mapExpectedOutcomeToDecision,
+  runWordInjectionLibraryComparisons,
   type ContextualWordCandidate,
+  type WordInjectionLibraryComparison,
   type WordInjectionCaseEvaluation,
   type WordInjectionEvaluationSummary,
   type WordInjectionExpectedOutcome,
@@ -30,9 +32,10 @@ export type BrowserWordInjectionValidationResult = {
   corpusVersion: string;
   summary: WordInjectionEvaluationSummary;
   checks: BrowserValidationChecks;
+  comparisons: WordInjectionLibraryComparison[];
 };
 
-export function runWordInjectionValidation(): BrowserWordInjectionValidationResult {
+export async function runWordInjectionValidation(): Promise<BrowserWordInjectionValidationResult> {
   const baselineById = new Map<string, BrowserBaselineDecision>(
     runLemmaOnlyContentBaseline(WORD_INJECTION_CANDIDATES).map((decision) => [
       decision.id,
@@ -61,13 +64,15 @@ export function runWordInjectionValidation(): BrowserWordInjectionValidationResu
 
   const summary = summarize(perCase, WORD_INJECTION_CANDIDATES);
   const checks = validateAgainstExpectedSnapshot(summary, WORD_INJECTION_EXPECTED_BROWSER_RESULTS);
+  const comparisons = await runWordInjectionLibraryComparisons(WORD_INJECTION_CANDIDATES);
 
   return {
     generatedAt: new Date().toISOString(),
     browserUserAgent: navigator.userAgent,
     corpusVersion: WORD_INJECTION_CORPUS_VERSION,
     summary,
-    checks
+    checks,
+    comparisons
   };
 }
 

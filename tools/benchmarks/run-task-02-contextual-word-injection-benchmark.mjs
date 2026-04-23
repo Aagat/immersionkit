@@ -49,6 +49,15 @@ try {
     );
   }
 
+  if (Array.isArray(runPayload.result?.comparisons) && runPayload.result.comparisons.length > 0) {
+    console.log("Parser-backed comparison lanes:");
+    for (const comparison of runPayload.result.comparisons) {
+      console.log(
+        `- ${comparison.implementationId}: prototype accuracy ${formatPercent(comparison.summary.prototype.accuracy)}, must-inject ${formatPercent(comparison.summary.prototype.mustInjectCoverage)}, must-skip ${formatPercent(comparison.summary.prototype.mustSkipPrecision)}, avg case ${comparison.runtime.averageCaseMs.toFixed(4)} ms`
+      );
+    }
+  }
+
   if (!checks?.pass || runPayload.status !== "pass") {
     console.error("Validation snapshot checks failed. See output artifact for mismatches.");
     process.exitCode = 1;

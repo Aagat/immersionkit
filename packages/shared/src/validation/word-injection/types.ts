@@ -110,3 +110,29 @@ export type WordInjectionEvaluationSummary = {
   baseline: WordInjectionStrategyMetrics;
   prototype: WordInjectionStrategyMetrics;
 };
+
+export type WordInjectionLibraryImplementationId =
+  | "shared-annotated"
+  | "compromise-three"
+  | "wink-nlp";
+
+export type WordInjectionLibraryFeatureAgreement = {
+  caseCount: number;
+  observedPosMatchRate: number;
+  chunkTypeMatchRate: number;
+  exactSignatureMatchRate: number;
+};
+
+export type WordInjectionLibraryComparison = {
+  implementationId: WordInjectionLibraryImplementationId;
+  label: string;
+  inputMode: "fixture-annotated" | "library-derived";
+  runtime: {
+    totalMs: number;
+    averageCaseMs: number;
+    casesPerSecond: number;
+    repeatCount: number;
+  };
+  featureAgreement: WordInjectionLibraryFeatureAgreement;
+  summary: WordInjectionEvaluationSummary;
+};

@@ -431,13 +431,13 @@ async function runWordInjectionBenchmark() {
   const results = getRequiredElement<HTMLElement>(root, "#word-injection-results");
   const raw = getRequiredElement<HTMLPreElement>(root, "#word-injection-raw");
 
-  const run = () => {
+  const run = async () => {
     try {
       runButton.disabled = true;
-      status.textContent = "Running browser validation...";
+      status.textContent = "Running browser validation and parser-backed comparisons...";
       results.innerHTML = "";
 
-      const result = runWordInjectionValidation();
+      const result = await runWordInjectionValidation();
       window.__IK_WORD_INJECTION_VALIDATION__ = result;
 
       const statusText = result.checks.pass ? "pass" : "fail";
@@ -464,15 +464,34 @@ async function runWordInjectionBenchmark() {
   };
 
   runButton.addEventListener("click", () => {
-    run();
+    void run();
   });
 
-  run();
+  await run();
 }
 
 function renderWordInjectionResults(result: BrowserWordInjectionValidationResult): string {
   const baseline = result.summary.baseline;
   const prototype = result.summary.prototype;
+  const comparisonRows = result.comparisons
+    .map((comparison) => {
+      const prototypeMetrics = comparison.summary.prototype;
+
+      return `
+        <tr>
+          <th>${escapeHtml(comparison.label)}</th>
+          <td>${escapeHtml(comparison.inputMode)}</td>
+          <td>${formatPercent(prototypeMetrics.accuracy)}</td>
+          <td>${formatPercent(prototypeMetrics.mustInjectCoverage)}</td>
+          <td>${formatPercent(prototypeMetrics.mustSkipPrecision)}</td>
+          <td>${formatPercent(comparison.featureAgreement.observedPosMatchRate)}</td>
+          <td>${formatPercent(comparison.featureAgreement.chunkTypeMatchRate)}</td>
+          <td>${formatPercent(comparison.featureAgreement.exactSignatureMatchRate)}</td>
+          <td>${formatMs(comparison.runtime.averageCaseMs)}</td>
+        </tr>
+      `;
+    })
+    .join("\n");
   const mismatches = result.checks.mismatches
     .map((mismatch) => `<li class="assertion-fail">${escapeHtml(mismatch)}</li>`)
     .join("\n");
@@ -515,6 +534,33 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
           ? "<p class=\"assertion-pass\">PASS: Browser snapshot matches expected output.</p>"
           : `<ul>${mismatches}</ul>`
       }
+    </section>
+
+    <section>
+      <h2>Parser-Backed Comparison Lanes</h2>
+      <p>
+        The shared annotated corpus remains the authoritative quality lane. The rows below show
+        whether parser-derived features from raw text recover the same prototype decisions and
+        feature annotations closely enough to be useful.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Implementation</th>
+            <th>Input mode</th>
+            <th>Prototype accuracy</th>
+            <th>Must-inject coverage</th>
+            <th>Must-skip precision</th>
+            <th>Observed POS match</th>
+            <th>Chunk match</th>
+            <th>Exact signature match</th>
+            <th>Avg case ms</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${comparisonRows}
+        </tbody>
+      </table>
     </section>
   `;
 }
