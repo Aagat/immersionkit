@@ -129,3 +129,26 @@ export const INITIAL_AMBIGUOUS_LEMMA_INVENTORY = Object.freeze([
   "right",
   "plant"
 ]);
+
+export const V1_AMBIGUOUS_LEMMA_GROUPS: Readonly<Record<string, string>> =
+  Object.freeze({
+    can: "can_modal_vs_noun",
+    watch: "watch_verb_vs_noun",
+    light: "light_adjective_vs_noun",
+    right: "right_adjective_vs_adverb_or_noun",
+    plant: "plant_verb_vs_noun"
+  });
+
+export function getV1AmbiguityGroupForLemma(
+  lemma: string | undefined
+): string | undefined {
+  if (!lemma) {
+    return undefined;
+  }
+
+  return V1_AMBIGUOUS_LEMMA_GROUPS[lemma.trim().toLowerCase()];
+}
+
+export function isV1AmbiguousLemma(lemma: string | undefined): boolean {
+  return getV1AmbiguityGroupForLemma(lemma) !== undefined;
+}

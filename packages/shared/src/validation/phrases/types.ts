@@ -1,11 +1,11 @@
-export type PhraseSourceKind = "fixed-phrase" | "pattern-match" | "chunk";
+import type {
+  PhraseCategory as DomainPhraseCategory,
+  PhraseSourceKind as DomainPhraseSourceKind
+} from "../../domain/models";
 
-export type PhraseCategory =
-  | "fixed-idiom"
-  | "function-phrase"
-  | "grammar-carrier"
-  | "adjective-noun"
-  | "noun-chunk";
+export type PhraseSourceKind = DomainPhraseSourceKind;
+
+export type PhraseCategory = DomainPhraseCategory;
 
 export type PhraseTokenAnnotation = {
   surface: string;

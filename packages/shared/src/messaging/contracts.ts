@@ -1,4 +1,4 @@
-import type { SentenceLearningNote } from "../domain/models";
+import type { SentenceAnalysisEntry, SentenceLearningNote } from "../domain/models";
 
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
@@ -15,9 +15,18 @@ export type RefreshActiveTabMessage = {
   type: RuntimeMessageType.RefreshActiveTab;
 };
 
+export type QueuedSentenceCandidate = {
+  sentenceHash: string;
+  sourceText: string;
+  hostname?: string;
+  nodeId?: string;
+  documentUrl?: string;
+};
+
 export type QueueSentenceCandidatesMessage = {
   type: RuntimeMessageType.QueueSentenceCandidates;
   sentences: string[];
+  candidates?: QueuedSentenceCandidate[];
 };
 
 export type SentenceTranslationResult = {
@@ -31,6 +40,10 @@ export type SentenceTranslationResult = {
 export type SentenceTranslationResultMessage = {
   type: RuntimeMessageType.SentenceTranslationResult;
   results: SentenceTranslationResult[];
+};
+
+export type SentenceAnalysisResult = {
+  entry: SentenceAnalysisEntry;
 };
 
 export type RuntimeMessage =

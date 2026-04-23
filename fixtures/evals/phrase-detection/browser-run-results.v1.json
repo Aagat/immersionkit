@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T00:09:22.667Z",
+  "generatedAt": "2026-04-23T21:45:27.276Z",
   "browserContext": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -29,9 +29,9 @@
       "label": "Shared annotated heuristics",
       "inputMode": "fixture-annotated",
       "runtime": {
-        "totalMs": 3,
-        "averageCaseMs": 0.005454545454545455,
-        "casesPerSecond": 183333.33333333334,
+        "totalMs": 7,
+        "averageCaseMs": 0.012727272727272728,
+        "casesPerSecond": 78571.42857142857,
         "repeatCount": 25
       },
       "overall": {
@@ -153,9 +153,9 @@
       "label": "compromise/three + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 105,
-        "averageCaseMs": 0.19090909090909092,
-        "casesPerSecond": 5238.0952380952385,
+        "totalMs": 103,
+        "averageCaseMs": 0.18727272727272729,
+        "casesPerSecond": 5339.805825242719,
         "repeatCount": 25
       },
       "overall": {
