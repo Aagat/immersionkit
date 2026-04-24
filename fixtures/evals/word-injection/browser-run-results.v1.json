@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-04-23T22:19:05.748Z",
+  "capturedAt": "2026-04-24T23:02:35.246Z",
   "status": "pass",
   "result": {
-    "generatedAt": "2026-04-23T22:19:05.245Z",
+    "generatedAt": "2026-04-24T23:02:34.737Z",
     "browserUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "corpusVersion": "1.0.0",
     "summary": {
@@ -2154,9 +2154,9 @@
         "label": "compromise/three derived features",
         "inputMode": "library-derived",
         "runtime": {
-          "totalMs": 131,
-          "averageCaseMs": 0.17466666666666666,
-          "casesPerSecond": 5725.1908396946565,
+          "totalMs": 133,
+          "averageCaseMs": 0.17733333333333334,
+          "casesPerSecond": 5639.097744360902,
           "repeatCount": 25
         },
         "featureAgreement": {
