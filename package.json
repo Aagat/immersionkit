@@ -8,6 +8,8 @@
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "smoke:extension": "node tools/smoke/extension-runtime-smoke.mjs",
+    "smoke:extension:build": "pnpm build && pnpm smoke:extension",
     "benchmark": "node tools/benchmarks/run-browser-validation-suite.mjs",
     "benchmark:validation": "pnpm benchmark",
     "benchmark:nlp-performance": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",
