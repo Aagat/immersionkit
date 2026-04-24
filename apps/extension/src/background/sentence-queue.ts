@@ -11,6 +11,10 @@ import {
   OPENAI_SENTENCE_PROMPT_VERSION,
   type ProviderSentenceCandidate
 } from "./provider-client";
+import {
+  SentenceAnalysisService,
+  type AnalyzedSentenceCandidate
+} from "./sentence-analysis-service";
 import { ChromeStorageSentenceCacheRepository } from "./sentence-cache";
 import {
   loadBackgroundRuntimeConfig,
@@ -43,6 +47,7 @@ export type SentenceTranslationDelivery = {
 
 type SentenceQueueOrchestratorOptions = {
   sentenceCache?: SentenceCacheRepository;
+  sentenceAnalysisService?: SentenceAnalysisService;
   loadRuntimeConfig?: () => Promise<BackgroundRuntimeConfig>;
   createProviderClient?: typeof createSentenceProviderClient;
   notifyFreshTranslations?: (
@@ -54,15 +59,19 @@ type SentenceQueueOrchestratorOptions = {
 export type QueueSentenceCandidatesResponse = {
   ok: boolean;
   accepted: number;
+  analyzed: number;
+  analysisCacheHits: number;
   queued: number;
   skipped: number;
   cacheHits: number;
   translationAvailability: TranslationAvailability;
+  analysisResults: AnalyzedSentenceCandidate[];
   cachedResults: CachedSentenceResult[];
 };
 
 export class SentenceQueueOrchestrator {
   private readonly sentenceCache: SentenceCacheRepository;
+  private readonly sentenceAnalysisService: SentenceAnalysisService;
   private readonly loadRuntimeConfig: () => Promise<BackgroundRuntimeConfig>;
   private readonly createProviderClient: typeof createSentenceProviderClient;
   private readonly notifyFreshTranslations: (
@@ -78,6 +87,8 @@ export class SentenceQueueOrchestrator {
   constructor(options: SentenceQueueOrchestratorOptions = {}) {
     this.sentenceCache =
       options.sentenceCache ?? new ChromeStorageSentenceCacheRepository();
+    this.sentenceAnalysisService =
+      options.sentenceAnalysisService ?? new SentenceAnalysisService();
     this.loadRuntimeConfig =
       options.loadRuntimeConfig ?? loadBackgroundRuntimeConfig;
     this.createProviderClient =
@@ -94,21 +105,25 @@ export class SentenceQueueOrchestrator {
     message: QueueSentenceCandidatesMessage,
     senderTabId?: number
   ): Promise<QueueSentenceCandidatesResponse> {
-    const candidates = normalizeSentenceCandidates(message.sentences);
+    const candidates = normalizeSentenceCandidates(message);
     if (candidates.length === 0) {
       const config = await this.loadRuntimeConfig();
       return {
         ok: true,
         accepted: 0,
+        analyzed: 0,
+        analysisCacheHits: 0,
         queued: 0,
         skipped: 0,
         cacheHits: 0,
         translationAvailability: resolveTranslationAvailability(config),
+        analysisResults: [],
         cachedResults: []
       };
     }
 
     const config = await this.loadRuntimeConfig();
+    const analysisResults = await this.analyzeSentenceCandidates(candidates);
     const translationAvailability = resolveTranslationAvailability(config);
     const cacheHits = await this.findCachedEntries(candidates, config);
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
@@ -134,12 +149,26 @@ export class SentenceQueueOrchestrator {
     return {
       ok: true,
       accepted: candidates.length,
+      analyzed: analysisResults.length,
+      analysisCacheHits: analysisResults.filter((result) => result.cacheHit).length,
       queued,
       skipped,
       cacheHits: cacheHits.length,
       translationAvailability,
+      analysisResults,
       cachedResults: cacheHits.map(toCachedSentenceResult)
     };
+  }
+
+  private async analyzeSentenceCandidates(
+    candidates: readonly ProviderSentenceCandidate[]
+  ): Promise<AnalyzedSentenceCandidate[]> {
+    try {
+      return await this.sentenceAnalysisService.analyzeCandidates(candidates);
+    } catch (error) {
+      console.warn("ImmersionKit sentence analysis failed closed.", error);
+      return [];
+    }
   }
 
   private enqueueCandidates(
@@ -435,36 +464,57 @@ export class SentenceQueueOrchestrator {
 }
 
 function normalizeSentenceCandidates(
-  sentences: readonly string[] | undefined
+  message: QueueSentenceCandidatesMessage
 ): ProviderSentenceCandidate[] {
-  if (!Array.isArray(sentences)) {
-    return [];
+  const candidatesByHash = new Map<string, ProviderSentenceCandidate>();
+
+  for (const candidate of message.candidates?.slice(0, MAX_CANDIDATES_PER_MESSAGE) ??
+    []) {
+    if (!candidate || typeof candidate.sourceText !== "string") {
+      continue;
+    }
+
+    addNormalizedSentenceCandidate(
+      candidatesByHash,
+      candidate.sourceText,
+      candidate.sentenceHash
+    );
   }
 
-  const candidatesByHash = new Map<string, ProviderSentenceCandidate>();
-  for (const sentence of sentences.slice(0, MAX_CANDIDATES_PER_MESSAGE)) {
+  for (const sentence of (message.sentences ?? []).slice(
+    0,
+    MAX_CANDIDATES_PER_MESSAGE
+  )) {
     if (typeof sentence !== "string") {
       continue;
     }
 
-    const normalizedText = sentence.replace(/\s+/g, " ").trim();
-    if (!normalizedText) {
-      continue;
-    }
-
-    const sourceText = normalizedText.slice(0, MAX_SENTENCE_LENGTH);
-    const sentenceHash = hashSentence(sourceText);
-    if (candidatesByHash.has(sentenceHash)) {
-      continue;
-    }
-
-    candidatesByHash.set(sentenceHash, {
-      sentenceHash,
-      sourceText
-    });
+    addNormalizedSentenceCandidate(candidatesByHash, sentence);
   }
 
   return [...candidatesByHash.values()];
+}
+
+function addNormalizedSentenceCandidate(
+  candidatesByHash: Map<string, ProviderSentenceCandidate>,
+  sentence: string,
+  suppliedHash?: string
+) {
+  const normalizedText = sentence.replace(/\s+/g, " ").trim();
+  if (!normalizedText) {
+    return;
+  }
+
+  const sourceText = normalizedText.slice(0, MAX_SENTENCE_LENGTH);
+  const sentenceHash = suppliedHash || hashSentence(sourceText);
+  if (candidatesByHash.has(sentenceHash)) {
+    return;
+  }
+
+  candidatesByHash.set(sentenceHash, {
+    sentenceHash,
+    sourceText
+  });
 }
 
 function resolveTranslationAvailability(
