@@ -7,6 +7,7 @@ import articleExclusionsHtml from "../../../../fixtures/pages/article-exclusions
 import articleLongformHtml from "../../../../fixtures/pages/article-longform.html?raw";
 import articleDynamicAfterTemplatesHtml from "../../../../fixtures/evals/sentence-shortlisting/article-dynamic-after-templates.html?raw";
 import longformOverflowHtml from "../../../../fixtures/evals/sentence-shortlisting/longform-overflow.html?raw";
+import phraseHintBackfillHtml from "../../../../fixtures/evals/sentence-shortlisting/phrase-hint-backfill.html?raw";
 import repeatedContentBlocksHtml from "../../../../fixtures/evals/sentence-shortlisting/repeated-content-blocks.html?raw";
 import rerenderPass1Html from "../../../../fixtures/evals/sentence-shortlisting/rerender-pass-1.html?raw";
 import rerenderPass2Html from "../../../../fixtures/evals/sentence-shortlisting/rerender-pass-2.html?raw";
@@ -182,6 +183,22 @@ export const SENTENCE_SHORTLISTING_SCENARIOS: SentenceShortlistingScenario[] = [
     ]
   },
   {
+    id: "phrase-hint-backfill",
+    label: "Eval: phrase hint backfill",
+    source: "fixtures/evals/sentence-shortlisting/phrase-hint-backfill.html",
+    urlPath: "/fixtures/evals/sentence-shortlisting/phrase-hint-backfill.html",
+    passes: [
+      {
+        id: "initial",
+        label: "Phrase-only shortlist recovery",
+        html: phraseHintBackfillHtml,
+        usefulSentences: [
+          "In order to avoid delays, mentors explain the checklist before sunrise."
+        ]
+      }
+    ]
+  },
+  {
     id: "longform-overflow-nodes",
     label: "Eval: longform overflow nodes",
     source: "fixtures/evals/sentence-shortlisting/longform-overflow.html",
@@ -260,6 +277,7 @@ const SMALL_SCENARIO_IDS = new Set([
   "fixture-article-basic",
   "fixture-article-dynamic",
   "repeated-content-blocks",
+  "phrase-hint-backfill",
   "longform-overflow-nodes",
   "dynamic-rerender-same-hash"
 ]);

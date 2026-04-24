@@ -3,6 +3,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -10,6 +11,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "../..");
+const require = createRequire(import.meta.url);
+const { validateTask02Payload } = require("./benchmark-gates.cjs");
 const VALIDATION_URL =
   "http://127.0.0.1:5174/validation.html?task=contextual-word-injection&autorun=1";
 const OUTPUT_PATH = path.resolve(
@@ -26,6 +29,7 @@ try {
 
   const playwright = await loadPlaywright();
   const runPayload = await runBrowserValidation(playwright);
+  runPayload.benchmarkGates = validateTask02Payload(runPayload);
 
   await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await writeFile(OUTPUT_PATH, `${JSON.stringify(runPayload, null, 2)}\n`, "utf8");
@@ -58,8 +62,15 @@ try {
     }
   }
 
-  if (!checks?.pass || runPayload.status !== "pass") {
-    console.error("Validation snapshot checks failed. See output artifact for mismatches.");
+  if (!checks?.pass || runPayload.status !== "pass" || !runPayload.benchmarkGates.pass) {
+    if (!runPayload.benchmarkGates.pass) {
+      console.error("Benchmark threshold gates failed:");
+      for (const failure of runPayload.benchmarkGates.failures) {
+        console.error(`- ${failure}`);
+      }
+    } else {
+      console.error("Validation snapshot checks failed. See output artifact for mismatches.");
+    }
     process.exitCode = 1;
   }
 } catch (error) {

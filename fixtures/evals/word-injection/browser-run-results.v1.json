@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-04-23T21:46:10.029Z",
+  "capturedAt": "2026-04-23T22:19:05.748Z",
   "status": "pass",
   "result": {
-    "generatedAt": "2026-04-23T21:46:09.523Z",
+    "generatedAt": "2026-04-23T22:19:05.245Z",
     "browserUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "corpusVersion": "1.0.0",
     "summary": {
@@ -4276,5 +4276,35 @@
         }
       }
     ]
+  },
+  "benchmarkGates": {
+    "pass": true,
+    "checks": [
+      {
+        "id": "task-02-browser-status-pass",
+        "passed": true,
+        "message": "Browser validation status should be pass; got pass."
+      },
+      {
+        "id": "task-02-snapshot-checks-pass",
+        "passed": true,
+        "message": "Task 02 annotated browser snapshot checks must pass."
+      },
+      {
+        "id": "task-02-prototype-must-skip-precision",
+        "passed": true,
+        "actual": 1,
+        "minimum": 1,
+        "message": "Task 02 prototype must-skip precision must remain 100% on the current annotated corpus. Actual 1.000000, minimum 1.000000."
+      },
+      {
+        "id": "task-02-prototype-must-inject-coverage",
+        "passed": true,
+        "actual": 0.9285714285714286,
+        "minimum": 0.9285714285714286,
+        "message": "Task 02 prototype must-inject coverage must stay at or above the current 92.9% rounded target unless an approval is documented. Actual 0.928571, minimum 0.928571."
+      }
+    ],
+    "failures": []
   }
 }

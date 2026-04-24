@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-04-23T00:09:40.629Z",
+  "capturedAt": "2026-04-23T22:19:30.488Z",
   "validationUrl": "http://127.0.0.1:5173/validation.html?task=sentence-suitability&autorun=1",
   "checks": {
     "evaluations": [
@@ -38,6 +38,78 @@
     ],
     "failures": [],
     "pass": true
+  },
+  "benchmarkGates": {
+    "pass": true,
+    "checks": [
+      {
+        "id": "task-05-beginner_a2-present",
+        "passed": true,
+        "message": "Task 05 profile beginner_a2 must be present."
+      },
+      {
+        "id": "task-05-beginner_a2-prototype-ndcgAt5",
+        "passed": true,
+        "actual": 0.9787548397292644,
+        "minimum": 0.9787548397292644,
+        "message": "Task 05 beginner_a2 prototype ndcgAt5 must not regress against the default preset target. Actual 0.978755, minimum 0.978755."
+      },
+      {
+        "id": "task-05-beginner_a2-prototype-pairwiseAccuracy",
+        "passed": true,
+        "actual": 0.967741935483871,
+        "minimum": 0.967741935483871,
+        "message": "Task 05 beginner_a2 prototype pairwiseAccuracy must not regress against the default preset target. Actual 0.967742, minimum 0.967742."
+      },
+      {
+        "id": "task-05-beginner_a2-prototype-spearmanRho",
+        "passed": true,
+        "actual": 0.940357423386484,
+        "minimum": 0.940357423386484,
+        "message": "Task 05 beginner_a2 prototype spearmanRho must not regress against the default preset target. Actual 0.940357, minimum 0.940357."
+      },
+      {
+        "id": "task-05-beginner_a2-prototype-precisionAt5",
+        "passed": true,
+        "actual": 1,
+        "minimum": 1,
+        "message": "Task 05 beginner_a2 prototype precisionAt5 must not regress against the default preset target. Actual 1.000000, minimum 1.000000."
+      },
+      {
+        "id": "task-05-intermediate_b1-present",
+        "passed": true,
+        "message": "Task 05 profile intermediate_b1 must be present."
+      },
+      {
+        "id": "task-05-intermediate_b1-prototype-ndcgAt5",
+        "passed": true,
+        "actual": 0.46072285643397193,
+        "minimum": 0.46072285643397193,
+        "message": "Task 05 intermediate_b1 prototype ndcgAt5 must not regress against the default preset target. Actual 0.460723, minimum 0.460723."
+      },
+      {
+        "id": "task-05-intermediate_b1-prototype-pairwiseAccuracy",
+        "passed": true,
+        "actual": 0.6507936507936508,
+        "minimum": 0.6507936507936508,
+        "message": "Task 05 intermediate_b1 prototype pairwiseAccuracy must not regress against the default preset target. Actual 0.650794, minimum 0.650794."
+      },
+      {
+        "id": "task-05-intermediate_b1-prototype-spearmanRho",
+        "passed": true,
+        "actual": 0.34352771533573245,
+        "minimum": 0.34352771533573245,
+        "message": "Task 05 intermediate_b1 prototype spearmanRho must not regress against the default preset target. Actual 0.343528, minimum 0.343528."
+      },
+      {
+        "id": "task-05-intermediate_b1-prototype-precisionAt5",
+        "passed": true,
+        "actual": 0.6,
+        "minimum": 0.6,
+        "message": "Task 05 intermediate_b1 prototype precisionAt5 must not regress against the default preset target. Actual 0.600000, minimum 0.600000."
+      }
+    ],
+    "failures": []
   },
   "results": [
     {

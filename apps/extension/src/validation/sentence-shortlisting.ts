@@ -17,9 +17,31 @@ import {
   SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID
 } from "./sentence-shortlisting-data";
 
+type SentenceShortlistingBrowserBenchmarkArtifact = SentenceShortlistingBenchmarkResult & {
+  metadata: {
+    schemaVersion: "1.1.0";
+    generatedAt: string;
+    taskId: "task-04-sentence-shortlisting";
+    canonicalCommand: "pnpm benchmark";
+    inputProfile: string;
+    sourceOfTruth: "browser-run-validation";
+    browserContext: {
+      userAgent: string;
+      language: string;
+      platform: string;
+    };
+    scenarioCount: number;
+    phraseHints: readonly string[];
+    thresholds: {
+      phraseAwareMinimumSavedRatio: number;
+      phraseAwareMustReduceFalseNegatives: true;
+    };
+  };
+};
+
 declare global {
   interface Window {
-    __IK_SHORTLISTING_BENCHMARK__?: SentenceShortlistingBenchmarkResult;
+    __IK_SHORTLISTING_BENCHMARK__?: SentenceShortlistingBrowserBenchmarkArtifact;
   }
 }
 
@@ -48,7 +70,7 @@ function executeBenchmark() {
   runButton.textContent = "Running...";
 
   try {
-    const result = runSentenceShortlistingBenchmark({
+    const benchmarkResult = runSentenceShortlistingBenchmark({
       document,
       scenarios: shortlistingScenarios,
       lexicon: SENTENCE_SHORTLISTING_LEXICON,
@@ -58,9 +80,13 @@ function executeBenchmark() {
       phraseHints: SENTENCE_SHORTLISTING_PHRASE_HINTS,
       maxShortlistSize: SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE
     });
+    const result: SentenceShortlistingBrowserBenchmarkArtifact = {
+      metadata: buildMetadata(),
+      ...benchmarkResult
+    };
 
     window.__IK_SHORTLISTING_BENCHMARK__ = result;
-    renderContext();
+    renderContext(result);
     renderPolicySummary(result);
     renderScenarioSummaries(result);
     renderAssertions(result);
@@ -71,8 +97,31 @@ function executeBenchmark() {
   }
 }
 
-function renderContext() {
+function buildMetadata(): SentenceShortlistingBrowserBenchmarkArtifact["metadata"] {
+  return {
+    schemaVersion: "1.1.0",
+    generatedAt: new Date().toISOString(),
+    taskId: "task-04-sentence-shortlisting",
+    canonicalCommand: "pnpm benchmark",
+    inputProfile: shortlistingInputProfile,
+    sourceOfTruth: "browser-run-validation",
+    browserContext: {
+      userAgent: window.navigator.userAgent,
+      language: window.navigator.language,
+      platform: window.navigator.platform
+    },
+    scenarioCount: shortlistingScenarios.length,
+    phraseHints: SENTENCE_SHORTLISTING_PHRASE_HINTS,
+    thresholds: {
+      phraseAwareMinimumSavedRatio: 0.34,
+      phraseAwareMustReduceFalseNegatives: true
+    }
+  };
+}
+
+function renderContext(result: SentenceShortlistingBrowserBenchmarkArtifact) {
   const contextLines = [
+    `Generated At: ${result.metadata.generatedAt}`,
     `Input Profile: ${shortlistingInputProfile}`,
     `User Agent: ${window.navigator.userAgent}`,
     `Scenarios: ${shortlistingScenarios.length}`,

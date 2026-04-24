@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { test, expect } = require("playwright/test");
+const { validateTask04Payload } = require("./benchmark-gates.cjs");
 
 const inputProfile = process.env.IK_BENCHMARK_INPUT_PROFILE ?? "baseline";
 const validationUrl = `http://127.0.0.1:5173/validation.html?task=sentence-shortlisting&autorun=1&inputProfile=${encodeURIComponent(
@@ -17,7 +18,11 @@ test("task-04 sentence shortlisting benchmark", async ({ page }) => {
   const result = await page.evaluate(() => window.__IK_SHORTLISTING_BENCHMARK__);
   expect(result).toBeTruthy();
 
+  const benchmarkGates = validateTask04Payload(result);
+  result.benchmarkGates = benchmarkGates;
+
   fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  expect(benchmarkGates.failures).toEqual([]);
 });
 
 function resolveOutputPath(profile) {

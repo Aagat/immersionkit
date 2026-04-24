@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import http from "node:http";
+import { createRequire } from "node:module";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +14,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectory = path.dirname(currentFilePath);
 const projectRoot = path.resolve(currentDirectory, "../..");
+const require = createRequire(import.meta.url);
+const { validateTask03Payload } = require("./benchmark-gates.cjs");
 
 const host = process.env.IK_VALIDATION_HOST ?? "127.0.0.1";
 const configuredPort = process.env.IK_VALIDATION_PORT
@@ -43,6 +46,7 @@ try {
 
   const playwright = await loadPlaywright();
   const payload = await runBrowserValidation(playwright, validationUrl);
+  payload.benchmarkGates = validateTask03Payload(payload);
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
@@ -53,7 +57,13 @@ try {
   const failedAssertions = (payload.assertions ?? []).filter(
     (assertion) => !assertion.passed
   );
-  if (failedAssertions.length > 0) {
+  if (failedAssertions.length > 0 || !payload.benchmarkGates.pass) {
+    if (!payload.benchmarkGates.pass) {
+      throw new Error(
+        `Benchmark threshold gates failed: ${payload.benchmarkGates.failures.join("; ")}`
+      );
+    }
+
     throw new Error(
       `Browser assertions failed: ${failedAssertions
         .map((assertion) => assertion.name)

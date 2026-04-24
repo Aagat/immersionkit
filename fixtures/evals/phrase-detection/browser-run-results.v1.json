@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T21:45:27.276Z",
+  "generatedAt": "2026-04-23T22:19:12.362Z",
   "browserContext": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -153,9 +153,9 @@
       "label": "compromise/three + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 103,
-        "averageCaseMs": 0.18727272727272729,
-        "casesPerSecond": 5339.805825242719,
+        "totalMs": 104,
+        "averageCaseMs": 0.1890909090909091,
+        "casesPerSecond": 5288.461538461539,
         "repeatCount": 25
       },
       "overall": {
@@ -366,5 +366,83 @@
       ],
       "representativeFalseNegatives": []
     }
-  ]
+  ],
+  "benchmarkGates": {
+    "pass": true,
+    "checks": [
+      {
+        "id": "task-03-browser-assertion-all-configured-implementations-completed",
+        "passed": true,
+        "message": "3 implementation runs captured for 22 cases."
+      },
+      {
+        "id": "task-03-browser-assertion-shared-annotated-baseline-is-present",
+        "passed": true,
+        "message": "Shared annotated baseline included in the comparison set."
+      },
+      {
+        "id": "task-03-browser-assertion-at-least-one-library-backed-implementation-is-present",
+        "passed": true,
+        "message": "Third-party library backed detector output is present."
+      },
+      {
+        "id": "task-03-shared-annotated-present",
+        "passed": true,
+        "message": "Task 03 implementation shared-annotated must be present."
+      },
+      {
+        "id": "task-03-shared-annotated-precision",
+        "passed": true,
+        "actual": 0.9474,
+        "minimum": 0.9473684210526315,
+        "message": "Task 03 shared-annotated phrase precision must not regress below the current target. Actual 0.947400, minimum 0.947368."
+      },
+      {
+        "id": "task-03-shared-annotated-recall",
+        "passed": true,
+        "actual": 0.9474,
+        "minimum": 0.9473684210526315,
+        "message": "Task 03 shared-annotated phrase recall must not regress below the current target. Actual 0.947400, minimum 0.947368."
+      },
+      {
+        "id": "task-03-compromise-three-present",
+        "passed": true,
+        "message": "Task 03 implementation compromise-three must be present."
+      },
+      {
+        "id": "task-03-compromise-three-precision",
+        "passed": true,
+        "actual": 0.95,
+        "minimum": 0.95,
+        "message": "Task 03 compromise-three phrase precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
+      },
+      {
+        "id": "task-03-compromise-three-recall",
+        "passed": true,
+        "actual": 1,
+        "minimum": 1,
+        "message": "Task 03 compromise-three phrase recall must not regress below the current target. Actual 1.000000, minimum 1.000000."
+      },
+      {
+        "id": "task-03-wink-nlp-present",
+        "passed": true,
+        "message": "Task 03 implementation wink-nlp must be present."
+      },
+      {
+        "id": "task-03-wink-nlp-precision",
+        "passed": true,
+        "actual": 0.95,
+        "minimum": 0.95,
+        "message": "Task 03 wink-nlp phrase precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
+      },
+      {
+        "id": "task-03-wink-nlp-recall",
+        "passed": true,
+        "actual": 1,
+        "minimum": 1,
+        "message": "Task 03 wink-nlp phrase recall must not regress below the current target. Actual 1.000000, minimum 1.000000."
+      }
+    ],
+    "failures": []
+  }
 }

@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import http from "node:http";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -12,6 +13,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../..");
+const require = createRequire(import.meta.url);
+const { validateTask05Results } = require("./benchmark-gates.cjs");
 
 const host = "127.0.0.1";
 const port = 5173;
@@ -54,6 +57,7 @@ try {
   await browser.close();
 
   const checks = validateRequiredLifts(captured.results);
+  const benchmarkGates = validateTask05Results(captured.results);
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(
@@ -63,6 +67,7 @@ try {
         capturedAt: new Date().toISOString(),
         validationUrl,
         checks,
+        benchmarkGates,
         results: captured.results
       },
       null,
@@ -74,8 +79,12 @@ try {
   printSummary(captured.results, checks);
   console.log(`Saved output artifact: ${path.relative(workspaceRoot, outputPath)}`);
 
-  if (checks.failures.length > 0) {
-    throw new Error(`Sentence suitability checks failed: ${checks.failures.join("; ")}`);
+  if (checks.failures.length > 0 || !benchmarkGates.pass) {
+    const failures = [
+      ...checks.failures,
+      ...benchmarkGates.failures
+    ];
+    throw new Error(`Sentence suitability checks failed: ${failures.join("; ")}`);
   }
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
