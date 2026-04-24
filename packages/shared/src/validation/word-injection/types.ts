@@ -1,4 +1,13 @@
-import type { SafeInjectionPos } from "../../domain/models";
+import type {
+  ContextChunkType,
+  ContextualWordCandidate as DomainContextualWordCandidate,
+  ObservedContextPos
+} from "../../domain/models";
+export {
+  CONTEXT_CHUNK_TYPES,
+  OBSERVED_CONTEXT_POS_VALUES
+} from "../../domain/models";
+export type { ContextChunkType, ObservedContextPos } from "../../domain/models";
 
 export const WORD_INJECTION_EXPECTED_OUTCOMES = [
   "must-inject",
@@ -8,45 +17,11 @@ export const WORD_INJECTION_EXPECTED_OUTCOMES = [
 
 export const WORD_INJECTION_DECISIONS = ["inject", "skip"] as const;
 
-export const OBSERVED_CONTEXT_POS_VALUES = [
-  "noun",
-  "verb",
-  "adjective",
-  "adverb",
-  "modal",
-  "auxiliary",
-  "interjection",
-  "other"
-] as const;
-
-export const CONTEXT_CHUNK_TYPES = [
-  "noun-phrase",
-  "verb-phrase",
-  "adjective-phrase",
-  "adverb-phrase",
-  "idiom",
-  "fragment",
-  "other"
-] as const;
-
 export type WordInjectionExpectedOutcome =
   (typeof WORD_INJECTION_EXPECTED_OUTCOMES)[number];
 export type WordInjectionDecision = (typeof WORD_INJECTION_DECISIONS)[number];
-export type ObservedContextPos = (typeof OBSERVED_CONTEXT_POS_VALUES)[number];
-export type ContextChunkType = (typeof CONTEXT_CHUNK_TYPES)[number];
 
-export type ContextualWordCandidate = {
-  id: string;
-  sentence: string;
-  tokenText: string;
-  targetLemma: string;
-  candidateLemma: string;
-  candidatePos: SafeInjectionPos;
-  observedPos: ObservedContextPos;
-  chunkType: ContextChunkType;
-  nearbyContextSignature: string[];
-  ambiguityGroup: string;
-  confidence: number;
+export type ContextualWordCandidate = DomainContextualWordCandidate & {
   expectedOutcome: WordInjectionExpectedOutcome;
   rationale: string;
 };

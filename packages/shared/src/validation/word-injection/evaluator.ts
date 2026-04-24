@@ -1,4 +1,5 @@
 import { SAFE_INJECTION_POS_VALUES } from "../../domain/models";
+import type { ContextualWordCandidate as DomainContextualWordCandidate } from "../../domain/models";
 import { CONTEXTUAL_AMBIGUITY_RULES } from "./rules";
 import type {
   ContextualWordCandidate,
@@ -13,7 +14,7 @@ import type {
 const SAFE_INJECTABLE_POS = new Set(SAFE_INJECTION_POS_VALUES);
 
 export function evaluateLemmaOnlyDecision(
-  candidate: ContextualWordCandidate
+  candidate: DomainContextualWordCandidate
 ): WordInjectionDecisionResult {
   if (!SAFE_INJECTABLE_POS.has(candidate.candidatePos)) {
     return {
@@ -31,7 +32,7 @@ export function evaluateLemmaOnlyDecision(
 }
 
 export function evaluateContextAwareDecision(
-  candidate: ContextualWordCandidate
+  candidate: DomainContextualWordCandidate
 ): WordInjectionDecisionResult {
   const rule = CONTEXTUAL_AMBIGUITY_RULES.get(candidate.ambiguityGroup);
   if (!rule) {

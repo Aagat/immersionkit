@@ -1,5 +1,6 @@
 import { normalizeToken } from "../../text/normalize";
 import { tokenizeForLookup } from "../../text/tokenize";
+import type { AnalyzerChunk, AnalyzerOutput, AnalyzerToken } from "../../domain/models";
 import {
   FIXED_PHRASE_LEXICON,
   type FixedPhraseLexiconEntry
@@ -41,6 +42,10 @@ type BuildCandidateInput = {
   endToken: number;
   sourceText: string;
   tokens: readonly PhraseToken[];
+};
+
+export type AnalyzerPhraseDetectionOptions = {
+  minimumChunkConfidence?: number;
 };
 
 export function buildCanonicalPhraseKey(
@@ -116,6 +121,75 @@ export function detectPhraseCandidates(
     allCandidates,
     selectedCandidates
   };
+}
+
+export function detectPhraseCandidatesFromAnalyzerOutput(
+  analyzerOutput: AnalyzerOutput,
+  lexicon: readonly FixedPhraseLexiconEntry[] = FIXED_PHRASE_LEXICON,
+  options: AnalyzerPhraseDetectionOptions = {}
+): PhraseDetectionResult {
+  const tokens = materializePhraseTokensFromAnalyzerOutput(analyzerOutput);
+  const fixedLaneCandidates = detectFixedPhrasesFromAnalyzerOutput(
+    analyzerOutput,
+    lexicon
+  );
+  const grammarLaneCandidates = [
+    ...detectGrammarCarriersFromAnalyzerOutput(analyzerOutput),
+    ...detectHighConfidenceChunksFromAnalyzerOutput(analyzerOutput, options)
+  ];
+  const allCandidates = [...fixedLaneCandidates, ...grammarLaneCandidates].sort(
+    compareBySpan
+  );
+
+  return {
+    allCandidates,
+    selectedCandidates: resolveOverlaps(allCandidates)
+  };
+}
+
+export function detectFixedPhrasesFromAnalyzerOutput(
+  analyzerOutput: AnalyzerOutput,
+  lexicon: readonly FixedPhraseLexiconEntry[] = FIXED_PHRASE_LEXICON
+): PhraseCandidate[] {
+  return detectFixedPhraseLane(
+    analyzerOutput.sourceText,
+    materializePhraseTokensFromAnalyzerOutput(analyzerOutput),
+    lexicon
+  ).sort(compareBySpan);
+}
+
+export function detectGrammarCarriersFromAnalyzerOutput(
+  analyzerOutput: AnalyzerOutput
+): PhraseCandidate[] {
+  return detectGrammarCarrierPatterns(
+    analyzerOutput.sourceText,
+    materializePhraseTokensFromAnalyzerOutput(analyzerOutput)
+  );
+}
+
+export function detectHighConfidenceChunksFromAnalyzerOutput(
+  analyzerOutput: AnalyzerOutput,
+  options: AnalyzerPhraseDetectionOptions = {}
+): PhraseCandidate[] {
+  const minimumChunkConfidence = options.minimumChunkConfidence ?? 0.76;
+  const tokens = materializePhraseTokensFromAnalyzerOutput(analyzerOutput);
+  const chunks = analyzerOutput.chunks
+    .filter((chunk) => isSupportedPhraseChunk(chunk, minimumChunkConfidence))
+    .map((chunk) => ({
+      kind: "noun-chunk" as const,
+      startToken: chunk.tokenStart,
+      endToken: chunk.tokenEnd
+    }));
+
+  return detectCoherentChunks(analyzerOutput.sourceText, tokens, chunks);
+}
+
+export function materializePhraseTokensFromAnalyzerOutput(
+  analyzerOutput: AnalyzerOutput
+): PhraseToken[] {
+  return analyzerOutput.tokens.map((token, index) =>
+    materializePhraseTokenFromAnalyzerToken(token, index)
+  );
 }
 
 export function detectFixedPhraseLane(
@@ -523,4 +597,62 @@ function isChunkShellToken(pos: string): boolean {
     pos === "PROPN" ||
     pos === "PREP"
   );
+}
+
+function materializePhraseTokenFromAnalyzerToken(
+  token: AnalyzerToken,
+  index: number
+): PhraseToken {
+  return {
+    index,
+    surface: token.text,
+    normalized: token.normalized,
+    lemma: token.lemma ? normalizeToken(token.lemma) : token.normalized,
+    pos: normalizeAnalyzerPosForPhraseRules(token),
+    startChar: token.startOffset,
+    endChar: token.endOffset
+  };
+}
+
+function normalizeAnalyzerPosForPhraseRules(token: AnalyzerToken): string {
+  const values = [token.pos, ...token.tags]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toLowerCase());
+
+  if (values.some((value) => ["verb", "aux", "auxiliary"].includes(value))) {
+    return "VERB";
+  }
+
+  if (values.some((value) => ["adj", "adjective"].includes(value))) {
+    return "ADJ";
+  }
+
+  if (values.some((value) => ["noun", "n"].includes(value))) {
+    return "NOUN";
+  }
+
+  if (values.some((value) => ["propernoun", "proper-noun", "propn"].includes(value))) {
+    return "PROPN";
+  }
+
+  if (values.some((value) => ["prep", "preposition", "adp"].includes(value))) {
+    return "PREP";
+  }
+
+  if (values.some((value) => ["det", "determiner"].includes(value))) {
+    return "DET";
+  }
+
+  if (values.some((value) => ["pron", "pronoun"].includes(value))) {
+    return "PRON";
+  }
+
+  return token.pos?.toUpperCase() ?? "X";
+}
+
+function isSupportedPhraseChunk(
+  chunk: AnalyzerChunk,
+  minimumChunkConfidence: number
+): boolean {
+  return chunk.type === "noun-phrase" && chunk.confidence >= minimumChunkConfidence;
 }

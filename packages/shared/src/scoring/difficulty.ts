@@ -109,6 +109,8 @@ export const DEFAULT_DIFFICULTY_PRESETS: Record<string, DifficultyProfilePreset>
   [INTERMEDIATE_DIFFICULTY_PRESET.id]: INTERMEDIATE_DIFFICULTY_PRESET
 };
 
+export const DEFAULT_SUITABILITY_PRESETS = DEFAULT_DIFFICULTY_PRESETS;
+
 export function resolveDifficultyPreset(
   profileId: string,
   profileDisplayName: string,
