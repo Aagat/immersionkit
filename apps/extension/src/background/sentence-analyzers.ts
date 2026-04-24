@@ -9,6 +9,8 @@ import {
   type AnalyzerToken,
   type GrammarFeatureMatch
 } from "@immersionkit/shared";
+import winkNlpModule from "wink-nlp";
+import winkModel from "wink-eng-lite-web-model";
 
 type WinkNlpEngine = {
   its: {
@@ -42,13 +44,8 @@ export function getDefaultSentenceAnalyzer(): Promise<SentenceAnalyzer> {
 }
 
 export async function createWinkNlpSentenceAnalyzer(): Promise<SentenceAnalyzer> {
-  const winkModule = (await import("wink-nlp")) as unknown as {
-    default: (model: unknown) => WinkNlpEngine;
-  };
-  const modelModule = (await import("wink-eng-lite-web-model")) as {
-    default: unknown;
-  };
-  const winkNlp = winkModule.default(modelModule.default);
+  const createWinkNlp = winkNlpModule as (model: unknown) => WinkNlpEngine;
+  const winkNlp = createWinkNlp(winkModel);
 
   return {
     analyzerId: "wink-nlp",
