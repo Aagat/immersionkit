@@ -443,6 +443,174 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("keeps ambiguous injected words in English after background analysis rejects them", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "I can watch the city from the hill.";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+        const sentenceHash = hashSentence(sourceSentence);
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": [
+            ...SEED_LEXICON,
+            {
+              lemmaId: "lemma-can",
+              sourceLemma: "can",
+              targetLemma: "lata",
+              pos: "noun",
+              frequencyRank: 200,
+              confidence: 0.95
+            }
+          ],
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:16:00.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            !message ||
+            typeof message !== "object" ||
+            (message as { type?: unknown }).type !==
+              RuntimeMessageType.QueueSentenceCandidates
+          ) {
+            return undefined;
+          }
+
+          return {
+            ok: true,
+            analysisResults: [
+              {
+                cacheHit: false,
+                entry: {
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  analyzerId: "fixture-annotated",
+                  sourceText: sourceSentence,
+                  tokens: [],
+                  lemmas: [],
+                  posTags: [],
+                  chunks: [],
+                  phraseMatches: [],
+                  grammarFeatures: [],
+                  createdAt: "2026-04-18T10:16:00.000Z",
+                  lastAccessedAt: "2026-04-18T10:16:00.000Z",
+                  contextualWordCandidates: [
+                    {
+                      id: "candidate-can",
+                      sentenceHash,
+                      sentence: sourceSentence,
+                      tokenText: "can",
+                      surfaceText: "can",
+                      normalizedText: "can",
+                      targetLemma: "lata",
+                      candidateLemma: "can",
+                      lemmaId: "lemma-can",
+                      candidatePos: "noun",
+                      observedPos: "modal",
+                      chunkType: "other",
+                      nearbyContextSignature: ["modal-before-base-verb"],
+                      ambiguityGroup: "can_modal_vs_noun",
+                      confidence: 0.41,
+                      decision: "skip",
+                      rationale: "Modal use should not inject the noun sense."
+                    }
+                  ]
+                }
+              }
+            ],
+            cachedResults: []
+          };
+        });
+
+        try {
+          await bootContentScript();
+          await wait(60);
+
+          const canToken = document.querySelector<HTMLElement>(
+            "[data-ik-lemma-id='lemma-can']"
+          );
+          expect(canToken).toBeTruthy();
+          expect(canToken?.textContent).toBe("can");
+          expect(canToken?.getAttribute("data-ik-context-decision")).toBe("skip");
+          expect(canToken?.classList.contains("ik-word--suppressed")).toBe(true);
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("injects due learning items even when discovery sampling would skip them", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        document.body.innerHTML = "<p>The city is important for every visitor.</p>";
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": {
+            ...BASE_SETTINGS,
+            discoveryRate: 0
+          },
+          "immersionkit.learningItems": {
+            "word:lemma-city": {
+              itemId: "word:lemma-city",
+              unitRefId: "lemma-city",
+              unitType: "word",
+              sourceText: "city",
+              targetText: "ciudad",
+              status: "reviewing",
+              introducedAt: "2026-04-18T10:00:00.000Z",
+              nextReviewAt: "2020-01-01T00:00:00.000Z",
+              interval: 600000,
+              ease: 2.3,
+              lapses: 0,
+              assistCount: 0,
+              qualifiedExposureCount: 1,
+              consecutiveUnassistedCount: 0,
+              distinctContextCount: 1,
+              suspended: false
+            }
+          },
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 0,
+              updatedAt: "2026-04-18T10:17:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          expect(
+            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+              ?.textContent
+          ).toBe("ciudad");
+          expect(
+            document.querySelector<HTMLElement>(
+              "[data-ik-lemma-id='lemma-important']"
+            )
+          ).toBeNull();
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("removes sentence notes when processing is disabled on refresh", async () => {
     await withFixtureDom(
       "article-basic.html",

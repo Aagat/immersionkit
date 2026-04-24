@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,16 @@ const userDataDir = await mkdtemp(join(tmpdir(), "ik-extension-smoke-"));
 if (!existsSync(join(extensionPath, "manifest.json"))) {
   throw new Error(
     "Built extension not found. Run `pnpm build` before `pnpm smoke:extension`, or use `pnpm smoke:extension:build`."
+  );
+}
+
+const serviceWorkerLoader = await readFile(
+  join(extensionPath, "service-worker-loader.js"),
+  "utf8"
+);
+if (serviceWorkerLoader.includes("localhost:")) {
+  throw new Error(
+    "Extension dist appears to contain a dev service worker. Run `pnpm build` before `pnpm smoke:extension`, or use `pnpm smoke:extension:build`."
   );
 }
 
@@ -164,5 +174,10 @@ try {
 } finally {
   await context.close();
   await new Promise((resolveServer) => server.close(resolveServer));
-  await rm(userDataDir, { recursive: true, force: true });
+  await rm(userDataDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 100
+  });
 }

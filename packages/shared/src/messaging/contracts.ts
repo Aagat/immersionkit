@@ -1,10 +1,17 @@
-import type { SentenceAnalysisEntry, SentenceLearningNote } from "../domain/models";
+import type {
+  AssistEvent,
+  QualifiedExposureEvent,
+  SentenceAnalysisEntry,
+  SentenceLearningNote
+} from "../domain/models";
 
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
   RefreshActiveTab = "settings/refresh-active-tab",
   QueueSentenceCandidates = "sentence/queue-candidates",
-  SentenceTranslationResult = "sentence/translation-result"
+  SentenceTranslationResult = "sentence/translation-result",
+  AssistEvent = "evidence/assist-event",
+  QualifiedExposureEvent = "evidence/qualified-exposure-event"
 }
 
 export type PingMessage = {
@@ -46,8 +53,21 @@ export type SentenceAnalysisResult = {
   entry: SentenceAnalysisEntry;
 };
 
+export type AssistEventMessage = AssistEvent & {
+  type: RuntimeMessageType.AssistEvent;
+};
+
+export type QualifiedExposureEventMessage = QualifiedExposureEvent & {
+  type: RuntimeMessageType.QualifiedExposureEvent;
+  dwellMs?: number;
+  viewportRatio?: number;
+  source?: string;
+};
+
 export type RuntimeMessage =
   | PingMessage
   | RefreshActiveTabMessage
   | QueueSentenceCandidatesMessage
-  | SentenceTranslationResultMessage;
+  | SentenceTranslationResultMessage
+  | AssistEventMessage
+  | QualifiedExposureEventMessage;

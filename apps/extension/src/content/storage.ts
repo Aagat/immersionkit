@@ -1,5 +1,6 @@
 import type {
   ExtensionSettings,
+  LearningItem,
   SeedLexiconEntry,
   SiteSetting,
   UserVocabEntry,
@@ -49,6 +50,7 @@ export type ProcessingContext = {
   lexicon: SeedLexiconEntry[];
   lexiconInfo: LexiconLoadInfo;
   vocabByLemmaId: Map<string, UserVocabEntry>;
+  learningItemsByUnitRefId: Map<string, LearningItem>;
 };
 
 export type PersistVocabStatusInput = {
@@ -66,6 +68,7 @@ export async function loadProcessingContext(
     ...STORAGE_KEYS.settings,
     ...STORAGE_KEYS.siteSettings,
     ...STORAGE_KEYS.vocab,
+    ...STORAGE_KEYS.learningItems,
     ...STORAGE_KEYS.seedLexicon
   ]);
 
@@ -100,6 +103,9 @@ export async function loadProcessingContext(
     },
     vocabByLemmaId: parseVocabEntries(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
+    ),
+    learningItemsByUnitRefId: parseLearningItems(
+      pickFirstDefinedValue(storage, STORAGE_KEYS.learningItems)
     )
   };
 }
@@ -248,6 +254,58 @@ function serializeVocabEntries(
   }
 
   return serialized;
+}
+
+function parseLearningItems(input: unknown): Map<string, LearningItem> {
+  const items: LearningItem[] = [];
+
+  if (!isRecord(input)) {
+    return new Map();
+  }
+
+  for (const value of Object.values(input)) {
+    if (!isRecord(value)) {
+      continue;
+    }
+
+    const itemId = readString(value.itemId);
+    const unitRefId = readString(value.unitRefId);
+    if (!itemId || !unitRefId) {
+      continue;
+    }
+
+    items.push({
+      itemId,
+      unitRefId,
+      unitType:
+        value.unitType === "phrase" || value.unitType === "grammar-feature"
+          ? value.unitType
+          : "word",
+      sourceText: readString(value.sourceText) ?? unitRefId,
+      targetText: readString(value.targetText) ?? "",
+      status:
+        value.status === "learning" ||
+        value.status === "reviewing" ||
+        value.status === "mastered" ||
+        value.status === "suspended"
+          ? value.status
+          : "new",
+      introducedAt: readString(value.introducedAt) ?? new Date().toISOString(),
+      lastExposedAt: readString(value.lastExposedAt) ?? undefined,
+      lastReviewedAt: readString(value.lastReviewedAt) ?? undefined,
+      nextReviewAt: readString(value.nextReviewAt) ?? undefined,
+      interval: readNumber(value.interval, 0),
+      ease: readNumber(value.ease, 2.3),
+      lapses: readNumber(value.lapses, 0),
+      assistCount: readNumber(value.assistCount, 0),
+      qualifiedExposureCount: readNumber(value.qualifiedExposureCount, 0),
+      consecutiveUnassistedCount: readNumber(value.consecutiveUnassistedCount, 0),
+      distinctContextCount: readNumber(value.distinctContextCount, 0),
+      suspended: value.suspended === true
+    });
+  }
+
+  return new Map(items.map((item) => [item.unitRefId, item]));
 }
 
 function resolveLexicon(input: unknown): {

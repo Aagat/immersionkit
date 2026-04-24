@@ -12,6 +12,10 @@ describe("runtime contracts", () => {
     expect(RuntimeMessageType.SentenceTranslationResult).toBe(
       "sentence/translation-result"
     );
+    expect(RuntimeMessageType.AssistEvent).toBe("evidence/assist-event");
+    expect(RuntimeMessageType.QualifiedExposureEvent).toBe(
+      "evidence/qualified-exposure-event"
+    );
   });
 
   it("keeps runtime message types unique", () => {

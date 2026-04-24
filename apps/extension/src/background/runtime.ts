@@ -3,9 +3,12 @@ import type {
   QueueSentenceCandidatesMessage,
   RefreshActiveTabMessage,
   RuntimeMessage,
+  AssistEventMessage,
+  QualifiedExposureEventMessage,
   SentenceTranslationResultMessage
 } from "@immersionkit/shared";
 
+import { BackgroundLearningItemService } from "./learning-items";
 import {
   SentenceQueueOrchestrator,
   type QueueSentenceCandidatesResponse,
@@ -41,6 +44,7 @@ const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType))
 
 export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
+  private readonly learningItems: BackgroundLearningItemService;
   private isBooted = false;
 
   constructor() {
@@ -48,6 +52,7 @@ export class BackgroundRuntimeCoordinator {
       notifyFreshTranslations: (deliveries) =>
         this.deliverFreshSentenceTranslations(deliveries)
     });
+    this.learningItems = new BackgroundLearningItemService();
   }
 
   boot() {
@@ -85,6 +90,16 @@ export class BackgroundRuntimeCoordinator {
 
       if (message.type === RuntimeMessageType.QueueSentenceCandidates) {
         void this.handleQueueSentenceCandidates(message, sender, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.AssistEvent) {
+        void this.handleAssistEvent(message, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.QualifiedExposureEvent) {
+        void this.handleQualifiedExposureEvent(message, sendResponse);
         return true;
       }
 
@@ -147,6 +162,44 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "sentence-queue-failed"
+      });
+    }
+  }
+
+  private async handleAssistEvent(
+    message: AssistEventMessage,
+    sendResponse: (response: { ok: true; stored: boolean } | ErrorResponse) => void
+  ) {
+    try {
+      const item = await this.learningItems.recordAssist(message);
+      sendResponse({
+        ok: true,
+        stored: Boolean(item)
+      });
+    } catch (error) {
+      console.warn("ImmersionKit assist evidence handling failed.", error);
+      sendResponse({
+        ok: false,
+        error: "assist-evidence-failed"
+      });
+    }
+  }
+
+  private async handleQualifiedExposureEvent(
+    message: QualifiedExposureEventMessage,
+    sendResponse: (response: { ok: true; stored: boolean } | ErrorResponse) => void
+  ) {
+    try {
+      const item = await this.learningItems.recordQualifiedExposure(message);
+      sendResponse({
+        ok: true,
+        stored: Boolean(item)
+      });
+    } catch (error) {
+      console.warn("ImmersionKit exposure evidence handling failed.", error);
+      sendResponse({
+        ok: false,
+        error: "exposure-evidence-failed"
       });
     }
   }

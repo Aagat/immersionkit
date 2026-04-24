@@ -9,6 +9,9 @@ type StorageValues = Record<string, unknown>;
 export type ChromeTestStub = {
   sentMessages: unknown[];
   setStorageValues: (values: StorageValues) => void;
+  setSendMessageHandler: (
+    handler: ((message: unknown) => unknown | Promise<unknown>) | null
+  ) => void;
   getStorageSnapshot: () => StorageValues;
   dispatchRuntimeMessage: (
     message: unknown,
@@ -22,6 +25,9 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
   const listeners = new Set<RuntimeListener>();
   const sentMessages: unknown[] = [];
   const storageValues: StorageValues = { ...initialStorage };
+  let sendMessageHandler:
+    | ((message: unknown) => unknown | Promise<unknown>)
+    | null = null;
 
   const chromeStub = {
     runtime: {
@@ -37,9 +43,16 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
           listeners.delete(listener);
         }
       },
-      sendMessage(message: unknown, callback?: () => void) {
+      sendMessage(message: unknown, callback?: (response?: unknown) => void) {
         sentMessages.push(message);
-        callback?.();
+        if (!sendMessageHandler) {
+          callback?.();
+          return;
+        }
+
+        Promise.resolve(sendMessageHandler(message)).then((response) => {
+          callback?.(response);
+        });
       }
     },
     storage: {
@@ -82,6 +95,9 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
     sentMessages,
     setStorageValues(values: StorageValues) {
       Object.assign(storageValues, values);
+    },
+    setSendMessageHandler(handler) {
+      sendMessageHandler = handler;
     },
     getStorageSnapshot() {
       return { ...storageValues };

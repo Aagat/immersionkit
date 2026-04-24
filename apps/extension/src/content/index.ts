@@ -1,7 +1,9 @@
 import { RuntimeMessageType, hashString } from "@immersionkit/shared";
 import type {
   QueuedSentenceCandidate,
+  LearningItem,
   SeedLexiconEntry,
+  SentenceAnalysisEntry,
   SentenceTranslationResult,
   UserVocabEntry,
   VocabStatus
@@ -12,6 +14,7 @@ import {
 } from "../diagnostics/page-diagnostics";
 
 import {
+  applySentenceAnalysisDecisions,
   applyTokenStatusUpdate,
   processTextNode,
   readTokenMetadata,
@@ -56,6 +59,7 @@ type ProcessingState = {
   samplingSeed: string;
   lexiconLookup: Map<string, SeedLexiconEntry>;
   vocabByLemmaId: Map<string, UserVocabEntry>;
+  learningItemsByUnitRefId: Map<string, LearningItem>;
   seenSentenceHashes: Set<string>;
   processedTextNodes: number;
   injectedTokens: number;
@@ -322,6 +326,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       samplingSeed: `${window.location.hostname}${window.location.pathname}`,
       lexiconLookup,
       vocabByLemmaId: processingContext.vocabByLemmaId,
+      learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
       seenSentenceHashes: new Set<string>(),
       processedTextNodes: 0,
       injectedTokens: 0,
@@ -468,6 +473,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         lexiconLookup: state.lexiconLookup,
         vocabByLemmaId: state.vocabByLemmaId,
         isKnownWordForScoring: (word) => isKnownWord(state, word),
+        isDueForReview: (lemmaId) => isDueLearningItem(state, lemmaId),
         allowPhraseOnlyCandidates: true
       });
 
@@ -527,6 +533,11 @@ function queueSentenceCandidates(
       }
 
       const cachedResults = readCachedResultsFromQueueResponse(response);
+      const analysisEntries = readAnalysisEntriesFromQueueResponse(response);
+      if (analysisEntries.length > 0) {
+        applySentenceAnalysisDecisions(analysisEntries);
+      }
+
       if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
         state.sentenceNotesRendered += renderSentenceTranslations(cachedResults);
       }
@@ -622,6 +633,19 @@ function isKnownWord(state: ProcessingState, normalizedWord: string): boolean {
 
   const status = state.vocabByLemmaId.get(lexiconEntry.lemmaId)?.status ?? "new";
   return status === "known" || status === "learning";
+}
+
+function isDueLearningItem(state: ProcessingState, lemmaId: string): boolean {
+  const item = state.learningItemsByUnitRefId.get(lemmaId);
+  if (!item || item.suspended || item.status === "suspended") {
+    return false;
+  }
+
+  if (!item.nextReviewAt) {
+    return item.status === "learning" || item.status === "reviewing";
+  }
+
+  return Date.parse(item.nextReviewAt) <= Date.now();
 }
 
 function openPopover(
@@ -1164,6 +1188,29 @@ function readCachedResultsFromQueueResponse(
   }
 
   return parseSentenceTranslationResults(response.cachedResults);
+}
+
+function readAnalysisEntriesFromQueueResponse(
+  response: unknown
+): SentenceAnalysisEntry[] {
+  if (!isRecord(response) || !Array.isArray(response.analysisResults)) {
+    return [];
+  }
+
+  return response.analysisResults.flatMap((result): SentenceAnalysisEntry[] => {
+    if (!isRecord(result) || !isRecord(result.entry)) {
+      return [];
+    }
+
+    if (
+      typeof result.entry.sentenceHash !== "string" ||
+      !Array.isArray(result.entry.contextualWordCandidates)
+    ) {
+      return [];
+    }
+
+    return [result.entry as SentenceAnalysisEntry];
+  });
 }
 
 function isSentenceTranslationResultMessage(

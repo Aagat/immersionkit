@@ -1,5 +1,10 @@
-import { hashString } from "@immersionkit/shared";
-import type { SeedLexiconEntry, UserVocabEntry, VocabStatus } from "@immersionkit/shared";
+import { hashString, normalizeToken } from "@immersionkit/shared";
+import type {
+  SeedLexiconEntry,
+  SentenceAnalysisEntry,
+  UserVocabEntry,
+  VocabStatus
+} from "@immersionkit/shared";
 
 import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
@@ -24,6 +29,7 @@ export type ProcessTextNodeContext = {
   lexiconLookup: Map<string, SeedLexiconEntry>;
   vocabByLemmaId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
+  isDueForReview?: (lemmaId: string) => boolean;
   allowPhraseOnlyCandidates?: boolean;
 };
 
@@ -156,8 +162,10 @@ function renderTextWindow(input: {
     }
 
     const wordKind: InjectedWordKind = status === "known" ? "known" : "discovery";
+    const isDueForReview = context.isDueForReview?.(lexiconEntry.lemmaId) ?? false;
     if (
       wordKind === "discovery" &&
+      !isDueForReview &&
       !shouldInjectDiscoveryToken(
         `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`,
         context.discoveryRate
@@ -349,6 +357,51 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   return true;
 }
 
+export function applySentenceAnalysisDecisions(
+  entries: readonly SentenceAnalysisEntry[],
+  root: ParentNode = document
+): number {
+  const queryRoot = isQueryRoot(root) ? root : document;
+  let suppressedCount = 0;
+
+  for (const entry of entries) {
+    for (const candidate of entry.contextualWordCandidates) {
+      if (candidate.decision !== "skip" || !candidate.lemmaId) {
+        continue;
+      }
+
+      const tokens = queryRoot.querySelectorAll<HTMLElement>(
+        `[data-ik-sentence-hash='${escapeSelector(entry.sentenceHash)}'][data-ik-lemma-id='${escapeSelector(candidate.lemmaId)}']`
+      );
+
+      for (const token of tokens) {
+        if (token.getAttribute("data-ik-context-decision") === "skip") {
+          continue;
+        }
+
+        const sourceToken = token.getAttribute("data-ik-source-token");
+        const candidateToken = candidate.normalizedText ?? normalizeToken(candidate.tokenText);
+        if (!sourceToken || normalizeToken(sourceToken) !== candidateToken) {
+          continue;
+        }
+
+        token.textContent = sourceToken;
+        token.classList.remove("ik-word--known", "ik-word--discovery");
+        token.classList.add("ik-word--suppressed");
+        token.setAttribute("data-ik-context-decision", "skip");
+        token.setAttribute("data-ik-context-rationale", candidate.rationale ?? "");
+        token.setAttribute(
+          "aria-label",
+          `${sourceToken} kept in English because the local meaning is ambiguous`
+        );
+        suppressedCount += 1;
+      }
+    }
+  }
+
+  return suppressedCount;
+}
+
 function createTokenElement(input: {
   tokenId: string;
   nodeId: string;
@@ -538,6 +591,12 @@ function normalizeStatus(status: string): VocabStatus {
   }
 
   return "new";
+}
+
+function escapeSelector(value: string): string {
+  return globalThis.CSS?.escape
+    ? globalThis.CSS.escape(value)
+    : value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
 function isQueryRoot(

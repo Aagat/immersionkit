@@ -1,11 +1,11 @@
-import { hashString } from "@immersionkit/shared";
+import { RuntimeMessageType, hashString } from "@immersionkit/shared";
 
 import { IMMERSIONKIT_WORD_SELECTOR } from "./constants";
 import type { TokenMetadata } from "./contracts";
 
-export const CONTENT_ASSIST_EVENT_MESSAGE_TYPE = "evidence/assist-event";
+export const CONTENT_ASSIST_EVENT_MESSAGE_TYPE = RuntimeMessageType.AssistEvent;
 export const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
-  "evidence/qualified-exposure-event";
+  RuntimeMessageType.QualifiedExposureEvent;
 
 const QUALIFIED_DWELL_MS = 1_500;
 const QUALIFIED_INTERSECTION_RATIO = 0.6;

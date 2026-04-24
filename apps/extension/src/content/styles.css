@@ -108,6 +108,17 @@ html[data-ik-ui-theme="dark"] {
   --ik-word-active-bg: var(--ik-ignored-active-bg);
 }
 
+.ik-word--suppressed {
+  color: inherit;
+  font-weight: inherit;
+  background: transparent;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--ik-muted-fg);
+  --ik-word-hover-bg: var(--ik-ignored-hover-bg);
+  --ik-word-active-bg: var(--ik-ignored-active-bg);
+}
+
 .ik-word:hover,
 .ik-word:focus-visible {
   outline: none;
