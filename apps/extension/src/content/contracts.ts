@@ -29,6 +29,8 @@ export type TokenMetadata = {
   exampleSentenceNative: string | null;
 };
 
+export type SentenceCandidateReason = "injected-token" | "fixed-phrase-hint";
+
 export type TokenActivatedDetail = TokenMetadata & {
   sourceEvent: "click" | "keyboard";
 };
@@ -47,4 +49,6 @@ export type SentenceCandidateMetadata = {
   totalWordCount: number;
   knownRatio: number;
   nodeId: string;
+  reason: SentenceCandidateReason;
+  phraseHints: string[];
 };

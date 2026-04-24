@@ -1,5 +1,6 @@
 import { RuntimeMessageType, hashString } from "@immersionkit/shared";
 import type {
+  QueuedSentenceCandidate,
   SeedLexiconEntry,
   SentenceTranslationResult,
   UserVocabEntry,
@@ -21,7 +22,11 @@ import {
   IMMERSIONKIT_TOKEN_ACTIVATED_EVENT,
   IMMERSIONKIT_TOKEN_STATUS_EVENT
 } from "./contracts";
-import type { TokenActivatedDetail, TokenStatusUpdatedDetail } from "./contracts";
+import type {
+  SentenceCandidateMetadata,
+  TokenActivatedDetail,
+  TokenStatusUpdatedDetail
+} from "./contracts";
 import {
   IMMERSIONKIT_ROOT_ATTRIBUTE,
   IMMERSIONKIT_TOKEN_ATTRIBUTE,
@@ -33,6 +38,7 @@ import {
   nodeToProcessRoot,
   shouldSkipDocument
 } from "./dom";
+import { ContentEvidenceTracker } from "./evidence";
 import { buildLexiconLookup } from "./lexicon";
 import {
   clearSentenceTranslations,
@@ -60,6 +66,7 @@ type ProcessingState = {
   observer: MutationObserver | null;
   nodeSequence: number;
   sentenceTranslationEnabled: boolean;
+  evidenceTracker: ContentEvidenceTracker;
 };
 
 type RuntimeState = {
@@ -136,7 +143,7 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
         return;
       }
 
-      const activated = emitTokenActivatedEvent(event.target, "click");
+      const activated = emitTokenActivatedEvent(runtimeState, event.target, "click");
       if (activated) {
         return;
       }
@@ -163,7 +170,7 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
         return;
       }
 
-      if (!emitTokenActivatedEvent(event.target, "keyboard")) {
+      if (!emitTokenActivatedEvent(runtimeState, event.target, "keyboard")) {
         return;
       }
 
@@ -324,7 +331,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       flushHandle: null,
       observer: null,
       nodeSequence: 0,
-      sentenceTranslationEnabled
+      sentenceTranslationEnabled,
+      evidenceTracker: new ContentEvidenceTracker()
     };
 
     runtimeState.processing = state;
@@ -356,6 +364,7 @@ function stopProcessing(runtimeState: RuntimeState) {
 
   state.observer?.disconnect();
   state.observer = null;
+  state.evidenceTracker.stop();
 
   if (state.flushHandle !== null) {
     window.clearTimeout(state.flushHandle);
@@ -444,7 +453,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
     return;
   }
 
-  const queuedSentences: string[] = [];
+  const queuedCandidates: SentenceCandidateMetadata[] = [];
   let processedNodes = 0;
   let injectedTokens = 0;
 
@@ -458,7 +467,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         createNodeId: () => createNodeId(state),
         lexiconLookup: state.lexiconLookup,
         vocabByLemmaId: state.vocabByLemmaId,
-        isKnownWordForScoring: (word) => isKnownWord(state, word)
+        isKnownWordForScoring: (word) => isKnownWord(state, word),
+        allowPhraseOnlyCandidates: true
       });
 
       if (!result.replaced) {
@@ -468,19 +478,15 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
       processedNodes += 1;
       injectedTokens += result.injectedCount;
 
-      if (!state.sentenceTranslationEnabled) {
-        continue;
-      }
-
       for (const candidate of result.sentenceCandidates) {
         if (state.seenSentenceHashes.has(candidate.sentenceHash)) {
           continue;
         }
 
         state.seenSentenceHashes.add(candidate.sentenceHash);
-        queuedSentences.push(candidate.sentence);
+        queuedCandidates.push(candidate);
 
-        if (queuedSentences.length >= 12) {
+        if (queuedCandidates.length >= 12) {
           break;
         }
       }
@@ -489,29 +495,31 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
 
   state.processedTextNodes += processedNodes;
   state.injectedTokens += injectedTokens;
-  queueSentenceCandidates(state, queuedSentences);
+  state.evidenceTracker.registerRenderedTokens(document);
+  queueSentenceCandidates(state, queuedCandidates);
 }
 
-function queueSentenceCandidates(state: ProcessingState, sentences: string[]) {
-  if (!state.sentenceTranslationEnabled) {
-    return;
-  }
-
+function queueSentenceCandidates(
+  state: ProcessingState,
+  candidates: readonly SentenceCandidateMetadata[]
+) {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     return;
   }
 
-  const uniqueSentences = [...new Set(sentences)].filter(Boolean).slice(0, 12);
-  if (uniqueSentences.length === 0) {
+  const compactCandidates = dedupeSentenceCandidates(candidates).slice(0, 12);
+  if (compactCandidates.length === 0) {
     return;
   }
 
-  state.sentenceCandidatesQueued += uniqueSentences.length;
+  state.sentenceCandidatesQueued += compactCandidates.length;
+  const legacySentences = compactCandidates.map((candidate) => candidate.sourceText);
 
   chrome.runtime.sendMessage(
     {
       type: RuntimeMessageType.QueueSentenceCandidates,
-      sentences: uniqueSentences
+      sentences: legacySentences,
+      candidates: compactCandidates
     },
     (response: unknown) => {
       if (chrome.runtime.lastError) {
@@ -519,14 +527,41 @@ function queueSentenceCandidates(state: ProcessingState, sentences: string[]) {
       }
 
       const cachedResults = readCachedResultsFromQueueResponse(response);
-      if (cachedResults.length > 0) {
+      if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
         state.sentenceNotesRendered += renderSentenceTranslations(cachedResults);
       }
     }
   );
 }
 
+function dedupeSentenceCandidates(
+  candidates: readonly SentenceCandidateMetadata[]
+): QueuedSentenceCandidate[] {
+  const byHash = new Map<string, QueuedSentenceCandidate>();
+
+  for (const candidate of candidates) {
+    if (byHash.has(candidate.sentenceHash)) {
+      continue;
+    }
+
+    byHash.set(candidate.sentenceHash, {
+      sentenceHash: candidate.sentenceHash,
+      sourceText: candidate.sentence,
+      hostname: window.location.hostname,
+      nodeId: candidate.nodeId,
+      documentUrl: window.location.href,
+      reason: candidate.reason,
+      knownWordCount: candidate.knownWordCount,
+      totalWordCount: candidate.totalWordCount,
+      phraseHints: candidate.phraseHints
+    } as QueuedSentenceCandidate);
+  }
+
+  return [...byHash.values()];
+}
+
 function emitTokenActivatedEvent(
+  runtimeState: RuntimeState,
   target: EventTarget | null,
   sourceEvent: "click" | "keyboard"
 ): boolean {
@@ -548,6 +583,7 @@ function emitTokenActivatedEvent(
     ...metadata,
     sourceEvent
   };
+  runtimeState.processing?.evidenceTracker.recordAssist(metadata);
 
   window.dispatchEvent(
     new CustomEvent<TokenActivatedDetail>(IMMERSIONKIT_TOKEN_ACTIVATED_EVENT, {

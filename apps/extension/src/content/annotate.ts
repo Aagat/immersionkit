@@ -5,7 +5,8 @@ import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
   IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE,
   IMMERSIONKIT_TOKEN_ATTRIBUTE,
-  MAX_SENTENCE_METADATA_LENGTH
+  MAX_SENTENCE_METADATA_LENGTH,
+  MAX_TEXT_NODE_LENGTH
 } from "./constants";
 import type {
   InjectedWordKind,
@@ -23,6 +24,7 @@ export type ProcessTextNodeContext = {
   lexiconLookup: Map<string, SeedLexiconEntry>;
   vocabByLemmaId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
+  allowPhraseOnlyCandidates?: boolean;
 };
 
 export type ProcessTextNodeResult = {
@@ -47,6 +49,79 @@ export function processTextNode(
     return emptyResult();
   }
 
+  const windows = splitTextIntoProcessableWindows(sourceText);
+  if (windows.length > 1) {
+    return processWindowedTextNode(node, context, windows);
+  }
+
+  const rendered = renderTextWindow({
+    sourceText,
+    context,
+    offsetBase: 0
+  });
+  if (!rendered.replaced) {
+    return emptyResult();
+  }
+
+  node.replaceWith(rendered.node);
+
+  return rendered.result;
+}
+
+function processWindowedTextNode(
+  node: Text,
+  context: ProcessTextNodeContext,
+  windows: readonly TextWindow[]
+): ProcessTextNodeResult {
+  const fragment = document.createDocumentFragment();
+  const mergedResult = emptyResult();
+
+  for (const window of windows) {
+    const rendered = renderTextWindow({
+      sourceText: window.text,
+      context,
+      offsetBase: window.start
+    });
+
+    if (rendered.replaced) {
+      fragment.append(rendered.node);
+      mergedResult.replaced = true;
+      mergedResult.injectedCount += rendered.result.injectedCount;
+      mergedResult.knownCount += rendered.result.knownCount;
+      mergedResult.discoveryCount += rendered.result.discoveryCount;
+      mergedResult.sentenceCandidates.push(...rendered.result.sentenceCandidates);
+    } else {
+      fragment.append(window.text);
+    }
+  }
+
+  if (!mergedResult.replaced) {
+    return emptyResult();
+  }
+
+  node.replaceWith(fragment);
+  return mergedResult;
+}
+
+function renderTextWindow(input: {
+  sourceText: string;
+  context: ProcessTextNodeContext;
+  offsetBase: number;
+}): {
+  replaced: boolean;
+  node: Node;
+  result: ProcessTextNodeResult;
+} {
+  const { sourceText, context, offsetBase } = input;
+  const segments = segmentText(sourceText);
+  if (segments.length === 0) {
+    return {
+      replaced: false,
+      node: document.createTextNode(sourceText),
+      result: emptyResult()
+    };
+  }
+
   const sentences = segmentSentences(sourceText);
   const injectedSentenceHashes = new Set<string>();
   const wrapper = document.createElement("span");
@@ -55,6 +130,7 @@ export function processTextNode(
   wrapper.className = "ik-node";
   wrapper.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, nodeId);
   wrapper.setAttribute(IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE, encodeOriginalText(sourceText));
+  wrapper.setAttribute("data-ik-render-layer", "word");
 
   let injectedCount = 0;
   let knownCount = 0;
@@ -83,7 +159,7 @@ export function processTextNode(
     if (
       wordKind === "discovery" &&
       !shouldInjectDiscoveryToken(
-        `${context.samplingSeed}:${segment.normalized}:${segment.start}`,
+        `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`,
         context.discoveryRate
       )
     ) {
@@ -121,23 +197,47 @@ export function processTextNode(
     }
   }
 
-  if (injectedCount === 0) {
-    return emptyResult();
+  const scoredSentenceCandidates = scoreSentenceCandidates(
+    sentences,
+    nodeId,
+    injectedSentenceHashes,
+    context.isKnownWordForScoring
+  );
+  const sentenceCandidates = context.allowPhraseOnlyCandidates
+    ? scoredSentenceCandidates
+    : scoredSentenceCandidates.filter((candidate) => candidate.reason === "injected-token");
+
+  const phraseHints = collectCandidatePhraseHints(sentenceCandidates);
+  if (phraseHints.length > 0) {
+    wrapper.setAttribute("data-ik-render-layer", "word phrase-candidate");
+    wrapper.setAttribute("data-ik-phrase-hints", phraseHints.join("|"));
   }
 
-  node.replaceWith(wrapper);
+  if (sentenceCandidates.length > 0) {
+    wrapper.setAttribute(
+      "data-ik-sentence-candidate-hashes",
+      sentenceCandidates.map((candidate) => candidate.sentenceHash).join("|")
+    );
+  }
+
+  if (injectedCount === 0 && sentenceCandidates.length === 0) {
+    return {
+      replaced: false,
+      node: document.createTextNode(sourceText),
+      result: emptyResult()
+    };
+  }
 
   return {
     replaced: true,
-    injectedCount,
-    knownCount,
-    discoveryCount,
-    sentenceCandidates: scoreSentenceCandidates(
-      sentences,
-      nodeId,
-      injectedSentenceHashes,
-      context.isKnownWordForScoring
-    )
+    node: wrapper,
+    result: {
+      replaced: true,
+      injectedCount,
+      knownCount,
+      discoveryCount,
+      sentenceCandidates
+    }
   };
 }
 
@@ -270,6 +370,8 @@ function createTokenElement(input: {
   element.setAttribute("role", "button");
   element.setAttribute("data-ik-source-language", "en");
   element.setAttribute("data-ik-target-language", "es");
+  element.setAttribute("data-ik-unit-kind", "word");
+  element.setAttribute("data-ik-phrase-render-hook", "reserved");
   element.setAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE, input.tokenId);
   element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
   element.setAttribute("data-ik-source-token", input.sourceToken);
@@ -353,6 +455,81 @@ function shouldInjectDiscoveryToken(seed: string, discoveryRate: number): boolea
   const hashPrefix = hashString(seed).slice(0, 8);
   const hashValue = Number.parseInt(hashPrefix, 16);
   return hashValue / 0xffffffff <= discoveryRate;
+}
+
+type TextWindow = {
+  text: string;
+  start: number;
+  end: number;
+};
+
+function splitTextIntoProcessableWindows(input: string): TextWindow[] {
+  if (input.length <= MAX_TEXT_NODE_LENGTH) {
+    return [
+      {
+        text: input,
+        start: 0,
+        end: input.length
+      }
+    ];
+  }
+
+  const windows: TextWindow[] = [];
+  let windowStart = 0;
+  let lastSentenceBreak = 0;
+
+  for (const match of input.matchAll(/[^.!?]+[.!?]?/g)) {
+    const raw = match[0] ?? "";
+    const end = (match.index ?? 0) + raw.length;
+
+    if (end - windowStart > MAX_TEXT_NODE_LENGTH && lastSentenceBreak > windowStart) {
+      windows.push(createTextWindow(input, windowStart, lastSentenceBreak));
+      windowStart = lastSentenceBreak;
+    }
+
+    while (end - windowStart > MAX_TEXT_NODE_LENGTH) {
+      const splitAt = findWindowBreak(input, windowStart, MAX_TEXT_NODE_LENGTH);
+      windows.push(createTextWindow(input, windowStart, splitAt));
+      windowStart = splitAt;
+    }
+
+    lastSentenceBreak = end;
+  }
+
+  if (windowStart < input.length) {
+    windows.push(createTextWindow(input, windowStart, input.length));
+  }
+
+  return windows.filter((window) => window.text.length > 0);
+}
+
+function createTextWindow(input: string, start: number, end: number): TextWindow {
+  return {
+    text: input.slice(start, end),
+    start,
+    end
+  };
+}
+
+function findWindowBreak(input: string, start: number, maxLength: number): number {
+  const hardLimit = Math.min(start + maxLength, input.length);
+  const preferredFloor = start + Math.floor(maxLength * 0.6);
+
+  for (let index = hardLimit; index > preferredFloor; index -= 1) {
+    if (/\s/.test(input.charAt(index))) {
+      return index;
+    }
+  }
+
+  return hardLimit;
+}
+
+function collectCandidatePhraseHints(
+  candidates: readonly SentenceCandidateMetadata[]
+): string[] {
+  return [
+    ...new Set(candidates.flatMap((candidate) => candidate.phraseHints))
+  ];
 }
 
 function normalizeStatus(status: string): VocabStatus {

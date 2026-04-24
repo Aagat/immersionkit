@@ -23,7 +23,16 @@ export const DEFAULT_DISCOVERY_RATE = DEFAULT_EXTENSION_SETTINGS.discoveryRate;
 export const DEFAULT_SENTENCE_THRESHOLD =
   DEFAULT_EXTENSION_SETTINGS.goldilocksThreshold;
 export const MAX_TEXT_NODE_LENGTH = 420;
+export const MAX_TEXT_NODE_SCAN_LENGTH = 8_000;
 export const MAX_SENTENCE_METADATA_LENGTH = 240;
+export const SENTENCE_FIXED_PHRASE_HINTS = [
+  "as soon as",
+  "at least",
+  "take care of",
+  "in order to",
+  "used to",
+  "going to"
+] as const;
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   discoveryRate: DEFAULT_DISCOVERY_RATE,

@@ -152,6 +152,24 @@ describe("eligible text-node collection", () => {
       expect(combinedText).not.toContain("https://example.test/path with anchor words");
     });
   });
+
+  it("keeps oversized public text nodes eligible for downstream windowing", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const longLead = Array.from({ length: 18 }, () =>
+        "Public context keeps this article node long enough to cross the old cap."
+      ).join(" ");
+      document.body.innerHTML = `
+        <main>
+          <p>${longLead} The city team publishes short updates so new volunteers can plan a simple route.</p>
+        </main>
+      `;
+
+      const combinedText = joinText(collectEligibleTextNodes(document.body));
+      expect(combinedText).toContain(
+        "The city team publishes short updates so new volunteers can plan a simple route."
+      );
+    });
+  });
 });
 
 function joinText(nodes: Text[]): string {

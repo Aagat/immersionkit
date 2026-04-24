@@ -1,7 +1,7 @@
 import {
   IMMERSIONKIT_IGNORE_SELECTOR,
   IMMERSIONKIT_NODE_SELECTOR,
-  MAX_TEXT_NODE_LENGTH
+  MAX_TEXT_NODE_SCAN_LENGTH
 } from "./constants";
 
 const BLOCKED_PAGE_PATH_PATTERN =
@@ -134,7 +134,7 @@ function isEligibleTextNode(node: Text): boolean {
   }
 
   const text = node.nodeValue ?? "";
-  if (!text || text.length > MAX_TEXT_NODE_LENGTH) {
+  if (!text || text.length > MAX_TEXT_NODE_SCAN_LENGTH) {
     return false;
   }
 

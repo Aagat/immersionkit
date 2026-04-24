@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { installChromeStub } from "./helpers/chrome-stub";
 import { withFixtureDom } from "./helpers/fixture-dom";
+import { CONTENT_ASSIST_EVENT_MESSAGE_TYPE } from "../src/content/evidence";
 
 const HOSTNAME = "fixtures.immersionkit.test";
 const FIXTURE_URL = `https://${HOSTNAME}/story`;
@@ -267,6 +268,174 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).toContain(
             "The city is important for every visitor."
           );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("queues compact phrase-hint sentence candidates without word injection", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence =
+          "As soon as we arrive at the station, we take care of tools before lunch.";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:13:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          expect(getInjectedTokens(document)).toHaveLength(0);
+
+          const queueMessage = chromeStub.sentMessages.find(
+            (message): message is {
+              type: RuntimeMessageType.QueueSentenceCandidates;
+              sentences: string[];
+              candidates: Array<{
+                sourceText: string;
+                sentenceHash: string;
+                reason: string;
+                phraseHints: string[];
+              }>;
+            } =>
+              Boolean(message) &&
+              typeof message === "object" &&
+              (message as { type?: unknown }).type ===
+                RuntimeMessageType.QueueSentenceCandidates
+          );
+
+          expect(queueMessage?.sentences).toEqual([sourceSentence]);
+          expect(queueMessage?.candidates[0]).toMatchObject({
+            sourceText: sourceSentence,
+            sentenceHash: hashSentence(sourceSentence),
+            reason: "fixed-phrase-hint",
+            phraseHints: ["as soon as", "take care of"]
+          });
+          expect(
+            document.querySelector("[data-ik-render-layer='word phrase-candidate']")
+          ).toBeTruthy();
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("splits oversized text nodes into processable windows", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const lead = Array.from({ length: 18 }, () =>
+          "Public context keeps this article node long enough to cross the old cap."
+        ).join(" ");
+        const sourceSentence =
+          "The city team publishes short updates so new volunteers can plan a simple route.";
+        document.body.innerHTML = `<p>${lead} ${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:13:30.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const token = document.querySelector<HTMLElement>(
+            "[data-ik-lemma-id='lemma-city']"
+          );
+          expect(token).toBeTruthy();
+          expect(token?.getAttribute("data-ik-sentence-hash")).toBe(
+            hashSentence(sourceSentence)
+          );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("captures assist evidence when a word interaction opens help", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, window, wait }) => {
+        document.body.innerHTML = "<p>The city is important for every visitor.</p>";
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:13:45.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const token = document.querySelector<HTMLElement>(
+            "[data-ik-lemma-id='lemma-city']"
+          );
+          expect(token).toBeTruthy();
+
+          token?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          const assistMessage = chromeStub.sentMessages.find(
+            (message): message is {
+              type: string;
+              itemId: string;
+              assistType: string;
+              contextSentenceHash: string;
+            } =>
+              Boolean(message) &&
+              typeof message === "object" &&
+              (message as { type?: unknown }).type === CONTENT_ASSIST_EVENT_MESSAGE_TYPE
+          );
+
+          expect(assistMessage).toMatchObject({
+            itemId: "word:lemma-city",
+            assistType: "manual-lookup",
+            contextSentenceHash: hashSentence(
+              "The city is important for every visitor."
+            )
+          });
         } finally {
           chromeStub.restore();
         }
