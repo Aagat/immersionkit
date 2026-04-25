@@ -682,6 +682,14 @@ export function OptionsApp() {
                   value={formatCount(pageDiagnostics?.analysisSuppressedTokens ?? 0)}
                 />
                 <MetricCard
+                  label="Phrases"
+                  value={formatCount(pageDiagnostics?.injectedPhrases ?? 0)}
+                />
+                <MetricCard
+                  label="Phrase rejects"
+                  value={formatCount(pageDiagnostics?.rejectedPhrases ?? 0)}
+                />
+                <MetricCard
                   label="Seen sentences"
                   value={formatCount(pageDiagnostics?.sentenceCandidatesSeen ?? 0)}
                 />

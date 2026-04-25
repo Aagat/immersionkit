@@ -3,6 +3,7 @@ import type {
   ContextualWordCandidate,
   ExtensionSettings,
   LearningItem,
+  PhraseOccurrence,
   SeedLexiconEntry,
   SiteSetting,
   UserVocabEntry,
@@ -54,6 +55,7 @@ export type ProcessingContext = {
   vocabByLemmaId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+  cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
 };
 
 export type CachedContextSkipDecision = {
@@ -62,6 +64,20 @@ export type CachedContextSkipDecision = {
   normalizedText: string;
   rationale?: string;
 };
+
+export type CachedPhraseMatch = Pick<
+  PhraseOccurrence,
+  | "occurrenceId"
+  | "phraseId"
+  | "sentenceHash"
+  | "sourceText"
+  | "normalizedSourceText"
+  | "sourceKind"
+  | "category"
+  | "ruleId"
+  | "span"
+  | "confidence"
+>;
 
 export type PersistVocabStatusInput = {
   lemmaId: string;
@@ -98,6 +114,8 @@ export async function loadProcessingContext(
     pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon)
   );
 
+  const sentenceAnalysisCache = await loadCachedSentenceAnalysisEntries();
+
   return {
     settings,
     discoveryRate,
@@ -114,7 +132,8 @@ export async function loadProcessingContext(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
     ),
     learningItemsByUnitRefId: await loadLearningItemsByUnitRefId(),
-    cachedContextSkipDecisions: await loadCachedContextSkipDecisions()
+    cachedContextSkipDecisions: parseCachedContextSkipDecisions(sentenceAnalysisCache),
+    cachedPhraseMatchesBySentenceHash: parseCachedPhraseMatches(sentenceAnalysisCache)
   };
 }
 
@@ -202,11 +221,9 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
   });
 }
 
-async function loadCachedContextSkipDecisions(): Promise<
-  Map<string, CachedContextSkipDecision[]>
-> {
+async function loadCachedSentenceAnalysisEntries(): Promise<unknown[]> {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
-    return new Map();
+    return [];
   }
 
   return new Promise((resolve) => {
@@ -214,11 +231,18 @@ async function loadCachedContextSkipDecisions(): Promise<
       { type: RuntimeMessageType.GetSentenceAnalysisCache },
       (response?: unknown) => {
         if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
-          resolve(new Map());
+          resolve([]);
           return;
         }
 
-        resolve(parseCachedContextSkipDecisions(response.entries));
+        const entries = response.entries;
+        resolve(
+          Array.isArray(entries)
+            ? entries
+            : isRecord(entries)
+              ? Object.values(entries)
+              : []
+        );
       }
     );
   });
@@ -394,6 +418,95 @@ function parseCachedContextSkipDecisions(
   return decisionsBySentenceHash;
 }
 
+function parseCachedPhraseMatches(input: unknown): Map<string, CachedPhraseMatch[]> {
+  const matchesBySentenceHash = new Map<string, CachedPhraseMatch[]>();
+  const values = Array.isArray(input)
+    ? input
+    : isRecord(input)
+      ? Object.values(input)
+      : [];
+
+  for (const entry of values) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const sentenceHash = readString(entry.sentenceHash);
+    if (!sentenceHash || !Array.isArray(entry.phraseMatches)) {
+      continue;
+    }
+
+    for (const phraseMatch of entry.phraseMatches) {
+      const parsedMatch = normalizeCachedPhraseMatch(sentenceHash, phraseMatch);
+      if (!parsedMatch) {
+        continue;
+      }
+
+      const existing = matchesBySentenceHash.get(sentenceHash) ?? [];
+      existing.push(parsedMatch);
+      matchesBySentenceHash.set(sentenceHash, existing);
+    }
+  }
+
+  return matchesBySentenceHash;
+}
+
+function normalizeCachedPhraseMatch(
+  fallbackSentenceHash: string,
+  input: unknown
+): CachedPhraseMatch | null {
+  if (!isRecord(input) || !isRecord(input.span)) {
+    return null;
+  }
+
+  const phraseId = readString(input.phraseId);
+  const occurrenceId = readString(input.occurrenceId);
+  const sourceText = readString(input.sourceText);
+  const normalizedSourceText = readString(input.normalizedSourceText);
+  const startChar = readNumber(input.span.startChar, -1);
+  const endChar = readNumber(input.span.endChar, -1);
+  const startToken = readNumber(input.span.startToken, -1);
+  const endToken = readNumber(input.span.endToken, -1);
+  const sourceKind = readPhraseSourceKind(input.sourceKind);
+  const category = readPhraseCategory(input.category);
+  const ruleId = readString(input.ruleId);
+  const confidence = readNumber(input.confidence, 0);
+
+  if (
+    !phraseId ||
+    !occurrenceId ||
+    !sourceText ||
+    !normalizedSourceText ||
+    !sourceKind ||
+    !category ||
+    !ruleId ||
+    startChar < 0 ||
+    endChar <= startChar ||
+    startToken < 0 ||
+    endToken <= startToken
+  ) {
+    return null;
+  }
+
+  return {
+    occurrenceId,
+    phraseId,
+    sentenceHash: readString(input.sentenceHash) ?? fallbackSentenceHash,
+    sourceText,
+    normalizedSourceText,
+    sourceKind,
+    category,
+    ruleId,
+    span: {
+      startToken,
+      endToken,
+      startChar,
+      endChar
+    },
+    confidence
+  };
+}
+
 function normalizeCachedSkipDecision(
   fallbackSentenceHash: string,
   input: unknown
@@ -530,4 +643,20 @@ function readNumber(value: unknown, fallback: number): number {
 
 function isRecord(value: unknown): value is StorageRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readPhraseSourceKind(value: unknown): CachedPhraseMatch["sourceKind"] | null {
+  return value === "fixed-phrase" || value === "pattern-match" || value === "chunk"
+    ? value
+    : null;
+}
+
+function readPhraseCategory(value: unknown): CachedPhraseMatch["category"] | null {
+  return value === "fixed-idiom" ||
+    value === "function-phrase" ||
+    value === "grammar-carrier" ||
+    value === "adjective-noun" ||
+    value === "noun-chunk"
+    ? value
+    : null;
 }

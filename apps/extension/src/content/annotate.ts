@@ -1,5 +1,6 @@
 import { hashString, normalizeToken } from "@immersionkit/shared";
 import type {
+  LearningItem,
   SeedLexiconEntry,
   SentenceAnalysisEntry,
   UserVocabEntry,
@@ -20,7 +21,7 @@ import type {
   TokenStatusUpdatedDetail
 } from "./contracts";
 import { findSentenceForOffset, scoreSentenceCandidates, segmentSentences } from "./sentences";
-import type { CachedContextSkipDecision } from "./storage";
+import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
 import { preserveWordCasing, segmentText } from "./tokenize";
 
 export type ProcessTextNodeContext = {
@@ -32,6 +33,8 @@ export type ProcessTextNodeContext = {
   isKnownWordForScoring: (word: string) => boolean;
   isDueForReview?: (lemmaId: string) => boolean;
   cachedContextSkipDecisions?: Map<string, CachedContextSkipDecision[]>;
+  cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
+  learningItemsByUnitRefId?: Map<string, LearningItem>;
   allowPhraseOnlyCandidates?: boolean;
 };
 
@@ -41,6 +44,8 @@ export type ProcessTextNodeResult = {
   knownCount: number;
   discoveryCount: number;
   contextSkippedCount: number;
+  phraseInjectedCount: number;
+  phraseRejectedCount: number;
   sentenceCandidates: SentenceCandidateMetadata[];
 };
 
@@ -99,6 +104,8 @@ function processWindowedTextNode(
       mergedResult.knownCount += rendered.result.knownCount;
       mergedResult.discoveryCount += rendered.result.discoveryCount;
       mergedResult.contextSkippedCount += rendered.result.contextSkippedCount;
+      mergedResult.phraseInjectedCount += rendered.result.phraseInjectedCount;
+      mergedResult.phraseRejectedCount += rendered.result.phraseRejectedCount;
       mergedResult.sentenceCandidates.push(...rendered.result.sentenceCandidates);
     } else {
       fragment.append(window.text);
@@ -133,6 +140,12 @@ function renderTextWindow(input: {
   }
 
   const sentences = segmentSentences(sourceText);
+  const phraseCandidates = selectPhraseRenderCandidates({
+    sourceText,
+    sentences,
+    cachedPhraseMatchesBySentenceHash: context.cachedPhraseMatchesBySentenceHash,
+    learningItemsByUnitRefId: context.learningItemsByUnitRefId
+  });
   const injectedSentenceHashes = new Set<string>();
   const wrapper = document.createElement("span");
   const nodeId = context.createNodeId();
@@ -146,23 +159,69 @@ function renderTextWindow(input: {
   let knownCount = 0;
   let discoveryCount = 0;
   let contextSkippedCount = 0;
+  let phraseInjectedCount = 0;
   let tokenIndex = 0;
+  let cursor = 0;
 
   for (const segment of segments) {
+    const phraseCandidate = phraseCandidates.acceptedByStart.get(segment.start);
+    if (phraseCandidate) {
+      if (cursor < phraseCandidate.start) {
+        wrapper.append(sourceText.slice(cursor, phraseCandidate.start));
+      }
+
+      const tokenId = `${nodeId}-t${tokenIndex}`;
+      tokenIndex += 1;
+      wrapper.append(
+        createPhraseElement({
+          tokenId,
+          nodeId,
+          sourceText: sourceText.slice(phraseCandidate.start, phraseCandidate.end),
+          targetText: phraseCandidate.targetText,
+          sentence: phraseCandidate.sentence,
+          phraseId: phraseCandidate.phraseId,
+          itemId: phraseCandidate.itemId,
+          category: phraseCandidate.category,
+          sourceKind: phraseCandidate.sourceKind,
+          ruleId: phraseCandidate.ruleId,
+          confidence: phraseCandidate.confidence,
+          isDueForReview: phraseCandidate.isDueForReview
+        })
+      );
+
+      injectedSentenceHashes.add(phraseCandidate.sentence.hash);
+      injectedCount += 1;
+      discoveryCount += 1;
+      phraseInjectedCount += 1;
+      cursor = phraseCandidate.end;
+      continue;
+    }
+
+    if (segment.start < cursor) {
+      continue;
+    }
+
+    if (cursor < segment.start) {
+      wrapper.append(sourceText.slice(cursor, segment.start));
+    }
+
     if (segment.kind === "text") {
       wrapper.append(segment.value);
+      cursor = segment.end;
       continue;
     }
 
     const lexiconEntry = context.lexiconLookup.get(segment.normalized);
     if (!lexiconEntry) {
       wrapper.append(segment.value);
+      cursor = segment.end;
       continue;
     }
 
     const status = getVocabStatus(lexiconEntry.lemmaId, context.vocabByLemmaId);
     if (status === "ignored") {
       wrapper.append(segment.value);
+      cursor = segment.end;
       continue;
     }
 
@@ -177,6 +236,7 @@ function renderTextWindow(input: {
       )
     ) {
       wrapper.append(segment.value);
+      cursor = segment.end;
       continue;
     }
 
@@ -192,6 +252,7 @@ function renderTextWindow(input: {
     if (cachedSkipDecision) {
       wrapper.append(segment.value);
       contextSkippedCount += 1;
+      cursor = segment.end;
       continue;
     }
 
@@ -216,6 +277,7 @@ function renderTextWindow(input: {
     });
 
     wrapper.append(tokenElement);
+    cursor = segment.end;
     injectedCount += 1;
 
     if (wordKind === "known") {
@@ -223,6 +285,10 @@ function renderTextWindow(input: {
     } else {
       discoveryCount += 1;
     }
+  }
+
+  if (cursor < sourceText.length) {
+    wrapper.append(sourceText.slice(cursor));
   }
 
   const scoredSentenceCandidates = scoreSentenceCandidates(
@@ -239,6 +305,29 @@ function renderTextWindow(input: {
   if (phraseHints.length > 0) {
     wrapper.setAttribute("data-ik-render-layer", "word phrase-candidate");
     wrapper.setAttribute("data-ik-phrase-hints", phraseHints.join("|"));
+  }
+
+  if (phraseInjectedCount > 0) {
+    wrapper.setAttribute(
+      "data-ik-render-layer",
+      phraseHints.length > 0 ? "word phrase phrase-candidate" : "word phrase"
+    );
+    wrapper.setAttribute(
+      "data-ik-phrase-selected",
+      [...phraseCandidates.acceptedByStart.values()]
+        .map((candidate) => candidate.phraseId)
+        .join("|")
+    );
+  }
+
+  if (phraseCandidates.rejected.length > 0) {
+    wrapper.setAttribute(
+      "data-ik-phrase-rejections",
+      phraseCandidates.rejected
+        .slice(0, 8)
+        .map((rejection) => `${rejection.phraseId}:${rejection.reason}`)
+        .join("|")
+    );
   }
 
   if (sentenceCandidates.length > 0) {
@@ -265,6 +354,8 @@ function renderTextWindow(input: {
       knownCount,
       discoveryCount,
       contextSkippedCount,
+      phraseInjectedCount,
+      phraseRejectedCount: phraseCandidates.rejected.length,
       sentenceCandidates
     }
   };
@@ -496,6 +587,178 @@ function createTokenElement(input: {
   return element;
 }
 
+function createPhraseElement(input: {
+  tokenId: string;
+  nodeId: string;
+  sourceText: string;
+  targetText: string;
+  sentence: {
+    text: string;
+    hash: string;
+  };
+  phraseId: string;
+  itemId: string;
+  category: string;
+  sourceKind: string;
+  ruleId: string;
+  confidence: number;
+  isDueForReview: boolean;
+}): HTMLSpanElement {
+  const element = document.createElement("span");
+
+  element.className = "ik-word ik-word--discovery ik-phrase";
+  element.textContent = preserveWordCasing(input.sourceText, input.targetText);
+  element.tabIndex = 0;
+  element.setAttribute("role", "button");
+  element.setAttribute("data-ik-source-language", "en");
+  element.setAttribute("data-ik-target-language", "es");
+  element.setAttribute("data-ik-unit-kind", "phrase");
+  element.setAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE, input.tokenId);
+  element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
+  element.setAttribute("data-ik-source-token", input.sourceText);
+  element.setAttribute("data-ik-target-token", input.targetText);
+  element.setAttribute("data-ik-phrase-id", input.phraseId);
+  element.setAttribute("data-ik-item-id", input.itemId);
+  element.setAttribute("data-ik-phrase-category", input.category);
+  element.setAttribute("data-ik-phrase-source-kind", input.sourceKind);
+  element.setAttribute("data-ik-phrase-rule-id", input.ruleId);
+  element.setAttribute("data-ik-phrase-confidence", input.confidence.toFixed(3));
+  element.setAttribute("data-ik-context-decision", "inject");
+  element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
+  element.setAttribute(
+    "data-ik-scheduler-reason",
+    input.isDueForReview ? "phrase-due-review" : "phrase-learning-item"
+  );
+  element.setAttribute("data-ik-sentence", truncateSentenceMetadata(input.sentence.text));
+  element.setAttribute("data-ik-sentence-hash", input.sentence.hash);
+  element.setAttribute(
+    "aria-label",
+    `${input.sourceText} translated to ${input.targetText}`
+  );
+
+  return element;
+}
+
+type PhraseRenderCandidate = {
+  phraseId: string;
+  itemId: string;
+  sourceKind: string;
+  category: string;
+  ruleId: string;
+  confidence: number;
+  start: number;
+  end: number;
+  targetText: string;
+  sentence: {
+    text: string;
+    hash: string;
+  };
+  isDueForReview: boolean;
+};
+
+function selectPhraseRenderCandidates(input: {
+  sourceText: string;
+  sentences: ReturnType<typeof segmentSentences>;
+  cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
+  learningItemsByUnitRefId?: Map<string, LearningItem>;
+}): {
+  acceptedByStart: Map<number, PhraseRenderCandidate>;
+  rejected: { phraseId: string; reason: string }[];
+} {
+  const acceptedByStart = new Map<number, PhraseRenderCandidate>();
+  const rejected: { phraseId: string; reason: string }[] = [];
+  const candidates: PhraseRenderCandidate[] = [];
+
+  for (const sentence of input.sentences) {
+    const matches = input.cachedPhraseMatchesBySentenceHash?.get(sentence.hash) ?? [];
+    for (const match of matches) {
+      const learningItem = input.learningItemsByUnitRefId?.get(match.phraseId);
+      if (!learningItem || learningItem.unitType !== "phrase" || learningItem.suspended) {
+        rejected.push({ phraseId: match.phraseId, reason: "missing-active-learning-item" });
+        continue;
+      }
+
+      const start = sentence.start + match.span.startChar;
+      const end = sentence.start + match.span.endChar;
+      const sourceSlice = input.sourceText.slice(start, end);
+      if (
+        start < sentence.start ||
+        end > sentence.end ||
+        normalizePhraseText(sourceSlice) !== normalizePhraseText(match.sourceText)
+      ) {
+        rejected.push({ phraseId: match.phraseId, reason: "span-mismatch" });
+        continue;
+      }
+
+      candidates.push({
+        phraseId: match.phraseId,
+        itemId: learningItem.itemId,
+        sourceKind: match.sourceKind,
+        category: match.category,
+        ruleId: match.ruleId,
+        confidence: match.confidence,
+        start,
+        end,
+        targetText: learningItem.targetText,
+        sentence,
+        isDueForReview:
+          Boolean(learningItem.nextReviewAt) &&
+          Date.parse(learningItem.nextReviewAt ?? "") <= Date.now()
+      });
+    }
+  }
+
+  const selected: PhraseRenderCandidate[] = [];
+  for (const candidate of candidates.sort(comparePhraseCandidates)) {
+    if (
+      selected.some((existing) =>
+        spansOverlap(candidate.start, candidate.end, existing.start, existing.end)
+      )
+    ) {
+      rejected.push({ phraseId: candidate.phraseId, reason: "overlap" });
+      continue;
+    }
+
+    selected.push(candidate);
+    acceptedByStart.set(candidate.start, candidate);
+  }
+
+  return {
+    acceptedByStart,
+    rejected
+  };
+}
+
+function comparePhraseCandidates(
+  left: PhraseRenderCandidate,
+  right: PhraseRenderCandidate
+): number {
+  const leftLength = left.end - left.start;
+  const rightLength = right.end - right.start;
+  if (leftLength !== rightLength) {
+    return rightLength - leftLength;
+  }
+
+  if (left.confidence !== right.confidence) {
+    return right.confidence - left.confidence;
+  }
+
+  return left.start - right.start;
+}
+
+function spansOverlap(
+  leftStart: number,
+  leftEnd: number,
+  rightStart: number,
+  rightEnd: number
+): boolean {
+  return leftStart < rightEnd && rightStart < leftEnd;
+}
+
+function normalizePhraseText(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function truncateSentenceMetadata(input: string): string {
   if (input.length <= MAX_SENTENCE_METADATA_LENGTH) {
     return input;
@@ -666,6 +929,8 @@ function emptyResult(): ProcessTextNodeResult {
     knownCount: 0,
     discoveryCount: 0,
     contextSkippedCount: 0,
+    phraseInjectedCount: 0,
+    phraseRejectedCount: 0,
     sentenceCandidates: []
   };
 }

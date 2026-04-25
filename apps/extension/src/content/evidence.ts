@@ -134,13 +134,24 @@ export class ContentEvidenceTracker {
       return;
     }
 
+    const unitKind = element.getAttribute("data-ik-unit-kind");
     const lemmaId = element.getAttribute("data-ik-lemma-id");
+    const phraseId = element.getAttribute("data-ik-phrase-id");
     const sentenceHash = element.getAttribute("data-ik-sentence-hash");
-    if (!lemmaId || !sentenceHash) {
+    if (!sentenceHash) {
       return;
     }
 
-    const itemId = wordItemId(lemmaId);
+    const itemId =
+      unitKind === "phrase" && phraseId
+        ? phraseItemId(phraseId)
+        : lemmaId
+          ? wordItemId(lemmaId)
+          : null;
+    if (!itemId) {
+      return;
+    }
+
     const key = evidenceDedupeKey(itemId, sentenceHash);
     const now = this.now();
     const lastEmittedAt = this.emittedExposureAt.get(key);
@@ -208,6 +219,10 @@ function isActiveSession(): boolean {
 
 function wordItemId(lemmaId: string): string {
   return `word:${lemmaId}`;
+}
+
+function phraseItemId(phraseId: string): string {
+  return `phrase:${phraseId}`;
 }
 
 function evidenceDedupeKey(itemId: string, sentenceHash?: string): string {

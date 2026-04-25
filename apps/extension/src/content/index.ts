@@ -58,7 +58,7 @@ import {
 } from "./sentence-renderer";
 import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { loadProcessingContext, persistVocabStatus } from "./storage";
-import type { CachedContextSkipDecision } from "./storage";
+import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
 import "./styles.css";
 
 type ProcessingState = {
@@ -68,9 +68,12 @@ type ProcessingState = {
   vocabByLemmaId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+  cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   seenSentenceHashes: Set<string>;
   processedTextNodes: number;
   injectedTokens: number;
+  injectedPhrases: number;
+  rejectedPhrases: number;
   contextSkippedTokens: number;
   analysisSuppressedTokens: number;
   sentenceCandidatesQueued: number;
@@ -298,6 +301,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       fallbackLexicon: processingContext.lexiconInfo.isFallback,
       processedTextNodes: 0,
       injectedTokens: 0,
+      injectedPhrases: 0,
+      rejectedPhrases: 0,
       contextSkippedTokens: 0,
       analysisSuppressedTokens: 0,
       sentenceCandidatesSeen: 0,
@@ -344,9 +349,13 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       vocabByLemmaId: processingContext.vocabByLemmaId,
       learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
       cachedContextSkipDecisions: processingContext.cachedContextSkipDecisions,
+      cachedPhraseMatchesBySentenceHash:
+        processingContext.cachedPhraseMatchesBySentenceHash,
       seenSentenceHashes: new Set<string>(),
       processedTextNodes: 0,
       injectedTokens: 0,
+      injectedPhrases: 0,
+      rejectedPhrases: 0,
       contextSkippedTokens: 0,
       analysisSuppressedTokens: 0,
       sentenceCandidatesQueued: 0,
@@ -481,6 +490,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
   const queuedCandidates: SentenceCandidateMetadata[] = [];
   let processedNodes = 0;
   let injectedTokens = 0;
+  let injectedPhrases = 0;
+  let rejectedPhrases = 0;
   let contextSkippedTokens = 0;
 
   for (const root of roots) {
@@ -494,6 +505,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         lexiconLookup: state.lexiconLookup,
         vocabByLemmaId: state.vocabByLemmaId,
         cachedContextSkipDecisions: state.cachedContextSkipDecisions,
+        cachedPhraseMatchesBySentenceHash: state.cachedPhraseMatchesBySentenceHash,
+        learningItemsByUnitRefId: state.learningItemsByUnitRefId,
         isKnownWordForScoring: (word) => isKnownWord(state, word),
         isDueForReview: (lemmaId) => isDueLearningItem(state, lemmaId),
         allowPhraseOnlyCandidates: true
@@ -505,6 +518,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
 
       processedNodes += 1;
       injectedTokens += result.injectedCount;
+      injectedPhrases += result.phraseInjectedCount;
+      rejectedPhrases += result.phraseRejectedCount;
       contextSkippedTokens += result.contextSkippedCount;
 
       for (const candidate of result.sentenceCandidates) {
@@ -524,6 +539,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
 
   state.processedTextNodes += processedNodes;
   state.injectedTokens += injectedTokens;
+  state.injectedPhrases += injectedPhrases;
+  state.rejectedPhrases += rejectedPhrases;
   state.contextSkippedTokens += contextSkippedTokens;
   state.evidenceTracker.registerRenderedTokens(document);
   queueSentenceCandidates(state, queuedCandidates);
@@ -1338,6 +1355,8 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     fallbackLexicon: true,
     processedTextNodes: 0,
     injectedTokens: 0,
+    injectedPhrases: 0,
+    rejectedPhrases: 0,
     contextSkippedTokens: 0,
     analysisSuppressedTokens: 0,
     sentenceCandidatesSeen: 0,
@@ -1360,6 +1379,8 @@ function updateDiagnostics(runtimeState: RuntimeState) {
   if (processing) {
     runtimeState.diagnostics.processedTextNodes = processing.processedTextNodes;
     runtimeState.diagnostics.injectedTokens = processing.injectedTokens;
+    runtimeState.diagnostics.injectedPhrases = processing.injectedPhrases;
+    runtimeState.diagnostics.rejectedPhrases = processing.rejectedPhrases;
     runtimeState.diagnostics.contextSkippedTokens = processing.contextSkippedTokens;
     runtimeState.diagnostics.analysisSuppressedTokens =
       processing.analysisSuppressedTokens;

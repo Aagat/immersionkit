@@ -5,11 +5,17 @@ import { SAFE_POS } from "./constants";
 
 export type LexiconLookup = Map<string, SeedLexiconEntry>;
 
+const BLOCKED_SINGLE_TOKEN_SOURCE_LEMMAS = new Set(["a", "an", "the"]);
+
 export function buildLexiconLookup(seedEntries: SeedLexiconEntry[]): LexiconLookup {
   const lookup = new Map<string, SeedLexiconEntry>();
 
   for (const entry of seedEntries) {
     if (!SAFE_POS.has(entry.pos)) {
+      continue;
+    }
+
+    if (isBlockedLexicalKey(entry.sourceLemma)) {
       continue;
     }
 
@@ -33,8 +39,17 @@ function registerLexiconKey(
     return;
   }
 
+  if (isBlockedLexicalKey(normalized)) {
+    return;
+  }
+
   const existing = lookup.get(normalized);
   lookup.set(normalized, selectPreferredEntry(existing, entry));
+}
+
+function isBlockedLexicalKey(rawKey: string): boolean {
+  const normalized = normalizeToken(rawKey);
+  return BLOCKED_SINGLE_TOKEN_SOURCE_LEMMAS.has(normalized);
 }
 
 function selectPreferredEntry(
