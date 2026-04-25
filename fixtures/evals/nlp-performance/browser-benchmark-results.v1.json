@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-24T23:38:39.626Z",
+  "generatedAt": "2026-04-25T11:06:13.874Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -33,17 +33,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 16,
-      "hotPerSentenceLatencyMs": 0.37285714149475097,
+      "coldStartLatencyMs": 14.699999809265137,
+      "hotPerSentenceLatencyMs": 0.35928571224212646,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 2.5999999046325684,
-        "perSentenceLatencyMs": 0.25999999046325684
+        "totalLatencyMs": 2.4000000953674316,
+        "perSentenceLatencyMs": 0.24000000953674316
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 15.199999809265137,
-        "perSentenceLatencyMs": 0.3166666626930237
+        "totalLatencyMs": 12.5,
+        "perSentenceLatencyMs": 0.2604166666666667
       },
       "payload": {
         "averageBytesPerSentence": 1006.25,
@@ -63,8 +63,8 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 20.59999990463257,
-        "withCacheLatencyMs": 4.5,
+        "noCacheLatencyMs": 21,
+        "withCacheLatencyMs": 4.900000095367432,
         "savedLatencyMs": 16.09999990463257
       },
       "quality": {
@@ -1058,8 +1058,8 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.5,
-      "hotPerSentenceLatencyMs": 0.5035714285714286,
+      "coldStartLatencyMs": 1.6999998092651367,
+      "hotPerSentenceLatencyMs": 0.5335714306150164,
       "smallBatch": {
         "sentenceCount": 10,
         "totalLatencyMs": 4.599999904632568,
@@ -1067,8 +1067,8 @@
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 21.59999990463257,
-        "perSentenceLatencyMs": 0.4499999980131785
+        "totalLatencyMs": 22.300000190734863,
+        "perSentenceLatencyMs": 0.4645833373069763
       },
       "payload": {
         "averageBytesPerSentence": 1075.4583333333333,
@@ -1088,9 +1088,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 36.5,
-        "withCacheLatencyMs": 7.099999904632568,
-        "savedLatencyMs": 29.40000009536743
+        "noCacheLatencyMs": 41.09999990463257,
+        "withCacheLatencyMs": 7.600000381469727,
+        "savedLatencyMs": 33.49999952316284
       },
       "quality": {
         "corpusVersion": "2026-04-21",
@@ -2121,17 +2121,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 0.8000001907348633,
-      "hotPerSentenceLatencyMs": 0.06000000068119594,
+      "coldStartLatencyMs": 1.4000000953674316,
+      "hotPerSentenceLatencyMs": 0.06499999931880406,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 0.19999980926513672,
-        "perSentenceLatencyMs": 0.019999980926513672
+        "totalLatencyMs": 0.20000028610229492,
+        "perSentenceLatencyMs": 0.02000002861022949
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 1.0999999046325684,
-        "perSentenceLatencyMs": 0.022916664679845173
+        "totalLatencyMs": 1,
+        "perSentenceLatencyMs": 0.020833333333333332
       },
       "payload": {
         "averageBytesPerSentence": 918.2708333333334,
@@ -2151,9 +2151,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 1.4000000953674316,
-        "withCacheLatencyMs": 0.5999999046325684,
-        "savedLatencyMs": 0.8000001907348633
+        "noCacheLatencyMs": 1.5,
+        "withCacheLatencyMs": 0.5,
+        "savedLatencyMs": 1
       },
       "quality": {
         "corpusVersion": "2026-04-21",

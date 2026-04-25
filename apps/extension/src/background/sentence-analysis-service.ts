@@ -1,6 +1,7 @@
 import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
+  buildRuntimePhraseId,
   createSentenceAnalysisEntry,
   detectPhraseCandidatesFromAnalyzerOutput,
   evaluateContextAwareDecision,
@@ -24,6 +25,10 @@ import {
 } from "@immersionkit/shared";
 
 import { parseSeedLexiconInput } from "../seed/seed-lexicon";
+import {
+  ChromeStoragePhraseRegistryRepository,
+  type PhraseRegistryRepository
+} from "./phrase-registry";
 import {
   ChromeStorageSentenceAnalysisCacheRepository,
   type SentenceAnalysisCacheRepository
@@ -67,6 +72,7 @@ export type AnalyzedSentenceCandidate = {
 
 type SentenceAnalysisServiceOptions = {
   cache?: SentenceAnalysisCacheRepository;
+  phraseRegistry?: PhraseRegistryRepository;
   analyzer?: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>);
   loadLexicon?: () => Promise<SeedLexiconEntry[]>;
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
@@ -78,12 +84,15 @@ type LexiconLookup = {
 
 export class SentenceAnalysisService {
   private readonly cache: SentenceAnalysisCacheRepository;
+  private readonly phraseRegistry: PhraseRegistryRepository;
   private readonly analyzerLoader: () => Promise<SentenceAnalyzer>;
   private readonly loadLexicon: () => Promise<SeedLexiconEntry[]>;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
 
   constructor(options: SentenceAnalysisServiceOptions = {}) {
     this.cache = options.cache ?? new ChromeStorageSentenceAnalysisCacheRepository();
+    this.phraseRegistry =
+      options.phraseRegistry ?? new ChromeStoragePhraseRegistryRepository();
     if (!options.analyzer) {
       this.analyzerLoader = getDefaultSentenceAnalyzer;
     } else if (isSentenceAnalyzer(options.analyzer)) {
@@ -149,6 +158,10 @@ export class SentenceAnalysisService {
     }
 
     await this.cache.putMany(entriesToPersist);
+    await this.phraseRegistry.upsertOccurrences(
+      results.flatMap((result) => result.entry.phraseMatches),
+      now
+    );
     return results;
   }
 }
@@ -291,7 +304,11 @@ function buildPhraseOccurrences(
 
   return detection.selectedCandidates.map((candidate) => ({
     occurrenceId: `${analyzerOutput.sentenceHash}:${analyzerOutput.analyzerVersion}:${candidate.span.startToken}-${candidate.span.endToken}:${candidate.ruleId}`,
-    phraseId: candidate.canonicalPhraseKey,
+    phraseId: buildRuntimePhraseId({
+      normalizedSourceText: candidate.normalizedSourceText,
+      sourceKind: candidate.sourceKind,
+      normalizedTargetText: ""
+    }),
     sentenceHash: analyzerOutput.sentenceHash,
     analyzerVersion: analyzerOutput.analyzerVersion,
     sourceText: candidate.sourceText,

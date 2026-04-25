@@ -5,7 +5,13 @@ import type {
   ReviewEvent,
   ReviewGrade
 } from "@immersionkit/shared";
-import { RuntimeMessageType } from "@immersionkit/shared";
+import {
+  REVIEW_INTERVALS_MS,
+  RuntimeMessageType,
+  addMs,
+  scheduleAssistReview,
+  scheduleQualifiedExposure
+} from "@immersionkit/shared";
 
 import {
   isRecord,
@@ -16,20 +22,30 @@ import {
 
 const LEARNING_ITEMS_STORAGE_KEYS = ["immersionkit.learningItems"] as const;
 const REVIEW_EVENTS_STORAGE_KEYS = ["immersionkit.reviewEvents"] as const;
+const CONTEXT_HISTORY_STORAGE_KEYS = [
+  "immersionkit.learningItemContextHistory"
+] as const;
 const LEARNING_ITEMS_PRIMARY_KEY = LEARNING_ITEMS_STORAGE_KEYS[0];
 const REVIEW_EVENTS_PRIMARY_KEY = REVIEW_EVENTS_STORAGE_KEYS[0];
-const REVIEW_INTERVALS_MS = [
-  10 * 60 * 1000,
-  24 * 60 * 60 * 1000,
-  3 * 24 * 60 * 60 * 1000,
-  7 * 24 * 60 * 60 * 1000,
-  14 * 24 * 60 * 60 * 1000,
-  30 * 24 * 60 * 60 * 1000,
-  60 * 24 * 60 * 60 * 1000
-] as const;
+const CONTEXT_HISTORY_PRIMARY_KEY = CONTEXT_HISTORY_STORAGE_KEYS[0];
 const MAX_REVIEW_EVENTS = 500;
+const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
+const EXPOSURE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 type LearningItemRecord = Record<string, LearningItem>;
+type LearningItemContextHistoryRecord = Record<string, LearningItemContextHistory>;
+
+type LearningItemContextHistory = {
+  itemId: string;
+  contexts: LearningItemContextEntry[];
+};
+
+type LearningItemContextEntry = {
+  key: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  exposureCount: number;
+};
 
 export class BackgroundLearningItemService {
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {
@@ -41,21 +57,7 @@ export class BackgroundLearningItemService {
     const state = await this.loadState();
     const existing = state.items[message.itemId];
     const item = ensureWordLearningItem(existing, message.itemId, now);
-    const nextItem: LearningItem = {
-      ...item,
-      status: item.status === "new" ? "learning" : item.status,
-      lastReviewedAt: now,
-      nextReviewAt: addMs(now, REVIEW_INTERVALS_MS[0]),
-      interval: REVIEW_INTERVALS_MS[0],
-      ease: Math.max(1.3, item.ease - 0.12),
-      lapses:
-        item.status === "reviewing" || item.status === "mastered"
-          ? item.lapses + 1
-          : item.lapses,
-      assistCount: item.assistCount + 1,
-      consecutiveUnassistedCount: 0,
-      suspended: false
-    };
+    const nextItem = scheduleAssistReview(item, now);
 
     state.items[nextItem.itemId] = nextItem;
     state.events.push(createReviewEvent(message, "hard", now));
@@ -74,35 +76,28 @@ export class BackgroundLearningItemService {
     const state = await this.loadState();
     const existing = state.items[message.itemId];
     const item = ensureWordLearningItem(existing, message.itemId, now);
-    const isDue = !item.nextReviewAt || Date.parse(item.nextReviewAt) <= Date.parse(now);
-    const distinctContextCount = Math.max(
-      item.distinctContextCount,
-      message.distinctContextKey ? item.distinctContextCount + 1 : item.distinctContextCount
-    );
-    const nextReviewIndex = isDue
-      ? Math.min(REVIEW_INTERVALS_MS.length - 1, intervalIndex(item.interval) + 1)
-      : intervalIndex(item.interval);
-    const nextInterval = REVIEW_INTERVALS_MS[nextReviewIndex];
-    const grade: ReviewGrade = message.wasAssisted ? "hard" : isDue ? "good" : "good";
-    const nextItem: LearningItem = {
-      ...item,
-      status: resolveStatusAfterExposure(item, nextReviewIndex),
-      lastExposedAt: now,
-      lastReviewedAt: isDue ? now : item.lastReviewedAt,
-      nextReviewAt: isDue ? addMs(now, nextInterval) : item.nextReviewAt,
-      interval: isDue ? nextInterval : item.interval,
-      ease: message.wasAssisted ? Math.max(1.3, item.ease - 0.08) : item.ease + 0.04,
-      qualifiedExposureCount: item.qualifiedExposureCount + 1,
-      consecutiveUnassistedCount: message.wasAssisted
-        ? 0
-        : item.consecutiveUnassistedCount + 1,
-      distinctContextCount,
-      suspended: false
-    };
+    const contextUpdate = updateContextHistory({
+      history: state.contextHistory[message.itemId],
+      itemId: message.itemId,
+      contextKey: readExposureContextKey(message),
+      now
+    });
+    state.contextHistory[message.itemId] = contextUpdate.history;
+    if (contextUpdate.isDuplicateWithinWindow) {
+      await persistState(state);
+      return item;
+    }
+
+    const scheduled = scheduleQualifiedExposure(item, {
+      now,
+      wasAssisted: message.wasAssisted,
+      isDistinctContext: contextUpdate.isNewContext
+    });
+    const nextItem = scheduled.item;
 
     state.items[nextItem.itemId] = nextItem;
-    if (isDue || !item.nextReviewAt) {
-      state.events.push(createReviewEvent(message, grade, now));
+    if (scheduled.shouldCreateReviewEvent) {
+      state.events.push(createReviewEvent(message, scheduled.grade, now));
     }
 
     await persistState(state);
@@ -112,17 +107,24 @@ export class BackgroundLearningItemService {
   private async loadState(): Promise<{
     items: LearningItemRecord;
     events: ReviewEvent[];
+    contextHistory: LearningItemContextHistoryRecord;
   }> {
     const storage = await readStorageValues([
       ...LEARNING_ITEMS_STORAGE_KEYS,
-      ...REVIEW_EVENTS_STORAGE_KEYS
+      ...REVIEW_EVENTS_STORAGE_KEYS,
+      ...CONTEXT_HISTORY_STORAGE_KEYS
     ]);
     const rawItems = pickFirstDefinedValue(storage, LEARNING_ITEMS_STORAGE_KEYS);
     const rawEvents = pickFirstDefinedValue(storage, REVIEW_EVENTS_STORAGE_KEYS);
+    const rawContextHistory = pickFirstDefinedValue(
+      storage,
+      CONTEXT_HISTORY_STORAGE_KEYS
+    );
 
     return {
       items: parseLearningItems(rawItems),
-      events: parseReviewEvents(rawEvents)
+      events: parseReviewEvents(rawEvents),
+      contextHistory: parseContextHistory(rawContextHistory)
     };
   }
 }
@@ -155,25 +157,6 @@ function ensureWordLearningItem(
     distinctContextCount: 0,
     suspended: false
   };
-}
-
-function resolveStatusAfterExposure(
-  item: LearningItem,
-  intervalIndexValue: number
-): LearningItem["status"] {
-  if (item.status === "suspended") {
-    return "suspended";
-  }
-
-  if (intervalIndexValue >= 5 && item.consecutiveUnassistedCount >= 3) {
-    return "mastered";
-  }
-
-  if (intervalIndexValue >= 2) {
-    return "reviewing";
-  }
-
-  return "learning";
 }
 
 function createReviewEvent(
@@ -258,24 +241,63 @@ function parseReviewEvents(value: unknown): ReviewEvent[] {
   });
 }
 
+function parseContextHistory(value: unknown): LearningItemContextHistoryRecord {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  const output: LearningItemContextHistoryRecord = {};
+  for (const entry of Object.values(value)) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const itemId = readString(entry.itemId);
+    if (!itemId || !Array.isArray(entry.contexts)) {
+      continue;
+    }
+
+    const contexts = entry.contexts.flatMap((context): LearningItemContextEntry[] => {
+      if (!isRecord(context)) {
+        return [];
+      }
+
+      const key = readString(context.key);
+      const firstSeenAt = readString(context.firstSeenAt);
+      const lastSeenAt = readString(context.lastSeenAt);
+      if (!key || !firstSeenAt || !lastSeenAt) {
+        return [];
+      }
+
+      return [
+        {
+          key,
+          firstSeenAt,
+          lastSeenAt,
+          exposureCount: readNumber(context.exposureCount, 1)
+        }
+      ];
+    });
+
+    output[itemId] = {
+      itemId,
+      contexts: contexts.slice(-MAX_CONTEXT_HISTORY_PER_ITEM)
+    };
+  }
+
+  return output;
+}
+
 async function persistState(state: {
   items: LearningItemRecord;
   events: ReviewEvent[];
+  contextHistory: LearningItemContextHistoryRecord;
 }): Promise<void> {
   await writeStorageValues({
     [LEARNING_ITEMS_PRIMARY_KEY]: state.items,
-    [REVIEW_EVENTS_PRIMARY_KEY]: state.events.slice(-MAX_REVIEW_EVENTS)
+    [REVIEW_EVENTS_PRIMARY_KEY]: state.events.slice(-MAX_REVIEW_EVENTS),
+    [CONTEXT_HISTORY_PRIMARY_KEY]: state.contextHistory
   });
-}
-
-function intervalIndex(interval: number): number {
-  const index = REVIEW_INTERVALS_MS.findIndex((candidate) => candidate >= interval);
-  return index >= 0 ? index : 0;
-}
-
-function addMs(timestamp: string, ms: number): string {
-  const base = Date.parse(timestamp);
-  return new Date((Number.isFinite(base) ? base : Date.now()) + ms).toISOString();
 }
 
 function isWordItemId(itemId: string): boolean {
@@ -297,4 +319,70 @@ function readString(value: unknown): string | null {
 
 function readNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function readExposureContextKey(
+  message: QualifiedExposureEventMessage
+): string | null {
+  return (
+    readString(message.distinctContextKey) ??
+    (message.hostname ? `${message.hostname}:${message.sentenceHash}` : message.sentenceHash)
+  );
+}
+
+function updateContextHistory(input: {
+  history: LearningItemContextHistory | undefined;
+  itemId: string;
+  contextKey: string | null;
+  now: string;
+}): {
+  history: LearningItemContextHistory;
+  isNewContext: boolean;
+  isDuplicateWithinWindow: boolean;
+} {
+  const history = input.history ?? {
+    itemId: input.itemId,
+    contexts: []
+  };
+  if (!input.contextKey) {
+    return {
+      history,
+      isNewContext: false,
+      isDuplicateWithinWindow: false
+    };
+  }
+
+  const existing = history.contexts.find((context) => context.key === input.contextKey);
+  if (existing) {
+    const nowMs = Date.parse(input.now);
+    const lastSeenMs = Date.parse(existing.lastSeenAt);
+    const isDuplicateWithinWindow =
+      Number.isFinite(nowMs) &&
+      Number.isFinite(lastSeenMs) &&
+      nowMs - lastSeenMs < EXPOSURE_DEDUPE_WINDOW_MS;
+    if (!isDuplicateWithinWindow) {
+      existing.lastSeenAt = input.now;
+      existing.exposureCount += 1;
+    }
+
+    return {
+      history,
+      isNewContext: false,
+      isDuplicateWithinWindow
+    };
+  }
+
+  history.contexts.push({
+    key: input.contextKey,
+    firstSeenAt: input.now,
+    lastSeenAt: input.now,
+    exposureCount: 1
+  });
+  history.contexts = history.contexts.slice(-MAX_CONTEXT_HISTORY_PER_ITEM);
+
+  return {
+    history,
+    isNewContext: true,
+    isDuplicateWithinWindow: false
+  };
 }

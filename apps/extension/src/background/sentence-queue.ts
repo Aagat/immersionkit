@@ -127,8 +127,9 @@ export class SentenceQueueOrchestrator {
     const translationAvailability = resolveTranslationAvailability(config);
     const cacheHits = await this.findCachedEntries(candidates, config);
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
-    const uncachedCandidates = candidates.filter(
-      (candidate) => !cachedByHash.has(candidate.sentenceHash)
+    const uncachedCandidates = rankCandidatesByAnalysis(
+      candidates.filter((candidate) => !cachedByHash.has(candidate.sentenceHash)),
+      analysisResults
     );
 
     let queued = 0;
@@ -515,6 +516,42 @@ function addNormalizedSentenceCandidate(
     sentenceHash,
     sourceText
   });
+}
+
+function rankCandidatesByAnalysis(
+  candidates: readonly ProviderSentenceCandidate[],
+  analysisResults: readonly AnalyzedSentenceCandidate[]
+): ProviderSentenceCandidate[] {
+  if (candidates.length <= 1 || analysisResults.length === 0) {
+    return [...candidates];
+  }
+
+  const scoreByHash = new Map(
+    analysisResults.map((result) => [
+      result.entry.sentenceHash,
+      result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result)
+    ] as const)
+  );
+
+  return candidates
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      score: scoreByHash.get(candidate.sentenceHash) ?? 0
+    }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((entry) => entry.candidate);
+}
+
+function scoreFromSuitabilitySignals(result: AnalyzedSentenceCandidate): number {
+  return (
+    result.suitabilitySignals.vocabularyFit * 0.28 +
+    result.suitabilitySignals.grammarFit * 0.16 +
+    result.suitabilitySignals.dueTargetValue * 0.18 +
+    result.suitabilitySignals.chunkUsefulness * 0.14 -
+    result.suitabilitySignals.ambiguityPenalty * 0.16 -
+    result.suitabilitySignals.stretchDemand * 0.08
+  );
 }
 
 function resolveTranslationAvailability(

@@ -1,4 +1,8 @@
-import { RuntimeMessageType, hashString } from "@immersionkit/shared";
+import {
+  RuntimeMessageType,
+  hashString,
+  shouldReceiveDueReviewBoost
+} from "@immersionkit/shared";
 import type {
   QueuedSentenceCandidate,
   LearningItem,
@@ -65,6 +69,8 @@ type ProcessingState = {
   seenSentenceHashes: Set<string>;
   processedTextNodes: number;
   injectedTokens: number;
+  contextSkippedTokens: number;
+  analysisSuppressedTokens: number;
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
   pendingRoots: Set<ParentNode>;
@@ -288,6 +294,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       fallbackLexicon: processingContext.lexiconInfo.isFallback,
       processedTextNodes: 0,
       injectedTokens: 0,
+      contextSkippedTokens: 0,
+      analysisSuppressedTokens: 0,
       sentenceCandidatesSeen: 0,
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
@@ -333,6 +341,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       seenSentenceHashes: new Set<string>(),
       processedTextNodes: 0,
       injectedTokens: 0,
+      contextSkippedTokens: 0,
+      analysisSuppressedTokens: 0,
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
       pendingRoots: new Set<ParentNode>(),
@@ -464,6 +474,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
   const queuedCandidates: SentenceCandidateMetadata[] = [];
   let processedNodes = 0;
   let injectedTokens = 0;
+  let contextSkippedTokens = 0;
 
   for (const root of roots) {
     const nodes = collectEligibleTextNodes(root);
@@ -487,6 +498,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
 
       processedNodes += 1;
       injectedTokens += result.injectedCount;
+      contextSkippedTokens += result.contextSkippedCount;
 
       for (const candidate of result.sentenceCandidates) {
         if (state.seenSentenceHashes.has(candidate.sentenceHash)) {
@@ -505,6 +517,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
 
   state.processedTextNodes += processedNodes;
   state.injectedTokens += injectedTokens;
+  state.contextSkippedTokens += contextSkippedTokens;
   state.evidenceTracker.registerRenderedTokens(document);
   queueSentenceCandidates(state, queuedCandidates);
 }
@@ -539,7 +552,7 @@ function queueSentenceCandidates(
       const cachedResults = readCachedResultsFromQueueResponse(response);
       const analysisEntries = readAnalysisEntriesFromQueueResponse(response);
       if (analysisEntries.length > 0) {
-        applySentenceAnalysisDecisions(analysisEntries);
+        state.analysisSuppressedTokens += applySentenceAnalysisDecisions(analysisEntries);
       }
 
       if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
@@ -641,15 +654,7 @@ function isKnownWord(state: ProcessingState, normalizedWord: string): boolean {
 
 function isDueLearningItem(state: ProcessingState, lemmaId: string): boolean {
   const item = state.learningItemsByUnitRefId.get(lemmaId);
-  if (!item || item.suspended || item.status === "suspended") {
-    return false;
-  }
-
-  if (!item.nextReviewAt) {
-    return item.status === "learning" || item.status === "reviewing";
-  }
-
-  return Date.parse(item.nextReviewAt) <= Date.now();
+  return shouldReceiveDueReviewBoost(item, Date.now());
 }
 
 function openPopover(
@@ -1249,6 +1254,8 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     fallbackLexicon: true,
     processedTextNodes: 0,
     injectedTokens: 0,
+    contextSkippedTokens: 0,
+    analysisSuppressedTokens: 0,
     sentenceCandidatesSeen: 0,
     sentenceCandidatesQueued: 0,
     sentenceNotesRendered: 0,
@@ -1267,6 +1274,9 @@ function updateDiagnostics(runtimeState: RuntimeState) {
   if (processing) {
     runtimeState.diagnostics.processedTextNodes = processing.processedTextNodes;
     runtimeState.diagnostics.injectedTokens = processing.injectedTokens;
+    runtimeState.diagnostics.contextSkippedTokens = processing.contextSkippedTokens;
+    runtimeState.diagnostics.analysisSuppressedTokens =
+      processing.analysisSuppressedTokens;
     runtimeState.diagnostics.sentenceCandidatesSeen = processing.seenSentenceHashes.size;
     runtimeState.diagnostics.sentenceCandidatesQueued =
       processing.sentenceCandidatesQueued;

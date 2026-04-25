@@ -2,6 +2,7 @@ export * from "./domain/analysis";
 export * from "./domain/models";
 export * from "./messaging/contracts";
 export * from "./scoring/difficulty";
+export * from "./scoring/scheduler";
 export * from "./scoring/sentence";
 export * from "./storage/adapter";
 export * from "./storage/repositories";

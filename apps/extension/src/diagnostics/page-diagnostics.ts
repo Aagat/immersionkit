@@ -16,6 +16,8 @@ export type PageDiagnosticsSnapshot = {
   fallbackLexicon: boolean;
   processedTextNodes: number;
   injectedTokens: number;
+  contextSkippedTokens: number;
+  analysisSuppressedTokens: number;
   sentenceCandidatesSeen: number;
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;

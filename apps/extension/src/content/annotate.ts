@@ -40,6 +40,7 @@ export type ProcessTextNodeResult = {
   injectedCount: number;
   knownCount: number;
   discoveryCount: number;
+  contextSkippedCount: number;
   sentenceCandidates: SentenceCandidateMetadata[];
 };
 
@@ -97,6 +98,7 @@ function processWindowedTextNode(
       mergedResult.injectedCount += rendered.result.injectedCount;
       mergedResult.knownCount += rendered.result.knownCount;
       mergedResult.discoveryCount += rendered.result.discoveryCount;
+      mergedResult.contextSkippedCount += rendered.result.contextSkippedCount;
       mergedResult.sentenceCandidates.push(...rendered.result.sentenceCandidates);
     } else {
       fragment.append(window.text);
@@ -143,6 +145,7 @@ function renderTextWindow(input: {
   let injectedCount = 0;
   let knownCount = 0;
   let discoveryCount = 0;
+  let contextSkippedCount = 0;
   let tokenIndex = 0;
 
   for (const segment of segments) {
@@ -188,6 +191,7 @@ function renderTextWindow(input: {
       : null;
     if (cachedSkipDecision) {
       wrapper.append(segment.value);
+      contextSkippedCount += 1;
       continue;
     }
 
@@ -207,7 +211,8 @@ function renderTextWindow(input: {
       sentence,
       lexiconEntry,
       status,
-      wordKind
+      wordKind,
+      isDueForReview
     });
 
     wrapper.append(tokenElement);
@@ -259,6 +264,7 @@ function renderTextWindow(input: {
       injectedCount,
       knownCount,
       discoveryCount,
+      contextSkippedCount,
       sentenceCandidates
     }
   };
@@ -429,6 +435,7 @@ function createTokenElement(input: {
   lexiconEntry: SeedLexiconEntry;
   status: VocabStatus;
   wordKind: InjectedWordKind;
+  isDueForReview: boolean;
 }): HTMLSpanElement {
   const element = document.createElement("span");
 
@@ -449,6 +456,16 @@ function createTokenElement(input: {
   element.setAttribute("data-ik-status", input.status);
   element.setAttribute("data-ik-pos", input.lexiconEntry.pos);
   element.setAttribute("data-ik-word-kind", input.wordKind);
+  element.setAttribute("data-ik-context-decision", "inject");
+  element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
+  element.setAttribute(
+    "data-ik-scheduler-reason",
+    input.isDueForReview
+      ? "due-review"
+      : input.wordKind === "known"
+        ? "known-status"
+        : "discovery-sampling"
+  );
   element.setAttribute(
     "aria-label",
     `${input.sourceToken} translated to ${input.targetToken}`
@@ -648,6 +665,7 @@ function emptyResult(): ProcessTextNodeResult {
     injectedCount: 0,
     knownCount: 0,
     discoveryCount: 0,
+    contextSkippedCount: 0,
     sentenceCandidates: []
   };
 }

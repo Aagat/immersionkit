@@ -15,6 +15,10 @@ import {
   SentenceQueueOrchestrator,
   type SentenceTranslationDelivery
 } from "../src/background/sentence-queue";
+import type {
+  AnalyzedSentenceCandidate,
+  SentenceAnalysisService
+} from "../src/background/sentence-analysis-service";
 
 describe("sentence queue orchestration", () => {
   it("returns cache hits immediately in queue response", async () => {
@@ -232,6 +236,64 @@ describe("sentence queue orchestration", () => {
     expect(providerCalls).not.toHaveBeenCalled();
     expect(notifyCalls).not.toHaveBeenCalled();
   });
+
+  it("prioritizes higher-suitability analysis results for provider work", async () => {
+    const ordinarySentence = "The museum opens early for visitors.";
+    const dueTargetSentence = "The city offers guided tours on Sundays.";
+    const ordinaryHash = hashSentence(ordinarySentence);
+    const dueTargetHash = hashSentence(dueTargetSentence);
+    const translatedDue = "La ciudad ofrece visitas guiadas los domingos.";
+    const providerCandidateBatches: string[][] = [];
+    const deliveryPromise = createDeferred<SentenceTranslationDelivery[]>();
+
+    const orchestrator = new SentenceQueueOrchestrator({
+      sentenceCache: new InMemorySentenceCache(),
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(ordinaryHash, 0.31),
+        createAnalysisResult(dueTargetHash, 0.86)
+      ]),
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createReadyConfig({
+            sentenceBatchSize: 1
+          })
+        ),
+      createProviderClient: () => ({
+        providerName: "openai",
+        async translateSentences(input) {
+          providerCandidateBatches.push(
+            input.candidates.map((candidate) => candidate.sentenceHash)
+          );
+          return input.candidates
+            .filter((candidate) => candidate.sentenceHash === dueTargetHash)
+            .map((candidate) => ({
+              sentenceHash: candidate.sentenceHash,
+              sourceText: candidate.sourceText,
+              translatedText: translatedDue,
+              learningNote: createLearningNote("Due target sentence first."),
+              model: "test-model",
+              promptVersion: OPENAI_SENTENCE_PROMPT_VERSION
+            }));
+        }
+      }),
+      notifyFreshTranslations: (deliveries) => {
+        deliveryPromise.resolve(deliveries);
+      },
+      flushDelayMs: 0
+    });
+
+    const response = await orchestrator.queueMessage(
+      {
+        type: RuntimeMessageType.QueueSentenceCandidates,
+        sentences: [ordinarySentence, dueTargetSentence]
+      },
+      31
+    );
+
+    expect(response.queued).toBe(2);
+    await withTimeout(deliveryPromise.promise, 800);
+    expect(providerCandidateBatches[0]).toEqual([dueTargetHash]);
+  });
 });
 
 type Deferred<T> = {
@@ -313,6 +375,48 @@ class InMemorySentenceCache implements SentenceCacheRepository {
   async clear(): Promise<void> {
     this.entries.clear();
   }
+}
+
+function createAnalysisServiceMock(
+  results: readonly AnalyzedSentenceCandidate[]
+): SentenceAnalysisService {
+  return {
+    analyzeCandidates: async () => [...results]
+  } as SentenceAnalysisService;
+}
+
+function createAnalysisResult(
+  sentenceHash: string,
+  difficultyScore: number
+): AnalyzedSentenceCandidate {
+  return {
+    cacheHit: false,
+    suitabilitySignals: {
+      vocabularyFit: difficultyScore,
+      grammarFit: 0,
+      structuralSimplicity: 0,
+      dueTargetValue: 0,
+      chunkUsefulness: 0,
+      ambiguityPenalty: 0,
+      stretchDemand: 0
+    },
+    entry: {
+      sentenceHash,
+      analyzerVersion: "fixture-v1",
+      analyzerId: "fixture-annotated",
+      sourceText: sentenceHash,
+      tokens: [],
+      lemmas: [],
+      posTags: [],
+      chunks: [],
+      contextualWordCandidates: [],
+      phraseMatches: [],
+      grammarFeatures: [],
+      difficultyScore,
+      createdAt: "2026-04-25T10:00:00.000Z",
+      lastAccessedAt: "2026-04-25T10:00:00.000Z"
+    }
+  };
 }
 
 function createProviderClientMock(

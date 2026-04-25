@@ -2,6 +2,8 @@ import {
   hashSentence,
   normalizeAnalyzerToken,
   type AnalyzerOutput,
+  type PhraseOccurrence,
+  type PhraseRegistryEntry,
   type SentenceAnalysisEntry,
   type SeedLexiconEntry
 } from "@immersionkit/shared";
@@ -11,6 +13,10 @@ import {
   SentenceAnalysisService,
   type SentenceAnalysisCandidate
 } from "../src/background/sentence-analysis-service";
+import {
+  mergePhraseOccurrence,
+  type PhraseRegistryRepository
+} from "../src/background/phrase-registry";
 import type { SentenceAnalysisCacheRepository } from "../src/background/sentence-analysis-cache";
 import type { SentenceAnalyzer } from "../src/background/sentence-analyzers";
 
@@ -127,6 +133,34 @@ describe("background sentence analysis service", () => {
     expect(analysis?.suitabilitySignals.chunkUsefulness).toBeGreaterThan(0);
     expect(analysis?.entry.vocabStats?.totalWordCount).toBeGreaterThan(0);
   });
+
+  it("merges repeated phrase sightings into durable registry identities", async () => {
+    const sourceText = "The captain of the football team has been patient.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const first = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const second = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const phraseId = first[0]?.entry.phraseMatches[0]?.phraseId;
+
+    expect(second[0]?.cacheHit).toBe(true);
+    expect(phraseId).toMatch(/^phrase:/);
+    expect(phraseId).not.toContain(sentenceHash);
+    expect(await phraseRegistry.get(phraseId ?? "")).toMatchObject({
+      phraseId,
+      exposureCount: 2
+    });
+  });
 });
 
 class InMemorySentenceAnalysisCache implements SentenceAnalysisCacheRepository {
@@ -161,6 +195,29 @@ class InMemorySentenceAnalysisCache implements SentenceAnalysisCacheRepository {
 
   async clear(): Promise<void> {
     this.entries.clear();
+  }
+}
+
+class InMemoryPhraseRegistry implements PhraseRegistryRepository {
+  private readonly entries = new Map<string, PhraseRegistryEntry>();
+
+  async get(phraseId: string): Promise<PhraseRegistryEntry | null> {
+    return this.entries.get(phraseId) ?? null;
+  }
+
+  async upsertOccurrences(
+    occurrences: readonly PhraseOccurrence[],
+    now: string
+  ): Promise<PhraseRegistryEntry[]> {
+    return occurrences.map((occurrence) => {
+      const entry = mergePhraseOccurrence(
+        this.entries.get(occurrence.phraseId),
+        occurrence,
+        now
+      );
+      this.entries.set(entry.phraseId, entry);
+      return entry;
+    });
   }
 }
 
