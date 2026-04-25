@@ -29,9 +29,32 @@ export type TokenMetadata = {
   exampleSentenceNative: string | null;
 };
 
+export type PhraseMetadata = {
+  tokenId: string;
+  nodeId: string;
+  sourceLanguage: "en";
+  targetLanguage: "es";
+  sourceText: string;
+  targetText: string;
+  phraseId: string;
+  itemId: string;
+  category: string;
+  sourceKind: string;
+  ruleId: string;
+  confidence: number | null;
+  dueStatus: string | null;
+  schedulerReason: string | null;
+  sentence: string | null;
+  sentenceHash: string | null;
+};
+
 export type SentenceCandidateReason = "injected-token" | "fixed-phrase-hint";
 
 export type TokenActivatedDetail = TokenMetadata & {
+  sourceEvent: "click" | "keyboard";
+};
+
+export type PhraseActivatedDetail = PhraseMetadata & {
   sourceEvent: "click" | "keyboard";
 };
 

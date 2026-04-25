@@ -65,6 +65,39 @@ export class IndexedDbSentenceAnalysisCacheRepository
     }
   }
 
+  async listBySentenceHashes(
+    sentenceHashes: readonly string[]
+  ): Promise<SentenceAnalysisEntry[]> {
+    const uniqueHashes = [...new Set(sentenceHashes.filter(Boolean))];
+    if (uniqueHashes.length === 0) {
+      return [];
+    }
+
+    if (!isIndexedDbAvailable()) {
+      return [];
+    }
+
+    try {
+      const store = await getIndexedDbStore(
+        INDEXEDDB_STORES.sentenceAnalysisCache,
+        "readonly"
+      );
+      const index = store.index("sentenceHash");
+      const entries = await Promise.all(
+        uniqueHashes.map(async (sentenceHash) =>
+          requestToPromise(index.getAll(sentenceHash))
+        )
+      );
+      return entries
+        .flat()
+        .map((entry) => normalizeSentenceAnalysisEntry(entry))
+        .filter((entry): entry is SentenceAnalysisEntry => Boolean(entry));
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB analysis cache scoped read failed.", error);
+      return [];
+    }
+  }
+
   async get(
     sentenceHash: string,
     analyzerVersion: string

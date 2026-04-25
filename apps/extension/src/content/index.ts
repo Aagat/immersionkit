@@ -13,6 +13,7 @@ import type {
   VocabStatus
 } from "@immersionkit/shared";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
+import type { PageDiagnosticsPhraseSample } from "../diagnostics/page-diagnostics";
 import type { PageDiagnosticsSentenceRankingReason } from "../diagnostics/page-diagnostics";
 import type { PageDiagnosticsTokenSample } from "../diagnostics/page-diagnostics";
 import {
@@ -23,6 +24,7 @@ import {
   applySentenceAnalysisDecisions,
   applyTokenStatusUpdate,
   processTextNode,
+  readPhraseMetadata,
   readTokenMetadata,
   restoreAnnotatedNodes
 } from "./annotate";
@@ -33,6 +35,7 @@ import {
 } from "./contracts";
 import type {
   SentenceCandidateMetadata,
+  PhraseActivatedDetail,
   TokenActivatedDetail,
   TokenStatusUpdatedDetail
 } from "./contracts";
@@ -47,6 +50,7 @@ import {
   nodeToProcessRoot,
   shouldSkipDocument
 } from "./dom";
+import { segmentSentences } from "./sentences";
 import { ContentEvidenceTracker } from "./evidence";
 import { buildLexiconLookup } from "./lexicon";
 import {
@@ -106,6 +110,7 @@ const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const UI_THEME_ATTRIBUTE = "data-ik-ui-theme";
 const TOKEN_DIAGNOSTICS_SAMPLE_LIMIT = 8;
+const PHRASE_DIAGNOSTICS_SAMPLE_LIMIT = 8;
 const STATUS_BUTTONS: readonly {
   status: InteractiveVocabStatus;
   label: string;
@@ -283,7 +288,13 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   runtimeState.refreshPromise = (async () => {
     applyUiTheme();
 
-    const processingContext = await loadProcessingContext(window.location.hostname);
+    const initialSentenceHashes = document.body
+      ? collectPageSentenceHashes(document.body)
+      : [];
+    const processingContext = await loadProcessingContext(
+      window.location.hostname,
+      initialSentenceHashes
+    );
     const sentenceTranslationEnabled = isSentenceTranslationEnabled(
       processingContext.settings.sentenceTranslationEnabled,
       processingContext.settings.provider
@@ -310,6 +321,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceNotesRendered: 0,
       sentenceNotesVisible: countSentenceNotes(),
       sentenceRankingReasons: [],
+      phraseDecisionSamples: collectPhraseDecisionSamples(),
       tokenDecisionSamples: collectTokenDecisionSamples(),
       updatedAt: new Date().toISOString()
     };
@@ -588,6 +600,20 @@ function queueSentenceCandidates(
   );
 }
 
+function collectPageSentenceHashes(root: ParentNode): string[] {
+  const hashes = new Set<string>();
+  for (const node of collectEligibleTextNodes(root)) {
+    for (const sentence of segmentSentences(node.nodeValue ?? "")) {
+      hashes.add(sentence.hash);
+      if (hashes.size >= 500) {
+        return [...hashes];
+      }
+    }
+  }
+
+  return [...hashes];
+}
+
 function dedupeSentenceCandidates(
   candidates: readonly SentenceCandidateMetadata[]
 ): QueuedSentenceCandidate[] {
@@ -629,21 +655,33 @@ function emitTokenActivatedEvent(
   }
 
   const metadata = readTokenMetadata(tokenElement);
-  if (!metadata) {
+  if (metadata) {
+    const detail: TokenActivatedDetail = {
+      ...metadata,
+      sourceEvent
+    };
+    runtimeState.processing?.evidenceTracker.recordAssist(metadata);
+
+    window.dispatchEvent(
+      new CustomEvent<TokenActivatedDetail>(IMMERSIONKIT_TOKEN_ACTIVATED_EVENT, {
+        detail
+      })
+    );
+
+    return true;
+  }
+
+  const phraseMetadata = readPhraseMetadata(tokenElement);
+  if (!phraseMetadata) {
     return false;
   }
 
-  const detail: TokenActivatedDetail = {
-    ...metadata,
+  const detail: PhraseActivatedDetail = {
+    ...phraseMetadata,
     sourceEvent
   };
-  runtimeState.processing?.evidenceTracker.recordAssist(metadata);
-
-  window.dispatchEvent(
-    new CustomEvent<TokenActivatedDetail>(IMMERSIONKIT_TOKEN_ACTIVATED_EVENT, {
-      detail
-    })
-  );
+  runtimeState.processing?.evidenceTracker.recordPhraseAssist(phraseMetadata);
+  openPhrasePopover(runtimeState, tokenElement, detail);
 
   return true;
 }
@@ -784,6 +822,37 @@ function openSentencePopover(
 
   document.body.append(popover);
   positionPopover(popover, noteElement);
+
+  const closeOnViewportChange = () => {
+    closePopover(runtimeState);
+  };
+
+  window.addEventListener("scroll", closeOnViewportChange, true);
+  window.addEventListener("resize", closeOnViewportChange);
+
+  runtimeState.popover = popover;
+  runtimeState.popoverCleanup = () => {
+    window.removeEventListener("scroll", closeOnViewportChange, true);
+    window.removeEventListener("resize", closeOnViewportChange);
+  };
+}
+
+function openPhrasePopover(
+  runtimeState: RuntimeState,
+  phraseElement: HTMLElement,
+  detail: PhraseActivatedDetail
+) {
+  if (runtimeState.activeToken === phraseElement && runtimeState.popover) {
+    closePopover(runtimeState);
+    return;
+  }
+
+  closePopover(runtimeState);
+  setActiveToken(runtimeState, phraseElement);
+
+  const popover = renderPhrasePopover(detail);
+  document.body.append(popover);
+  positionPopover(popover, phraseElement);
 
   const closeOnViewportChange = () => {
     closePopover(runtimeState);
@@ -954,6 +1023,47 @@ function renderSentencePopover(
   syncSentencePopoverActions(popover, noteElement);
 
   return popover;
+}
+
+function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
+  const popover = document.createElement("div");
+  popover.className = "ik-popover";
+  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
+  popover.setAttribute("data-immersionkit-ignore", "true");
+  popover.setAttribute("role", "dialog");
+  popover.setAttribute("aria-live", "polite");
+
+  const pair = document.createElement("div");
+  pair.className = "ik-popover__pair";
+  pair.append(createTokenPill("ik-popover__source", detail.sourceText));
+  pair.append(createArrow());
+  pair.append(createTokenPill("ik-popover__target", detail.targetText));
+  popover.append(pair);
+
+  const meta = document.createElement("p");
+  meta.className = "ik-popover__meta";
+  meta.textContent = [
+    formatPhraseLabel(detail.category),
+    formatPhraseLabel(detail.sourceKind),
+    detail.confidence === null ? null : `confidence ${detail.confidence.toFixed(2)}`
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  popover.append(meta);
+
+  const pageSentence = readNonEmptyString(detail.sentence);
+  if (pageSentence) {
+    const sentence = document.createElement("p");
+    sentence.className = "ik-popover__sentence";
+    sentence.textContent = pageSentence;
+    popover.append(sentence);
+  }
+
+  return popover;
+}
+
+function formatPhraseLabel(value: string): string {
+  return value.replace(/-/g, " ");
 }
 
 function collectSentencePopoverSections(
@@ -1364,6 +1474,7 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     sentenceNotesRendered: 0,
     sentenceNotesVisible: countSentenceNotes(),
     sentenceRankingReasons: [],
+    phraseDecisionSamples: collectPhraseDecisionSamples(),
     tokenDecisionSamples: collectTokenDecisionSamples(),
     updatedAt: new Date().toISOString()
   };
@@ -1393,6 +1504,7 @@ function updateDiagnostics(runtimeState: RuntimeState) {
   }
 
   runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
+  runtimeState.diagnostics.phraseDecisionSamples = collectPhraseDecisionSamples();
   runtimeState.diagnostics.tokenDecisionSamples = collectTokenDecisionSamples();
   runtimeState.diagnostics.updatedAt = new Date().toISOString();
 }
@@ -1420,6 +1532,57 @@ function collectTokenDecisionSamples(): PageDiagnosticsTokenSample[] {
       schedulerReason: token.getAttribute("data-ik-scheduler-reason"),
       sentenceHash: token.getAttribute("data-ik-sentence-hash")
     }));
+}
+
+function collectPhraseDecisionSamples(): PageDiagnosticsPhraseSample[] {
+  const selected = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-ik-unit-kind='phrase']")
+  ).map((phrase): PageDiagnosticsPhraseSample => ({
+    phraseId: phrase.getAttribute("data-ik-phrase-id"),
+    sourceText: phrase.getAttribute("data-ik-source-token"),
+    targetText: phrase.getAttribute("data-ik-target-token"),
+    selected: true,
+    rejectedReason: null,
+    sourceKind: phrase.getAttribute("data-ik-phrase-source-kind"),
+    category: phrase.getAttribute("data-ik-phrase-category"),
+    dueStatus: phrase.getAttribute("data-ik-due-status"),
+    schedulerReason: phrase.getAttribute("data-ik-scheduler-reason"),
+    sentenceHash: phrase.getAttribute("data-ik-sentence-hash"),
+    exposureEligible: Boolean(phrase.getAttribute("data-ik-sentence-hash"))
+  }));
+
+  const rejected = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-ik-phrase-rejections]")
+  ).flatMap((wrapper): PageDiagnosticsPhraseSample[] => {
+    const sentenceHash =
+      wrapper.getAttribute("data-ik-sentence-candidate-hashes")?.split("|")[0] ?? null;
+    return (wrapper.getAttribute("data-ik-phrase-rejections") ?? "")
+      .split("|")
+      .flatMap((entry): PageDiagnosticsPhraseSample[] => {
+        const separator = entry.lastIndexOf(":");
+        if (separator <= 0) {
+          return [];
+        }
+
+        return [
+          {
+            phraseId: entry.slice(0, separator),
+            sourceText: null,
+            targetText: null,
+            selected: false,
+            rejectedReason: entry.slice(separator + 1),
+            sourceKind: null,
+            category: null,
+            dueStatus: null,
+            schedulerReason: null,
+            sentenceHash,
+            exposureEligible: false
+          }
+        ];
+      });
+  });
+
+  return [...selected, ...rejected].slice(0, PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

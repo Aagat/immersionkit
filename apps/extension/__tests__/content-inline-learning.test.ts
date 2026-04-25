@@ -443,6 +443,170 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("opens phrase help and records phrase assist evidence only on interaction", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, window, wait }) => {
+        const sourceSentence = "I used to visit the city.";
+        const sentenceHash = hashSentence(sourceSentence);
+        const phraseId = "pattern:used-to-visit";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:14:15.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetLearningItems
+          ) {
+            return {
+              ok: true,
+              items: [
+                {
+                  itemId: `phrase:${phraseId}`,
+                  unitRefId: phraseId,
+                  unitType: "phrase",
+                  sourceText: "used to visit",
+                  targetText: "solia visitar",
+                  status: "learning",
+                  introducedAt: "2026-04-18T10:00:00.000Z",
+                  nextReviewAt: "2026-04-19T10:00:00.000Z",
+                  interval: 600000,
+                  ease: 2.3,
+                  lapses: 0,
+                  assistCount: 0,
+                  qualifiedExposureCount: 0,
+                  consecutiveUnassistedCount: 0,
+                  distinctContextCount: 0,
+                  suspended: false
+                }
+              ]
+            };
+          }
+
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetSentenceAnalysisCache
+          ) {
+            expect((message as { sentenceHashes?: string[] }).sentenceHashes).toContain(
+              sentenceHash
+            );
+            return {
+              ok: true,
+              entries: [
+                {
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  analyzerId: "fixture-annotated",
+                  sourceText: sourceSentence,
+                  tokens: [{ text: "I", normalized: "i", tags: [], startOffset: 0, endOffset: 1 }],
+                  chunks: [],
+                  grammarFeatures: [],
+                  phraseMatches: [
+                    {
+                      occurrenceId: "occurrence-used-to-visit",
+                      phraseId,
+                      sentenceHash,
+                      analyzerVersion: "fixture-v1",
+                      sourceText: "used to visit",
+                      normalizedSourceText: "used to visit",
+                      sourceKind: "pattern-match",
+                      category: "grammar-carrier",
+                      ruleId: "used-to-verb",
+                      span: {
+                        startToken: 1,
+                        endToken: 4,
+                        startChar: 2,
+                        endChar: 15
+                      },
+                      confidence: 0.91
+                    }
+                  ],
+                  contextualWordCandidates: [],
+                  createdAt: "2026-04-18T10:00:00.000Z",
+                  lastAccessedAt: "2026-04-18T10:00:00.000Z"
+                }
+              ]
+            };
+          }
+
+          return undefined;
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          expect(
+            chromeStub.sentMessages.find(
+              (message) =>
+                Boolean(message) &&
+                typeof message === "object" &&
+                (message as { type?: unknown }).type === CONTENT_ASSIST_EVENT_MESSAGE_TYPE
+            )
+          ).toBeUndefined();
+
+          const phrase = document.querySelector<HTMLElement>(
+            `[data-ik-phrase-id='${phraseId}']`
+          );
+          expect(phrase).toBeTruthy();
+
+          phrase?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
+          expect(popover?.textContent).toContain("used to visit");
+          expect(popover?.textContent).toContain("solia visitar");
+          expect(popover?.textContent).toContain("grammar carrier");
+          expect(popover?.textContent).toContain(sourceSentence);
+          expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
+
+          const assistMessage = chromeStub.sentMessages.find(
+            (message): message is {
+              type: string;
+              itemId: string;
+              assistType: string;
+              contextSentenceHash: string;
+              phraseId: string;
+            } =>
+              Boolean(message) &&
+              typeof message === "object" &&
+              (message as { type?: unknown }).type === CONTENT_ASSIST_EVENT_MESSAGE_TYPE
+          );
+
+          expect(assistMessage).toMatchObject({
+            itemId: `phrase:${phraseId}`,
+            assistType: "phrase-gloss-reveal",
+            contextSentenceHash: sentenceHash,
+            phraseId
+          });
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("keeps ambiguous injected words in English after background analysis rejects them", async () => {
     await withFixtureDom(
       "article-basic.html",

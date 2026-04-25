@@ -40,14 +40,18 @@ export class BackgroundLearningItemService {
   }
 
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {
-    if (!isWordItemId(message.itemId)) {
+    if (!isSupportedLearningItemId(message.itemId)) {
       return null;
     }
 
     const now = message.createdAt || new Date().toISOString();
     const state = await this.loadState();
     const existing = state.items[message.itemId];
-    const item = ensureWordLearningItem(existing, message.itemId, now);
+    const item = ensureLearningItem(existing, message.itemId, now);
+    if (!item) {
+      return null;
+    }
+
     const nextItem = scheduleAssistReview(item, now);
 
     state.items[nextItem.itemId] = nextItem;
@@ -59,14 +63,18 @@ export class BackgroundLearningItemService {
   async recordQualifiedExposure(
     message: QualifiedExposureEventMessage
   ): Promise<LearningItem | null> {
-    if (!isWordItemId(message.itemId)) {
+    if (!isSupportedLearningItemId(message.itemId)) {
       return null;
     }
 
     const now = message.occurredAt || new Date().toISOString();
     const state = await this.loadState();
     const existing = state.items[message.itemId];
-    const item = ensureWordLearningItem(existing, message.itemId, now);
+    const item = ensureLearningItem(existing, message.itemId, now);
+    if (!item) {
+      return null;
+    }
+
     const contextUpdate = updateContextHistory({
       history: state.contextHistory[message.itemId],
       itemId: message.itemId,
@@ -148,6 +156,18 @@ function ensureWordLearningItem(
   };
 }
 
+function ensureLearningItem(
+  existing: LearningItem | undefined,
+  itemId: string,
+  now: string
+): LearningItem | null {
+  if (existing) {
+    return existing;
+  }
+
+  return isWordItemId(itemId) ? ensureWordLearningItem(existing, itemId, now) : null;
+}
+
 function createReviewEvent(
   message: AssistEventMessage | QualifiedExposureEventMessage,
   grade: ReviewGrade,
@@ -175,6 +195,10 @@ function isQualifiedExposureMessage(
 
 function isWordItemId(itemId: string): boolean {
   return /^word:[a-zA-Z0-9:_-]+$/.test(itemId);
+}
+
+function isSupportedLearningItemId(itemId: string): boolean {
+  return /^(word|phrase):[a-zA-Z0-9:_-]+$/.test(itemId);
 }
 
 function readString(value: unknown): string | null {

@@ -25,6 +25,7 @@ export type PageDiagnosticsSnapshot = {
   sentenceNotesRendered: number;
   sentenceNotesVisible: number;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
+  phraseDecisionSamples: PageDiagnosticsPhraseSample[];
   tokenDecisionSamples: PageDiagnosticsTokenSample[];
   updatedAt: string;
 };
@@ -54,6 +55,20 @@ export type PageDiagnosticsTokenSample = {
   dueStatus: string | null;
   schedulerReason: string | null;
   sentenceHash: string | null;
+};
+
+export type PageDiagnosticsPhraseSample = {
+  phraseId: string | null;
+  sourceText: string | null;
+  targetText: string | null;
+  selected: boolean;
+  rejectedReason: string | null;
+  sourceKind: string | null;
+  category: string | null;
+  dueStatus: string | null;
+  schedulerReason: string | null;
+  sentenceHash: string | null;
+  exposureEligible: boolean;
 };
 
 export function isPageDiagnosticsMessage(

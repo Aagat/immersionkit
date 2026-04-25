@@ -113,7 +113,7 @@ export class BackgroundRuntimeCoordinator {
       }
 
       if (message.type === RuntimeMessageType.GetSentenceAnalysisCache) {
-        void this.handleGetSentenceAnalysisCache(sendResponse);
+        void this.handleGetSentenceAnalysisCache(message.sentenceHashes, sendResponse);
         return true;
       }
 
@@ -213,12 +213,15 @@ export class BackgroundRuntimeCoordinator {
   }
 
   private async handleGetSentenceAnalysisCache(
+    sentenceHashes: readonly string[] | undefined,
     sendResponse: (response: GetSentenceAnalysisCacheResponse) => void
   ) {
     try {
       sendResponse({
         ok: true,
-        entries: await this.sentenceAnalysisCache.listAll()
+        entries: Array.isArray(sentenceHashes)
+          ? await this.sentenceAnalysisCache.listBySentenceHashes(sentenceHashes)
+          : await this.sentenceAnalysisCache.listAll()
       });
     } catch (error) {
       console.warn("ImmersionKit sentence analysis cache read failed.", error);

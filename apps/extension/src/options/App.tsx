@@ -784,6 +784,55 @@ export function OptionsApp() {
           <section className="panel-card">
             <div className="section-heading">
               <div>
+                <p className="eyebrow">Phrase Decisions</p>
+                <h2>Sampled phrase spans</h2>
+              </div>
+              <span className="mini-badge">
+                {formatCount(getPhraseDecisionSamples(pageDiagnostics).length)} shown
+              </span>
+            </div>
+
+            {getPhraseDecisionSamples(pageDiagnostics).length ? (
+              <div className="list-stack">
+                {getPhraseDecisionSamples(pageDiagnostics).map((sample, index) => (
+                  <div
+                    key={`${sample.phraseId ?? "phrase"}-${sample.sentenceHash ?? index}-${index}`}
+                    className="list-item"
+                  >
+                    <div className="list-row">
+                      <p className="list-title">
+                        {sample.selected
+                          ? formatTokenPair(sample.sourceText, sample.targetText)
+                          : sample.phraseId ?? "Rejected phrase"}
+                      </p>
+                      <span className="mini-badge">
+                        {sample.selected ? "selected" : sample.rejectedReason ?? "rejected"}
+                      </span>
+                    </div>
+                    <p className="list-subtitle">
+                      {[
+                        sample.phraseId ? `phrase ${sample.phraseId}` : null,
+                        sample.category ? `category ${sample.category}` : null,
+                        sample.sourceKind ? `source ${sample.sourceKind}` : null,
+                        sample.dueStatus ? `due ${sample.dueStatus}` : null,
+                        sample.schedulerReason ? `scheduler ${sample.schedulerReason}` : null,
+                        sample.exposureEligible ? "exposure eligible" : "no exposure",
+                        sample.sentenceHash ? `sentence ${shortenHash(sample.sentenceHash)}` : null
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-line muted" style={{ marginTop: 0 }}>
+                No phrase decision sample is available from the active page.
+              </p>
+            )}
+          </section>
+
+          <section className="panel-card">
+            <div className="section-heading">
+              <div>
                 <p className="eyebrow">Token Decisions</p>
                 <h2>Sampled render attributes</h2>
               </div>
@@ -908,6 +957,14 @@ function getSentenceRankingReasons(
 ): PageDiagnostics["sentenceRankingReasons"] {
   return Array.isArray(diagnostics?.sentenceRankingReasons)
     ? diagnostics.sentenceRankingReasons
+    : [];
+}
+
+function getPhraseDecisionSamples(
+  diagnostics: PageDiagnostics | null
+): PageDiagnostics["phraseDecisionSamples"] {
+  return Array.isArray(diagnostics?.phraseDecisionSamples)
+    ? diagnostics.phraseDecisionSamples
     : [];
 }
 

@@ -45,6 +45,66 @@ describe("background learning item service", () => {
     ]);
   });
 
+  it("persists assist evidence for existing phrase learning items", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository({
+      "phrase:pattern:used-to-visit": createLearningItem({
+        itemId: "phrase:pattern:used-to-visit",
+        unitRefId: "pattern:used-to-visit",
+        unitType: "phrase",
+        sourceText: "used to visit",
+        targetText: "solia visitar"
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordAssist({
+      type: RuntimeMessageType.AssistEvent,
+      eventId: "assist-phrase-1",
+      itemId: "phrase:pattern:used-to-visit",
+      assistType: "phrase-gloss-reveal",
+      contextSentenceHash: "sentence-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      createdAt: "2026-04-18T10:00:00.000Z"
+    });
+
+    expect(item).toMatchObject({
+      itemId: "phrase:pattern:used-to-visit",
+      unitType: "phrase",
+      assistCount: 1,
+      consecutiveUnassistedCount: 0
+    });
+    expect(history.reviewEvents).toEqual([
+      expect.objectContaining({
+        itemId: "phrase:pattern:used-to-visit",
+        grade: "hard",
+        contextSentenceHash: "sentence-1"
+      })
+    ]);
+  });
+
+  it("does not create missing phrase items from loose assist evidence", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository();
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordAssist({
+      type: RuntimeMessageType.AssistEvent,
+      eventId: "assist-phrase-missing",
+      itemId: "phrase:missing",
+      assistType: "phrase-gloss-reveal",
+      contextSentenceHash: "sentence-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      createdAt: "2026-04-18T10:00:00.000Z"
+    });
+
+    expect(item).toBeNull();
+    expect(history.reviewEvents).toHaveLength(0);
+    expect(items.items).toEqual({});
+  });
+
   it("advances due qualified exposures on the interval ladder", async () => {
     const history = new InMemoryLearningHistoryRepository();
     const items = new InMemoryLearningItemRepository({

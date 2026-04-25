@@ -88,7 +88,8 @@ export type PersistVocabStatusInput = {
 };
 
 export async function loadProcessingContext(
-  hostname: string
+  hostname: string,
+  sentenceHashes: readonly string[] = []
 ): Promise<ProcessingContext> {
   const storage = await readStorageValues([
     ...STORAGE_KEYS.settings,
@@ -114,7 +115,7 @@ export async function loadProcessingContext(
     pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon)
   );
 
-  const sentenceAnalysisCache = await loadCachedSentenceAnalysisEntries();
+  const sentenceAnalysisCache = await loadCachedSentenceAnalysisEntries(sentenceHashes);
 
   return {
     settings,
@@ -221,14 +222,19 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
   });
 }
 
-async function loadCachedSentenceAnalysisEntries(): Promise<unknown[]> {
+async function loadCachedSentenceAnalysisEntries(
+  sentenceHashes: readonly string[]
+): Promise<unknown[]> {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     return [];
   }
 
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
-      { type: RuntimeMessageType.GetSentenceAnalysisCache },
+      {
+        type: RuntimeMessageType.GetSentenceAnalysisCache,
+        sentenceHashes: [...new Set(sentenceHashes)].slice(0, 500)
+      },
       (response?: unknown) => {
         if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
           resolve([]);

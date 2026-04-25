@@ -1,7 +1,7 @@
 import { RuntimeMessageType, hashString } from "@immersionkit/shared";
 
 import { IMMERSIONKIT_WORD_SELECTOR } from "./constants";
-import type { TokenMetadata } from "./contracts";
+import type { PhraseMetadata, TokenMetadata } from "./contracts";
 
 export const CONTENT_ASSIST_EVENT_MESSAGE_TYPE = RuntimeMessageType.AssistEvent;
 export const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
@@ -75,6 +75,28 @@ export class ContentEvidenceTracker {
       sessionId: this.sessionId,
       createdAt: new Date(this.now()).toISOString(),
       source: "content-word-interaction"
+    });
+  }
+
+  recordPhraseAssist(
+    metadata: PhraseMetadata,
+    assistType = "phrase-gloss-reveal"
+  ): void {
+    const contextSentenceHash = metadata.sentenceHash ?? undefined;
+    const key = evidenceDedupeKey(metadata.itemId, contextSentenceHash);
+    this.assistedAt.set(key, this.now());
+
+    emitEvidenceMessage({
+      type: CONTENT_ASSIST_EVENT_MESSAGE_TYPE,
+      eventId: this.nextEventId("assist", key),
+      itemId: metadata.itemId,
+      assistType,
+      contextSentenceHash,
+      hostname: window.location.hostname,
+      sessionId: this.sessionId,
+      createdAt: new Date(this.now()).toISOString(),
+      phraseId: metadata.phraseId,
+      source: "content-phrase-interaction"
     });
   }
 

@@ -30,6 +30,7 @@ export type GetLearningItemsMessage = {
 
 export type GetSentenceAnalysisCacheMessage = {
   type: RuntimeMessageType.GetSentenceAnalysisCache;
+  sentenceHashes?: string[];
 };
 
 export type QueuedSentenceCandidate = {

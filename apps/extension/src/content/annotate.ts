@@ -16,6 +16,7 @@ import {
 } from "./constants";
 import type {
   InjectedWordKind,
+  PhraseMetadata,
   SentenceCandidateMetadata,
   TokenMetadata,
   TokenStatusUpdatedDetail
@@ -422,6 +423,54 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
     sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash"),
     exampleSentenceEnglish: tokenElement.getAttribute("data-ik-example-sentence-english"),
     exampleSentenceNative: tokenElement.getAttribute("data-ik-example-sentence-native")
+  };
+}
+
+export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | null {
+  const tokenId = tokenElement.getAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE);
+  const nodeId = tokenElement.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
+  const sourceText = tokenElement.getAttribute("data-ik-source-token");
+  const targetText = tokenElement.getAttribute("data-ik-target-token");
+  const phraseId = tokenElement.getAttribute("data-ik-phrase-id");
+  const itemId = tokenElement.getAttribute("data-ik-item-id");
+  const category = tokenElement.getAttribute("data-ik-phrase-category");
+  const sourceKind = tokenElement.getAttribute("data-ik-phrase-source-kind");
+  const ruleId = tokenElement.getAttribute("data-ik-phrase-rule-id");
+
+  if (
+    !tokenId ||
+    !nodeId ||
+    !sourceText ||
+    !targetText ||
+    !phraseId ||
+    !itemId ||
+    !category ||
+    !sourceKind ||
+    !ruleId
+  ) {
+    return null;
+  }
+
+  const rawConfidence = tokenElement.getAttribute("data-ik-phrase-confidence");
+  const confidence = rawConfidence ? Number.parseFloat(rawConfidence) : Number.NaN;
+
+  return {
+    tokenId,
+    nodeId,
+    sourceLanguage: "en",
+    targetLanguage: "es",
+    sourceText,
+    targetText,
+    phraseId,
+    itemId,
+    category,
+    sourceKind,
+    ruleId,
+    confidence: Number.isFinite(confidence) ? confidence : null,
+    dueStatus: tokenElement.getAttribute("data-ik-due-status"),
+    schedulerReason: tokenElement.getAttribute("data-ik-scheduler-reason"),
+    sentence: tokenElement.getAttribute("data-ik-sentence"),
+    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash")
   };
 }
 

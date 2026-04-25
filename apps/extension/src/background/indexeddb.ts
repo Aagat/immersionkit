@@ -1,5 +1,5 @@
 const DATABASE_NAME = "immersionkit-extension";
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 
 export const INDEXEDDB_STORES = {
   sentenceCache: "sentence-cache",
@@ -88,9 +88,16 @@ async function openDatabase(): Promise<IDBDatabase> {
           INDEXEDDB_STORES.sentenceAnalysisCache
         )
       ) {
-        database.createObjectStore(INDEXEDDB_STORES.sentenceAnalysisCache, {
+        const store = database.createObjectStore(INDEXEDDB_STORES.sentenceAnalysisCache, {
           keyPath: "identity"
         });
+        store.createIndex("sentenceHash", "sentenceHash", { unique: false });
+      } else {
+        const transaction = request.transaction;
+        const store = transaction?.objectStore(INDEXEDDB_STORES.sentenceAnalysisCache);
+        if (store && !store.indexNames.contains("sentenceHash")) {
+          store.createIndex("sentenceHash", "sentenceHash", { unique: false });
+        }
       }
 
       if (!database.objectStoreNames.contains(INDEXEDDB_STORES.reviewEvents)) {
