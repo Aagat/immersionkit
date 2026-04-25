@@ -116,14 +116,64 @@ try {
       "immersionkit.sentenceCache",
       "immersionkit.settings"
     ]);
-    const analysisCache = values["immersionkit.sentenceAnalysisCache"] ?? {};
-    const translationCache = values["immersionkit.sentenceCache"] ?? {};
+    const legacyAnalysisCache = values["immersionkit.sentenceAnalysisCache"] ?? {};
+    const legacyTranslationCache = values["immersionkit.sentenceCache"] ?? {};
+    const indexedDbSnapshot = await new Promise((resolve) => {
+      const request = indexedDB.open("immersionkit-extension", 1);
+
+      request.onerror = () => {
+        resolve({
+          analysisCacheEntries: 0,
+          translationCacheEntries: 0,
+          firstAnalysisEntry: null
+        });
+      };
+
+      request.onsuccess = () => {
+        const database = request.result;
+        const readStore = (storeName) =>
+          new Promise((resolveStore) => {
+            if (!database.objectStoreNames.contains(storeName)) {
+              resolveStore([]);
+              return;
+            }
+
+            const store = database.transaction(storeName, "readonly").objectStore(storeName);
+            const allRequest = store.getAll();
+            allRequest.onsuccess = () => {
+              resolveStore(allRequest.result ?? []);
+            };
+            allRequest.onerror = () => {
+              resolveStore([]);
+            };
+          });
+
+        Promise.all([
+          readStore("sentence-analysis-cache"),
+          readStore("sentence-cache")
+        ]).then(([analysisEntries, translationEntries]) => {
+          database.close();
+          resolve({
+            analysisCacheEntries: analysisEntries.length,
+            translationCacheEntries: translationEntries.length,
+            firstAnalysisEntry: analysisEntries[0] ?? null
+          });
+        });
+      };
+    });
 
     return {
-      analysisCacheEntries: Object.keys(analysisCache).length,
-      translationCacheEntries: Object.keys(translationCache).length,
+      analysisCacheEntries:
+        indexedDbSnapshot.analysisCacheEntries +
+        Object.keys(legacyAnalysisCache).length,
+      translationCacheEntries:
+        indexedDbSnapshot.translationCacheEntries +
+        Object.keys(legacyTranslationCache).length,
       settings: values["immersionkit.settings"] ?? null,
-      firstAnalysisEntry: Object.values(analysisCache)[0] ?? null
+      firstAnalysisEntry:
+        indexedDbSnapshot.firstAnalysisEntry ??
+        Object.values(legacyAnalysisCache)[0] ??
+        null
     };
   });
 

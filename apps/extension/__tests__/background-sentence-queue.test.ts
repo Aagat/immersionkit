@@ -13,6 +13,7 @@ import { OPENAI_SENTENCE_PROMPT_VERSION } from "../src/background/provider-clien
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
 import {
   SentenceQueueOrchestrator,
+  rankCandidatesByAnalysis,
   type SentenceTranslationDelivery
 } from "../src/background/sentence-queue";
 import type {
@@ -291,8 +292,66 @@ describe("sentence queue orchestration", () => {
     );
 
     expect(response.queued).toBe(2);
+    expect(response.rankingReasons).toEqual([
+      expect.objectContaining({
+        sentenceHash: dueTargetHash,
+        rank: 1,
+        score: 0.86,
+        primaryReason: "difficulty-score"
+      }),
+      expect.objectContaining({
+        sentenceHash: ordinaryHash,
+        rank: 2,
+        score: 0.31,
+        primaryReason: "difficulty-score"
+      })
+    ]);
     await withTimeout(deliveryPromise.promise, 800);
     expect(providerCandidateBatches[0]).toEqual([dueTargetHash]);
+  });
+
+  it("returns deterministic ranking reasons from suitability signals", () => {
+    const first = {
+      sentenceHash: "sentence-a",
+      sourceText: "The museum opens early."
+    };
+    const second = {
+      sentenceHash: "sentence-b",
+      sourceText: "The city offers guided tours."
+    };
+
+    const ranked = rankCandidatesByAnalysis([first, second], [
+      createSignalOnlyAnalysisResult(first.sentenceHash, {
+        vocabularyFit: 0.2,
+        grammarFit: 0.1,
+        dueTargetValue: 0,
+        chunkUsefulness: 0.1,
+        ambiguityPenalty: 0,
+        stretchDemand: 0
+      }),
+      createSignalOnlyAnalysisResult(second.sentenceHash, {
+        vocabularyFit: 0.45,
+        grammarFit: 0.2,
+        dueTargetValue: 0.9,
+        chunkUsefulness: 0.2,
+        ambiguityPenalty: 0.1,
+        stretchDemand: 0
+      })
+    ]);
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      second.sentenceHash,
+      first.sentenceHash
+    ]);
+    expect(ranked.reasons[0]).toMatchObject({
+      sentenceHash: second.sentenceHash,
+      rank: 1,
+      primaryReason: "due-target-value",
+      signals: {
+        dueTargetValue: 0.9,
+        ambiguityPenalty: 0.1
+      }
+    });
   });
 });
 
@@ -415,6 +474,20 @@ function createAnalysisResult(
       difficultyScore,
       createdAt: "2026-04-25T10:00:00.000Z",
       lastAccessedAt: "2026-04-25T10:00:00.000Z"
+    }
+  };
+}
+
+function createSignalOnlyAnalysisResult(
+  sentenceHash: string,
+  signals: AnalyzedSentenceCandidate["suitabilitySignals"]
+): AnalyzedSentenceCandidate {
+  return {
+    ...createAnalysisResult(sentenceHash, 0),
+    suitabilitySignals: signals,
+    entry: {
+      ...createAnalysisResult(sentenceHash, 0).entry,
+      difficultyScore: undefined
     }
   };
 }

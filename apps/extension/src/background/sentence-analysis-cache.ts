@@ -19,6 +19,13 @@ import {
   removeStorageValues,
   writeStorageValues
 } from "./storage";
+import {
+  INDEXEDDB_STORES,
+  getIndexedDbStore,
+  isIndexedDbAvailable,
+  requestToPromise,
+  transactionDone
+} from "./indexeddb";
 
 const SENTENCE_ANALYSIS_CACHE_STORAGE_KEYS = [
   "immersionkit.sentenceAnalysisCache"
@@ -42,6 +49,142 @@ export interface SentenceAnalysisCacheRepository {
   put(entry: SentenceAnalysisEntry): Promise<void>;
   putMany(entries: readonly SentenceAnalysisEntry[]): Promise<void>;
   clear(): Promise<void>;
+}
+
+type IndexedSentenceAnalysisCacheEntry = SentenceAnalysisEntry & {
+  identity: string;
+};
+
+export class IndexedDbSentenceAnalysisCacheRepository
+  implements SentenceAnalysisCacheRepository
+{
+  private readonly fallback = new ChromeStorageSentenceAnalysisCacheRepository();
+
+  async get(
+    sentenceHash: string,
+    analyzerVersion: string
+  ): Promise<SentenceAnalysisEntry | null> {
+    if (!sentenceHash || !analyzerVersion) {
+      return null;
+    }
+
+    const [entry] = await this.getMany([sentenceHash], analyzerVersion);
+    return entry ?? null;
+  }
+
+  async getMany(
+    sentenceHashes: readonly string[],
+    analyzerVersion: string
+  ): Promise<SentenceAnalysisEntry[]> {
+    if (sentenceHashes.length === 0 || !analyzerVersion) {
+      return [];
+    }
+
+    if (!isIndexedDbAvailable()) {
+      return this.fallback.getMany(sentenceHashes, analyzerVersion);
+    }
+
+    try {
+      const store = await getIndexedDbStore(
+        INDEXEDDB_STORES.sentenceAnalysisCache,
+        "readonly"
+      );
+      const entries = await Promise.all(
+        [...new Set(sentenceHashes)].map(async (sentenceHash) => {
+          const identity = buildSentenceAnalysisIdentity(
+            sentenceHash,
+            analyzerVersion
+          );
+          return normalizeSentenceAnalysisEntry(
+            await requestToPromise(store.get(identity))
+          );
+        })
+      );
+      const normalizedEntries = entries.filter(
+        (entry): entry is SentenceAnalysisEntry => Boolean(entry)
+      );
+      const missingHashes = sentenceHashes.filter(
+        (sentenceHash) =>
+          !normalizedEntries.some((entry) => entry.sentenceHash === sentenceHash)
+      );
+
+      if (missingHashes.length === 0) {
+        return normalizedEntries;
+      }
+
+      const legacyEntries = await this.fallback.getMany(
+        missingHashes,
+        analyzerVersion
+      );
+      if (legacyEntries.length > 0) {
+        await this.putMany(legacyEntries);
+      }
+
+      return [...normalizedEntries, ...legacyEntries];
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB analysis cache read failed.", error);
+      return this.fallback.getMany(sentenceHashes, analyzerVersion);
+    }
+  }
+
+  async put(entry: SentenceAnalysisEntry): Promise<void> {
+    await this.putMany([entry]);
+  }
+
+  async putMany(entries: readonly SentenceAnalysisEntry[]): Promise<void> {
+    const normalizedEntries = entries
+      .map((entry) => normalizeSentenceAnalysisEntry(entry))
+      .filter((entry): entry is SentenceAnalysisEntry => Boolean(entry));
+    if (normalizedEntries.length === 0) {
+      return;
+    }
+
+    if (!isIndexedDbAvailable()) {
+      await this.fallback.putMany(normalizedEntries);
+      return;
+    }
+
+    try {
+      const store = await getIndexedDbStore(
+        INDEXEDDB_STORES.sentenceAnalysisCache,
+        "readwrite"
+      );
+      const transaction = store.transaction;
+      for (const entry of normalizedEntries) {
+        store.put({
+          ...entry,
+          identity: buildSentenceAnalysisIdentity(
+            entry.sentenceHash,
+            entry.analyzerVersion
+          )
+        } satisfies IndexedSentenceAnalysisCacheEntry);
+      }
+      await transactionDone(transaction);
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB analysis cache write failed.", error);
+      await this.fallback.putMany(normalizedEntries);
+    }
+  }
+
+  async clear(): Promise<void> {
+    if (!isIndexedDbAvailable()) {
+      await this.fallback.clear();
+      return;
+    }
+
+    try {
+      const store = await getIndexedDbStore(
+        INDEXEDDB_STORES.sentenceAnalysisCache,
+        "readwrite"
+      );
+      const transaction = store.transaction;
+      store.clear();
+      await transactionDone(transaction);
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB analysis cache clear failed.", error);
+      await this.fallback.clear();
+    }
+  }
 }
 
 export class ChromeStorageSentenceAnalysisCacheRepository

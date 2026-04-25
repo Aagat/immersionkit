@@ -13,6 +13,10 @@ import {
   PAGE_DIAGNOSTICS_MESSAGE_TYPE,
   type PageDiagnosticsSnapshot
 } from "../diagnostics/page-diagnostics";
+import {
+  INDEXEDDB_STORES,
+  countIndexedDbStore
+} from "../background/indexeddb";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -233,11 +237,14 @@ export async function loadSentenceStats(): Promise<SentenceStats> {
     ...SENTENCE_CACHE_STORAGE_KEYS,
     ...SENTENCE_QUEUE_STORAGE_KEYS
   ]);
+  const indexedDbCacheSize = await countIndexedDbStore(
+    INDEXEDDB_STORES.sentenceCache
+  );
 
   return {
-    cacheSize: countEntries(
-      pickFirstDefinedValue(storage, SENTENCE_CACHE_STORAGE_KEYS)
-    ),
+    cacheSize:
+      indexedDbCacheSize ??
+      countEntries(pickFirstDefinedValue(storage, SENTENCE_CACHE_STORAGE_KEYS)),
     pendingCount: countEntries(
       pickFirstDefinedValue(storage, SENTENCE_QUEUE_STORAGE_KEYS)
     )

@@ -22,8 +22,23 @@ export type PageDiagnosticsSnapshot = {
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
   sentenceNotesVisible: number;
+  sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   tokenDecisionSamples: PageDiagnosticsTokenSample[];
   updatedAt: string;
+};
+
+export type PageDiagnosticsSentenceRankingReason = {
+  sentenceHash: string;
+  rank: number;
+  score: number;
+  primaryReason: string;
+  signals?: {
+    vocabularyFit: number;
+    grammarFit: number;
+    dueTargetValue: number;
+    chunkUsefulness: number;
+    ambiguityPenalty: number;
+  };
 };
 
 export type PageDiagnosticsTokenSample = {

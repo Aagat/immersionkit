@@ -13,6 +13,7 @@ import type {
   VocabStatus
 } from "@immersionkit/shared";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
+import type { PageDiagnosticsSentenceRankingReason } from "../diagnostics/page-diagnostics";
 import type { PageDiagnosticsTokenSample } from "../diagnostics/page-diagnostics";
 import {
   isPageDiagnosticsMessage
@@ -74,6 +75,7 @@ type ProcessingState = {
   analysisSuppressedTokens: number;
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
+  sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   pendingRoots: Set<ParentNode>;
   flushHandle: number | null;
   observer: MutationObserver | null;
@@ -302,6 +304,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
       sentenceNotesVisible: countSentenceNotes(),
+      sentenceRankingReasons: [],
       tokenDecisionSamples: collectTokenDecisionSamples(),
       updatedAt: new Date().toISOString()
     };
@@ -348,6 +351,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       analysisSuppressedTokens: 0,
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
+      sentenceRankingReasons: [],
       pendingRoots: new Set<ParentNode>(),
       flushHandle: null,
       observer: null,
@@ -554,6 +558,8 @@ function queueSentenceCandidates(
 
       const cachedResults = readCachedResultsFromQueueResponse(response);
       const analysisEntries = readAnalysisEntriesFromQueueResponse(response);
+      state.sentenceRankingReasons =
+        readRankingReasonsFromQueueResponse(response).slice(0, 8);
       if (analysisEntries.length > 0) {
         state.analysisSuppressedTokens += applySentenceAnalysisDecisions(analysisEntries);
       }
@@ -1225,6 +1231,81 @@ function readAnalysisEntriesFromQueueResponse(
   });
 }
 
+function readRankingReasonsFromQueueResponse(
+  response: unknown
+): PageDiagnosticsSentenceRankingReason[] {
+  if (!isRecord(response) || !Array.isArray(response.rankingReasons)) {
+    return [];
+  }
+
+  return response.rankingReasons.flatMap(
+    (reason): PageDiagnosticsSentenceRankingReason[] => {
+      if (!isRecord(reason)) {
+        return [];
+      }
+
+      const sentenceHash = readNonEmptyString(
+        typeof reason.sentenceHash === "string" ? reason.sentenceHash : null
+      );
+      const rank = typeof reason.rank === "number" ? reason.rank : null;
+      const score = typeof reason.score === "number" ? reason.score : null;
+      const primaryReason = readNonEmptyString(
+        typeof reason.primaryReason === "string" ? reason.primaryReason : null
+      );
+
+      if (!sentenceHash || rank === null || score === null || !primaryReason) {
+        return [];
+      }
+
+      return [
+        {
+          sentenceHash,
+          rank,
+          score,
+          primaryReason,
+          signals: readRankingSignals(reason.signals)
+        }
+      ];
+    }
+  );
+}
+
+function readRankingSignals(
+  value: unknown
+): PageDiagnosticsSentenceRankingReason["signals"] {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const vocabularyFit =
+    typeof value.vocabularyFit === "number" ? value.vocabularyFit : null;
+  const grammarFit = typeof value.grammarFit === "number" ? value.grammarFit : null;
+  const dueTargetValue =
+    typeof value.dueTargetValue === "number" ? value.dueTargetValue : null;
+  const chunkUsefulness =
+    typeof value.chunkUsefulness === "number" ? value.chunkUsefulness : null;
+  const ambiguityPenalty =
+    typeof value.ambiguityPenalty === "number" ? value.ambiguityPenalty : null;
+
+  if (
+    vocabularyFit === null ||
+    grammarFit === null ||
+    dueTargetValue === null ||
+    chunkUsefulness === null ||
+    ambiguityPenalty === null
+  ) {
+    return undefined;
+  }
+
+  return {
+    vocabularyFit,
+    grammarFit,
+    dueTargetValue,
+    chunkUsefulness,
+    ambiguityPenalty
+  };
+}
+
 function isSentenceTranslationResultMessage(
   message: unknown
 ): message is {
@@ -1263,6 +1344,7 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     sentenceCandidatesQueued: 0,
     sentenceNotesRendered: 0,
     sentenceNotesVisible: countSentenceNotes(),
+    sentenceRankingReasons: [],
     tokenDecisionSamples: collectTokenDecisionSamples(),
     updatedAt: new Date().toISOString()
   };
@@ -1285,6 +1367,8 @@ function updateDiagnostics(runtimeState: RuntimeState) {
     runtimeState.diagnostics.sentenceCandidatesQueued =
       processing.sentenceCandidatesQueued;
     runtimeState.diagnostics.sentenceNotesRendered = processing.sentenceNotesRendered;
+    runtimeState.diagnostics.sentenceRankingReasons =
+      processing.sentenceRankingReasons;
   }
 
   runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();

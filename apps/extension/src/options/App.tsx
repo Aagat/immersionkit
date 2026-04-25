@@ -739,6 +739,43 @@ export function OptionsApp() {
           <section className="panel-card">
             <div className="section-heading">
               <div>
+                <p className="eyebrow">Sentence Queue</p>
+                <h2>Ranking reasons</h2>
+              </div>
+              <span className="mini-badge">
+                {formatCount(getSentenceRankingReasons(pageDiagnostics).length)} shown
+              </span>
+            </div>
+
+            {getSentenceRankingReasons(pageDiagnostics).length ? (
+              <div className="list-stack">
+                {getSentenceRankingReasons(pageDiagnostics).map((reason) => (
+                  <div
+                    key={`${reason.sentenceHash}-${reason.rank}`}
+                    className="list-item"
+                  >
+                    <div className="list-row">
+                      <p className="list-title">
+                        #{reason.rank} sentence {shortenHash(reason.sentenceHash)}
+                      </p>
+                      <span className="mini-badge">{reason.primaryReason}</span>
+                    </div>
+                    <p className="list-subtitle">
+                      {formatRankingSignals(reason)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-line muted" style={{ marginTop: 0 }}>
+                No sentence ranking sample is available from the active page.
+              </p>
+            )}
+          </section>
+
+          <section className="panel-card">
+            <div className="section-heading">
+              <div>
                 <p className="eyebrow">Token Decisions</p>
                 <h2>Sampled render attributes</h2>
               </div>
@@ -856,6 +893,32 @@ function getTokenDecisionSamples(
   return Array.isArray(diagnostics?.tokenDecisionSamples)
     ? diagnostics.tokenDecisionSamples
     : [];
+}
+
+function getSentenceRankingReasons(
+  diagnostics: PageDiagnostics | null
+): PageDiagnostics["sentenceRankingReasons"] {
+  return Array.isArray(diagnostics?.sentenceRankingReasons)
+    ? diagnostics.sentenceRankingReasons
+    : [];
+}
+
+function formatRankingSignals(
+  reason: PageDiagnostics["sentenceRankingReasons"][number]
+): string {
+  const signals = reason.signals;
+  if (!signals) {
+    return `score ${reason.score.toFixed(3)}`;
+  }
+
+  return [
+    `score ${reason.score.toFixed(3)}`,
+    `vocab ${signals.vocabularyFit.toFixed(2)}`,
+    `grammar ${signals.grammarFit.toFixed(2)}`,
+    `due ${signals.dueTargetValue.toFixed(2)}`,
+    `phrase ${signals.chunkUsefulness.toFixed(2)}`,
+    `ambiguity ${signals.ambiguityPenalty.toFixed(2)}`
+  ].join(" · ");
 }
 
 function formatTokenPair(sourceToken: string | null, targetToken: string | null): string {

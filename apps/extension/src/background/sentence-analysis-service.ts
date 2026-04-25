@@ -30,7 +30,7 @@ import {
   type PhraseRegistryRepository
 } from "./phrase-registry";
 import {
-  ChromeStorageSentenceAnalysisCacheRepository,
+  IndexedDbSentenceAnalysisCacheRepository,
   type SentenceAnalysisCacheRepository
 } from "./sentence-analysis-cache";
 import {
@@ -90,7 +90,7 @@ export class SentenceAnalysisService {
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
 
   constructor(options: SentenceAnalysisServiceOptions = {}) {
-    this.cache = options.cache ?? new ChromeStorageSentenceAnalysisCacheRepository();
+    this.cache = options.cache ?? new IndexedDbSentenceAnalysisCacheRepository();
     this.phraseRegistry =
       options.phraseRegistry ?? new ChromeStoragePhraseRegistryRepository();
     if (!options.analyzer) {

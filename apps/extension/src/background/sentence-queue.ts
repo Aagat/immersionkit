@@ -15,7 +15,7 @@ import {
   SentenceAnalysisService,
   type AnalyzedSentenceCandidate
 } from "./sentence-analysis-service";
-import { ChromeStorageSentenceCacheRepository } from "./sentence-cache";
+import { IndexedDbSentenceCacheRepository } from "./sentence-cache";
 import {
   loadBackgroundRuntimeConfig,
   type BackgroundRuntimeConfig
@@ -39,6 +39,28 @@ export type TranslationAvailability =
   | "missing-credentials";
 
 export type CachedSentenceResult = SentenceTranslationResult;
+
+export type SentenceRankingPrimaryReason =
+  | "difficulty-score"
+  | "vocab-fit"
+  | "due-target-value"
+  | "phrase-value"
+  | "ambiguity-penalty"
+  | "fallback-original-order";
+
+export type SentenceRankingReason = {
+  sentenceHash: string;
+  rank: number;
+  score: number;
+  primaryReason: SentenceRankingPrimaryReason;
+  signals?: {
+    vocabularyFit: number;
+    grammarFit: number;
+    dueTargetValue: number;
+    chunkUsefulness: number;
+    ambiguityPenalty: number;
+  };
+};
 
 export type SentenceTranslationDelivery = {
   tabId: number;
@@ -67,6 +89,7 @@ export type QueueSentenceCandidatesResponse = {
   translationAvailability: TranslationAvailability;
   analysisResults: AnalyzedSentenceCandidate[];
   cachedResults: CachedSentenceResult[];
+  rankingReasons: SentenceRankingReason[];
 };
 
 export class SentenceQueueOrchestrator {
@@ -86,7 +109,7 @@ export class SentenceQueueOrchestrator {
 
   constructor(options: SentenceQueueOrchestratorOptions = {}) {
     this.sentenceCache =
-      options.sentenceCache ?? new ChromeStorageSentenceCacheRepository();
+      options.sentenceCache ?? new IndexedDbSentenceCacheRepository();
     this.sentenceAnalysisService =
       options.sentenceAnalysisService ?? new SentenceAnalysisService();
     this.loadRuntimeConfig =
@@ -118,7 +141,8 @@ export class SentenceQueueOrchestrator {
         cacheHits: 0,
         translationAvailability: resolveTranslationAvailability(config),
         analysisResults: [],
-        cachedResults: []
+        cachedResults: [],
+        rankingReasons: []
       };
     }
 
@@ -127,10 +151,11 @@ export class SentenceQueueOrchestrator {
     const translationAvailability = resolveTranslationAvailability(config);
     const cacheHits = await this.findCachedEntries(candidates, config);
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
-    const uncachedCandidates = rankCandidatesByAnalysis(
+    const rankedCandidates = rankCandidatesByAnalysis(
       candidates.filter((candidate) => !cachedByHash.has(candidate.sentenceHash)),
       analysisResults
     );
+    const uncachedCandidates = rankedCandidates.candidates;
 
     let queued = 0;
     let skipped = candidates.length - uncachedCandidates.length;
@@ -157,7 +182,8 @@ export class SentenceQueueOrchestrator {
       cacheHits: cacheHits.length,
       translationAvailability,
       analysisResults,
-      cachedResults: cacheHits.map(toCachedSentenceResult)
+      cachedResults: cacheHits.map(toCachedSentenceResult),
+      rankingReasons: rankedCandidates.reasons
     };
   }
 
@@ -518,29 +544,105 @@ function addNormalizedSentenceCandidate(
   });
 }
 
-function rankCandidatesByAnalysis(
+export function rankCandidatesByAnalysis(
   candidates: readonly ProviderSentenceCandidate[],
   analysisResults: readonly AnalyzedSentenceCandidate[]
-): ProviderSentenceCandidate[] {
+): { candidates: ProviderSentenceCandidate[]; reasons: SentenceRankingReason[] } {
   if (candidates.length <= 1 || analysisResults.length === 0) {
-    return [...candidates];
+    return {
+      candidates: [...candidates],
+      reasons: candidates.map((candidate, index) => ({
+        sentenceHash: candidate.sentenceHash,
+        rank: index + 1,
+        score: 0,
+        primaryReason: "fallback-original-order"
+      }))
+    };
   }
 
-  const scoreByHash = new Map(
-    analysisResults.map((result) => [
-      result.entry.sentenceHash,
-      result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result)
-    ] as const)
+  const analysisByHash = new Map(
+    analysisResults.map((result) => [result.entry.sentenceHash, result] as const)
   );
 
-  return candidates
+  const ranked = candidates
     .map((candidate, index) => ({
       candidate,
       index,
-      score: scoreByHash.get(candidate.sentenceHash) ?? 0
+      ranking: buildRankingReason(
+        candidate.sentenceHash,
+        analysisByHash.get(candidate.sentenceHash)
+      )
     }))
-    .sort((left, right) => right.score - left.score || left.index - right.index)
-    .map((entry) => entry.candidate);
+    .sort(
+      (left, right) =>
+        right.ranking.score - left.ranking.score || left.index - right.index
+    );
+
+  return {
+    candidates: ranked.map((entry) => entry.candidate),
+    reasons: ranked.map((entry, index) => ({
+      ...entry.ranking,
+      rank: index + 1
+    }))
+  };
+}
+
+function buildRankingReason(
+  sentenceHash: string,
+  result: AnalyzedSentenceCandidate | undefined
+): SentenceRankingReason {
+  if (!result) {
+    return {
+      sentenceHash,
+      rank: 0,
+      score: 0,
+      primaryReason: "fallback-original-order"
+    };
+  }
+
+  const score = result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result);
+  return {
+    sentenceHash,
+    rank: 0,
+    score: roundSignal(score),
+    primaryReason: choosePrimaryRankingReason(result),
+    signals: {
+      vocabularyFit: roundSignal(result.suitabilitySignals.vocabularyFit),
+      grammarFit: roundSignal(result.suitabilitySignals.grammarFit),
+      dueTargetValue: roundSignal(result.suitabilitySignals.dueTargetValue),
+      chunkUsefulness: roundSignal(result.suitabilitySignals.chunkUsefulness),
+      ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty)
+    }
+  };
+}
+
+function choosePrimaryRankingReason(
+  result: AnalyzedSentenceCandidate
+): SentenceRankingPrimaryReason {
+  if (typeof result.entry.difficultyScore === "number") {
+    return "difficulty-score";
+  }
+
+  const signals = result.suitabilitySignals;
+  const positiveSignals: {
+    reason: SentenceRankingPrimaryReason;
+    value: number;
+  }[] = [
+    { reason: "vocab-fit", value: signals.vocabularyFit },
+    { reason: "due-target-value", value: signals.dueTargetValue },
+    { reason: "phrase-value", value: signals.chunkUsefulness }
+  ];
+  const bestPositive = positiveSignals.sort((left, right) => right.value - left.value)[0];
+
+  if (signals.ambiguityPenalty >= Math.max(bestPositive?.value ?? 0, 0.4)) {
+    return "ambiguity-penalty";
+  }
+
+  return bestPositive?.reason ?? "fallback-original-order";
+}
+
+function roundSignal(value: number): number {
+  return Math.round(value * 1000) / 1000;
 }
 
 function scoreFromSuitabilitySignals(result: AnalyzedSentenceCandidate): number {
