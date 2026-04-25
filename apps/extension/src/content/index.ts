@@ -61,7 +61,11 @@ import {
   toggleSentenceSourceReveal
 } from "./sentence-renderer";
 import type { SentenceNoteMetadata } from "./sentence-renderer";
-import { loadProcessingContext, persistVocabStatus } from "./storage";
+import {
+  loadCachedSentenceAnalysisContext,
+  loadProcessingContext,
+  persistVocabStatus
+} from "./storage";
 import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
 import "./styles.css";
 
@@ -82,6 +86,8 @@ type ProcessingState = {
   analysisSuppressedTokens: number;
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
+  mutationCacheRefreshes: number;
+  mutationCacheRefreshHits: number;
   curriculumConfigId: string | null;
   activeCurriculumBandId: string | null;
   curriculumSkippedSentences: number;
@@ -92,6 +98,7 @@ type ProcessingState = {
   nodeSequence: number;
   sentenceTranslationEnabled: boolean;
   evidenceTracker: ContentEvidenceTracker;
+  isActive: boolean;
 };
 
 type RuntimeState = {
@@ -322,6 +329,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceCandidatesSeen: 0,
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
+      mutationCacheRefreshes: 0,
+      mutationCacheRefreshHits: 0,
       sentenceNotesVisible: countSentenceNotes(),
       curriculumConfigId: null,
       activeCurriculumBandId: null,
@@ -378,6 +387,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       analysisSuppressedTokens: 0,
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
+      mutationCacheRefreshes: 0,
+      mutationCacheRefreshHits: 0,
       curriculumConfigId: null,
       activeCurriculumBandId: null,
       curriculumSkippedSentences: 0,
@@ -387,7 +398,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       observer: null,
       nodeSequence: 0,
       sentenceTranslationEnabled,
-      evidenceTracker: new ContentEvidenceTracker()
+      evidenceTracker: new ContentEvidenceTracker(),
+      isActive: true
     };
 
     runtimeState.processing = state;
@@ -420,6 +432,7 @@ function stopProcessing(runtimeState: RuntimeState) {
   state.observer?.disconnect();
   state.observer = null;
   state.evidenceTracker.stop();
+  state.isActive = false;
 
   if (state.flushHandle !== null) {
     window.clearTimeout(state.flushHandle);
@@ -499,12 +512,61 @@ function scheduleRootFlush(state: ProcessingState) {
         : [document.body as ParentNode];
 
     state.pendingRoots.clear();
-    processRoots(state, roots);
+    void processMutationRoots(state, roots);
   }, 140);
 }
 
+async function processMutationRoots(state: ProcessingState, roots: ParentNode[]) {
+  if (!state.isActive) {
+    return;
+  }
+
+  await refreshScopedAnalysisCacheForRoots(state, roots);
+
+  if (!state.isActive) {
+    return;
+  }
+
+  processRoots(state, roots);
+}
+
+async function refreshScopedAnalysisCacheForRoots(
+  state: ProcessingState,
+  roots: readonly ParentNode[]
+) {
+  const sentenceHashes = collectRootsSentenceHashes(roots).filter(
+    (hash) =>
+      !state.cachedContextSkipDecisions.has(hash) &&
+      !state.cachedPhraseMatchesBySentenceHash.has(hash)
+  );
+
+  if (sentenceHashes.length === 0) {
+    return;
+  }
+
+  state.mutationCacheRefreshes += 1;
+
+  try {
+    const context = await loadCachedSentenceAnalysisContext(sentenceHashes.slice(0, 100));
+    state.mutationCacheRefreshHits += context.entryCount;
+    mergeCachedAnalysisMap(
+      state.cachedContextSkipDecisions,
+      context.cachedContextSkipDecisions
+    );
+    mergeCachedAnalysisMap(
+      state.cachedPhraseMatchesBySentenceHash,
+      context.cachedPhraseMatchesBySentenceHash
+    );
+  } catch (error) {
+    console.warn("ImmersionKit failed to refresh scoped sentence analysis cache.", {
+      error,
+      requestedSentenceHashes: sentenceHashes.length
+    });
+  }
+}
+
 function processRoots(state: ProcessingState, roots: ParentNode[]) {
-  if (!document.body) {
+  if (!document.body || !state.isActive) {
     return;
   }
 
@@ -611,17 +673,40 @@ function queueSentenceCandidates(
 }
 
 function collectPageSentenceHashes(root: ParentNode): string[] {
+  return collectRootsSentenceHashes([root], 500);
+}
+
+function collectRootsSentenceHashes(
+  roots: readonly ParentNode[],
+  limit = 100
+): string[] {
   const hashes = new Set<string>();
-  for (const node of collectEligibleTextNodes(root)) {
-    for (const sentence of segmentSentences(node.nodeValue ?? "")) {
-      hashes.add(sentence.hash);
-      if (hashes.size >= 500) {
-        return [...hashes];
+
+  for (const root of roots) {
+    for (const node of collectEligibleTextNodes(root)) {
+      for (const sentence of segmentSentences(node.nodeValue ?? "")) {
+        hashes.add(sentence.hash);
+        if (hashes.size >= limit) {
+          return [...hashes];
+        }
       }
     }
   }
 
   return [...hashes];
+}
+
+function mergeCachedAnalysisMap<T>(
+  target: Map<string, T[]>,
+  source: Map<string, T[]>
+) {
+  for (const [sentenceHash, values] of source) {
+    if (values.length === 0) {
+      continue;
+    }
+
+    target.set(sentenceHash, values);
+  }
 }
 
 function dedupeSentenceCandidates(
@@ -1516,6 +1601,8 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     sentenceCandidatesQueued: 0,
     sentenceNotesRendered: 0,
     sentenceNotesVisible: countSentenceNotes(),
+    mutationCacheRefreshes: 0,
+    mutationCacheRefreshHits: 0,
     curriculumConfigId: null,
     activeCurriculumBandId: null,
     curriculumSkippedSentences: 0,
@@ -1545,6 +1632,10 @@ function updateDiagnostics(runtimeState: RuntimeState) {
     runtimeState.diagnostics.sentenceCandidatesQueued =
       processing.sentenceCandidatesQueued;
     runtimeState.diagnostics.sentenceNotesRendered = processing.sentenceNotesRendered;
+    runtimeState.diagnostics.mutationCacheRefreshes =
+      processing.mutationCacheRefreshes;
+    runtimeState.diagnostics.mutationCacheRefreshHits =
+      processing.mutationCacheRefreshHits;
     runtimeState.diagnostics.curriculumConfigId = processing.curriculumConfigId;
     runtimeState.diagnostics.activeCurriculumBandId =
       processing.activeCurriculumBandId;

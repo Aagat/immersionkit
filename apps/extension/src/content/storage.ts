@@ -58,6 +58,12 @@ export type ProcessingContext = {
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
 };
 
+export type CachedSentenceAnalysisContext = {
+  entryCount: number;
+  cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+  cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+};
+
 export type CachedContextSkipDecision = {
   sentenceHash: string;
   lemmaId: string;
@@ -115,7 +121,7 @@ export async function loadProcessingContext(
     pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon)
   );
 
-  const sentenceAnalysisCache = await loadCachedSentenceAnalysisEntries(sentenceHashes);
+  const sentenceAnalysisContext = await loadCachedSentenceAnalysisContext(sentenceHashes);
 
   return {
     settings,
@@ -133,6 +139,20 @@ export async function loadProcessingContext(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
     ),
     learningItemsByUnitRefId: await loadLearningItemsByUnitRefId(),
+    cachedContextSkipDecisions:
+      sentenceAnalysisContext.cachedContextSkipDecisions,
+    cachedPhraseMatchesBySentenceHash:
+      sentenceAnalysisContext.cachedPhraseMatchesBySentenceHash
+  };
+}
+
+export async function loadCachedSentenceAnalysisContext(
+  sentenceHashes: readonly string[]
+): Promise<CachedSentenceAnalysisContext> {
+  const sentenceAnalysisCache = await loadCachedSentenceAnalysisEntries(sentenceHashes);
+
+  return {
+    entryCount: sentenceAnalysisCache.length,
     cachedContextSkipDecisions: parseCachedContextSkipDecisions(sentenceAnalysisCache),
     cachedPhraseMatchesBySentenceHash: parseCachedPhraseMatches(sentenceAnalysisCache)
   };

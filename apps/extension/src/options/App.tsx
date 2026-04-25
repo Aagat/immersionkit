@@ -698,6 +698,14 @@ export function OptionsApp() {
                   value={formatCount(pageDiagnostics?.sentenceCandidatesQueued ?? 0)}
                 />
                 <MetricCard
+                  label="Mutation cache"
+                  value={`${formatCount(pageDiagnostics?.mutationCacheRefreshHits ?? 0)} hits`}
+                />
+                <MetricCard
+                  label="Mutation reads"
+                  value={formatCount(pageDiagnostics?.mutationCacheRefreshes ?? 0)}
+                />
+                <MetricCard
                   label="Curriculum"
                   value={pageDiagnostics?.activeCurriculumBandId ?? "unknown"}
                 />

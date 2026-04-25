@@ -24,6 +24,8 @@ export type PageDiagnosticsSnapshot = {
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
   sentenceNotesVisible: number;
+  mutationCacheRefreshes: number;
+  mutationCacheRefreshHits: number;
   curriculumConfigId: string | null;
   activeCurriculumBandId: string | null;
   curriculumSkippedSentences: number;

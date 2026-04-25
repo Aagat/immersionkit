@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { installChromeStub } from "./helpers/chrome-stub";
 import { withFixtureDom } from "./helpers/fixture-dom";
 import { CONTENT_ASSIST_EVENT_MESSAGE_TYPE } from "../src/content/evidence";
+import { PAGE_DIAGNOSTICS_MESSAGE_TYPE } from "../src/diagnostics/page-diagnostics";
 
 const HOSTNAME = "fixtures.immersionkit.test";
 const FIXTURE_URL = `https://${HOSTNAME}/story`;
@@ -801,6 +802,130 @@ describe("content inline learning loop", () => {
             document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
               ?.textContent
           ).toBe("ciudad");
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("refreshes scoped cached analysis before processing dynamic text", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "I can watch the city from the hill.";
+        const sentenceHash = hashSentence(sourceSentence);
+        document.body.innerHTML = "<main id='feed'></main>";
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": [
+            ...SEED_LEXICON,
+            {
+              lemmaId: "lemma-can",
+              sourceLemma: "can",
+              targetLemma: "lata",
+              pos: "noun",
+              frequencyRank: 200,
+              confidence: 0.95
+            }
+          ],
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:15:45.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetSentenceAnalysisCache
+          ) {
+            const hashes = (message as { sentenceHashes?: string[] }).sentenceHashes ?? [];
+            if (!hashes.includes(sentenceHash)) {
+              return {
+                ok: true,
+                entries: []
+              };
+            }
+
+            return {
+              ok: true,
+              entries: [
+                {
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  analyzerId: "fixture-annotated",
+                  sourceText: sourceSentence,
+                  createdAt: "2026-04-18T10:15:00.000Z",
+                  lastAccessedAt: "2026-04-18T10:15:00.000Z",
+                  phraseMatches: [],
+                  contextualWordCandidates: [
+                    {
+                      id: "candidate-can",
+                      sentenceHash,
+                      sentence: sourceSentence,
+                      tokenText: "can",
+                      normalizedText: "can",
+                      targetLemma: "lata",
+                      candidateLemma: "can",
+                      lemmaId: "lemma-can",
+                      candidatePos: "noun",
+                      observedPos: "modal",
+                      chunkType: "other",
+                      nearbyContextSignature: ["modal-before-base-verb"],
+                      ambiguityGroup: "can_modal_vs_noun",
+                      confidence: 0.41,
+                      decision: "skip",
+                      rationale: "Modal use should not inject the noun sense."
+                    }
+                  ]
+                }
+              ]
+            };
+          }
+
+          return undefined;
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const feed = document.getElementById("feed");
+          expect(feed).toBeTruthy();
+          const paragraph = document.createElement("p");
+          paragraph.textContent = sourceSentence;
+          feed?.append(paragraph);
+          await wait(240);
+
+          expect(
+            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-can']")
+          ).toBeNull();
+          expect(document.body.textContent).toContain("I can watch");
+          expect(document.body.textContent).not.toContain("lata");
+          expect(
+            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+              ?.textContent
+          ).toBe("ciudad");
+
+          const diagnostics = (
+            await chromeStub.dispatchRuntimeMessage({
+              type: PAGE_DIAGNOSTICS_MESSAGE_TYPE
+            })
+          )[0] as {
+            mutationCacheRefreshes?: number;
+            mutationCacheRefreshHits?: number;
+          };
+
+          expect(diagnostics.mutationCacheRefreshes).toBe(1);
+          expect(diagnostics.mutationCacheRefreshHits).toBe(1);
         } finally {
           chromeStub.restore();
         }
