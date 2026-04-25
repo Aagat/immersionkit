@@ -2,7 +2,9 @@ import type {
   CurriculumBand,
   CurriculumBandUnitType,
   LearningItem,
-  SupportedTargetLanguage
+  LearningUnitType,
+  SupportedTargetLanguage,
+  UserLearningProfile
 } from "../domain/models";
 
 export type CurriculumLevel = {
@@ -41,6 +43,41 @@ export type CurriculumTransitionDecision = {
   band: CurriculumBand | null;
   nextBand: CurriculumBand | null;
   unmetRequirements: string[];
+};
+
+export type CurriculumRuntimeProfileInput = Partial<
+  Pick<
+    UserLearningProfile,
+    | "activeVocabularyBandId"
+    | "activePhraseBandId"
+    | "activeGrammarBandId"
+    | "unlockedBandIds"
+  >
+>;
+
+export type CurriculumGateUnitType = LearningUnitType | "sentence";
+
+export type CurriculumEligibilitySkipReason =
+  | "unknown-active-band"
+  | "unit-type-outside-active-band"
+  | "outside-active-band-items"
+  | "below-active-band-difficulty"
+  | "above-active-band-difficulty";
+
+export type CurriculumEligibilityInput = {
+  unitType: CurriculumGateUnitType;
+  score?: number | null;
+  itemId?: string | null;
+  bandId?: string | null;
+  profile?: CurriculumRuntimeProfileInput | null;
+};
+
+export type CurriculumEligibilityDecision = {
+  eligible: boolean;
+  configId: string;
+  activeBand: CurriculumBand | null;
+  activeBandId: string | null;
+  skipReason: CurriculumEligibilitySkipReason | null;
 };
 
 export const DEFAULT_CURRICULUM_CONFIG: CurriculumConfig = {
@@ -179,6 +216,90 @@ export function evaluateCurriculumBandTransition(
   };
 }
 
+export function resolveActiveCurriculumBand(
+  configInput: Partial<CurriculumConfig> | null | undefined,
+  unitType: CurriculumGateUnitType,
+  profile?: CurriculumRuntimeProfileInput | null
+): CurriculumBand | null {
+  const config = resolveCurriculumConfig(configInput);
+  const activeBandId = readActiveBandId(unitType, profile);
+  const orderedBands = [...config.bands].sort((left, right) => left.order - right.order);
+
+  if (activeBandId) {
+    return orderedBands.find((band) => band.bandId === activeBandId) ?? null;
+  }
+
+  return (
+    orderedBands.find((band) => bandMatchesUnitType(band, unitType)) ??
+    orderedBands[0] ??
+    null
+  );
+}
+
+export function evaluateCurriculumEligibility(
+  configInput: Partial<CurriculumConfig> | null | undefined,
+  input: CurriculumEligibilityInput
+): CurriculumEligibilityDecision {
+  const config = resolveCurriculumConfig(configInput);
+  const activeBand = resolveActiveCurriculumBand(
+    config,
+    input.unitType,
+    input.profile
+  );
+
+  if (!activeBand) {
+    return createEligibilityDecision(config.configId, null, "unknown-active-band");
+  }
+
+  if (!bandMatchesUnitType(activeBand, input.unitType)) {
+    return createEligibilityDecision(
+      config.configId,
+      activeBand,
+      "unit-type-outside-active-band"
+    );
+  }
+
+  if (input.bandId && input.bandId !== activeBand.bandId) {
+    return createEligibilityDecision(
+      config.configId,
+      activeBand,
+      "outside-active-band-items"
+    );
+  }
+
+  if (
+    input.itemId &&
+    activeBand.itemIds.length > 0 &&
+    !activeBand.itemIds.includes(input.itemId)
+  ) {
+    return createEligibilityDecision(
+      config.configId,
+      activeBand,
+      "outside-active-band-items"
+    );
+  }
+
+  if (typeof input.score === "number" && Number.isFinite(input.score)) {
+    if (input.score < activeBand.difficultyLimits.minimumScore) {
+      return createEligibilityDecision(
+        config.configId,
+        activeBand,
+        "below-active-band-difficulty"
+      );
+    }
+
+    if (input.score > activeBand.difficultyLimits.maximumScore) {
+      return createEligibilityDecision(
+        config.configId,
+        activeBand,
+        "above-active-band-difficulty"
+      );
+    }
+  }
+
+  return createEligibilityDecision(config.configId, activeBand, null);
+}
+
 function resolveTransitionPolicy(
   config: CurriculumConfig,
   band: CurriculumBand
@@ -189,6 +310,50 @@ function resolveTransitionPolicy(
     minimumQualifiedExposures: band.unlockRequirements.minimumQualifiedExposures,
     maximumRecentLapseRate: band.unlockRequirements.maximumRecentLapseRate,
     checkpointRequired: band.unlockRequirements.checkpointRequired
+  };
+}
+
+function readActiveBandId(
+  unitType: CurriculumGateUnitType,
+  profile?: CurriculumRuntimeProfileInput | null
+): string | undefined {
+  if (!profile) {
+    return undefined;
+  }
+
+  if (unitType === "phrase") {
+    return profile.activePhraseBandId;
+  }
+
+  if (unitType === "grammar-feature") {
+    return profile.activeGrammarBandId;
+  }
+
+  return profile.activeVocabularyBandId;
+}
+
+function bandMatchesUnitType(
+  band: CurriculumBand,
+  unitType: CurriculumGateUnitType
+): boolean {
+  if (unitType === "sentence") {
+    return band.unitType === "mixed";
+  }
+
+  return band.unitType === "mixed" || band.unitType === unitType;
+}
+
+function createEligibilityDecision(
+  configId: string,
+  activeBand: CurriculumBand | null,
+  skipReason: CurriculumEligibilitySkipReason | null
+): CurriculumEligibilityDecision {
+  return {
+    eligible: !skipReason,
+    configId,
+    activeBand,
+    activeBandId: activeBand?.bandId ?? null,
+    skipReason
   };
 }
 

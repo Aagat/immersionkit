@@ -24,6 +24,9 @@ export type PageDiagnosticsSnapshot = {
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
   sentenceNotesVisible: number;
+  curriculumConfigId: string | null;
+  activeCurriculumBandId: string | null;
+  curriculumSkippedSentences: number;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   phraseDecisionSamples: PageDiagnosticsPhraseSample[];
   tokenDecisionSamples: PageDiagnosticsTokenSample[];
@@ -35,6 +38,12 @@ export type PageDiagnosticsSentenceRankingReason = {
   rank: number;
   score: number;
   primaryReason: string;
+  curriculum?: {
+    configId: string;
+    activeBandId: string | null;
+    eligible: boolean;
+    skipReason: string | null;
+  };
   signals?: {
     vocabularyFit: number;
     grammarFit: number;

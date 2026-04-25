@@ -1,4 +1,10 @@
-import { hashSentence } from "@immersionkit/shared";
+import {
+  evaluateCurriculumEligibility,
+  hashSentence,
+  type CurriculumConfig,
+  type CurriculumEligibilityDecision,
+  type CurriculumRuntimeProfileInput
+} from "@immersionkit/shared";
 import type {
   QueueSentenceCandidatesMessage,
   SentenceCacheEntry,
@@ -46,6 +52,7 @@ export type SentenceRankingPrimaryReason =
   | "due-target-value"
   | "phrase-value"
   | "ambiguity-penalty"
+  | "curriculum-gate"
   | "fallback-original-order";
 
 export type SentenceRankingReason = {
@@ -53,6 +60,12 @@ export type SentenceRankingReason = {
   rank: number;
   score: number;
   primaryReason: SentenceRankingPrimaryReason;
+  curriculum?: {
+    configId: string;
+    activeBandId: string | null;
+    eligible: boolean;
+    skipReason: string | null;
+  };
   signals?: {
     vocabularyFit: number;
     grammarFit: number;
@@ -60,6 +73,11 @@ export type SentenceRankingReason = {
     chunkUsefulness: number;
     ambiguityPenalty: number;
   };
+};
+
+type CurriculumRuntimePolicy = {
+  config: CurriculumConfig;
+  profile: CurriculumRuntimeProfileInput;
 };
 
 export type SentenceTranslationDelivery = {
@@ -153,7 +171,8 @@ export class SentenceQueueOrchestrator {
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
     const rankedCandidates = rankCandidatesByAnalysis(
       candidates.filter((candidate) => !cachedByHash.has(candidate.sentenceHash)),
-      analysisResults
+      analysisResults,
+      config.curriculum
     );
     const uncachedCandidates = rankedCandidates.candidates;
 
@@ -546,50 +565,46 @@ function addNormalizedSentenceCandidate(
 
 export function rankCandidatesByAnalysis(
   candidates: readonly ProviderSentenceCandidate[],
-  analysisResults: readonly AnalyzedSentenceCandidate[]
+  analysisResults: readonly AnalyzedSentenceCandidate[],
+  curriculum?: CurriculumRuntimePolicy | null
 ): { candidates: ProviderSentenceCandidate[]; reasons: SentenceRankingReason[] } {
-  if (candidates.length <= 1 || analysisResults.length === 0) {
-    return {
-      candidates: [...candidates],
-      reasons: candidates.map((candidate, index) => ({
-        sentenceHash: candidate.sentenceHash,
-        rank: index + 1,
-        score: 0,
-        primaryReason: "fallback-original-order"
-      }))
-    };
-  }
-
   const analysisByHash = new Map(
     analysisResults.map((result) => [result.entry.sentenceHash, result] as const)
   );
 
-  const ranked = candidates
+  const rankedEntries = candidates
     .map((candidate, index) => ({
       candidate,
       index,
       ranking: buildRankingReason(
         candidate.sentenceHash,
-        analysisByHash.get(candidate.sentenceHash)
+        analysisByHash.get(candidate.sentenceHash),
+        curriculum
       )
-    }))
+    }));
+  const eligible = rankedEntries
+    .filter((entry) => entry.ranking.curriculum?.eligible !== false)
     .sort(
       (left, right) =>
         right.ranking.score - left.ranking.score || left.index - right.index
     );
+  const skipped = rankedEntries.filter(
+    (entry) => entry.ranking.curriculum?.eligible === false
+  );
 
   return {
-    candidates: ranked.map((entry) => entry.candidate),
-    reasons: ranked.map((entry, index) => ({
+    candidates: eligible.map((entry) => entry.candidate),
+    reasons: [...eligible, ...skipped].map((entry, index) => ({
       ...entry.ranking,
-      rank: index + 1
+      rank: entry.ranking.curriculum?.eligible === false ? 0 : index + 1
     }))
   };
 }
 
 function buildRankingReason(
   sentenceHash: string,
-  result: AnalyzedSentenceCandidate | undefined
+  result: AnalyzedSentenceCandidate | undefined,
+  curriculum?: CurriculumRuntimePolicy | null
 ): SentenceRankingReason {
   if (!result) {
     return {
@@ -601,11 +616,25 @@ function buildRankingReason(
   }
 
   const score = result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result);
+  const curriculumDecision = curriculum
+    ? evaluateCurriculumEligibility(curriculum.config, {
+        unitType: "sentence",
+        score: scoreToDifficultyProxy(score),
+        profile: curriculum.profile
+      })
+    : null;
+
   return {
     sentenceHash,
     rank: 0,
     score: roundSignal(score),
-    primaryReason: choosePrimaryRankingReason(result),
+    primaryReason:
+      curriculumDecision?.eligible === false
+        ? "curriculum-gate"
+        : choosePrimaryRankingReason(result),
+    curriculum: curriculumDecision
+      ? serializeCurriculumDecision(curriculumDecision)
+      : undefined,
     signals: {
       vocabularyFit: roundSignal(result.suitabilitySignals.vocabularyFit),
       grammarFit: roundSignal(result.suitabilitySignals.grammarFit),
@@ -613,6 +642,25 @@ function buildRankingReason(
       chunkUsefulness: roundSignal(result.suitabilitySignals.chunkUsefulness),
       ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty)
     }
+  };
+}
+
+function scoreToDifficultyProxy(score: number): number {
+  if (!Number.isFinite(score)) {
+    return 1;
+  }
+
+  // Existing analysis stores a suitability score where higher means easier to use now.
+  // Curriculum bands expect difficulty, so invert until analysis exposes native difficulty.
+  return Math.min(1, Math.max(0, 1 - score));
+}
+
+function serializeCurriculumDecision(decision: CurriculumEligibilityDecision) {
+  return {
+    configId: decision.configId,
+    activeBandId: decision.activeBandId,
+    eligible: decision.eligible,
+    skipReason: decision.skipReason
   };
 }
 

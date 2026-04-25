@@ -1,6 +1,8 @@
 import {
   DEFAULT_CURRICULUM_CONFIG,
   evaluateCurriculumBandTransition,
+  evaluateCurriculumEligibility,
+  resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   type CurriculumConfig,
   type LearningItem
@@ -81,5 +83,64 @@ describe("curriculum configuration", () => {
       "qualified-exposures",
       "checkpoint"
     ]);
+  });
+
+  it("resolves active runtime bands from profile data with default fallback", () => {
+    expect(resolveActiveCurriculumBand(null, "word")?.bandId).toBe("level-1a");
+    expect(
+      resolveActiveCurriculumBand(null, "phrase", {
+        activePhraseBandId: "level-2b"
+      })?.bandId
+    ).toBe("level-2b");
+  });
+
+  it("gates runtime eligibility through active band difficulty limits", () => {
+    const allowed = evaluateCurriculumEligibility(DEFAULT_CURRICULUM_CONFIG, {
+      unitType: "sentence",
+      score: 0.3
+    });
+    const skipped = evaluateCurriculumEligibility(DEFAULT_CURRICULUM_CONFIG, {
+      unitType: "sentence",
+      score: 0.8
+    });
+
+    expect(allowed).toMatchObject({
+      eligible: true,
+      configId: "en-es-default-v1",
+      activeBandId: "level-1a",
+      skipReason: null
+    });
+    expect(skipped).toMatchObject({
+      eligible: false,
+      activeBandId: "level-1a",
+      skipReason: "above-active-band-difficulty"
+    });
+  });
+
+  it("lets a custom active band change runtime gates without changing callers", () => {
+    const customConfig: CurriculumConfig = {
+      ...DEFAULT_CURRICULUM_CONFIG,
+      bands: DEFAULT_CURRICULUM_CONFIG.bands.map((band) =>
+        band.bandId === "level-1a"
+          ? {
+              ...band,
+              difficultyLimits: {
+                minimumScore: 0,
+                maximumScore: 0.2
+              }
+            }
+          : band
+      )
+    };
+
+    expect(
+      evaluateCurriculumEligibility(customConfig, {
+        unitType: "word",
+        score: 0.3
+      })
+    ).toMatchObject({
+      eligible: false,
+      skipReason: "above-active-band-difficulty"
+    });
   });
 });

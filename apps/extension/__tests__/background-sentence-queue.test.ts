@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CURRICULUM_CONFIG,
   DEFAULT_EXTENSION_SETTINGS,
   RuntimeMessageType,
   type SentenceLearningNote,
@@ -38,6 +39,9 @@ describe("sentence queue orchestration", () => {
     const providerCalls = vi.fn();
     const orchestrator = new SentenceQueueOrchestrator({
       sentenceCache: cache,
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
       loadRuntimeConfig: () => Promise.resolve(createReadyConfig()),
       createProviderClient: () => {
         providerCalls();
@@ -90,6 +94,9 @@ describe("sentence queue orchestration", () => {
 
     const orchestrator = new SentenceQueueOrchestrator({
       sentenceCache: cache,
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
       loadRuntimeConfig: () => Promise.resolve(createReadyConfig()),
       createProviderClient: () => {
         providerCalls();
@@ -162,6 +169,9 @@ describe("sentence queue orchestration", () => {
 
     const orchestrator = new SentenceQueueOrchestrator({
       sentenceCache: staleCache,
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
       loadRuntimeConfig: () => Promise.resolve(createReadyConfig()),
       createProviderClient: () => {
         providerCalls();
@@ -250,7 +260,7 @@ describe("sentence queue orchestration", () => {
     const orchestrator = new SentenceQueueOrchestrator({
       sentenceCache: new InMemorySentenceCache(),
       sentenceAnalysisService: createAnalysisServiceMock([
-        createAnalysisResult(ordinaryHash, 0.31),
+        createAnalysisResult(ordinaryHash, 0.78),
         createAnalysisResult(dueTargetHash, 0.86)
       ]),
       loadRuntimeConfig: () =>
@@ -297,12 +307,16 @@ describe("sentence queue orchestration", () => {
         sentenceHash: dueTargetHash,
         rank: 1,
         score: 0.86,
-        primaryReason: "difficulty-score"
+        primaryReason: "difficulty-score",
+        curriculum: expect.objectContaining({
+          activeBandId: "level-1a",
+          eligible: true
+        })
       }),
       expect.objectContaining({
         sentenceHash: ordinaryHash,
         rank: 2,
-        score: 0.31,
+        score: 0.78,
         primaryReason: "difficulty-score"
       })
     ]);
@@ -352,6 +366,55 @@ describe("sentence queue orchestration", () => {
         ambiguityPenalty: 0.1
       }
     });
+  });
+
+  it("skips out-of-band sentence candidates through curriculum policy", () => {
+    const easier = {
+      sentenceHash: "sentence-easy",
+      sourceText: "The city is quiet."
+    };
+    const tooHard = {
+      sentenceHash: "sentence-hard",
+      sourceText: "The diplomatic delegation negotiated procedural amendments."
+    };
+
+    const ranked = rankCandidatesByAnalysis(
+      [tooHard, easier],
+      [
+        createAnalysisResult(tooHard.sentenceHash, 0.4),
+        createAnalysisResult(easier.sentenceHash, 0.8)
+      ],
+      {
+        config: DEFAULT_CURRICULUM_CONFIG,
+        profile: {}
+      }
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      easier.sentenceHash
+    ]);
+    expect(ranked.reasons).toEqual([
+      expect.objectContaining({
+        sentenceHash: easier.sentenceHash,
+        rank: 1,
+        primaryReason: "difficulty-score",
+        curriculum: expect.objectContaining({
+          activeBandId: "level-1a",
+          eligible: true,
+          skipReason: null
+        })
+      }),
+      expect.objectContaining({
+        sentenceHash: tooHard.sentenceHash,
+        rank: 0,
+        primaryReason: "curriculum-gate",
+        curriculum: expect.objectContaining({
+          activeBandId: "level-1a",
+          eligible: false,
+          skipReason: "above-active-band-difficulty"
+        })
+      })
+    ]);
   });
 });
 
@@ -547,6 +610,10 @@ function createReadyConfig(
     },
     credentials: {
       openAiApiKey: "sk-test-12345678901234567890"
+    },
+    curriculum: {
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {}
     }
   };
 }

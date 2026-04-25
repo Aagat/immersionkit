@@ -82,6 +82,9 @@ type ProcessingState = {
   analysisSuppressedTokens: number;
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
+  curriculumConfigId: string | null;
+  activeCurriculumBandId: string | null;
+  curriculumSkippedSentences: number;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   pendingRoots: Set<ParentNode>;
   flushHandle: number | null;
@@ -320,6 +323,9 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
       sentenceNotesVisible: countSentenceNotes(),
+      curriculumConfigId: null,
+      activeCurriculumBandId: null,
+      curriculumSkippedSentences: 0,
       sentenceRankingReasons: [],
       phraseDecisionSamples: collectPhraseDecisionSamples(),
       tokenDecisionSamples: collectTokenDecisionSamples(),
@@ -372,6 +378,9 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       analysisSuppressedTokens: 0,
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
+      curriculumConfigId: null,
+      activeCurriculumBandId: null,
+      curriculumSkippedSentences: 0,
       sentenceRankingReasons: [],
       pendingRoots: new Set<ParentNode>(),
       flushHandle: null,
@@ -589,6 +598,7 @@ function queueSentenceCandidates(
       const analysisEntries = readAnalysisEntriesFromQueueResponse(response);
       state.sentenceRankingReasons =
         readRankingReasonsFromQueueResponse(response).slice(0, 8);
+      updateCurriculumDiagnosticsFromRanking(state);
       if (analysisEntries.length > 0) {
         state.analysisSuppressedTokens += applySentenceAnalysisDecisions(analysisEntries);
       }
@@ -1390,11 +1400,44 @@ function readRankingReasonsFromQueueResponse(
           rank,
           score,
           primaryReason,
+          curriculum: readRankingCurriculum(reason.curriculum),
           signals: readRankingSignals(reason.signals)
         }
       ];
     }
   );
+}
+
+function readRankingCurriculum(
+  value: unknown
+): PageDiagnosticsSentenceRankingReason["curriculum"] {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const configId = readNonEmptyString(
+    typeof value.configId === "string" ? value.configId : null
+  );
+  const activeBandId =
+    typeof value.activeBandId === "string" && value.activeBandId.trim()
+      ? value.activeBandId
+      : null;
+  const eligible = typeof value.eligible === "boolean" ? value.eligible : null;
+  const skipReason =
+    typeof value.skipReason === "string" && value.skipReason.trim()
+      ? value.skipReason
+      : null;
+
+  if (!configId || eligible === null) {
+    return undefined;
+  }
+
+  return {
+    configId,
+    activeBandId,
+    eligible,
+    skipReason
+  };
 }
 
 function readRankingSignals(
@@ -1473,6 +1516,9 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     sentenceCandidatesQueued: 0,
     sentenceNotesRendered: 0,
     sentenceNotesVisible: countSentenceNotes(),
+    curriculumConfigId: null,
+    activeCurriculumBandId: null,
+    curriculumSkippedSentences: 0,
     sentenceRankingReasons: [],
     phraseDecisionSamples: collectPhraseDecisionSamples(),
     tokenDecisionSamples: collectTokenDecisionSamples(),
@@ -1499,6 +1545,11 @@ function updateDiagnostics(runtimeState: RuntimeState) {
     runtimeState.diagnostics.sentenceCandidatesQueued =
       processing.sentenceCandidatesQueued;
     runtimeState.diagnostics.sentenceNotesRendered = processing.sentenceNotesRendered;
+    runtimeState.diagnostics.curriculumConfigId = processing.curriculumConfigId;
+    runtimeState.diagnostics.activeCurriculumBandId =
+      processing.activeCurriculumBandId;
+    runtimeState.diagnostics.curriculumSkippedSentences =
+      processing.curriculumSkippedSentences;
     runtimeState.diagnostics.sentenceRankingReasons =
       processing.sentenceRankingReasons;
   }
@@ -1507,6 +1558,20 @@ function updateDiagnostics(runtimeState: RuntimeState) {
   runtimeState.diagnostics.phraseDecisionSamples = collectPhraseDecisionSamples();
   runtimeState.diagnostics.tokenDecisionSamples = collectTokenDecisionSamples();
   runtimeState.diagnostics.updatedAt = new Date().toISOString();
+}
+
+function updateCurriculumDiagnosticsFromRanking(state: ProcessingState) {
+  const curriculumReasons = state.sentenceRankingReasons.flatMap((reason) =>
+    reason.curriculum ? [reason.curriculum] : []
+  );
+  const first = curriculumReasons[0];
+
+  state.curriculumConfigId = first?.configId ?? state.curriculumConfigId;
+  state.activeCurriculumBandId =
+    first?.activeBandId ?? state.activeCurriculumBandId;
+  state.curriculumSkippedSentences = curriculumReasons.filter(
+    (reason) => !reason.eligible
+  ).length;
 }
 
 function countSentenceNotes(): number {

@@ -697,6 +697,14 @@ export function OptionsApp() {
                   label="Queued sentences"
                   value={formatCount(pageDiagnostics?.sentenceCandidatesQueued ?? 0)}
                 />
+                <MetricCard
+                  label="Curriculum"
+                  value={pageDiagnostics?.activeCurriculumBandId ?? "unknown"}
+                />
+                <MetricCard
+                  label="Band skips"
+                  value={formatCount(pageDiagnostics?.curriculumSkippedSentences ?? 0)}
+                />
               </div>
 
               <p className="support-line muted">
@@ -770,6 +778,7 @@ export function OptionsApp() {
                     </div>
                     <p className="list-subtitle">
                       {formatRankingSignals(reason)}
+                      {formatRankingCurriculum(reason)}
                     </p>
                   </div>
                 ))}
@@ -984,6 +993,19 @@ function formatRankingSignals(
     `phrase ${signals.chunkUsefulness.toFixed(2)}`,
     `ambiguity ${signals.ambiguityPenalty.toFixed(2)}`
   ].join(" · ");
+}
+
+function formatRankingCurriculum(
+  reason: PageDiagnostics["sentenceRankingReasons"][number]
+): string {
+  const curriculum = reason.curriculum;
+  if (!curriculum) {
+    return "";
+  }
+
+  return ` · band ${curriculum.activeBandId ?? "unknown"}${
+    curriculum.skipReason ? ` · skipped ${curriculum.skipReason}` : ""
+  }`;
 }
 
 function formatTokenPair(sourceToken: string | null, targetToken: string | null): string {
