@@ -22,7 +22,21 @@ export type PageDiagnosticsSnapshot = {
   sentenceCandidatesQueued: number;
   sentenceNotesRendered: number;
   sentenceNotesVisible: number;
+  tokenDecisionSamples: PageDiagnosticsTokenSample[];
   updatedAt: string;
+};
+
+export type PageDiagnosticsTokenSample = {
+  sourceToken: string | null;
+  targetToken: string | null;
+  lemmaId: string | null;
+  unitKind: string | null;
+  wordKind: string | null;
+  contextDecision: string | null;
+  contextRationale: string | null;
+  dueStatus: string | null;
+  schedulerReason: string | null;
+  sentenceHash: string | null;
 };
 
 export function isPageDiagnosticsMessage(

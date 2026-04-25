@@ -3,6 +3,8 @@ import type { ProviderName } from "@immersionkit/shared";
 import {
   PROFICIENCY_SEED_OPTIONS,
   isProviderKeyValid,
+  loadActiveTabContext,
+  loadPageDiagnostics,
   loadSentenceStats,
   loadSettingsState,
   loadSiteSettingsMap,
@@ -14,7 +16,9 @@ import {
   type SentenceStats,
   type SettingsState,
   type SiteSettingsMap,
-  type VocabStats
+  type VocabStats,
+  type ActiveTabContext,
+  type PageDiagnostics
 } from "./state";
 
 const EMPTY_STATS: VocabStats = {
@@ -30,6 +34,14 @@ const EMPTY_SENTENCE_STATS: SentenceStats = {
   pendingCount: 0
 };
 
+const EMPTY_ACTIVE_TAB_CONTEXT: ActiveTabContext = {
+  tabId: null,
+  hostname: null,
+  url: null,
+  isSupportedPage: false,
+  supportMessage: "Active tab has not been checked yet."
+};
+
 const SHOW_ADVANCED_TAB = true;
 
 type OptionsTab = "general" | "translation" | "advanced";
@@ -39,6 +51,10 @@ export function OptionsApp() {
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
   const [siteSettings, setSiteSettings] = useState<SiteSettingsMap>({});
   const [sentenceStats, setSentenceStats] = useState<SentenceStats>(EMPTY_SENTENCE_STATS);
+  const [activeTabContext, setActiveTabContext] = useState<ActiveTabContext>(
+    EMPTY_ACTIVE_TAB_CONTEXT
+  );
+  const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>("general");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,18 +68,31 @@ export function OptionsApp() {
     setErrorMessage(null);
 
     try {
-      const [loadedSettings, loadedVocabStats, loadedSiteSettings, loadedSentenceStats] =
+      const [
+        loadedSettings,
+        loadedVocabStats,
+        loadedSiteSettings,
+        loadedSentenceStats,
+        loadedActiveTabContext
+      ] =
         await Promise.all([
           loadSettingsState(),
           loadVocabStats(),
           loadSiteSettingsMap(),
-          loadSentenceStats()
+          loadSentenceStats(),
+          loadActiveTabContext()
         ]);
+
+      const loadedPageDiagnostics = loadedActiveTabContext.isSupportedPage
+        ? await loadPageDiagnostics(loadedActiveTabContext.tabId)
+        : null;
 
       setSettingsState(loadedSettings);
       setVocabStats(loadedVocabStats);
       setSiteSettings(loadedSiteSettings);
       setSentenceStats(loadedSentenceStats);
+      setActiveTabContext(loadedActiveTabContext);
+      setPageDiagnostics(loadedPageDiagnostics);
     } catch {
       setErrorMessage("Could not load extension settings.");
     } finally {
@@ -629,6 +658,48 @@ export function OptionsApp() {
             <section className="panel-card">
               <div className="section-heading">
                 <div>
+                  <p className="eyebrow">Active Page</p>
+                  <h2>Diagnostics</h2>
+                </div>
+                <span className={pageDiagnostics ? "badge-soft badge-soft--on" : "badge-soft badge-soft--off"}>
+                  {pageDiagnostics ? "Live" : "Unavailable"}
+                </span>
+              </div>
+
+              <p className="helper-line muted" style={{ marginTop: 0 }}>
+                {pageDiagnostics
+                  ? `${pageDiagnostics.pageHostname}${pageDiagnostics.pagePathname}`
+                  : activeTabContext.supportMessage}
+              </p>
+
+              <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
+                <MetricCard
+                  label="Context skips"
+                  value={formatCount(pageDiagnostics?.contextSkippedTokens ?? 0)}
+                />
+                <MetricCard
+                  label="Suppressed"
+                  value={formatCount(pageDiagnostics?.analysisSuppressedTokens ?? 0)}
+                />
+                <MetricCard
+                  label="Seen sentences"
+                  value={formatCount(pageDiagnostics?.sentenceCandidatesSeen ?? 0)}
+                />
+                <MetricCard
+                  label="Queued sentences"
+                  value={formatCount(pageDiagnostics?.sentenceCandidatesQueued ?? 0)}
+                />
+              </div>
+
+              <p className="support-line muted">
+                Queue storage has {formatCount(sentenceStats.pendingCount)} pending and{" "}
+                {formatCount(sentenceStats.cacheSize)} cached sentence records.
+              </p>
+            </section>
+
+            <section className="panel-card">
+              <div className="section-heading">
+                <div>
                   <p className="eyebrow">Site Overrides</p>
                   <h2>Saved site decisions</h2>
                 </div>
@@ -664,6 +735,55 @@ export function OptionsApp() {
               )}
             </section>
           </div>
+
+          <section className="panel-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Token Decisions</p>
+                <h2>Sampled render attributes</h2>
+              </div>
+              <span className="mini-badge">
+                {formatCount(getTokenDecisionSamples(pageDiagnostics).length)} shown
+              </span>
+            </div>
+
+            {getTokenDecisionSamples(pageDiagnostics).length ? (
+              <div className="list-stack">
+                {getTokenDecisionSamples(pageDiagnostics).map((sample, index) => (
+                  <div
+                    key={`${sample.lemmaId ?? "token"}-${sample.sentenceHash ?? index}-${index}`}
+                    className="list-item"
+                  >
+                    <div className="list-row">
+                      <p className="list-title">
+                        {formatTokenPair(sample.sourceToken, sample.targetToken)}
+                      </p>
+                      <span className="mini-badge">
+                        {sample.contextDecision ?? "unknown"}
+                      </span>
+                    </div>
+                    <p className="list-subtitle">
+                      {[
+                        sample.lemmaId ? `lemma ${sample.lemmaId}` : null,
+                        sample.unitKind ? `unit ${sample.unitKind}` : null,
+                        sample.wordKind ? `kind ${sample.wordKind}` : null,
+                        sample.dueStatus ? `due ${sample.dueStatus}` : null,
+                        sample.schedulerReason ? `scheduler ${sample.schedulerReason}` : null,
+                        sample.sentenceHash ? `sentence ${shortenHash(sample.sentenceHash)}` : null
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                    {sample.contextRationale ? (
+                      <p className="list-subtitle">{sample.contextRationale}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-line muted" style={{ marginTop: 0 }}>
+                No annotated tokens are available from the active page.
+              </p>
+            )}
+          </section>
         </div>
       ) : null}
     </main>
@@ -728,6 +848,26 @@ function MetricCard({ label, value }: MetricCardProps) {
       <p className={`metric-value${valueIsText ? " metric-value--text" : ""}`}>{value}</p>
     </div>
   );
+}
+
+function getTokenDecisionSamples(
+  diagnostics: PageDiagnostics | null
+): PageDiagnostics["tokenDecisionSamples"] {
+  return Array.isArray(diagnostics?.tokenDecisionSamples)
+    ? diagnostics.tokenDecisionSamples
+    : [];
+}
+
+function formatTokenPair(sourceToken: string | null, targetToken: string | null): string {
+  if (sourceToken && targetToken) {
+    return `${sourceToken} -> ${targetToken}`;
+  }
+
+  return sourceToken ?? targetToken ?? "Unknown token";
+}
+
+function shortenHash(value: string): string {
+  return value.length > 12 ? `${value.slice(0, 12)}...` : value;
 }
 
 function formatCount(value: number): string {

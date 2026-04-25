@@ -13,6 +13,7 @@ import type {
   VocabStatus
 } from "@immersionkit/shared";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
+import type { PageDiagnosticsTokenSample } from "../diagnostics/page-diagnostics";
 import {
   isPageDiagnosticsMessage
 } from "../diagnostics/page-diagnostics";
@@ -99,6 +100,7 @@ const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
 const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const UI_THEME_ATTRIBUTE = "data-ik-ui-theme";
+const TOKEN_DIAGNOSTICS_SAMPLE_LIMIT = 8;
 const STATUS_BUTTONS: readonly {
   status: InteractiveVocabStatus;
   label: string;
@@ -300,6 +302,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceCandidatesQueued: 0,
       sentenceNotesRendered: 0,
       sentenceNotesVisible: countSentenceNotes(),
+      tokenDecisionSamples: collectTokenDecisionSamples(),
       updatedAt: new Date().toISOString()
     };
 
@@ -1260,6 +1263,7 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     sentenceCandidatesQueued: 0,
     sentenceNotesRendered: 0,
     sentenceNotesVisible: countSentenceNotes(),
+    tokenDecisionSamples: collectTokenDecisionSamples(),
     updatedAt: new Date().toISOString()
   };
 }
@@ -1284,11 +1288,33 @@ function updateDiagnostics(runtimeState: RuntimeState) {
   }
 
   runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
+  runtimeState.diagnostics.tokenDecisionSamples = collectTokenDecisionSamples();
   runtimeState.diagnostics.updatedAt = new Date().toISOString();
 }
 
 function countSentenceNotes(): number {
   return document.querySelectorAll(SENTENCE_NOTE_SELECTOR).length;
+}
+
+function collectTokenDecisionSamples(): PageDiagnosticsTokenSample[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      `[${IMMERSIONKIT_TOKEN_ATTRIBUTE}]`
+    )
+  )
+    .slice(0, TOKEN_DIAGNOSTICS_SAMPLE_LIMIT)
+    .map((token) => ({
+      sourceToken: token.getAttribute("data-ik-source-token"),
+      targetToken: token.getAttribute("data-ik-target-token"),
+      lemmaId: token.getAttribute("data-ik-lemma-id"),
+      unitKind: token.getAttribute("data-ik-unit-kind"),
+      wordKind: token.getAttribute("data-ik-word-kind"),
+      contextDecision: token.getAttribute("data-ik-context-decision"),
+      contextRationale: token.getAttribute("data-ik-context-rationale"),
+      dueStatus: token.getAttribute("data-ik-due-status"),
+      schedulerReason: token.getAttribute("data-ik-scheduler-reason"),
+      sentenceHash: token.getAttribute("data-ik-sentence-hash")
+    }));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
