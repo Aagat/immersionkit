@@ -119,7 +119,7 @@ try {
     const legacyAnalysisCache = values["immersionkit.sentenceAnalysisCache"] ?? {};
     const legacyTranslationCache = values["immersionkit.sentenceCache"] ?? {};
     const indexedDbSnapshot = await new Promise((resolve) => {
-      const request = indexedDB.open("immersionkit-extension", 1);
+      const request = indexedDB.open("immersionkit-extension");
 
       request.onerror = () => {
         resolve({

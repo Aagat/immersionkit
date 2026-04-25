@@ -19,35 +19,26 @@ import {
   readStorageValues,
   writeStorageValues
 } from "./storage";
+import {
+  IndexedDbLearningHistoryRepository,
+  type LearningHistoryRepository,
+  type LearningItemContextHistory,
+  type LearningItemContextHistoryRecord
+} from "./learning-history-repository";
 
 const LEARNING_ITEMS_STORAGE_KEYS = ["immersionkit.learningItems"] as const;
-const REVIEW_EVENTS_STORAGE_KEYS = ["immersionkit.reviewEvents"] as const;
-const CONTEXT_HISTORY_STORAGE_KEYS = [
-  "immersionkit.learningItemContextHistory"
-] as const;
 const LEARNING_ITEMS_PRIMARY_KEY = LEARNING_ITEMS_STORAGE_KEYS[0];
-const REVIEW_EVENTS_PRIMARY_KEY = REVIEW_EVENTS_STORAGE_KEYS[0];
-const CONTEXT_HISTORY_PRIMARY_KEY = CONTEXT_HISTORY_STORAGE_KEYS[0];
-const MAX_REVIEW_EVENTS = 500;
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
 const EXPOSURE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 type LearningItemRecord = Record<string, LearningItem>;
-type LearningItemContextHistoryRecord = Record<string, LearningItemContextHistory>;
-
-type LearningItemContextHistory = {
-  itemId: string;
-  contexts: LearningItemContextEntry[];
-};
-
-type LearningItemContextEntry = {
-  key: string;
-  firstSeenAt: string;
-  lastSeenAt: string;
-  exposureCount: number;
-};
 
 export class BackgroundLearningItemService {
+  constructor(
+    private readonly historyRepository: LearningHistoryRepository =
+      new IndexedDbLearningHistoryRepository()
+  ) {}
+
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {
     if (!isWordItemId(message.itemId)) {
       return null;
@@ -61,7 +52,7 @@ export class BackgroundLearningItemService {
 
     state.items[nextItem.itemId] = nextItem;
     state.events.push(createReviewEvent(message, "hard", now));
-    await persistState(state);
+    await this.persistState(state);
     return nextItem;
   }
 
@@ -84,7 +75,7 @@ export class BackgroundLearningItemService {
     });
     state.contextHistory[message.itemId] = contextUpdate.history;
     if (contextUpdate.isDuplicateWithinWindow) {
-      await persistState(state);
+      await this.persistState(state);
       return item;
     }
 
@@ -100,7 +91,7 @@ export class BackgroundLearningItemService {
       state.events.push(createReviewEvent(message, scheduled.grade, now));
     }
 
-    await persistState(state);
+    await this.persistState(state);
     return nextItem;
   }
 
@@ -109,23 +100,26 @@ export class BackgroundLearningItemService {
     events: ReviewEvent[];
     contextHistory: LearningItemContextHistoryRecord;
   }> {
-    const storage = await readStorageValues([
-      ...LEARNING_ITEMS_STORAGE_KEYS,
-      ...REVIEW_EVENTS_STORAGE_KEYS,
-      ...CONTEXT_HISTORY_STORAGE_KEYS
-    ]);
+    const storage = await readStorageValues([...LEARNING_ITEMS_STORAGE_KEYS]);
     const rawItems = pickFirstDefinedValue(storage, LEARNING_ITEMS_STORAGE_KEYS);
-    const rawEvents = pickFirstDefinedValue(storage, REVIEW_EVENTS_STORAGE_KEYS);
-    const rawContextHistory = pickFirstDefinedValue(
-      storage,
-      CONTEXT_HISTORY_STORAGE_KEYS
-    );
 
     return {
       items: parseLearningItems(rawItems),
-      events: parseReviewEvents(rawEvents),
-      contextHistory: parseContextHistory(rawContextHistory)
+      events: await this.historyRepository.loadReviewEvents(),
+      contextHistory: await this.historyRepository.loadContextHistory()
     };
+  }
+
+  private async persistState(state: {
+    items: LearningItemRecord;
+    events: ReviewEvent[];
+    contextHistory: LearningItemContextHistoryRecord;
+  }): Promise<void> {
+    await writeStorageValues({
+      [LEARNING_ITEMS_PRIMARY_KEY]: state.items
+    });
+    await this.historyRepository.persistReviewEvents(state.events);
+    await this.historyRepository.persistContextHistory(state.contextHistory);
   }
 }
 
@@ -229,75 +223,6 @@ function normalizeLearningItem(entry: Record<string, unknown>): LearningItem {
     distinctContextCount: readNumber(entry.distinctContextCount, 0),
     suspended: entry.suspended === true
   };
-}
-
-function parseReviewEvents(value: unknown): ReviewEvent[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((event): event is ReviewEvent => {
-    return isRecord(event) && typeof event.eventId === "string";
-  });
-}
-
-function parseContextHistory(value: unknown): LearningItemContextHistoryRecord {
-  if (!isRecord(value)) {
-    return {};
-  }
-
-  const output: LearningItemContextHistoryRecord = {};
-  for (const entry of Object.values(value)) {
-    if (!isRecord(entry)) {
-      continue;
-    }
-
-    const itemId = readString(entry.itemId);
-    if (!itemId || !Array.isArray(entry.contexts)) {
-      continue;
-    }
-
-    const contexts = entry.contexts.flatMap((context): LearningItemContextEntry[] => {
-      if (!isRecord(context)) {
-        return [];
-      }
-
-      const key = readString(context.key);
-      const firstSeenAt = readString(context.firstSeenAt);
-      const lastSeenAt = readString(context.lastSeenAt);
-      if (!key || !firstSeenAt || !lastSeenAt) {
-        return [];
-      }
-
-      return [
-        {
-          key,
-          firstSeenAt,
-          lastSeenAt,
-          exposureCount: readNumber(context.exposureCount, 1)
-        }
-      ];
-    });
-
-    output[itemId] = {
-      itemId,
-      contexts: contexts.slice(-MAX_CONTEXT_HISTORY_PER_ITEM)
-    };
-  }
-
-  return output;
-}
-
-async function persistState(state: {
-  items: LearningItemRecord;
-  events: ReviewEvent[];
-  contextHistory: LearningItemContextHistoryRecord;
-}): Promise<void> {
-  await writeStorageValues({
-    [LEARNING_ITEMS_PRIMARY_KEY]: state.items,
-    [REVIEW_EVENTS_PRIMARY_KEY]: state.events.slice(-MAX_REVIEW_EVENTS),
-    [CONTEXT_HISTORY_PRIMARY_KEY]: state.contextHistory
-  });
 }
 
 function isWordItemId(itemId: string): boolean {
