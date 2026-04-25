@@ -20,6 +20,7 @@ import type {
   TokenStatusUpdatedDetail
 } from "./contracts";
 import { findSentenceForOffset, scoreSentenceCandidates, segmentSentences } from "./sentences";
+import type { CachedContextSkipDecision } from "./storage";
 import { preserveWordCasing, segmentText } from "./tokenize";
 
 export type ProcessTextNodeContext = {
@@ -30,6 +31,7 @@ export type ProcessTextNodeContext = {
   vocabByLemmaId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
   isDueForReview?: (lemmaId: string) => boolean;
+  cachedContextSkipDecisions?: Map<string, CachedContextSkipDecision[]>;
   allowPhraseOnlyCandidates?: boolean;
 };
 
@@ -175,8 +177,21 @@ function renderTextWindow(input: {
       continue;
     }
 
-    const replacement = preserveWordCasing(segment.value, lexiconEntry.targetLemma);
     const sentence = findSentenceForOffset(sentences, segment.start);
+    const cachedSkipDecision = sentence
+      ? findCachedSkipDecision({
+          decisionsBySentenceHash: context.cachedContextSkipDecisions,
+          sentenceHash: sentence.hash,
+          lemmaId: lexiconEntry.lemmaId,
+          sourceToken: segment.value
+        })
+      : null;
+    if (cachedSkipDecision) {
+      wrapper.append(segment.value);
+      continue;
+    }
+
+    const replacement = preserveWordCasing(segment.value, lexiconEntry.targetLemma);
     if (sentence) {
       injectedSentenceHashes.add(sentence.hash);
     }
@@ -591,6 +606,28 @@ function normalizeStatus(status: string): VocabStatus {
   }
 
   return "new";
+}
+
+function findCachedSkipDecision(input: {
+  decisionsBySentenceHash?: Map<string, CachedContextSkipDecision[]>;
+  sentenceHash: string;
+  lemmaId: string;
+  sourceToken: string;
+}): CachedContextSkipDecision | null {
+  const decisions = input.decisionsBySentenceHash?.get(input.sentenceHash);
+  if (!decisions || decisions.length === 0) {
+    return null;
+  }
+
+  const normalizedSourceToken = normalizeToken(input.sourceToken);
+  return (
+    decisions.find((decision) => {
+      return (
+        decision.lemmaId === input.lemmaId &&
+        normalizeToken(decision.normalizedText) === normalizedSourceToken
+      );
+    }) ?? null
+  );
 }
 
 function escapeSelector(value: string): string {

@@ -52,6 +52,7 @@ import {
 } from "./sentence-renderer";
 import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { loadProcessingContext, persistVocabStatus } from "./storage";
+import type { CachedContextSkipDecision } from "./storage";
 import "./styles.css";
 
 type ProcessingState = {
@@ -60,6 +61,7 @@ type ProcessingState = {
   lexiconLookup: Map<string, SeedLexiconEntry>;
   vocabByLemmaId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
+  cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   seenSentenceHashes: Set<string>;
   processedTextNodes: number;
   injectedTokens: number;
@@ -327,6 +329,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       lexiconLookup,
       vocabByLemmaId: processingContext.vocabByLemmaId,
       learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
+      cachedContextSkipDecisions: processingContext.cachedContextSkipDecisions,
       seenSentenceHashes: new Set<string>(),
       processedTextNodes: 0,
       injectedTokens: 0,
@@ -472,6 +475,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         createNodeId: () => createNodeId(state),
         lexiconLookup: state.lexiconLookup,
         vocabByLemmaId: state.vocabByLemmaId,
+        cachedContextSkipDecisions: state.cachedContextSkipDecisions,
         isKnownWordForScoring: (word) => isKnownWord(state, word),
         isDueForReview: (lemmaId) => isDueLearningItem(state, lemmaId),
         allowPhraseOnlyCandidates: true

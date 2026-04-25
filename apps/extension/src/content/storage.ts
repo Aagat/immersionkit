@@ -1,4 +1,5 @@
 import type {
+  ContextualWordCandidate,
   ExtensionSettings,
   LearningItem,
   SeedLexiconEntry,
@@ -51,6 +52,14 @@ export type ProcessingContext = {
   lexiconInfo: LexiconLoadInfo;
   vocabByLemmaId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
+  cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+};
+
+export type CachedContextSkipDecision = {
+  sentenceHash: string;
+  lemmaId: string;
+  normalizedText: string;
+  rationale?: string;
 };
 
 export type PersistVocabStatusInput = {
@@ -69,6 +78,7 @@ export async function loadProcessingContext(
     ...STORAGE_KEYS.siteSettings,
     ...STORAGE_KEYS.vocab,
     ...STORAGE_KEYS.learningItems,
+    ...STORAGE_KEYS.sentenceAnalysisCache,
     ...STORAGE_KEYS.seedLexicon
   ]);
 
@@ -106,6 +116,9 @@ export async function loadProcessingContext(
     ),
     learningItemsByUnitRefId: parseLearningItems(
       pickFirstDefinedValue(storage, STORAGE_KEYS.learningItems)
+    ),
+    cachedContextSkipDecisions: parseCachedContextSkipDecisions(
+      pickFirstDefinedValue(storage, STORAGE_KEYS.sentenceAnalysisCache)
     )
   };
 }
@@ -306,6 +319,63 @@ function parseLearningItems(input: unknown): Map<string, LearningItem> {
   }
 
   return new Map(items.map((item) => [item.unitRefId, item]));
+}
+
+function parseCachedContextSkipDecisions(
+  input: unknown
+): Map<string, CachedContextSkipDecision[]> {
+  const decisionsBySentenceHash = new Map<string, CachedContextSkipDecision[]>();
+  if (!isRecord(input)) {
+    return decisionsBySentenceHash;
+  }
+
+  for (const entry of Object.values(input)) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const sentenceHash = readString(entry.sentenceHash);
+    if (!sentenceHash || !Array.isArray(entry.contextualWordCandidates)) {
+      continue;
+    }
+
+    for (const candidate of entry.contextualWordCandidates) {
+      const decision = normalizeCachedSkipDecision(sentenceHash, candidate);
+      if (!decision) {
+        continue;
+      }
+
+      const existing = decisionsBySentenceHash.get(sentenceHash) ?? [];
+      existing.push(decision);
+      decisionsBySentenceHash.set(sentenceHash, existing);
+    }
+  }
+
+  return decisionsBySentenceHash;
+}
+
+function normalizeCachedSkipDecision(
+  fallbackSentenceHash: string,
+  input: unknown
+): CachedContextSkipDecision | null {
+  if (!isRecord(input) || input.decision !== "skip") {
+    return null;
+  }
+
+  const candidate = input as Partial<ContextualWordCandidate>;
+  const lemmaId = readString(candidate.lemmaId);
+  const normalizedText =
+    readString(candidate.normalizedText) ?? readString(candidate.tokenText);
+  if (!lemmaId || !normalizedText) {
+    return null;
+  }
+
+  return {
+    sentenceHash: readString(candidate.sentenceHash) ?? fallbackSentenceHash,
+    lemmaId,
+    normalizedText,
+    rationale: readString(candidate.rationale) ?? undefined
+  };
 }
 
 function resolveLexicon(input: unknown): {

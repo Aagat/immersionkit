@@ -548,6 +548,88 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("uses cached analysis to skip unsafe ambiguous words before initial injection", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "I can watch the city from the hill.";
+        const sentenceHash = hashSentence(sourceSentence);
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": [
+            ...SEED_LEXICON,
+            {
+              lemmaId: "lemma-can",
+              sourceLemma: "can",
+              targetLemma: "lata",
+              pos: "noun",
+              frequencyRank: 200,
+              confidence: 0.95
+            }
+          ],
+          "immersionkit.sentenceAnalysisCache": {
+            [`${sentenceHash}:fixture-v1`]: {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              createdAt: "2026-04-18T10:15:00.000Z",
+              lastAccessedAt: "2026-04-18T10:15:00.000Z",
+              contextualWordCandidates: [
+                {
+                  id: "candidate-can",
+                  sentenceHash,
+                  sentence: sourceSentence,
+                  tokenText: "can",
+                  normalizedText: "can",
+                  targetLemma: "lata",
+                  candidateLemma: "can",
+                  lemmaId: "lemma-can",
+                  candidatePos: "noun",
+                  observedPos: "modal",
+                  chunkType: "other",
+                  nearbyContextSignature: ["modal-before-base-verb"],
+                  ambiguityGroup: "can_modal_vs_noun",
+                  confidence: 0.41,
+                  decision: "skip",
+                  rationale: "Modal use should not inject the noun sense."
+                }
+              ]
+            }
+          },
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:15:30.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          expect(
+            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-can']")
+          ).toBeNull();
+          expect(document.body.textContent).toContain("I can watch");
+          expect(document.body.textContent).not.toContain("lata");
+          expect(
+            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+              ?.textContent
+          ).toBe("ciudad");
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("injects due learning items even when discovery sampling would skip them", async () => {
     await withFixtureDom(
       "article-basic.html",
