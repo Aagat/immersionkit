@@ -1,44 +1,72 @@
 import type { PhraseOccurrence } from "@immersionkit/shared";
 import { describe, expect, it } from "vitest";
 
-import { ChromeStoragePhraseRegistryRepository } from "../src/background/phrase-registry";
-import { installChromeStub } from "./helpers/chrome-stub";
+import { IndexedDbPhraseRegistryRepository } from "../src/background/phrase-registry";
+import type {
+  PhraseRegistryRecord,
+  PhraseRegistryStore
+} from "../src/background/phrase-registry";
+import type {
+  LearningItemRecord,
+  LearningItemRepository
+} from "../src/background/learning-item-repository";
 
 describe("background phrase registry", () => {
   it("creates phrase learning items after registry identity exists", async () => {
-    const chromeStub = installChromeStub();
-    const registry = new ChromeStoragePhraseRegistryRepository();
+    const learningItems = new InMemoryLearningItemRepository();
+    const registryStore = new InMemoryPhraseRegistryStore();
+    const registry = new IndexedDbPhraseRegistryRepository(
+      learningItems,
+      registryStore
+    );
     const occurrence = createPhraseOccurrence("phrase:fixed-phrase:take-care-of:empty");
 
-    try {
-      const [entry] = await registry.upsertOccurrences([
-        occurrence
-      ], "2026-04-25T10:00:00.000Z");
-      await registry.upsertOccurrences([
-        occurrence
-      ], "2026-04-25T10:05:00.000Z");
+    const [entry] = await registry.upsertOccurrences([
+      occurrence
+    ], "2026-04-25T10:00:00.000Z");
+    await registry.upsertOccurrences([
+      occurrence
+    ], "2026-04-25T10:05:00.000Z");
 
-      const storage = chromeStub.getStorageSnapshot();
-      expect(storage["immersionkit.phraseRegistry"]).toMatchObject({
-        [entry.phraseId]: {
-          phraseId: entry.phraseId,
-          exposureCount: 2,
-          lastSeenAt: "2026-04-25T10:05:00.000Z"
-        }
-      });
-      expect(storage["immersionkit.learningItems"]).toMatchObject({
-        [`phrase:${entry.phraseId}`]: {
-          itemId: `phrase:${entry.phraseId}`,
-          unitRefId: entry.phraseId,
-          unitType: "phrase",
-          status: "new"
-        }
-      });
-    } finally {
-      chromeStub.restore();
-    }
+    expect(await registry.get(entry.phraseId)).toMatchObject({
+      phraseId: entry.phraseId,
+      exposureCount: 2,
+      lastSeenAt: "2026-04-25T10:05:00.000Z"
+    });
+    expect(learningItems.items).toMatchObject({
+      [`phrase:${entry.phraseId}`]: {
+        itemId: `phrase:${entry.phraseId}`,
+        unitRefId: entry.phraseId,
+        unitType: "phrase",
+        status: "new"
+      }
+    });
   });
 });
+
+class InMemoryLearningItemRepository implements LearningItemRepository {
+  items: LearningItemRecord = {};
+
+  async loadAll(): Promise<LearningItemRecord> {
+    return { ...this.items };
+  }
+
+  async persistAll(items: LearningItemRecord): Promise<void> {
+    this.items = { ...items };
+  }
+}
+
+class InMemoryPhraseRegistryStore implements PhraseRegistryStore {
+  registry: PhraseRegistryRecord = {};
+
+  async loadAll(): Promise<PhraseRegistryRecord> {
+    return { ...this.registry };
+  }
+
+  async persistAll(registry: PhraseRegistryRecord): Promise<void> {
+    this.registry = { ...registry };
+  }
+}
 
 function createPhraseOccurrence(phraseId: string): PhraseOccurrence {
   return {

@@ -45,8 +45,6 @@ export const STORAGE_KEYS = {
   settings: ["immersionkit.settings", "settings"] as const,
   siteSettings: ["immersionkit.siteSettings", "siteSettings"] as const,
   vocab: ["immersionkit.vocab", "vocab", "vocabEntries"] as const,
-  learningItems: ["immersionkit.learningItems"] as const,
-  sentenceAnalysisCache: ["immersionkit.sentenceAnalysisCache"] as const,
   seedLexicon: ["immersionkit.seedLexicon", "seedLexicon", "lexicon"] as const
 };
 

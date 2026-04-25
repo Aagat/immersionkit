@@ -1,12 +1,6 @@
 import type { ReviewEvent } from "@immersionkit/shared";
 
-import {
-  isRecord,
-  pickFirstDefinedValue,
-  readStorageValues,
-  removeStorageValues,
-  writeStorageValues
-} from "./storage";
+import { isRecord } from "./storage";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,
@@ -15,13 +9,6 @@ import {
   transactionDone
 } from "./indexeddb";
 
-export const REVIEW_EVENTS_STORAGE_KEYS = ["immersionkit.reviewEvents"] as const;
-export const CONTEXT_HISTORY_STORAGE_KEYS = [
-  "immersionkit.learningItemContextHistory"
-] as const;
-
-const REVIEW_EVENTS_PRIMARY_KEY = REVIEW_EVENTS_STORAGE_KEYS[0];
-const CONTEXT_HISTORY_PRIMARY_KEY = CONTEXT_HISTORY_STORAGE_KEYS[0];
 const MAX_REVIEW_EVENTS = 500;
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
 
@@ -55,11 +42,9 @@ export interface LearningHistoryRepository {
 export class IndexedDbLearningHistoryRepository
   implements LearningHistoryRepository
 {
-  private readonly fallback = new ChromeStorageLearningHistoryRepository();
-
   async loadReviewEvents(): Promise<ReviewEvent[]> {
     if (!isIndexedDbAvailable()) {
-      return this.fallback.loadReviewEvents();
+      return [];
     }
 
     try {
@@ -67,26 +52,16 @@ export class IndexedDbLearningHistoryRepository
         INDEXEDDB_STORES.reviewEvents,
         "readonly"
       );
-      const events = parseReviewEvents(await requestToPromise(store.getAll()));
-      if (events.length > 0) {
-        return events;
-      }
-
-      const legacyEvents = await this.fallback.loadReviewEvents();
-      if (legacyEvents.length > 0) {
-        await this.persistReviewEvents(legacyEvents);
-      }
-      return legacyEvents;
+      return parseReviewEvents(await requestToPromise(store.getAll()));
     } catch (error) {
       console.warn("ImmersionKit IndexedDB review event read failed.", error);
-      return this.fallback.loadReviewEvents();
+      return [];
     }
   }
 
   async persistReviewEvents(events: readonly ReviewEvent[]): Promise<void> {
     const normalizedEvents = parseReviewEvents(events).slice(-MAX_REVIEW_EVENTS);
     if (!isIndexedDbAvailable()) {
-      await this.fallback.persistReviewEvents(normalizedEvents);
       return;
     }
 
@@ -111,13 +86,12 @@ export class IndexedDbLearningHistoryRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB review event write failed.", error);
-      await this.fallback.persistReviewEvents(normalizedEvents);
     }
   }
 
   async loadContextHistory(): Promise<LearningItemContextHistoryRecord> {
     if (!isIndexedDbAvailable()) {
-      return this.fallback.loadContextHistory();
+      return {};
     }
 
     try {
@@ -125,19 +99,10 @@ export class IndexedDbLearningHistoryRepository
         INDEXEDDB_STORES.learningItemContextHistory,
         "readonly"
       );
-      const history = parseContextHistory(await requestToPromise(store.getAll()));
-      if (Object.keys(history).length > 0) {
-        return history;
-      }
-
-      const legacyHistory = await this.fallback.loadContextHistory();
-      if (Object.keys(legacyHistory).length > 0) {
-        await this.persistContextHistory(legacyHistory);
-      }
-      return legacyHistory;
+      return parseContextHistory(await requestToPromise(store.getAll()));
     } catch (error) {
       console.warn("ImmersionKit IndexedDB context history read failed.", error);
-      return this.fallback.loadContextHistory();
+      return {};
     }
   }
 
@@ -146,7 +111,6 @@ export class IndexedDbLearningHistoryRepository
   ): Promise<void> {
     const normalizedHistory = parseContextHistory(history);
     if (!isIndexedDbAvailable()) {
-      await this.fallback.persistContextHistory(normalizedHistory);
       return;
     }
 
@@ -162,13 +126,11 @@ export class IndexedDbLearningHistoryRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB context history write failed.", error);
-      await this.fallback.persistContextHistory(normalizedHistory);
     }
   }
 
   async clear(): Promise<void> {
     if (!isIndexedDbAvailable()) {
-      await this.fallback.clear();
       return;
     }
 
@@ -190,47 +152,7 @@ export class IndexedDbLearningHistoryRepository
       await transactionDone(contextTransaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB learning history clear failed.", error);
-      await this.fallback.clear();
     }
-  }
-}
-
-export class ChromeStorageLearningHistoryRepository
-  implements LearningHistoryRepository
-{
-  async loadReviewEvents(): Promise<ReviewEvent[]> {
-    const storage = await readStorageValues(REVIEW_EVENTS_STORAGE_KEYS);
-    return parseReviewEvents(
-      pickFirstDefinedValue(storage, REVIEW_EVENTS_STORAGE_KEYS)
-    );
-  }
-
-  async persistReviewEvents(events: readonly ReviewEvent[]): Promise<void> {
-    await writeStorageValues({
-      [REVIEW_EVENTS_PRIMARY_KEY]: parseReviewEvents(events).slice(-MAX_REVIEW_EVENTS)
-    });
-  }
-
-  async loadContextHistory(): Promise<LearningItemContextHistoryRecord> {
-    const storage = await readStorageValues(CONTEXT_HISTORY_STORAGE_KEYS);
-    return parseContextHistory(
-      pickFirstDefinedValue(storage, CONTEXT_HISTORY_STORAGE_KEYS)
-    );
-  }
-
-  async persistContextHistory(
-    history: LearningItemContextHistoryRecord
-  ): Promise<void> {
-    await writeStorageValues({
-      [CONTEXT_HISTORY_PRIMARY_KEY]: parseContextHistory(history)
-    });
-  }
-
-  async clear(): Promise<void> {
-    await removeStorageValues([
-      ...REVIEW_EVENTS_STORAGE_KEYS,
-      ...CONTEXT_HISTORY_STORAGE_KEYS
-    ]);
   }
 }
 

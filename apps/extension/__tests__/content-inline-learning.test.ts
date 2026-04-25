@@ -570,36 +570,6 @@ describe("content inline learning loop", () => {
               confidence: 0.95
             }
           ],
-          "immersionkit.sentenceAnalysisCache": {
-            [`${sentenceHash}:fixture-v1`]: {
-              sentenceHash,
-              analyzerVersion: "fixture-v1",
-              analyzerId: "fixture-annotated",
-              sourceText: sourceSentence,
-              createdAt: "2026-04-18T10:15:00.000Z",
-              lastAccessedAt: "2026-04-18T10:15:00.000Z",
-              contextualWordCandidates: [
-                {
-                  id: "candidate-can",
-                  sentenceHash,
-                  sentence: sourceSentence,
-                  tokenText: "can",
-                  normalizedText: "can",
-                  targetLemma: "lata",
-                  candidateLemma: "can",
-                  lemmaId: "lemma-can",
-                  candidatePos: "noun",
-                  observedPos: "modal",
-                  chunkType: "other",
-                  nearbyContextSignature: ["modal-before-base-verb"],
-                  ambiguityGroup: "can_modal_vs_noun",
-                  confidence: 0.41,
-                  decision: "skip",
-                  rationale: "Modal use should not inject the noun sense."
-                }
-              ]
-            }
-          },
           "immersionkit.siteSettings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -608,6 +578,50 @@ describe("content inline learning loop", () => {
               updatedAt: "2026-04-18T10:15:30.000Z"
             }
           }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === "sentence-analysis-cache/get"
+          ) {
+            return {
+              ok: true,
+              entries: [
+                {
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  analyzerId: "fixture-annotated",
+                  sourceText: sourceSentence,
+                  createdAt: "2026-04-18T10:15:00.000Z",
+                  lastAccessedAt: "2026-04-18T10:15:00.000Z",
+                  contextualWordCandidates: [
+                    {
+                      id: "candidate-can",
+                      sentenceHash,
+                      sentence: sourceSentence,
+                      tokenText: "can",
+                      normalizedText: "can",
+                      targetLemma: "lata",
+                      candidateLemma: "can",
+                      lemmaId: "lemma-can",
+                      candidatePos: "noun",
+                      observedPos: "modal",
+                      chunkType: "other",
+                      nearbyContextSignature: ["modal-before-base-verb"],
+                      ambiguityGroup: "can_modal_vs_noun",
+                      confidence: 0.41,
+                      decision: "skip",
+                      rationale: "Modal use should not inject the noun sense."
+                    }
+                  ]
+                }
+              ]
+            };
+          }
+
+          return undefined;
         });
 
         try {
@@ -642,26 +656,6 @@ describe("content inline learning loop", () => {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "immersionkit.learningItems": {
-            "word:lemma-city": {
-              itemId: "word:lemma-city",
-              unitRefId: "lemma-city",
-              unitType: "word",
-              sourceText: "city",
-              targetText: "ciudad",
-              status: "reviewing",
-              introducedAt: "2026-04-18T10:00:00.000Z",
-              nextReviewAt: "2020-01-01T00:00:00.000Z",
-              interval: 600000,
-              ease: 2.3,
-              lapses: 0,
-              assistCount: 0,
-              qualifiedExposureCount: 1,
-              consecutiveUnassistedCount: 0,
-              distinctContextCount: 1,
-              suspended: false
-            }
-          },
           "immersionkit.seedLexicon": SEED_LEXICON,
           "immersionkit.siteSettings": {
             [HOSTNAME]: {
@@ -671,6 +665,40 @@ describe("content inline learning loop", () => {
               updatedAt: "2026-04-18T10:17:00.000Z"
             }
           }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === "learning-items/get"
+          ) {
+            return {
+              ok: true,
+              items: [
+                {
+                  itemId: "word:lemma-city",
+                  unitRefId: "lemma-city",
+                  unitType: "word",
+                  sourceText: "city",
+                  targetText: "ciudad",
+                  status: "reviewing",
+                  introducedAt: "2026-04-18T10:00:00.000Z",
+                  nextReviewAt: "2020-01-01T00:00:00.000Z",
+                  interval: 600000,
+                  ease: 2.3,
+                  lapses: 0,
+                  assistCount: 0,
+                  qualifiedExposureCount: 1,
+                  consecutiveUnassistedCount: 0,
+                  distinctContextCount: 1,
+                  suspended: false
+                }
+              ]
+            };
+          }
+
+          return undefined;
         });
 
         try {

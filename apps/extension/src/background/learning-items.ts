@@ -8,36 +8,36 @@ import type {
 import {
   REVIEW_INTERVALS_MS,
   RuntimeMessageType,
-  addMs,
   scheduleAssistReview,
   scheduleQualifiedExposure
 } from "@immersionkit/shared";
 
-import {
-  isRecord,
-  pickFirstDefinedValue,
-  readStorageValues,
-  writeStorageValues
-} from "./storage";
 import {
   IndexedDbLearningHistoryRepository,
   type LearningHistoryRepository,
   type LearningItemContextHistory,
   type LearningItemContextHistoryRecord
 } from "./learning-history-repository";
+import {
+  IndexedDbLearningItemRepository,
+  type LearningItemRecord,
+  type LearningItemRepository
+} from "./learning-item-repository";
 
-const LEARNING_ITEMS_STORAGE_KEYS = ["immersionkit.learningItems"] as const;
-const LEARNING_ITEMS_PRIMARY_KEY = LEARNING_ITEMS_STORAGE_KEYS[0];
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
 const EXPOSURE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
-
-type LearningItemRecord = Record<string, LearningItem>;
 
 export class BackgroundLearningItemService {
   constructor(
     private readonly historyRepository: LearningHistoryRepository =
-      new IndexedDbLearningHistoryRepository()
+      new IndexedDbLearningHistoryRepository(),
+    private readonly itemRepository: LearningItemRepository =
+      new IndexedDbLearningItemRepository()
   ) {}
+
+  async listItems(): Promise<LearningItem[]> {
+    return Object.values(await this.itemRepository.loadAll());
+  }
 
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {
     if (!isWordItemId(message.itemId)) {
@@ -100,11 +100,8 @@ export class BackgroundLearningItemService {
     events: ReviewEvent[];
     contextHistory: LearningItemContextHistoryRecord;
   }> {
-    const storage = await readStorageValues([...LEARNING_ITEMS_STORAGE_KEYS]);
-    const rawItems = pickFirstDefinedValue(storage, LEARNING_ITEMS_STORAGE_KEYS);
-
     return {
-      items: parseLearningItems(rawItems),
+      items: await this.itemRepository.loadAll(),
       events: await this.historyRepository.loadReviewEvents(),
       contextHistory: await this.historyRepository.loadContextHistory()
     };
@@ -115,9 +112,7 @@ export class BackgroundLearningItemService {
     events: ReviewEvent[];
     contextHistory: LearningItemContextHistoryRecord;
   }): Promise<void> {
-    await writeStorageValues({
-      [LEARNING_ITEMS_PRIMARY_KEY]: state.items
-    });
+    await this.itemRepository.persistAll(state.items);
     await this.historyRepository.persistReviewEvents(state.events);
     await this.historyRepository.persistContextHistory(state.contextHistory);
   }
@@ -178,72 +173,12 @@ function isQualifiedExposureMessage(
   return message.type === RuntimeMessageType.QualifiedExposureEvent;
 }
 
-function parseLearningItems(value: unknown): LearningItemRecord {
-  if (!isRecord(value)) {
-    return {};
-  }
-
-  const output: LearningItemRecord = {};
-  for (const entry of Object.values(value)) {
-    if (!isRecord(entry) || typeof entry.itemId !== "string") {
-      continue;
-    }
-
-    output[entry.itemId] = normalizeLearningItem(entry);
-  }
-
-  return output;
-}
-
-function normalizeLearningItem(entry: Record<string, unknown>): LearningItem {
-  const now = new Date().toISOString();
-  const itemId = readString(entry.itemId) ?? "word:unknown";
-  const unitRefId = readString(entry.unitRefId) ?? itemId.replace(/^word:/, "");
-
-  return {
-    itemId,
-    unitRefId,
-    unitType: entry.unitType === "phrase" || entry.unitType === "grammar-feature"
-      ? entry.unitType
-      : "word",
-    sourceText: readString(entry.sourceText) ?? unitRefId,
-    targetText: readString(entry.targetText) ?? "",
-    status: normalizeLearningStatus(entry.status),
-    bandId: readString(entry.bandId) ?? undefined,
-    introducedAt: readString(entry.introducedAt) ?? now,
-    lastExposedAt: readString(entry.lastExposedAt) ?? undefined,
-    lastReviewedAt: readString(entry.lastReviewedAt) ?? undefined,
-    nextReviewAt: readString(entry.nextReviewAt) ?? undefined,
-    interval: readNumber(entry.interval, REVIEW_INTERVALS_MS[0]),
-    ease: readNumber(entry.ease, 2.3),
-    lapses: readNumber(entry.lapses, 0),
-    assistCount: readNumber(entry.assistCount, 0),
-    qualifiedExposureCount: readNumber(entry.qualifiedExposureCount, 0),
-    consecutiveUnassistedCount: readNumber(entry.consecutiveUnassistedCount, 0),
-    distinctContextCount: readNumber(entry.distinctContextCount, 0),
-    suspended: entry.suspended === true
-  };
-}
-
 function isWordItemId(itemId: string): boolean {
   return /^word:[a-zA-Z0-9:_-]+$/.test(itemId);
 }
 
-function normalizeLearningStatus(value: unknown): LearningItem["status"] {
-  return value === "learning" ||
-    value === "reviewing" ||
-    value === "mastered" ||
-    value === "suspended"
-    ? value
-    : "new";
-}
-
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function readNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function readExposureContextKey(

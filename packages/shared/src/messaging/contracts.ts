@@ -8,6 +8,8 @@ import type {
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
   RefreshActiveTab = "settings/refresh-active-tab",
+  GetLearningItems = "learning-items/get",
+  GetSentenceAnalysisCache = "sentence-analysis-cache/get",
   QueueSentenceCandidates = "sentence/queue-candidates",
   SentenceTranslationResult = "sentence/translation-result",
   AssistEvent = "evidence/assist-event",
@@ -20,6 +22,14 @@ export type PingMessage = {
 
 export type RefreshActiveTabMessage = {
   type: RuntimeMessageType.RefreshActiveTab;
+};
+
+export type GetLearningItemsMessage = {
+  type: RuntimeMessageType.GetLearningItems;
+};
+
+export type GetSentenceAnalysisCacheMessage = {
+  type: RuntimeMessageType.GetSentenceAnalysisCache;
 };
 
 export type QueuedSentenceCandidate = {
@@ -67,6 +77,8 @@ export type QualifiedExposureEventMessage = QualifiedExposureEvent & {
 export type RuntimeMessage =
   | PingMessage
   | RefreshActiveTabMessage
+  | GetLearningItemsMessage
+  | GetSentenceAnalysisCacheMessage
   | QueueSentenceCandidatesMessage
   | SentenceTranslationResultMessage
   | AssistEventMessage

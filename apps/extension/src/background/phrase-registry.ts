@@ -5,21 +5,26 @@ import {
   type PhraseRegistryEntry
 } from "@immersionkit/shared";
 
+import { isRecord, readString } from "./storage";
 import {
-  isRecord,
-  pickFirstDefinedValue,
-  readStorageValues,
-  readString,
-  writeStorageValues
-} from "./storage";
+  IndexedDbLearningItemRepository,
+  type LearningItemRecord,
+  type LearningItemRepository
+} from "./learning-item-repository";
+import {
+  INDEXEDDB_STORES,
+  getIndexedDbStore,
+  isIndexedDbAvailable,
+  requestToPromise,
+  transactionDone
+} from "./indexeddb";
 
-const PHRASE_REGISTRY_STORAGE_KEYS = ["immersionkit.phraseRegistry"] as const;
-const LEARNING_ITEMS_STORAGE_KEYS = ["immersionkit.learningItems"] as const;
-const PHRASE_REGISTRY_PRIMARY_KEY = PHRASE_REGISTRY_STORAGE_KEYS[0];
-const LEARNING_ITEMS_PRIMARY_KEY = LEARNING_ITEMS_STORAGE_KEYS[0];
+export type PhraseRegistryRecord = Record<string, PhraseRegistryEntry>;
 
-type PhraseRegistryRecord = Record<string, PhraseRegistryEntry>;
-type LearningItemRecord = Record<string, LearningItem>;
+export interface PhraseRegistryStore {
+  loadAll(): Promise<PhraseRegistryRecord>;
+  persistAll(registry: PhraseRegistryRecord): Promise<void>;
+}
 
 export interface PhraseRegistryRepository {
   get(phraseId: string): Promise<PhraseRegistryEntry | null>;
@@ -29,9 +34,16 @@ export interface PhraseRegistryRepository {
   ): Promise<PhraseRegistryEntry[]>;
 }
 
-export class ChromeStoragePhraseRegistryRepository
+export class IndexedDbPhraseRegistryRepository
   implements PhraseRegistryRepository
 {
+  constructor(
+    private readonly learningItems: LearningItemRepository =
+      new IndexedDbLearningItemRepository(),
+    private readonly registryStore: PhraseRegistryStore =
+      new IndexedDbPhraseRegistryStore()
+  ) {}
+
   async get(phraseId: string): Promise<PhraseRegistryEntry | null> {
     if (!phraseId) {
       return null;
@@ -60,43 +72,58 @@ export class ChromeStoragePhraseRegistryRepository
       updated.push(nextEntry);
     }
 
-    await writeStorageValues({
-      [PHRASE_REGISTRY_PRIMARY_KEY]: registry,
-      [LEARNING_ITEMS_PRIMARY_KEY]: learningItems
-    });
+    await this.persistRegistry(registry);
+    await this.learningItems.persistAll(learningItems);
     return updated;
   }
 
   private async loadRegistry(): Promise<PhraseRegistryRecord> {
-    const storage = await readStorageValues(PHRASE_REGISTRY_STORAGE_KEYS);
-    const rawRegistry = pickFirstDefinedValue(storage, PHRASE_REGISTRY_STORAGE_KEYS);
-    if (!isRecord(rawRegistry)) {
-      return {};
-    }
-
-    const registry: PhraseRegistryRecord = {};
-    for (const value of Object.values(rawRegistry)) {
-      const entry = normalizePhraseRegistryEntry(value);
-      if (entry) {
-        registry[entry.phraseId] = entry;
-      }
-    }
-
-    return registry;
+    return this.registryStore.loadAll();
   }
 
   private async loadLearningItems(): Promise<LearningItemRecord> {
-    const storage = await readStorageValues(LEARNING_ITEMS_STORAGE_KEYS);
-    const rawItems = pickFirstDefinedValue(storage, LEARNING_ITEMS_STORAGE_KEYS);
-    if (!isRecord(rawItems)) {
+    return this.learningItems.loadAll();
+  }
+
+  private async persistRegistry(registry: PhraseRegistryRecord): Promise<void> {
+    await this.registryStore.persistAll(registry);
+  }
+}
+
+export class IndexedDbPhraseRegistryStore implements PhraseRegistryStore {
+  async loadAll(): Promise<PhraseRegistryRecord> {
+    if (!isIndexedDbAvailable()) {
       return {};
     }
 
-    return Object.fromEntries(
-      Object.entries(rawItems).filter((entry): entry is [string, LearningItem] => {
-        return isRecord(entry[1]) && readString(entry[1].itemId) === entry[0];
-      })
-    );
+    try {
+      const store = await getIndexedDbStore(INDEXEDDB_STORES.phraseRegistry, "readonly");
+      return parsePhraseRegistry(await requestToPromise(store.getAll()));
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB phrase registry read failed.", error);
+      return {};
+    }
+  }
+
+  async persistAll(registry: PhraseRegistryRecord): Promise<void> {
+    if (!isIndexedDbAvailable()) {
+      return;
+    }
+
+    try {
+      const store = await getIndexedDbStore(
+        INDEXEDDB_STORES.phraseRegistry,
+        "readwrite"
+      );
+      const transaction = store.transaction;
+      store.clear();
+      for (const entry of Object.values(registry)) {
+        store.put(entry);
+      }
+      await transactionDone(transaction);
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB phrase registry write failed.", error);
+    }
   }
 }
 
@@ -166,6 +193,23 @@ function normalizePhraseRegistryEntry(value: unknown): PhraseRegistryEntry | nul
     exposureCount: Math.max(0, Math.floor(readNumber(value.exposureCount, 0))),
     lexiconEntryId: readString(value.lexiconEntryId) ?? undefined
   };
+}
+
+function parsePhraseRegistry(value: unknown): PhraseRegistryRecord {
+  const values = Array.isArray(value)
+    ? value
+    : isRecord(value)
+      ? Object.values(value)
+      : [];
+  const registry: PhraseRegistryRecord = {};
+  for (const candidate of values) {
+    const entry = normalizePhraseRegistryEntry(candidate);
+    if (entry) {
+      registry[entry.phraseId] = entry;
+    }
+  }
+
+  return registry;
 }
 
 function ensurePhraseLearningItem(

@@ -10,12 +10,8 @@ import {
 } from "@immersionkit/shared";
 
 import {
-  isRecord,
-  pickFirstDefinedValue,
-  readStorageValues,
   readString,
-  removeStorageValues,
-  writeStorageValues
+  isRecord
 } from "./storage";
 import {
   INDEXEDDB_STORES,
@@ -25,24 +21,14 @@ import {
   transactionDone
 } from "./indexeddb";
 
-const SENTENCE_CACHE_STORAGE_KEYS = [
-  "immersionkit.sentenceCache",
-  "sentenceCache"
-] as const;
-const SENTENCE_CACHE_PRIMARY_KEY = SENTENCE_CACHE_STORAGE_KEYS[0];
-
-type SentenceCacheRecord = Record<string, SentenceCacheEntry>;
-
 export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository {
-  private readonly fallback = new ChromeStorageSentenceCacheRepository();
-
   async getByHash(hash: string): Promise<SentenceCacheEntry | null> {
     if (!hash) {
       return null;
     }
 
     if (!isIndexedDbAvailable()) {
-      return this.fallback.getByHash(hash);
+      return null;
     }
 
     try {
@@ -54,15 +40,10 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
       if (entry) {
         return entry;
       }
-
-      const legacyEntry = await this.fallback.getByHash(hash);
-      if (legacyEntry) {
-        await this.put(legacyEntry);
-      }
-      return legacyEntry;
+      return null;
     } catch (error) {
       console.warn("ImmersionKit IndexedDB sentence cache read failed.", error);
-      return this.fallback.getByHash(hash);
+      return null;
     }
   }
 
@@ -72,7 +53,7 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
     }
 
     if (!isIndexedDbAvailable()) {
-      return this.fallback.getByHashes(hashes);
+      return [];
     }
 
     try {
@@ -85,23 +66,10 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
       const normalizedEntries = entries.filter(
         (entry): entry is SentenceCacheEntry => Boolean(entry)
       );
-      const missingHashes = hashes.filter(
-        (hash) => !normalizedEntries.some((entry) => entry.sentenceHash === hash)
-      );
-
-      if (missingHashes.length === 0) {
-        return normalizedEntries;
-      }
-
-      const legacyEntries = await this.fallback.getByHashes(missingHashes);
-      if (legacyEntries.length > 0) {
-        await this.putMany(legacyEntries);
-      }
-
-      return [...normalizedEntries, ...legacyEntries];
+      return normalizedEntries;
     } catch (error) {
       console.warn("ImmersionKit IndexedDB sentence cache read failed.", error);
-      return this.fallback.getByHashes(hashes);
+      return [];
     }
   }
 
@@ -118,7 +86,6 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
     }
 
     if (!isIndexedDbAvailable()) {
-      await this.fallback.putMany(normalizedEntries);
       return;
     }
 
@@ -134,7 +101,6 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB sentence cache write failed.", error);
-      await this.fallback.putMany(normalizedEntries);
     }
   }
 
@@ -144,7 +110,6 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
     }
 
     if (!isIndexedDbAvailable()) {
-      await this.fallback.deleteByHash(hash);
       return;
     }
 
@@ -158,13 +123,11 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB sentence cache delete failed.", error);
-      await this.fallback.deleteByHash(hash);
     }
   }
 
   async clear(): Promise<void> {
     if (!isIndexedDbAvailable()) {
-      await this.fallback.clear();
       return;
     }
 
@@ -178,104 +141,7 @@ export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB sentence cache clear failed.", error);
-      await this.fallback.clear();
     }
-  }
-}
-
-export class ChromeStorageSentenceCacheRepository implements SentenceCacheRepository {
-  async getByHash(hash: string): Promise<SentenceCacheEntry | null> {
-    if (!hash) {
-      return null;
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    return cacheRecord[hash] ?? null;
-  }
-
-  async getByHashes(hashes: readonly string[]): Promise<SentenceCacheEntry[]> {
-    if (hashes.length === 0) {
-      return [];
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    const entries: SentenceCacheEntry[] = [];
-
-    for (const hash of hashes) {
-      const entry = cacheRecord[hash];
-      if (entry) {
-        entries.push(entry);
-      }
-    }
-
-    return entries;
-  }
-
-  async put(entry: SentenceCacheEntry): Promise<void> {
-    await this.putMany([entry]);
-  }
-
-  async putMany(entries: readonly SentenceCacheEntry[]): Promise<void> {
-    if (entries.length === 0) {
-      return;
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    for (const entry of entries) {
-      const normalized = normalizeSentenceCacheEntry(entry, entry.sentenceHash);
-      if (!normalized) {
-        continue;
-      }
-
-      cacheRecord[normalized.sentenceHash] = normalized;
-    }
-
-    await this.persistCacheRecord(cacheRecord);
-  }
-
-  async deleteByHash(hash: string): Promise<void> {
-    if (!hash) {
-      return;
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    if (!(hash in cacheRecord)) {
-      return;
-    }
-
-    delete cacheRecord[hash];
-    await this.persistCacheRecord(cacheRecord);
-  }
-
-  async clear(): Promise<void> {
-    await removeStorageValues(SENTENCE_CACHE_STORAGE_KEYS);
-  }
-
-  private async loadCacheRecord(): Promise<SentenceCacheRecord> {
-    const storage = await readStorageValues(SENTENCE_CACHE_STORAGE_KEYS);
-    const rawRecord = pickFirstDefinedValue(storage, SENTENCE_CACHE_STORAGE_KEYS);
-
-    if (!isRecord(rawRecord)) {
-      return {};
-    }
-
-    const record: SentenceCacheRecord = {};
-    for (const [hash, value] of Object.entries(rawRecord)) {
-      const normalized = normalizeSentenceCacheEntry(value, hash);
-      if (!normalized) {
-        continue;
-      }
-
-      record[normalized.sentenceHash] = normalized;
-    }
-
-    return record;
-  }
-
-  private async persistCacheRecord(record: SentenceCacheRecord): Promise<void> {
-    await writeStorageValues({
-      [SENTENCE_CACHE_PRIMARY_KEY]: record
-    });
   }
 }
 

@@ -1,14 +1,17 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
+  LearningItem,
   QueueSentenceCandidatesMessage,
   RefreshActiveTabMessage,
   RuntimeMessage,
   AssistEventMessage,
   QualifiedExposureEventMessage,
+  SentenceAnalysisEntry,
   SentenceTranslationResultMessage
 } from "@immersionkit/shared";
 
 import { BackgroundLearningItemService } from "./learning-items";
+import { IndexedDbSentenceAnalysisCacheRepository } from "./sentence-analysis-cache";
 import {
   SentenceQueueOrchestrator,
   type QueueSentenceCandidatesResponse,
@@ -40,11 +43,26 @@ type ErrorResponse = {
   error: string;
 };
 
+export type GetLearningItemsResponse =
+  | {
+      ok: true;
+      items: LearningItem[];
+    }
+  | ErrorResponse;
+
+export type GetSentenceAnalysisCacheResponse =
+  | {
+      ok: true;
+      entries: SentenceAnalysisEntry[];
+    }
+  | ErrorResponse;
+
 const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType));
 
 export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
   private readonly learningItems: BackgroundLearningItemService;
+  private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
   private isBooted = false;
 
   constructor() {
@@ -53,6 +71,7 @@ export class BackgroundRuntimeCoordinator {
         this.deliverFreshSentenceTranslations(deliveries)
     });
     this.learningItems = new BackgroundLearningItemService();
+    this.sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
   }
 
   boot() {
@@ -85,6 +104,16 @@ export class BackgroundRuntimeCoordinator {
 
       if (message.type === RuntimeMessageType.RefreshActiveTab) {
         void this.handleRefreshActiveTab(sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.GetLearningItems) {
+        void this.handleGetLearningItems(sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.GetSentenceAnalysisCache) {
+        void this.handleGetSentenceAnalysisCache(sendResponse);
         return true;
       }
 
@@ -162,6 +191,40 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "sentence-queue-failed"
+      });
+    }
+  }
+
+  private async handleGetLearningItems(
+    sendResponse: (response: GetLearningItemsResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        items: await this.learningItems.listItems()
+      });
+    } catch (error) {
+      console.warn("ImmersionKit learning item read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "learning-items-read-failed"
+      });
+    }
+  }
+
+  private async handleGetSentenceAnalysisCache(
+    sendResponse: (response: GetSentenceAnalysisCacheResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        entries: await this.sentenceAnalysisCache.listAll()
+      });
+    } catch (error) {
+      console.warn("ImmersionKit sentence analysis cache read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "sentence-analysis-cache-read-failed"
       });
     }
   }

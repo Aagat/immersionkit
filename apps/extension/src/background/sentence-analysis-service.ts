@@ -26,7 +26,7 @@ import {
 
 import { parseSeedLexiconInput } from "../seed/seed-lexicon";
 import {
-  ChromeStoragePhraseRegistryRepository,
+  IndexedDbPhraseRegistryRepository,
   type PhraseRegistryRepository
 } from "./phrase-registry";
 import {
@@ -92,7 +92,7 @@ export class SentenceAnalysisService {
   constructor(options: SentenceAnalysisServiceOptions = {}) {
     this.cache = options.cache ?? new IndexedDbSentenceAnalysisCacheRepository();
     this.phraseRegistry =
-      options.phraseRegistry ?? new ChromeStoragePhraseRegistryRepository();
+      options.phraseRegistry ?? new IndexedDbPhraseRegistryRepository();
     if (!options.analyzer) {
       this.analyzerLoader = getDefaultSentenceAnalyzer;
     } else if (isSentenceAnalyzer(options.analyzer)) {

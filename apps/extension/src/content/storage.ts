@@ -1,3 +1,4 @@
+import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   ContextualWordCandidate,
   ExtensionSettings,
@@ -77,8 +78,6 @@ export async function loadProcessingContext(
     ...STORAGE_KEYS.settings,
     ...STORAGE_KEYS.siteSettings,
     ...STORAGE_KEYS.vocab,
-    ...STORAGE_KEYS.learningItems,
-    ...STORAGE_KEYS.sentenceAnalysisCache,
     ...STORAGE_KEYS.seedLexicon
   ]);
 
@@ -114,12 +113,8 @@ export async function loadProcessingContext(
     vocabByLemmaId: parseVocabEntries(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
     ),
-    learningItemsByUnitRefId: parseLearningItems(
-      pickFirstDefinedValue(storage, STORAGE_KEYS.learningItems)
-    ),
-    cachedContextSkipDecisions: parseCachedContextSkipDecisions(
-      pickFirstDefinedValue(storage, STORAGE_KEYS.sentenceAnalysisCache)
-    )
+    learningItemsByUnitRefId: await loadLearningItemsByUnitRefId(),
+    cachedContextSkipDecisions: await loadCachedContextSkipDecisions()
   };
 }
 
@@ -184,6 +179,48 @@ async function writeStorageValues(values: StorageRecord): Promise<void> {
     chrome.storage.local.set(values, () => {
       resolve();
     });
+  });
+}
+
+async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return new Map();
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { type: RuntimeMessageType.GetLearningItems },
+      (response?: unknown) => {
+        if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
+          resolve(new Map());
+          return;
+        }
+
+        resolve(parseLearningItems(response.items));
+      }
+    );
+  });
+}
+
+async function loadCachedContextSkipDecisions(): Promise<
+  Map<string, CachedContextSkipDecision[]>
+> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return new Map();
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { type: RuntimeMessageType.GetSentenceAnalysisCache },
+      (response?: unknown) => {
+        if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
+          resolve(new Map());
+          return;
+        }
+
+        resolve(parseCachedContextSkipDecisions(response.entries));
+      }
+    );
   });
 }
 
@@ -271,12 +308,13 @@ function serializeVocabEntries(
 
 function parseLearningItems(input: unknown): Map<string, LearningItem> {
   const items: LearningItem[] = [];
+  const values = Array.isArray(input)
+    ? input
+    : isRecord(input)
+      ? Object.values(input)
+      : [];
 
-  if (!isRecord(input)) {
-    return new Map();
-  }
-
-  for (const value of Object.values(input)) {
+  for (const value of values) {
     if (!isRecord(value)) {
       continue;
     }
@@ -325,11 +363,13 @@ function parseCachedContextSkipDecisions(
   input: unknown
 ): Map<string, CachedContextSkipDecision[]> {
   const decisionsBySentenceHash = new Map<string, CachedContextSkipDecision[]>();
-  if (!isRecord(input)) {
-    return decisionsBySentenceHash;
-  }
+  const values = Array.isArray(input)
+    ? input
+    : isRecord(input)
+      ? Object.values(input)
+      : [];
 
-  for (const entry of Object.values(input)) {
+  for (const entry of values) {
     if (!isRecord(entry)) {
       continue;
     }

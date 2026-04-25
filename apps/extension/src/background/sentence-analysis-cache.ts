@@ -12,12 +12,8 @@ import {
 } from "@immersionkit/shared";
 
 import {
-  isRecord,
-  pickFirstDefinedValue,
-  readStorageValues,
   readString,
-  removeStorageValues,
-  writeStorageValues
+  isRecord
 } from "./storage";
 import {
   INDEXEDDB_STORES,
@@ -26,14 +22,6 @@ import {
   requestToPromise,
   transactionDone
 } from "./indexeddb";
-
-const SENTENCE_ANALYSIS_CACHE_STORAGE_KEYS = [
-  "immersionkit.sentenceAnalysisCache"
-] as const;
-const SENTENCE_ANALYSIS_CACHE_PRIMARY_KEY =
-  SENTENCE_ANALYSIS_CACHE_STORAGE_KEYS[0];
-
-type SentenceAnalysisCacheRecord = Record<string, SentenceAnalysisEntry>;
 
 // Temporary background-owned bridge until shared grows a durable
 // SentenceAnalysisEntry repository contract.
@@ -58,7 +46,24 @@ type IndexedSentenceAnalysisCacheEntry = SentenceAnalysisEntry & {
 export class IndexedDbSentenceAnalysisCacheRepository
   implements SentenceAnalysisCacheRepository
 {
-  private readonly fallback = new ChromeStorageSentenceAnalysisCacheRepository();
+  async listAll(): Promise<SentenceAnalysisEntry[]> {
+    if (!isIndexedDbAvailable()) {
+      return [];
+    }
+
+    try {
+      const store = await getIndexedDbStore(
+        INDEXEDDB_STORES.sentenceAnalysisCache,
+        "readonly"
+      );
+      return (await requestToPromise(store.getAll()))
+        .map((entry) => normalizeSentenceAnalysisEntry(entry))
+        .filter((entry): entry is SentenceAnalysisEntry => Boolean(entry));
+    } catch (error) {
+      console.warn("ImmersionKit IndexedDB analysis cache list failed.", error);
+      return [];
+    }
+  }
 
   async get(
     sentenceHash: string,
@@ -81,7 +86,7 @@ export class IndexedDbSentenceAnalysisCacheRepository
     }
 
     if (!isIndexedDbAvailable()) {
-      return this.fallback.getMany(sentenceHashes, analyzerVersion);
+      return [];
     }
 
     try {
@@ -103,27 +108,10 @@ export class IndexedDbSentenceAnalysisCacheRepository
       const normalizedEntries = entries.filter(
         (entry): entry is SentenceAnalysisEntry => Boolean(entry)
       );
-      const missingHashes = sentenceHashes.filter(
-        (sentenceHash) =>
-          !normalizedEntries.some((entry) => entry.sentenceHash === sentenceHash)
-      );
-
-      if (missingHashes.length === 0) {
-        return normalizedEntries;
-      }
-
-      const legacyEntries = await this.fallback.getMany(
-        missingHashes,
-        analyzerVersion
-      );
-      if (legacyEntries.length > 0) {
-        await this.putMany(legacyEntries);
-      }
-
-      return [...normalizedEntries, ...legacyEntries];
+      return normalizedEntries;
     } catch (error) {
       console.warn("ImmersionKit IndexedDB analysis cache read failed.", error);
-      return this.fallback.getMany(sentenceHashes, analyzerVersion);
+      return [];
     }
   }
 
@@ -140,7 +128,6 @@ export class IndexedDbSentenceAnalysisCacheRepository
     }
 
     if (!isIndexedDbAvailable()) {
-      await this.fallback.putMany(normalizedEntries);
       return;
     }
 
@@ -162,13 +149,11 @@ export class IndexedDbSentenceAnalysisCacheRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB analysis cache write failed.", error);
-      await this.fallback.putMany(normalizedEntries);
     }
   }
 
   async clear(): Promise<void> {
     if (!isIndexedDbAvailable()) {
-      await this.fallback.clear();
       return;
     }
 
@@ -182,108 +167,7 @@ export class IndexedDbSentenceAnalysisCacheRepository
       await transactionDone(transaction);
     } catch (error) {
       console.warn("ImmersionKit IndexedDB analysis cache clear failed.", error);
-      await this.fallback.clear();
     }
-  }
-}
-
-export class ChromeStorageSentenceAnalysisCacheRepository
-  implements SentenceAnalysisCacheRepository
-{
-  async get(
-    sentenceHash: string,
-    analyzerVersion: string
-  ): Promise<SentenceAnalysisEntry | null> {
-    if (!sentenceHash || !analyzerVersion) {
-      return null;
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    return cacheRecord[buildSentenceAnalysisIdentity(sentenceHash, analyzerVersion)] ?? null;
-  }
-
-  async getMany(
-    sentenceHashes: readonly string[],
-    analyzerVersion: string
-  ): Promise<SentenceAnalysisEntry[]> {
-    if (sentenceHashes.length === 0 || !analyzerVersion) {
-      return [];
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    const entries: SentenceAnalysisEntry[] = [];
-
-    for (const sentenceHash of sentenceHashes) {
-      const entry =
-        cacheRecord[buildSentenceAnalysisIdentity(sentenceHash, analyzerVersion)];
-      if (entry) {
-        entries.push(entry);
-      }
-    }
-
-    return entries;
-  }
-
-  async put(entry: SentenceAnalysisEntry): Promise<void> {
-    await this.putMany([entry]);
-  }
-
-  async putMany(entries: readonly SentenceAnalysisEntry[]): Promise<void> {
-    if (entries.length === 0) {
-      return;
-    }
-
-    const cacheRecord = await this.loadCacheRecord();
-    for (const entry of entries) {
-      const normalized = normalizeSentenceAnalysisEntry(entry);
-      if (!normalized) {
-        continue;
-      }
-
-      cacheRecord[
-        buildSentenceAnalysisIdentity(
-          normalized.sentenceHash,
-          normalized.analyzerVersion
-        )
-      ] = normalized;
-    }
-
-    await writeStorageValues({
-      [SENTENCE_ANALYSIS_CACHE_PRIMARY_KEY]: cacheRecord
-    });
-  }
-
-  async clear(): Promise<void> {
-    await removeStorageValues(SENTENCE_ANALYSIS_CACHE_STORAGE_KEYS);
-  }
-
-  private async loadCacheRecord(): Promise<SentenceAnalysisCacheRecord> {
-    const storage = await readStorageValues(SENTENCE_ANALYSIS_CACHE_STORAGE_KEYS);
-    const rawRecord = pickFirstDefinedValue(
-      storage,
-      SENTENCE_ANALYSIS_CACHE_STORAGE_KEYS
-    );
-
-    if (!isRecord(rawRecord)) {
-      return {};
-    }
-
-    const record: SentenceAnalysisCacheRecord = {};
-    for (const value of Object.values(rawRecord)) {
-      const normalized = normalizeSentenceAnalysisEntry(value);
-      if (!normalized) {
-        continue;
-      }
-
-      record[
-        buildSentenceAnalysisIdentity(
-          normalized.sentenceHash,
-          normalized.analyzerVersion
-        )
-      ] = normalized;
-    }
-
-    return record;
   }
 }
 
