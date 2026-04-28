@@ -29,6 +29,7 @@ import { loadBackgroundRuntimeConfig } from "./settings";
 
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
 const EXPOSURE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
+const DEFAULT_BAND_BACKFILL_LIMIT = 50;
 
 export class BackgroundLearningItemService {
   constructor(
@@ -56,6 +57,55 @@ export class BackgroundLearningItemService {
     return Object.values(await this.itemRepository.loadAll()).filter((item) =>
       requested.has(item.unitRefId)
     );
+  }
+
+  async backfillMissingBands(limit: number = DEFAULT_BAND_BACKFILL_LIMIT): Promise<{
+    scanned: number;
+    updated: number;
+    remaining: number;
+  }> {
+    const normalizedLimit = Math.max(0, Math.floor(limit));
+    if (normalizedLimit === 0) {
+      return {
+        scanned: 0,
+        updated: 0,
+        remaining: 0
+      };
+    }
+
+    const items = await this.itemRepository.loadAll();
+    const entries = Object.entries(items).filter(([, item]) => !item.bandId);
+    const batch = entries.slice(0, normalizedLimit);
+    const resolvedBands = new Map<LearningUnitType, string | null>();
+    let updated = 0;
+
+    for (const [itemId, item] of batch) {
+      let bandId = resolvedBands.get(item.unitType);
+      if (!resolvedBands.has(item.unitType)) {
+        bandId = await this.resolveActiveBandId(item.unitType);
+        resolvedBands.set(item.unitType, bandId ?? null);
+      }
+
+      if (!bandId) {
+        continue;
+      }
+
+      items[itemId] = {
+        ...item,
+        bandId
+      };
+      updated += 1;
+    }
+
+    if (updated > 0) {
+      await this.itemRepository.persistAll(items);
+    }
+
+    return {
+      scanned: batch.length,
+      updated,
+      remaining: Math.max(0, entries.length - batch.length)
+    };
   }
 
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {

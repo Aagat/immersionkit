@@ -86,10 +86,12 @@ export class BackgroundRuntimeCoordinator {
 
     this.isBooted = true;
     void this.bootstrapSeedLexicon();
+    void this.backfillLearningItemBands();
 
     chrome.runtime.onInstalled.addListener(() => {
       console.info("ImmersionKit background service worker installed.");
       void this.bootstrapSeedLexicon();
+      void this.backfillLearningItemBands();
     });
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -327,6 +329,17 @@ export class BackgroundRuntimeCoordinator {
       });
     } catch (error) {
       console.warn("ImmersionKit failed to bootstrap seed lexicon.", error);
+    }
+  }
+
+  private async backfillLearningItemBands() {
+    try {
+      const result = await this.learningItems.backfillMissingBands();
+      if (result.updated > 0 || result.remaining > 0) {
+        console.info("ImmersionKit learning item band backfill checked.", result);
+      }
+    } catch (error) {
+      console.warn("ImmersionKit learning item band backfill failed.", error);
     }
   }
 }

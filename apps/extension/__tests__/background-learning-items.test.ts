@@ -145,6 +145,82 @@ describe("background learning item service", () => {
     expect(items.items["phrase:pattern:used-to-visit"]?.bandId).toBe("level-1b");
   });
 
+  it("backfills missing learning item bands without changing item identity", async () => {
+    const items = new InMemoryLearningItemRepository({
+      "word:lemma-city": createLearningItem({
+        itemId: "word:lemma-city",
+        unitRefId: "lemma-city",
+        unitType: "word",
+        bandId: undefined
+      }),
+      "phrase:pattern:used-to-visit": createLearningItem({
+        itemId: "phrase:pattern:used-to-visit",
+        unitRefId: "pattern:used-to-visit",
+        unitType: "phrase",
+        sourceText: "used to visit",
+        targetText: "solia visitar",
+        bandId: undefined
+      }),
+      "word:lemma-town": createLearningItem({
+        itemId: "word:lemma-town",
+        unitRefId: "lemma-town",
+        bandId: "level-1b"
+      })
+    });
+    const service = new BackgroundLearningItemService(
+      new InMemoryLearningHistoryRepository(),
+      items,
+      createUnitBandResolver({
+        word: "level-1a",
+        phrase: "level-2a",
+        "grammar-feature": "level-3a"
+      })
+    );
+
+    await expect(service.backfillMissingBands()).resolves.toEqual({
+      scanned: 2,
+      updated: 2,
+      remaining: 0
+    });
+    expect(Object.keys(items.items).sort()).toEqual([
+      "phrase:pattern:used-to-visit",
+      "word:lemma-city",
+      "word:lemma-town"
+    ]);
+    expect(items.items["word:lemma-city"]?.bandId).toBe("level-1a");
+    expect(items.items["phrase:pattern:used-to-visit"]?.bandId).toBe("level-2a");
+    expect(items.items["word:lemma-town"]?.bandId).toBe("level-1b");
+  });
+
+  it("bounds learning item band backfills", async () => {
+    const items = new InMemoryLearningItemRepository({
+      "word:lemma-city": createLearningItem({
+        itemId: "word:lemma-city",
+        unitRefId: "lemma-city",
+        bandId: undefined
+      }),
+      "word:lemma-town": createLearningItem({
+        itemId: "word:lemma-town",
+        unitRefId: "lemma-town",
+        bandId: undefined
+      })
+    });
+    const service = new BackgroundLearningItemService(
+      new InMemoryLearningHistoryRepository(),
+      items,
+      createBandResolver("level-1a")
+    );
+
+    await expect(service.backfillMissingBands(1)).resolves.toEqual({
+      scanned: 1,
+      updated: 1,
+      remaining: 1
+    });
+    expect(
+      Object.values(items.items).filter((item) => item.bandId === "level-1a")
+    ).toHaveLength(1);
+  });
+
   it("lists learning items by durable unit ref ids", async () => {
     const service = new BackgroundLearningItemService(
       new InMemoryLearningHistoryRepository(),
@@ -423,6 +499,10 @@ function createReviewEvent(): ReviewEvent {
 
 function createBandResolver(bandId: string) {
   return (_unitType: LearningUnitType) => Promise.resolve(bandId);
+}
+
+function createUnitBandResolver(bands: Record<LearningUnitType, string | null>) {
+  return (unitType: LearningUnitType) => Promise.resolve(bands[unitType] ?? null);
 }
 
 class InMemoryLearningItemRepository implements LearningItemRepository {
