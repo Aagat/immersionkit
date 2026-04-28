@@ -82,6 +82,18 @@ type LexiconLookup = {
   byNormalizedForm: Map<string, SeedLexiconEntry[]>;
 };
 
+type ResolvedPhraseTarget = {
+  targetText: string;
+  normalizedTargetText: string;
+};
+
+type PhraseTargetResolver = (input: {
+  sourceText: string;
+  normalizedSourceText: string;
+  sourceKind: PhraseOccurrence["sourceKind"];
+  category: PhraseOccurrence["category"];
+}) => ResolvedPhraseTarget | null;
+
 export class SentenceAnalysisService {
   private readonly cache: SentenceAnalysisCacheRepository;
   private readonly phraseRegistry: PhraseRegistryRepository;
@@ -176,7 +188,10 @@ function buildAnalysisEntry(
     analyzerOutput,
     lookup
   );
-  const phraseMatches = buildPhraseOccurrences(analyzerOutput);
+  const phraseMatches = buildPhraseOccurrences(
+    analyzerOutput,
+    buildSeedLexiconPhraseTargetResolver(lookup)
+  );
   const vocabStats = scoreSentenceByVocabStatuses(
     analyzerOutput.tokens.map((token) =>
       resolveTokenVocabStatus(token, lookup, vocab)
@@ -296,36 +311,78 @@ function isSafeInjectionPos(value: SeedLexiconEntry["pos"]): value is SafeInject
 }
 
 function buildPhraseOccurrences(
-  analyzerOutput: AnalyzerOutput
+  analyzerOutput: AnalyzerOutput,
+  resolvePhraseTarget: PhraseTargetResolver
 ): PhraseOccurrence[] {
   const detection = detectPhraseCandidatesFromAnalyzerOutput(analyzerOutput, undefined, {
     minimumChunkConfidence: 0.76
   });
 
-  return detection.selectedCandidates.map((candidate) => ({
-    occurrenceId: `${analyzerOutput.sentenceHash}:${analyzerOutput.analyzerVersion}:${candidate.span.startToken}-${candidate.span.endToken}:${candidate.ruleId}`,
-    phraseId: buildRuntimePhraseId({
+  return detection.selectedCandidates.map((candidate) => {
+    const resolvedTarget =
+      candidate.targetText && candidate.normalizedTargetText
+        ? {
+            targetText: candidate.targetText,
+            normalizedTargetText: candidate.normalizedTargetText
+          }
+        : resolvePhraseTarget({
+            sourceText: candidate.sourceText,
+            normalizedSourceText: candidate.normalizedSourceText,
+            sourceKind: candidate.sourceKind,
+            category: candidate.category
+          });
+    const normalizedTargetText = resolvedTarget?.normalizedTargetText ?? "";
+
+    return {
+      occurrenceId: `${analyzerOutput.sentenceHash}:${analyzerOutput.analyzerVersion}:${candidate.span.startToken}-${candidate.span.endToken}:${candidate.ruleId}`,
+      phraseId: buildRuntimePhraseId({
+        normalizedSourceText: candidate.normalizedSourceText,
+        sourceKind: candidate.sourceKind,
+        normalizedTargetText
+      }),
+      sentenceHash: analyzerOutput.sentenceHash,
+      analyzerVersion: analyzerOutput.analyzerVersion,
+      sourceText: candidate.sourceText,
       normalizedSourceText: candidate.normalizedSourceText,
+      targetText: resolvedTarget?.targetText,
+      normalizedTargetText: resolvedTarget?.normalizedTargetText,
       sourceKind: candidate.sourceKind,
-      normalizedTargetText: candidate.normalizedTargetText ?? ""
-    }),
-    sentenceHash: analyzerOutput.sentenceHash,
-    analyzerVersion: analyzerOutput.analyzerVersion,
-    sourceText: candidate.sourceText,
-    normalizedSourceText: candidate.normalizedSourceText,
-    targetText: candidate.targetText,
-    normalizedTargetText: candidate.normalizedTargetText,
-    sourceKind: candidate.sourceKind,
-    category: candidate.category,
-    ruleId: candidate.ruleId,
-    span: {
-      startToken: candidate.span.startToken,
-      endToken: candidate.span.endToken,
-      startChar: candidate.span.startChar,
-      endChar: candidate.span.endChar
-    },
-    confidence: candidate.confidence
-  }));
+      category: candidate.category,
+      ruleId: candidate.ruleId,
+      span: {
+        startToken: candidate.span.startToken,
+        endToken: candidate.span.endToken,
+        startChar: candidate.span.startChar,
+        endChar: candidate.span.endChar
+      },
+      confidence: candidate.confidence
+    };
+  });
+}
+
+function buildSeedLexiconPhraseTargetResolver(
+  lookup: LexiconLookup
+): PhraseTargetResolver {
+  return (input) => {
+    if (input.sourceKind === "fixed-phrase") {
+      return null;
+    }
+
+    const entries = lookup.byNormalizedForm.get(input.normalizedSourceText) ?? [];
+    const entry = entries.find(
+      (candidate) =>
+        candidate.targetLemma.trim().length > 0 &&
+        normalizeToken(candidate.sourceLemma) === input.normalizedSourceText
+    );
+    if (!entry) {
+      return null;
+    }
+
+    return {
+      targetText: entry.targetLemma.trim(),
+      normalizedTargetText: normalizeToken(entry.targetLemma)
+    };
+  };
 }
 
 function computeSuitabilitySignals(

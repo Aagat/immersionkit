@@ -166,6 +166,49 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("resolves runtime phrase targets from exact multiword seed entries", async () => {
+    const sourceText = "The old city center walls hold quiet memory.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createResolvableChunkAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () =>
+        Promise.resolve([
+          ...createLexicon(),
+          lexiconEntry(
+            "phrase-old-city-center-walls",
+            "old city center walls",
+            "murallas del centro antiguo",
+            "noun"
+          )
+        ]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const chunkPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceText === "old city center walls"
+    );
+
+    expect(chunkPhrase).toMatchObject({
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      targetText: "murallas del centro antiguo",
+      normalizedTargetText: "murallas del centro antiguo",
+      phraseId:
+        "phrase:chunk:old-city-center-walls:murallas-del-centro-antiguo"
+    });
+    await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
+      canonicalTargetText: "murallas del centro antiguo",
+      normalizedTargetText: "murallas del centro antiguo"
+    });
+  });
+
   it("merges repeated phrase sightings into durable registry identities", async () => {
     const sourceText = "The captain of the football team has been patient.";
     const sentenceHash = hashSentence(sourceText);
@@ -334,6 +377,39 @@ function createFixedPhraseAnalyzerOutput(
       token("city", "city", "noun", 24, 28, ["NN", "noun"])
     ],
     chunks: [],
+    grammarFeatures: []
+  };
+}
+
+function createResolvableChunkAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
+      token("old", "old", "adjective", 4, 7, ["JJ", "adjective"]),
+      token("city", "city", "noun", 8, 12, ["NN", "noun"]),
+      token("center", "center", "noun", 13, 19, ["NN", "noun"]),
+      token("walls", "walls", "noun", 20, 25, ["NNS", "noun"]),
+      token("hold", "hold", "verb", 26, 30, ["VBP", "verb"]),
+      token("quiet", "quiet", "adjective", 31, 36, ["JJ", "adjective"]),
+      token("memory", "memory", "noun", 37, 43, ["NN", "noun"])
+    ],
+    chunks: [
+      {
+        text: "old city center walls",
+        normalized: "old city center walls",
+        type: "noun-phrase",
+        tokenStart: 1,
+        tokenEnd: 5,
+        confidence: 0.9
+      }
+    ],
     grammarFeatures: []
   };
 }
