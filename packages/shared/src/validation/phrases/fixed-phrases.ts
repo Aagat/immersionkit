@@ -13,6 +13,16 @@ export type FixedPhraseLexiconEntry = {
   normalizedTargetText: string;
 };
 
+export type CuratedPhraseTargetEntry = {
+  sourceText: string;
+  targetText: string;
+  sourceKind: "chunk" | "pattern-match";
+  category: PhraseCategory;
+  confidence: number;
+  normalizedSourceText: string;
+  normalizedTargetText: string;
+};
+
 function createFixedPhraseEntry(
   phraseId: string,
   sourceText: string,
@@ -73,5 +83,61 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
     "cuidar de",
     "function-phrase",
     0.93
+  )
+];
+
+function createCuratedPhraseTargetEntry(
+  sourceText: string,
+  targetText: string,
+  sourceKind: CuratedPhraseTargetEntry["sourceKind"],
+  category: PhraseCategory,
+  confidence: number
+): CuratedPhraseTargetEntry {
+  return {
+    sourceText,
+    targetText,
+    sourceKind,
+    category,
+    confidence,
+    normalizedSourceText: normalizeAndTokenize(sourceText).join(" "),
+    normalizedTargetText: normalizeAndTokenize(targetText).join(" ")
+  };
+}
+
+export const CURATED_PHRASE_TARGET_LEXICON: readonly CuratedPhraseTargetEntry[] = [
+  createCuratedPhraseTargetEntry(
+    "public health care system",
+    "sistema de salud publica",
+    "chunk",
+    "noun-chunk",
+    0.93
+  ),
+  createCuratedPhraseTargetEntry(
+    "climate change action plan",
+    "plan de accion climatica",
+    "chunk",
+    "noun-chunk",
+    0.92
+  ),
+  createCuratedPhraseTargetEntry(
+    "customer service team",
+    "equipo de atencion al cliente",
+    "chunk",
+    "noun-chunk",
+    0.91
+  ),
+  createCuratedPhraseTargetEntry(
+    "used to",
+    "solia",
+    "pattern-match",
+    "grammar-carrier",
+    0.9
+  ),
+  createCuratedPhraseTargetEntry(
+    "going to",
+    "va a",
+    "pattern-match",
+    "grammar-carrier",
+    0.9
   )
 ];

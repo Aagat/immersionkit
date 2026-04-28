@@ -209,6 +209,40 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("resolves runtime phrase targets from the curated phrase target lexicon", async () => {
+    const sourceText = "The public health care system needs support.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createCuratedPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const chunkPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceText === "public health care system"
+    );
+
+    expect(chunkPhrase).toMatchObject({
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      targetText: "sistema de salud publica",
+      normalizedTargetText: "sistema de salud publica",
+      phraseId:
+        "phrase:chunk:public-health-care-system:sistema-de-salud-publica"
+    });
+    await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
+      canonicalTargetText: "sistema de salud publica",
+      normalizedTargetText: "sistema de salud publica"
+    });
+  });
+
   it("merges repeated phrase sightings into durable registry identities", async () => {
     const sourceText = "The captain of the football team has been patient.";
     const sentenceHash = hashSentence(sourceText);
@@ -404,6 +438,38 @@ function createResolvableChunkAnalyzerOutput(
       {
         text: "old city center walls",
         normalized: "old city center walls",
+        type: "noun-phrase",
+        tokenStart: 1,
+        tokenEnd: 5,
+        confidence: 0.9
+      }
+    ],
+    grammarFeatures: []
+  };
+}
+
+function createCuratedPhraseTargetAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
+      token("public", "public", "adjective", 4, 10, ["JJ", "adjective"]),
+      token("health", "health", "noun", 11, 17, ["NN", "noun"]),
+      token("care", "care", "noun", 18, 22, ["NN", "noun"]),
+      token("system", "system", "noun", 23, 29, ["NN", "noun"]),
+      token("needs", "needs", "verb", 30, 35, ["VBZ", "verb"]),
+      token("support", "support", "noun", 36, 43, ["NN", "noun"])
+    ],
+    chunks: [
+      {
+        text: "public health care system",
+        normalized: "public health care system",
         type: "noun-phrase",
         tokenStart: 1,
         tokenEnd: 5,

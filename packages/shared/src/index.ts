@@ -12,6 +12,7 @@ export * from "./text/normalize";
 export * from "./text/phrases";
 export * from "./text/tokenize";
 export {
+  CURATED_PHRASE_TARGET_LEXICON,
   FIXED_PHRASE_LEXICON,
   buildCanonicalPhraseKey,
   detectAdjectiveNounPatterns,
@@ -36,6 +37,7 @@ export {
 } from "./validation/phrases";
 export type {
   AnalyzerPhraseDetectionOptions,
+  CuratedPhraseTargetEntry,
   FixedPhraseLexiconEntry,
   PhraseCandidate,
   PhraseCandidateSpan,

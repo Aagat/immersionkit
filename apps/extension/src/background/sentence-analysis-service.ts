@@ -1,6 +1,7 @@
 import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
+  CURATED_PHRASE_TARGET_LEXICON,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
   detectPhraseCandidatesFromAnalyzerOutput,
@@ -366,6 +367,19 @@ function buildSeedLexiconPhraseTargetResolver(
   return (input) => {
     if (input.sourceKind === "fixed-phrase") {
       return null;
+    }
+
+    const curatedTarget = CURATED_PHRASE_TARGET_LEXICON.find(
+      (entry) =>
+        entry.sourceKind === input.sourceKind &&
+        entry.category === input.category &&
+        entry.normalizedSourceText === input.normalizedSourceText
+    );
+    if (curatedTarget) {
+      return {
+        targetText: curatedTarget.targetText,
+        normalizedTargetText: curatedTarget.normalizedTargetText
+      };
     }
 
     const entries = lookup.byNormalizedForm.get(input.normalizedSourceText) ?? [];
