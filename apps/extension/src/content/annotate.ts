@@ -378,11 +378,8 @@ function renderTextWindow(input: {
 
   if (phraseCandidates.rejected.length > 0) {
     wrapper.setAttribute(
-      "data-ik-phrase-rejections",
-      phraseCandidates.rejected
-        .slice(0, 8)
-        .map((rejection) => `${rejection.phraseId}:${rejection.reason}`)
-        .join("|")
+      "data-ik-phrase-rejection-details",
+      JSON.stringify(phraseCandidates.rejected.slice(0, 8))
     );
   }
 
@@ -760,12 +757,23 @@ type PhraseRenderCandidate = {
   confidence: number;
   start: number;
   end: number;
+  sourceText: string;
   targetText: string;
   sentence: {
     text: string;
     hash: string;
   };
   isDueForReview: boolean;
+};
+
+type PhraseRenderRejection = {
+  phraseId: string;
+  reason: string;
+  sourceText: string | null;
+  targetText: string | null;
+  sourceKind: string | null;
+  category: string | null;
+  sentenceHash: string | null;
 };
 
 function selectPhraseRenderCandidates(input: {
@@ -776,11 +784,11 @@ function selectPhraseRenderCandidates(input: {
   shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
 }): {
   acceptedByStart: Map<number, PhraseRenderCandidate>;
-  rejected: { phraseId: string; reason: string }[];
+  rejected: PhraseRenderRejection[];
   curriculumSkippedCount: number;
 } {
   const acceptedByStart = new Map<number, PhraseRenderCandidate>();
-  const rejected: { phraseId: string; reason: string }[] = [];
+  const rejected: PhraseRenderRejection[] = [];
   const candidates: PhraseRenderCandidate[] = [];
   let curriculumSkippedCount = 0;
 
@@ -789,7 +797,13 @@ function selectPhraseRenderCandidates(input: {
     for (const match of matches) {
       const learningItem = input.learningItemsByUnitRefId?.get(match.phraseId);
       if (!learningItem || learningItem.unitType !== "phrase" || learningItem.suspended) {
-        rejected.push({ phraseId: match.phraseId, reason: "missing-active-learning-item" });
+        rejected.push(
+          createPhraseRenderRejection(
+            match,
+            sentence.hash,
+            "missing-active-learning-item"
+          )
+        );
         continue;
       }
 
@@ -801,7 +815,11 @@ function selectPhraseRenderCandidates(input: {
         end > sentence.end ||
         normalizePhraseText(sourceSlice) !== normalizePhraseText(match.sourceText)
       ) {
-        rejected.push({ phraseId: match.phraseId, reason: "span-mismatch" });
+        rejected.push(
+          createPhraseRenderRejection(match, sentence.hash, "span-mismatch", {
+            targetText: learningItem.targetText
+          })
+        );
         continue;
       }
 
@@ -818,10 +836,14 @@ function selectPhraseRenderCandidates(input: {
           isDueForReview
         });
         if (!curriculumDecision.eligible) {
-          rejected.push({
-            phraseId: match.phraseId,
-            reason: `curriculum-${curriculumDecision.skipReason ?? "skip"}`
-          });
+          rejected.push(
+            createPhraseRenderRejection(
+              match,
+              sentence.hash,
+              `curriculum-${curriculumDecision.skipReason ?? "skip"}`,
+              { targetText: learningItem.targetText }
+            )
+          );
           curriculumSkippedCount += 1;
           continue;
         }
@@ -836,6 +858,7 @@ function selectPhraseRenderCandidates(input: {
         confidence: match.confidence,
         start,
         end,
+        sourceText: match.sourceText,
         targetText: learningItem.targetText,
         sentence,
         isDueForReview
@@ -850,7 +873,7 @@ function selectPhraseRenderCandidates(input: {
         spansOverlap(candidate.start, candidate.end, existing.start, existing.end)
       )
     ) {
-      rejected.push({ phraseId: candidate.phraseId, reason: "overlap" });
+      rejected.push(createPhraseRenderRejectionFromCandidate(candidate, "overlap"));
       continue;
     }
 
@@ -862,6 +885,38 @@ function selectPhraseRenderCandidates(input: {
     acceptedByStart,
     rejected,
     curriculumSkippedCount
+  };
+}
+
+function createPhraseRenderRejection(
+  match: CachedPhraseMatch,
+  sentenceHash: string,
+  reason: string,
+  options: { targetText?: string | null } = {}
+): PhraseRenderRejection {
+  return {
+    phraseId: match.phraseId,
+    reason,
+    sourceText: match.sourceText,
+    targetText: options.targetText ?? null,
+    sourceKind: match.sourceKind,
+    category: match.category,
+    sentenceHash
+  };
+}
+
+function createPhraseRenderRejectionFromCandidate(
+  candidate: PhraseRenderCandidate,
+  reason: string
+): PhraseRenderRejection {
+  return {
+    phraseId: candidate.phraseId,
+    reason,
+    sourceText: candidate.sourceText,
+    targetText: candidate.targetText,
+    sourceKind: candidate.sourceKind,
+    category: candidate.category,
+    sentenceHash: candidate.sentence.hash
   };
 }
 

@@ -1796,37 +1796,60 @@ function collectPhraseDecisionSamples(): PageDiagnosticsPhraseSample[] {
   }));
 
   const rejected = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-ik-phrase-rejections]")
-  ).flatMap((wrapper): PageDiagnosticsPhraseSample[] => {
-    const sentenceHash =
-      wrapper.getAttribute("data-ik-sentence-candidate-hashes")?.split("|")[0] ?? null;
-    return (wrapper.getAttribute("data-ik-phrase-rejections") ?? "")
-      .split("|")
-      .flatMap((entry): PageDiagnosticsPhraseSample[] => {
-        const separator = entry.lastIndexOf(":");
-        if (separator <= 0) {
-          return [];
-        }
-
-        return [
-          {
-            phraseId: entry.slice(0, separator),
-            sourceText: null,
-            targetText: null,
-            selected: false,
-            rejectedReason: entry.slice(separator + 1),
-            sourceKind: null,
-            category: null,
-            dueStatus: null,
-            schedulerReason: null,
-            sentenceHash,
-            exposureEligible: false
-          }
-        ];
-      });
-  });
+    document.querySelectorAll<HTMLElement>("[data-ik-phrase-rejection-details]")
+  ).flatMap(readPhraseRejectionDetails);
 
   return [...selected, ...rejected].slice(0, PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
+}
+
+function readPhraseRejectionDetails(
+  wrapper: HTMLElement
+): PageDiagnosticsPhraseSample[] {
+  const rawDetails = wrapper.getAttribute("data-ik-phrase-rejection-details");
+  if (!rawDetails) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawDetails);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.flatMap((entry): PageDiagnosticsPhraseSample[] => {
+      if (!isRecord(entry)) {
+        return [];
+      }
+
+      const phraseId = readNullableString(entry.phraseId);
+      const rejectedReason = readNullableString(entry.reason);
+      if (!phraseId || !rejectedReason) {
+        return [];
+      }
+
+      return [
+        {
+          phraseId,
+          sourceText: readNullableString(entry.sourceText),
+          targetText: readNullableString(entry.targetText),
+          selected: false,
+          rejectedReason,
+          sourceKind: readNullableString(entry.sourceKind),
+          category: readNullableString(entry.category),
+          dueStatus: null,
+          schedulerReason: null,
+          sentenceHash: readNullableString(entry.sentenceHash),
+          exposureEligible: false
+        }
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function readNullableString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

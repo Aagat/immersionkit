@@ -124,6 +124,22 @@ describe("content phrase-unit rendering", () => {
       expect(document.querySelectorAll("[data-ik-unit-kind='phrase']")).toHaveLength(1);
       expect(document.querySelector("[data-ik-phrase-id='phrase:pattern:used-to-visit']")).toBeTruthy();
       expect(document.querySelector("[data-ik-phrase-id='phrase:pattern:used-to']")).toBeNull();
+
+      const wrapper = document.querySelector<HTMLElement>(
+        "[data-ik-phrase-rejection-details]"
+      );
+      const details = JSON.parse(
+        wrapper?.getAttribute("data-ik-phrase-rejection-details") ?? "[]"
+      ) as Array<Record<string, unknown>>;
+      expect(details[0]).toMatchObject({
+        phraseId: "phrase:pattern:used-to",
+        reason: "overlap",
+        sourceText: "used to",
+        targetText: "solia",
+        sourceKind: "pattern-match",
+        category: "grammar-carrier",
+        sentenceHash: hashSentence(sentence)
+      });
     });
   });
 
