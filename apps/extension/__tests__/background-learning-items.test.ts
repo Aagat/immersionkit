@@ -84,6 +84,32 @@ describe("background learning item service", () => {
     ]);
   });
 
+  it("lists learning items by durable unit ref ids", async () => {
+    const service = new BackgroundLearningItemService(
+      new InMemoryLearningHistoryRepository(),
+      new InMemoryLearningItemRepository({
+        "word:lemma-city": createLearningItem(),
+        "phrase:pattern:used-to-visit": createLearningItem({
+          itemId: "phrase:pattern:used-to-visit",
+          unitRefId: "pattern:used-to-visit",
+          unitType: "phrase",
+          sourceText: "used to visit",
+          targetText: "solia visitar"
+        })
+      })
+    );
+
+    await expect(
+      service.listItemsByUnitRefIds(["pattern:used-to-visit", "missing"])
+    ).resolves.toEqual([
+      expect.objectContaining({
+        itemId: "phrase:pattern:used-to-visit",
+        unitRefId: "pattern:used-to-visit",
+        unitType: "phrase"
+      })
+    ]);
+  });
+
   it("does not create missing phrase items from loose assist evidence", async () => {
     const history = new InMemoryLearningHistoryRepository();
     const items = new InMemoryLearningItemRepository();

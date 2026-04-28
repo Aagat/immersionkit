@@ -211,6 +211,37 @@ export async function persistVocabStatus(
   return nextEntry;
 }
 
+export async function refreshLearningItemsByUnitRefIds(
+  unitRefIds: readonly string[]
+): Promise<Map<string, LearningItem>> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return new Map();
+  }
+
+  const requestedUnitRefIds = [...new Set(unitRefIds.map((id) => id.trim()).filter(Boolean))]
+    .slice(0, 100);
+  if (requestedUnitRefIds.length === 0) {
+    return new Map();
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        type: RuntimeMessageType.GetLearningItems,
+        unitRefIds: requestedUnitRefIds
+      },
+      (response?: unknown) => {
+        if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
+          resolve(new Map());
+          return;
+        }
+
+        resolve(parseLearningItems(response.items));
+      }
+    );
+  });
+}
+
 async function readStorageValues(keys: readonly string[]): Promise<StorageRecord> {
   if (typeof chrome === "undefined" || !chrome.storage?.local) {
     return {};

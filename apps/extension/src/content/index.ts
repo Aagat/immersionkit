@@ -77,7 +77,8 @@ import type { SentenceNoteMetadata } from "./sentence-renderer";
 import {
   loadCachedSentenceAnalysisContext,
   loadProcessingContext,
-  persistVocabStatus
+  persistVocabStatus,
+  refreshLearningItemsByUnitRefIds
 } from "./storage";
 import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
 import "./styles.css";
@@ -708,7 +709,7 @@ function queueSentenceCandidates(
       updateCurriculumDiagnosticsFromRanking(state);
       if (analysisEntries.length > 0) {
         state.analysisSuppressedTokens += applySentenceAnalysisDecisions(analysisEntries);
-        refreshFreshPhraseMatches(state, analysisEntries);
+        void refreshFreshPhraseMatches(state, analysisEntries);
       }
 
       if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
@@ -755,7 +756,7 @@ function mergeCachedAnalysisMap<T>(
   }
 }
 
-function refreshFreshPhraseMatches(
+async function refreshFreshPhraseMatches(
   state: ProcessingState,
   entries: readonly SentenceAnalysisEntry[]
 ) {
@@ -824,11 +825,48 @@ function refreshFreshPhraseMatches(
     return;
   }
 
+  await refreshPhraseLearningItemsForFreshMatches(state, entries);
+  if (!state.isActive) {
+    return;
+  }
+
   state.freshPhraseAnalysisHits += sentenceHashesWithPhrases.size;
   state.freshPhraseRerenders += rerenderAnnotatedNodesForSentenceHashes(
     state,
     sentenceHashesWithPhrases
   );
+}
+
+async function refreshPhraseLearningItemsForFreshMatches(
+  state: ProcessingState,
+  entries: readonly SentenceAnalysisEntry[]
+) {
+  const phraseIds = new Set<string>();
+  for (const entry of entries) {
+    for (const match of entry.phraseMatches) {
+      if (typeof match.phraseId === "string" && match.phraseId.trim().length > 0) {
+        phraseIds.add(match.phraseId);
+      }
+    }
+  }
+
+  if (phraseIds.size === 0) {
+    return;
+  }
+
+  try {
+    const refreshedItems = await refreshLearningItemsByUnitRefIds([...phraseIds]);
+    for (const [unitRefId, item] of refreshedItems) {
+      if (item.unitType === "phrase") {
+        state.learningItemsByUnitRefId.set(unitRefId, item);
+      }
+    }
+  } catch (error) {
+    console.warn("ImmersionKit failed to refresh fresh phrase learning items.", {
+      error,
+      requestedPhraseIds: phraseIds.size
+    });
+  }
 }
 
 function rerenderAnnotatedNodesForSentenceHashes(

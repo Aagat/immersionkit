@@ -39,6 +39,19 @@ export class BackgroundLearningItemService {
     return Object.values(await this.itemRepository.loadAll());
   }
 
+  async listItemsByUnitRefIds(unitRefIds: readonly string[]): Promise<LearningItem[]> {
+    const requested = new Set(
+      unitRefIds.map((unitRefId) => unitRefId.trim()).filter(Boolean)
+    );
+    if (requested.size === 0) {
+      return [];
+    }
+
+    return Object.values(await this.itemRepository.loadAll()).filter((item) =>
+      requested.has(item.unitRefId)
+    );
+  }
+
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {
     if (!isSupportedLearningItemId(message.itemId)) {
       return null;

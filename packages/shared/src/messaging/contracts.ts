@@ -26,6 +26,7 @@ export type RefreshActiveTabMessage = {
 
 export type GetLearningItemsMessage = {
   type: RuntimeMessageType.GetLearningItems;
+  unitRefIds?: string[];
 };
 
 export type GetSentenceAnalysisCacheMessage = {

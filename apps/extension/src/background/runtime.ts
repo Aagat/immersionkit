@@ -1,6 +1,7 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   LearningItem,
+  GetLearningItemsMessage,
   QueueSentenceCandidatesMessage,
   RefreshActiveTabMessage,
   RuntimeMessage,
@@ -108,7 +109,7 @@ export class BackgroundRuntimeCoordinator {
       }
 
       if (message.type === RuntimeMessageType.GetLearningItems) {
-        void this.handleGetLearningItems(sendResponse);
+        void this.handleGetLearningItems(message, sendResponse);
         return true;
       }
 
@@ -196,12 +197,15 @@ export class BackgroundRuntimeCoordinator {
   }
 
   private async handleGetLearningItems(
+    message: GetLearningItemsMessage,
     sendResponse: (response: GetLearningItemsResponse) => void
   ) {
     try {
       sendResponse({
         ok: true,
-        items: await this.learningItems.listItems()
+        items: Array.isArray(message.unitRefIds)
+          ? await this.learningItems.listItemsByUnitRefIds(message.unitRefIds.slice(0, 100))
+          : await this.learningItems.listItems()
       });
     } catch (error) {
       console.warn("ImmersionKit learning item read failed.", error);
