@@ -1206,12 +1206,20 @@ function openSentencePopover(
 
   closePopover(runtimeState);
   setActiveToken(runtimeState, noteElement);
+  const grammarFeatures =
+    runtimeState.processing?.cachedGrammarFeaturesBySentenceHash.get(
+      detail.sentenceHash
+    ) ?? [];
   runtimeState.processing?.evidenceTracker.recordGrammarAssist(
     detail.sentenceHash,
-    runtimeState.processing.cachedGrammarFeaturesBySentenceHash.get(
-      detail.sentenceHash
-    ) ?? []
+    grammarFeatures
   );
+  const stopGrammarDetailDwell =
+    runtimeState.processing?.evidenceTracker.watchGrammarDetailDwell({
+      anchor: noteElement,
+      sentenceHash: detail.sentenceHash,
+      features: grammarFeatures
+    }) ?? (() => undefined);
 
   const popover = renderSentencePopover(noteElement, detail);
   popover.addEventListener("click", (event) => {
@@ -1257,6 +1265,7 @@ function openSentencePopover(
 
   runtimeState.popover = popover;
   runtimeState.popoverCleanup = () => {
+    stopGrammarDetailDwell();
     window.removeEventListener("scroll", closeOnViewportChange, true);
     window.removeEventListener("resize", closeOnViewportChange);
   };

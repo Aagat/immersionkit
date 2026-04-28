@@ -2001,6 +2001,32 @@ describe("content inline learning loop", () => {
             contextSentenceHash: sentenceHash,
             source: "content-grammar-note"
           });
+
+          await wait(2600);
+
+          const exposureMessage = chromeStub.sentMessages.find(
+            (message): message is {
+              type: string;
+              itemId: string;
+              sentenceHash: string;
+              wasAssisted: boolean;
+              source: string;
+            } =>
+              Boolean(message) &&
+              typeof message === "object" &&
+              (message as { itemId?: unknown; source?: unknown }).itemId ===
+                "grammar-feature:aspect:have-been" &&
+              (message as { source?: unknown }).source ===
+                "content-grammar-detail-dwell"
+          );
+
+          expect(exposureMessage).toMatchObject({
+            type: RuntimeMessageType.QualifiedExposureEvent,
+            itemId: "grammar-feature:aspect:have-been",
+            sentenceHash,
+            wasAssisted: true,
+            source: "content-grammar-detail-dwell"
+          });
         } finally {
           chromeStub.restore();
         }

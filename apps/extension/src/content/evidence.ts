@@ -9,6 +9,7 @@ export const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
   RuntimeMessageType.QualifiedExposureEvent;
 
 const QUALIFIED_DWELL_MS = 1_500;
+const GRAMMAR_DETAIL_DWELL_MS = 2_500;
 const QUALIFIED_INTERSECTION_RATIO = 0.6;
 const EVIDENCE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
@@ -131,6 +132,30 @@ export class ContentEvidenceTracker {
     }
   }
 
+  watchGrammarDetailDwell(input: {
+    anchor: HTMLElement;
+    sentenceHash: string;
+    features: readonly CachedGrammarFeature[];
+  }): () => void {
+    if (input.features.length === 0 || !isDocumentVisible()) {
+      return () => undefined;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled || !isDocumentVisible() || !document.body?.contains(input.anchor)) {
+        return;
+      }
+
+      this.recordGrammarQualifiedExposure(input.sentenceHash, input.features);
+    }, GRAMMAR_DETAIL_DWELL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }
+
   stop(): void {
     this.observer?.disconnect();
     for (const watch of this.watches.values()) {
@@ -238,6 +263,48 @@ export class ContentEvidenceTracker {
     });
   }
 
+  private recordGrammarQualifiedExposure(
+    sentenceHash: string,
+    features: readonly CachedGrammarFeature[]
+  ): void {
+    const uniqueFeatureKeys = new Set<string>();
+    const now = this.now();
+    for (const feature of features) {
+      const featureKey = feature.featureKey.trim();
+      if (!featureKey || uniqueFeatureKeys.has(featureKey)) {
+        continue;
+      }
+
+      uniqueFeatureKeys.add(featureKey);
+      const itemId = grammarFeatureItemId(featureKey);
+      const key = evidenceDedupeKey(itemId, sentenceHash);
+      const lastEmittedAt = this.emittedExposureAt.get(key);
+      if (
+        typeof lastEmittedAt === "number" &&
+        now - lastEmittedAt < EVIDENCE_DEDUPE_WINDOW_MS
+      ) {
+        continue;
+      }
+
+      this.emittedExposureAt.set(key, now);
+      emitEvidenceMessage({
+        type: CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE,
+        eventId: this.nextEventId("exposure", key),
+        itemId,
+        sentenceHash,
+        hostname: window.location.hostname,
+        sessionId: this.sessionId,
+        occurredAt: new Date(now).toISOString(),
+        wasAssisted: this.wasRecentlyAssisted(key, now),
+        confidence: Math.max(0.6, Math.min(0.92, feature.confidence)),
+        distinctContextKey: `${window.location.hostname}:${sentenceHash}:grammar:${featureKey}`,
+        dwellMs: GRAMMAR_DETAIL_DWELL_MS,
+        viewportRatio: 1,
+        source: "content-grammar-detail-dwell"
+      });
+    }
+  }
+
   private wasRecentlyAssisted(key: string, now: number): boolean {
     const lastAssistedAt = this.assistedAt.get(key);
     return (
@@ -268,6 +335,10 @@ function createIntersectionObserver(
 
 function isActiveSession(): boolean {
   return document.visibilityState === "visible" && document.hasFocus();
+}
+
+function isDocumentVisible(): boolean {
+  return document.visibilityState === "visible";
 }
 
 function wordItemId(lemmaId: string): string {

@@ -278,6 +278,52 @@ describe("background learning item service", () => {
     ]);
   });
 
+  it("persists grammar qualified exposure for existing grammar feature learning items", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository({
+      "grammar-feature:aspect:have-been": createLearningItem({
+        itemId: "grammar-feature:aspect:have-been",
+        unitRefId: "aspect:have-been",
+        unitType: "grammar-feature",
+        sourceText: "Have been",
+        targetText: "",
+        bandId: "level-3a",
+        nextReviewAt: "2026-04-18T09:00:00.000Z"
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordQualifiedExposure({
+      type: RuntimeMessageType.QualifiedExposureEvent,
+      eventId: "exposure-grammar-1",
+      itemId: "grammar-feature:aspect:have-been",
+      sentenceHash: "sentence-grammar-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      occurredAt: "2026-04-18T10:00:00.000Z",
+      wasAssisted: true,
+      confidence: 0.72,
+      distinctContextKey:
+        "fixtures.immersionkit.test:sentence-grammar-1:grammar:aspect:have-been"
+    });
+
+    expect(item).toMatchObject({
+      itemId: "grammar-feature:aspect:have-been",
+      unitType: "grammar-feature",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 0,
+      bandId: "level-3a"
+    });
+    expect(history.reviewEvents).toEqual([
+      expect.objectContaining({
+        itemId: "grammar-feature:aspect:have-been",
+        unitType: "grammar-feature",
+        grade: "hard",
+        contextSentenceHash: "sentence-grammar-1"
+      })
+    ]);
+  });
+
   it("bounds learning item band backfills", async () => {
     const items = new InMemoryLearningItemRepository({
       "word:lemma-city": createLearningItem({
