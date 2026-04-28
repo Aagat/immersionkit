@@ -364,6 +364,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       curriculumSkippedSentences: 0,
       curriculumSkippedWords: 0,
       curriculumSkippedPhrases: 0,
+      grammarDueSentenceCount: 0,
       sentenceRankingReasons: [],
       phraseDecisionSamples: collectPhraseDecisionSamples(),
       tokenDecisionSamples: collectTokenDecisionSamples(),
@@ -1952,6 +1953,7 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     curriculumSkippedSentences: 0,
     curriculumSkippedWords: 0,
     curriculumSkippedPhrases: 0,
+    grammarDueSentenceCount: 0,
     sentenceRankingReasons: [],
     phraseDecisionSamples: collectPhraseDecisionSamples(),
     tokenDecisionSamples: collectTokenDecisionSamples(),
@@ -1995,6 +1997,8 @@ function updateDiagnostics(runtimeState: RuntimeState) {
       processing.curriculumSkippedWords;
     runtimeState.diagnostics.curriculumSkippedPhrases =
       processing.curriculumSkippedPhrases;
+    runtimeState.diagnostics.grammarDueSentenceCount =
+      countGrammarDueSentenceReasons(processing.sentenceRankingReasons);
     runtimeState.diagnostics.sentenceRankingReasons =
       processing.sentenceRankingReasons;
   }
@@ -2018,6 +2022,14 @@ function updateCurriculumDiagnosticsFromRanking(state: ProcessingState) {
     first?.activeBandId ?? state.activeCurriculumBandId;
   state.curriculumSkippedSentences = curriculumReasons.filter(
     (reason) => !reason.eligible
+  ).length;
+}
+
+function countGrammarDueSentenceReasons(
+  reasons: readonly PageDiagnosticsSentenceRankingReason[]
+): number {
+  return reasons.filter(
+    (reason) => (reason.signals?.grammarDueValue ?? 0) > 0
   ).length;
 }
 

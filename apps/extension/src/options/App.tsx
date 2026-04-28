@@ -763,6 +763,10 @@ export function OptionsApp() {
                   label="Phrase band skips"
                   value={formatCount(pageDiagnostics?.curriculumSkippedPhrases ?? 0)}
                 />
+                <MetricCard
+                  label="Due grammar"
+                  value={formatCount(pageDiagnostics?.grammarDueSentenceCount ?? 0)}
+                />
               </div>
 
               <p className="support-line muted">
@@ -1100,9 +1104,10 @@ function formatRankingSignals(
     `vocab ${signals.vocabularyFit.toFixed(2)}`,
     `grammar ${signals.grammarFit.toFixed(2)}`,
     `due ${signals.dueTargetValue.toFixed(2)}`,
+    signals.grammarDueValue ? `grammar due ${signals.grammarDueValue.toFixed(2)}` : null,
     `phrase ${signals.chunkUsefulness.toFixed(2)}`,
     `ambiguity ${signals.ambiguityPenalty.toFixed(2)}`
-  ].join(" · ");
+  ].filter(Boolean).join(" · ");
 }
 
 function formatRankingCurriculum(

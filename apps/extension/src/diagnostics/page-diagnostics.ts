@@ -33,6 +33,7 @@ export type PageDiagnosticsSnapshot = {
   curriculumSkippedSentences: number;
   curriculumSkippedWords: number;
   curriculumSkippedPhrases: number;
+  grammarDueSentenceCount: number;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   phraseDecisionSamples: PageDiagnosticsPhraseSample[];
   tokenDecisionSamples: PageDiagnosticsTokenSample[];
