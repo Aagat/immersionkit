@@ -12,6 +12,7 @@ import type {
 } from "@immersionkit/shared";
 
 import { BackgroundLearningItemService } from "./learning-items";
+import { CurriculumProgressionService } from "./curriculum-progression";
 import { IndexedDbSentenceAnalysisCacheRepository } from "./sentence-analysis-cache";
 import {
   SentenceQueueOrchestrator,
@@ -19,6 +20,7 @@ import {
   type SentenceTranslationDelivery
 } from "./sentence-queue";
 import { ensureSeedLexiconReady } from "./seed-lexicon";
+import { loadBackgroundRuntimeConfig } from "./settings";
 
 type RefreshActiveTabResponse =
   | {
@@ -63,6 +65,7 @@ const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType))
 export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
   private readonly learningItems: BackgroundLearningItemService;
+  private readonly curriculumProgression: CurriculumProgressionService;
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
   private isBooted = false;
 
@@ -72,6 +75,7 @@ export class BackgroundRuntimeCoordinator {
         this.deliverFreshSentenceTranslations(deliveries)
     });
     this.learningItems = new BackgroundLearningItemService();
+    this.curriculumProgression = new CurriculumProgressionService();
     this.sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
   }
 
@@ -261,6 +265,9 @@ export class BackgroundRuntimeCoordinator {
   ) {
     try {
       const item = await this.learningItems.recordQualifiedExposure(message);
+      if (item) {
+        await this.advanceCurriculumAfterExposure();
+      }
       sendResponse({
         ok: true,
         stored: Boolean(item)
@@ -271,6 +278,19 @@ export class BackgroundRuntimeCoordinator {
         ok: false,
         error: "exposure-evidence-failed"
       });
+    }
+  }
+
+  private async advanceCurriculumAfterExposure(): Promise<void> {
+    try {
+      const runtimeConfig = await loadBackgroundRuntimeConfig();
+      await this.curriculumProgression.advanceAfterImplicitEvidence({
+        config: runtimeConfig.curriculum.config,
+        profile: runtimeConfig.curriculum.profile,
+        items: await this.learningItems.listItems()
+      });
+    } catch (error) {
+      console.warn("ImmersionKit curriculum progression failed.", error);
     }
   }
 
