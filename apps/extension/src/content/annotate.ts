@@ -438,6 +438,28 @@ export function restoreAnnotatedNodes(root: ParentNode = document): number {
   return wrappers.length;
 }
 
+export function readAnnotatedNodeOriginalText(wrapper: HTMLElement): string | null {
+  if (
+    !wrapper.hasAttribute(IMMERSIONKIT_NODE_ATTRIBUTE) ||
+    !wrapper.hasAttribute(IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE)
+  ) {
+    return null;
+  }
+
+  return decodeOriginalText(wrapper.getAttribute(IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE));
+}
+
+export function restoreAnnotatedElement(wrapper: HTMLElement): Text | null {
+  const originalText = readAnnotatedNodeOriginalText(wrapper);
+  if (originalText === null) {
+    return null;
+  }
+
+  const textNode = document.createTextNode(originalText);
+  wrapper.replaceWith(textNode);
+  return textNode;
+}
+
 export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | null {
   const tokenId = tokenElement.getAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE);
   const nodeId = tokenElement.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);

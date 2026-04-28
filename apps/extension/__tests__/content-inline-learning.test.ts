@@ -713,6 +713,162 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("renders phrase units from fresh background analysis without a page reload", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "I used to visit the old city often.";
+        const sentenceHash = hashSentence(sourceSentence);
+        const phraseId = "phrase:pattern:used-to-visit";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:14:00.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetLearningItems
+          ) {
+            return {
+              ok: true,
+              items: [
+                {
+                  itemId: `phrase:${phraseId}`,
+                  unitRefId: phraseId,
+                  unitType: "phrase",
+                  sourceText: "used to visit",
+                  targetText: "solia visitar",
+                  status: "learning",
+                  introducedAt: "2026-04-18T10:00:00.000Z",
+                  nextReviewAt: "2026-04-19T10:00:00.000Z",
+                  interval: 600000,
+                  ease: 2.3,
+                  lapses: 0,
+                  assistCount: 0,
+                  qualifiedExposureCount: 0,
+                  consecutiveUnassistedCount: 0,
+                  distinctContextCount: 0,
+                  suspended: false
+                }
+              ]
+            };
+          }
+
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetSentenceAnalysisCache
+          ) {
+            return {
+              ok: true,
+              entries: []
+            };
+          }
+
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.QueueSentenceCandidates
+          ) {
+            return {
+              ok: true,
+              analysisResults: [
+                {
+                  cacheHit: false,
+                  entry: {
+                    sentenceHash,
+                    analyzerVersion: "fixture-v1",
+                    analyzerId: "fixture-annotated",
+                    sourceText: sourceSentence,
+                    tokens: [],
+                    lemmas: [],
+                    posTags: [],
+                    chunks: [],
+                    grammarFeatures: [],
+                    createdAt: "2026-04-18T10:14:00.000Z",
+                    lastAccessedAt: "2026-04-18T10:14:00.000Z",
+                    contextualWordCandidates: [],
+                    phraseMatches: [
+                      {
+                        occurrenceId: "occurrence-used-to-visit",
+                        phraseId,
+                        sentenceHash,
+                        analyzerVersion: "fixture-v1",
+                        sourceText: "used to visit",
+                        normalizedSourceText: "used to visit",
+                        sourceKind: "pattern-match",
+                        category: "grammar-carrier",
+                        ruleId: "used-to-verb",
+                        span: {
+                          startToken: 1,
+                          endToken: 4,
+                          startChar: 2,
+                          endChar: 15
+                        },
+                        confidence: 0.91
+                      }
+                    ]
+                  }
+                }
+              ],
+              cachedResults: []
+            };
+          }
+
+          return undefined;
+        });
+
+        try {
+          await bootContentScript();
+          await wait(120);
+
+          const phrase = document.querySelector<HTMLElement>(
+            `[data-ik-phrase-id='${phraseId}']`
+          );
+          expect(phrase).toBeTruthy();
+          expect(phrase?.textContent).toBe("solia visitar");
+          expect(document.querySelector("[data-ik-lemma-id='lemma-city']")).toBeTruthy();
+
+          const diagnostics = (
+            await chromeStub.dispatchRuntimeMessage({
+              type: PAGE_DIAGNOSTICS_MESSAGE_TYPE
+            })
+          )[0] as {
+            freshPhraseAnalysisHits?: number;
+            freshPhraseRerenders?: number;
+            phraseDecisionSamples?: Array<{ phraseId: string | null; selected: boolean }>;
+          };
+
+          expect(diagnostics.freshPhraseAnalysisHits).toBe(1);
+          expect(diagnostics.freshPhraseRerenders).toBe(1);
+          expect(diagnostics.phraseDecisionSamples).toContainEqual(
+            expect.objectContaining({
+              phraseId,
+              selected: true
+            })
+          );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("uses cached analysis to skip unsafe ambiguous words before initial injection", async () => {
     await withFixtureDom(
       "article-basic.html",

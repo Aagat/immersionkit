@@ -2,6 +2,7 @@ import {
   evaluateCurriculumEligibility,
   RuntimeMessageType,
   hashString,
+  normalizeToken,
   resolveActiveCurriculumBand,
   shouldReceiveDueReviewBoost
 } from "@immersionkit/shared";
@@ -28,8 +29,10 @@ import {
   applySentenceAnalysisDecisions,
   applyTokenStatusUpdate,
   processTextNode,
+  readAnnotatedNodeOriginalText,
   readPhraseMetadata,
   readTokenMetadata,
+  restoreAnnotatedElement,
   restoreAnnotatedNodes
 } from "./annotate";
 import type {
@@ -48,8 +51,10 @@ import type {
   TokenStatusUpdatedDetail
 } from "./contracts";
 import {
+  IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE,
   IMMERSIONKIT_ROOT_ATTRIBUTE,
   IMMERSIONKIT_TOKEN_ATTRIBUTE,
+  IMMERSIONKIT_NODE_ATTRIBUTE,
   IMMERSIONKIT_WORD_SELECTOR
 } from "./constants";
 import {
@@ -96,6 +101,8 @@ type ProcessingState = {
   sentenceNotesRendered: number;
   mutationCacheRefreshes: number;
   mutationCacheRefreshHits: number;
+  freshPhraseAnalysisHits: number;
+  freshPhraseRerenders: number;
   curriculumConfigId: string | null;
   activeCurriculumBandId: string | null;
   curriculumSkippedSentences: number;
@@ -133,6 +140,7 @@ const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const UI_THEME_ATTRIBUTE = "data-ik-ui-theme";
 const TOKEN_DIAGNOSTICS_SAMPLE_LIMIT = 8;
 const PHRASE_DIAGNOSTICS_SAMPLE_LIMIT = 8;
+const FRESH_PHRASE_RERENDER_LIMIT = 20;
 const STATUS_BUTTONS: readonly {
   status: InteractiveVocabStatus;
   label: string;
@@ -343,6 +351,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceNotesRendered: 0,
       mutationCacheRefreshes: 0,
       mutationCacheRefreshHits: 0,
+      freshPhraseAnalysisHits: 0,
+      freshPhraseRerenders: 0,
       sentenceNotesVisible: countSentenceNotes(),
       curriculumConfigId: null,
       activeCurriculumBandId: null,
@@ -403,6 +413,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceNotesRendered: 0,
       mutationCacheRefreshes: 0,
       mutationCacheRefreshHits: 0,
+      freshPhraseAnalysisHits: 0,
+      freshPhraseRerenders: 0,
       curriculumConfigId: processingContext.curriculumConfig.configId,
       activeCurriculumBandId:
         resolveActiveCurriculumBand(
@@ -696,6 +708,7 @@ function queueSentenceCandidates(
       updateCurriculumDiagnosticsFromRanking(state);
       if (analysisEntries.length > 0) {
         state.analysisSuppressedTokens += applySentenceAnalysisDecisions(analysisEntries);
+        refreshFreshPhraseMatches(state, analysisEntries);
       }
 
       if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
@@ -740,6 +753,149 @@ function mergeCachedAnalysisMap<T>(
 
     target.set(sentenceHash, values);
   }
+}
+
+function refreshFreshPhraseMatches(
+  state: ProcessingState,
+  entries: readonly SentenceAnalysisEntry[]
+) {
+  if (!state.isActive) {
+    return;
+  }
+
+  const sentenceHashesWithPhrases = new Set<string>();
+  for (const entry of entries) {
+    const skipDecisions = entry.contextualWordCandidates.flatMap(
+      (candidate): CachedContextSkipDecision[] => {
+        if (candidate.decision !== "skip" || !candidate.lemmaId) {
+          return [];
+        }
+
+        const normalizedText =
+          candidate.normalizedText ?? normalizeToken(candidate.tokenText);
+        if (!normalizedText) {
+          return [];
+        }
+
+        return [
+          {
+            sentenceHash: entry.sentenceHash,
+            lemmaId: candidate.lemmaId,
+            normalizedText,
+            rationale: candidate.rationale
+          }
+        ];
+      }
+    );
+    if (skipDecisions.length > 0) {
+      state.cachedContextSkipDecisions.set(entry.sentenceHash, skipDecisions);
+    }
+
+    const phraseMatches = entry.phraseMatches.flatMap((match): CachedPhraseMatch[] => {
+      if (!match.phraseId || !match.sourceText || !match.normalizedSourceText) {
+        return [];
+      }
+
+      return [
+        {
+          occurrenceId: match.occurrenceId,
+          phraseId: match.phraseId,
+          sentenceHash: match.sentenceHash || entry.sentenceHash,
+          sourceText: match.sourceText,
+          normalizedSourceText: match.normalizedSourceText,
+          sourceKind: match.sourceKind,
+          category: match.category,
+          ruleId: match.ruleId,
+          span: match.span,
+          confidence: match.confidence
+        }
+      ];
+    });
+
+    if (phraseMatches.length === 0) {
+      continue;
+    }
+
+    state.cachedPhraseMatchesBySentenceHash.set(entry.sentenceHash, phraseMatches);
+    sentenceHashesWithPhrases.add(entry.sentenceHash);
+  }
+
+  if (sentenceHashesWithPhrases.size === 0) {
+    return;
+  }
+
+  state.freshPhraseAnalysisHits += sentenceHashesWithPhrases.size;
+  state.freshPhraseRerenders += rerenderAnnotatedNodesForSentenceHashes(
+    state,
+    sentenceHashesWithPhrases
+  );
+}
+
+function rerenderAnnotatedNodesForSentenceHashes(
+  state: ProcessingState,
+  sentenceHashes: ReadonlySet<string>
+): number {
+  if (!document.body || !state.isActive) {
+    return 0;
+  }
+
+  const wrappers = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      `[${IMMERSIONKIT_NODE_ATTRIBUTE}][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
+    )
+  );
+  const roots = new Set<ParentNode>();
+  let rerendered = 0;
+  const observer = state.observer;
+
+  observer?.disconnect();
+
+  for (const wrapper of wrappers) {
+    if (rerendered >= FRESH_PHRASE_RERENDER_LIMIT) {
+      break;
+    }
+
+    const originalText = readAnnotatedNodeOriginalText(wrapper);
+    if (
+      originalText === null ||
+      !segmentSentences(originalText).some((sentence) =>
+        sentenceHashes.has(sentence.hash)
+      )
+    ) {
+      continue;
+    }
+
+    const parent = wrapper.parentNode;
+    const restoredText = restoreAnnotatedElement(wrapper);
+    if (!restoredText || !parent) {
+      continue;
+    }
+
+    roots.add(parent);
+    rerendered += 1;
+  }
+
+  if (roots.size === 0) {
+    if (state.isActive && observer && document.body) {
+      observer.observe(document.body, {
+        childList: true,
+        characterData: true,
+        subtree: true
+      });
+    }
+    return rerendered;
+  }
+
+  processRoots(state, [...roots]);
+  if (state.isActive && observer && document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  }
+
+  return rerendered;
 }
 
 function dedupeSentenceCandidates(
@@ -1685,6 +1841,8 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     sentenceNotesVisible: countSentenceNotes(),
     mutationCacheRefreshes: 0,
     mutationCacheRefreshHits: 0,
+    freshPhraseAnalysisHits: 0,
+    freshPhraseRerenders: 0,
     curriculumConfigId: null,
     activeCurriculumBandId: null,
     curriculumSkippedSentences: 0,
@@ -1720,6 +1878,10 @@ function updateDiagnostics(runtimeState: RuntimeState) {
       processing.mutationCacheRefreshes;
     runtimeState.diagnostics.mutationCacheRefreshHits =
       processing.mutationCacheRefreshHits;
+    runtimeState.diagnostics.freshPhraseAnalysisHits =
+      processing.freshPhraseAnalysisHits;
+    runtimeState.diagnostics.freshPhraseRerenders =
+      processing.freshPhraseRerenders;
     runtimeState.diagnostics.curriculumConfigId = processing.curriculumConfigId;
     runtimeState.diagnostics.activeCurriculumBandId =
       processing.activeCurriculumBandId;

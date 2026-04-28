@@ -706,6 +706,14 @@ export function OptionsApp() {
                   value={formatCount(pageDiagnostics?.mutationCacheRefreshes ?? 0)}
                 />
                 <MetricCard
+                  label="Fresh phrase hits"
+                  value={formatCount(pageDiagnostics?.freshPhraseAnalysisHits ?? 0)}
+                />
+                <MetricCard
+                  label="Phrase rerenders"
+                  value={formatCount(pageDiagnostics?.freshPhraseRerenders ?? 0)}
+                />
+                <MetricCard
                   label="Curriculum"
                   value={pageDiagnostics?.activeCurriculumBandId ?? "unknown"}
                 />
