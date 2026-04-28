@@ -1866,6 +1866,147 @@ describe("content inline learning loop", () => {
       }
     );
   });
+
+  it("records grammar assist evidence when sentence details reveal known grammar features", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, window, wait }) => {
+        const sourceSentence = "The city has been important for every visitor.";
+        const sentenceHash = hashSentence(sourceSentence);
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": {
+            discoveryRate: 1,
+            sentenceTranslationEnabled: true,
+            provider: "openai"
+          },
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:19:00.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetSentenceAnalysisCache
+          ) {
+            return {
+              ok: true,
+              entries: [
+                {
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  analyzerId: "fixture-annotated",
+                  sourceText: sourceSentence,
+                  tokens: [],
+                  chunks: [],
+                  grammarFeatures: [
+                    {
+                      featureId: "grammar:aspect:have-been",
+                      featureKey: "aspect:have-been",
+                      label: "Have been",
+                      category: "tense-aspect",
+                      sourceText: "has been",
+                      normalizedSourceText: "has been",
+                      span: {
+                        startToken: 2,
+                        endToken: 4,
+                        startChar: 9,
+                        endChar: 17
+                      },
+                      evidence: ["fixture"],
+                      confidence: 0.86
+                    }
+                  ],
+                  phraseMatches: [],
+                  contextualWordCandidates: [],
+                  createdAt: "2026-04-18T10:00:00.000Z",
+                  lastAccessedAt: "2026-04-18T10:00:00.000Z"
+                }
+              ]
+            };
+          }
+
+          return undefined;
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          await chromeStub.dispatchRuntimeMessage({
+            type: RuntimeMessageType.SentenceTranslationResult,
+            results: [
+              {
+                sentenceHash,
+                sourceText: sourceSentence,
+                translatedText: "La ciudad ha sido importante para cada visitante.",
+                learningNote: createLearningNote("Uses a perfect aspect pattern.", {
+                  grammarFocus: "Has been marks a present perfect idea."
+                })
+              }
+            ]
+          });
+          await wait(20);
+
+          expect(
+            chromeStub.sentMessages.find(
+              (message) =>
+                Boolean(message) &&
+                typeof message === "object" &&
+                (message as { itemId?: unknown }).itemId ===
+                  "grammar-feature:aspect:have-been"
+            )
+          ).toBeUndefined();
+
+          const note = document.querySelector<HTMLElement>(
+            `[data-ik-sentence-note='true'][data-ik-sentence-hash='${sentenceHash}']`
+          );
+          expect(note).toBeTruthy();
+          note?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          const assistMessage = chromeStub.sentMessages.find(
+            (message): message is {
+              type: string;
+              itemId: string;
+              assistType: string;
+              contextSentenceHash: string;
+              source: string;
+            } =>
+              Boolean(message) &&
+              typeof message === "object" &&
+              (message as { itemId?: unknown }).itemId ===
+                "grammar-feature:aspect:have-been"
+          );
+
+          expect(assistMessage).toMatchObject({
+            type: CONTENT_ASSIST_EVENT_MESSAGE_TYPE,
+            itemId: "grammar-feature:aspect:have-been",
+            assistType: "grammar-note-reveal",
+            contextSentenceHash: sentenceHash,
+            source: "content-grammar-note"
+          });
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
 });
 
 function getInjectedTokens(document: Document): HTMLElement[] {

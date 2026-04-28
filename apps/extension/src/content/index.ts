@@ -82,6 +82,7 @@ import {
   refreshLearningItemsByUnitRefIds
 } from "./storage";
 import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
+import type { CachedGrammarFeature } from "./storage";
 import "./styles.css";
 
 type ProcessingState = {
@@ -92,6 +93,7 @@ type ProcessingState = {
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
   seenSentenceHashes: Set<string>;
   processedTextNodes: number;
   injectedTokens: number;
@@ -405,6 +407,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       cachedContextSkipDecisions: processingContext.cachedContextSkipDecisions,
       cachedPhraseMatchesBySentenceHash:
         processingContext.cachedPhraseMatchesBySentenceHash,
+      cachedGrammarFeaturesBySentenceHash:
+        processingContext.cachedGrammarFeaturesBySentenceHash,
       seenSentenceHashes: new Set<string>(),
       processedTextNodes: 0,
       injectedTokens: 0,
@@ -576,7 +580,8 @@ async function refreshScopedAnalysisCacheForRoots(
   const sentenceHashes = collectRootsSentenceHashes(roots).filter(
     (hash) =>
       !state.cachedContextSkipDecisions.has(hash) &&
-      !state.cachedPhraseMatchesBySentenceHash.has(hash)
+      !state.cachedPhraseMatchesBySentenceHash.has(hash) &&
+      !state.cachedGrammarFeaturesBySentenceHash.has(hash)
   );
 
   if (sentenceHashes.length === 0) {
@@ -595,6 +600,10 @@ async function refreshScopedAnalysisCacheForRoots(
     mergeCachedAnalysisMap(
       state.cachedPhraseMatchesBySentenceHash,
       context.cachedPhraseMatchesBySentenceHash
+    );
+    mergeCachedAnalysisMap(
+      state.cachedGrammarFeaturesBySentenceHash,
+      context.cachedGrammarFeaturesBySentenceHash
     );
   } catch (error) {
     console.warn("ImmersionKit failed to refresh scoped sentence analysis cache.", {
@@ -799,6 +808,36 @@ async function refreshFreshPhraseMatches(
     );
     if (skipDecisions.length > 0) {
       state.cachedContextSkipDecisions.set(entry.sentenceHash, skipDecisions);
+    }
+
+    const grammarFeatures = entry.grammarFeatures.flatMap(
+      (feature): CachedGrammarFeature[] => {
+        const featureKey = readNonEmptyString(feature.featureKey);
+        const label = readNonEmptyString(feature.label);
+        if (!featureKey || !label) {
+          return [];
+        }
+
+        return [
+          {
+            featureId: readNonEmptyString(feature.featureId) ?? `grammar:${featureKey}`,
+            featureKey,
+            label,
+            category: feature.category,
+            sourceText: readNonEmptyString(feature.sourceText) ?? label,
+            confidence:
+              typeof feature.confidence === "number" && Number.isFinite(feature.confidence)
+                ? feature.confidence
+                : 0
+          }
+        ];
+      }
+    );
+    if (grammarFeatures.length > 0) {
+      state.cachedGrammarFeaturesBySentenceHash.set(
+        entry.sentenceHash,
+        grammarFeatures
+      );
     }
 
     const phraseMatches = entry.phraseMatches.flatMap((match): CachedPhraseMatch[] => {
@@ -1167,6 +1206,12 @@ function openSentencePopover(
 
   closePopover(runtimeState);
   setActiveToken(runtimeState, noteElement);
+  runtimeState.processing?.evidenceTracker.recordGrammarAssist(
+    detail.sentenceHash,
+    runtimeState.processing.cachedGrammarFeaturesBySentenceHash.get(
+      detail.sentenceHash
+    ) ?? []
+  );
 
   const popover = renderSentencePopover(noteElement, detail);
   popover.addEventListener("click", (event) => {

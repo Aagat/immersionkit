@@ -2,6 +2,7 @@ import { RuntimeMessageType, hashString } from "@immersionkit/shared";
 
 import { IMMERSIONKIT_WORD_SELECTOR } from "./constants";
 import type { PhraseMetadata, TokenMetadata } from "./contracts";
+import type { CachedGrammarFeature } from "./storage";
 
 export const CONTENT_ASSIST_EVENT_MESSAGE_TYPE = RuntimeMessageType.AssistEvent;
 export const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
@@ -98,6 +99,36 @@ export class ContentEvidenceTracker {
       phraseId: metadata.phraseId,
       source: "content-phrase-interaction"
     });
+  }
+
+  recordGrammarAssist(
+    sentenceHash: string,
+    features: readonly CachedGrammarFeature[]
+  ): void {
+    const uniqueFeatureKeys = new Set<string>();
+    for (const feature of features) {
+      const featureKey = feature.featureKey.trim();
+      if (!featureKey || uniqueFeatureKeys.has(featureKey)) {
+        continue;
+      }
+
+      uniqueFeatureKeys.add(featureKey);
+      const itemId = grammarFeatureItemId(featureKey);
+      const key = evidenceDedupeKey(itemId, sentenceHash);
+      this.assistedAt.set(key, this.now());
+
+      emitEvidenceMessage({
+        type: CONTENT_ASSIST_EVENT_MESSAGE_TYPE,
+        eventId: this.nextEventId("assist", key),
+        itemId,
+        assistType: "grammar-note-reveal",
+        contextSentenceHash: sentenceHash,
+        hostname: window.location.hostname,
+        sessionId: this.sessionId,
+        createdAt: new Date(this.now()).toISOString(),
+        source: "content-grammar-note"
+      });
+    }
   }
 
   stop(): void {
@@ -245,6 +276,10 @@ function wordItemId(lemmaId: string): string {
 
 function phraseItemId(phraseId: string): string {
   return `phrase:${phraseId}`;
+}
+
+function grammarFeatureItemId(featureKey: string): string {
+  return `grammar-feature:${featureKey}`;
 }
 
 function evidenceDedupeKey(itemId: string, sentenceHash?: string): string {

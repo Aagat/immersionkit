@@ -237,6 +237,47 @@ describe("background learning item service", () => {
     });
   });
 
+  it("persists grammar assist evidence for existing grammar feature learning items", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository({
+      "grammar-feature:aspect:have-been": createLearningItem({
+        itemId: "grammar-feature:aspect:have-been",
+        unitRefId: "aspect:have-been",
+        unitType: "grammar-feature",
+        sourceText: "Have been",
+        targetText: "",
+        bandId: "level-3a"
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordAssist({
+      type: RuntimeMessageType.AssistEvent,
+      eventId: "assist-grammar-1",
+      itemId: "grammar-feature:aspect:have-been",
+      assistType: "grammar-note-reveal",
+      contextSentenceHash: "sentence-grammar-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      createdAt: "2026-04-18T10:00:00.000Z"
+    });
+
+    expect(item).toMatchObject({
+      itemId: "grammar-feature:aspect:have-been",
+      unitType: "grammar-feature",
+      assistCount: 1,
+      bandId: "level-3a"
+    });
+    expect(history.reviewEvents).toEqual([
+      expect.objectContaining({
+        itemId: "grammar-feature:aspect:have-been",
+        unitType: "grammar-feature",
+        grade: "hard",
+        contextSentenceHash: "sentence-grammar-1"
+      })
+    ]);
+  });
+
   it("bounds learning item band backfills", async () => {
     const items = new InMemoryLearningItemRepository({
       "word:lemma-city": createLearningItem({

@@ -4,6 +4,7 @@ import type {
   CurriculumRuntimeProfileInput,
   ContextualWordCandidate,
   ExtensionSettings,
+  GrammarFeatureMatch,
   LearningItem,
   PhraseOccurrence,
   SeedLexiconEntry,
@@ -59,6 +60,7 @@ export type ProcessingContext = {
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
   curriculumConfig: CurriculumConfig;
   learningProfile: CurriculumRuntimeProfileInput;
 };
@@ -67,6 +69,7 @@ export type CachedSentenceAnalysisContext = {
   entryCount: number;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
 };
 
 export type CachedContextSkipDecision = {
@@ -88,6 +91,11 @@ export type CachedPhraseMatch = Pick<
   | "ruleId"
   | "span"
   | "confidence"
+>;
+
+export type CachedGrammarFeature = Pick<
+  GrammarFeatureMatch,
+  "featureId" | "featureKey" | "label" | "category" | "sourceText" | "confidence"
 >;
 
 export type PersistVocabStatusInput = {
@@ -155,6 +163,8 @@ export async function loadProcessingContext(
       sentenceAnalysisContext.cachedContextSkipDecisions,
     cachedPhraseMatchesBySentenceHash:
       sentenceAnalysisContext.cachedPhraseMatchesBySentenceHash,
+    cachedGrammarFeaturesBySentenceHash:
+      sentenceAnalysisContext.cachedGrammarFeaturesBySentenceHash,
     curriculumConfig: resolveCurriculumConfig(
       isRecord(rawCurriculumConfig)
         ? (rawCurriculumConfig as Partial<CurriculumConfig>)
@@ -172,7 +182,8 @@ export async function loadCachedSentenceAnalysisContext(
   return {
     entryCount: sentenceAnalysisCache.length,
     cachedContextSkipDecisions: parseCachedContextSkipDecisions(sentenceAnalysisCache),
-    cachedPhraseMatchesBySentenceHash: parseCachedPhraseMatches(sentenceAnalysisCache)
+    cachedPhraseMatchesBySentenceHash: parseCachedPhraseMatches(sentenceAnalysisCache),
+    cachedGrammarFeaturesBySentenceHash: parseCachedGrammarFeatures(sentenceAnalysisCache)
   };
 }
 
@@ -549,6 +560,60 @@ function parseCachedPhraseMatches(input: unknown): Map<string, CachedPhraseMatch
   return matchesBySentenceHash;
 }
 
+function parseCachedGrammarFeatures(input: unknown): Map<string, CachedGrammarFeature[]> {
+  const featuresBySentenceHash = new Map<string, CachedGrammarFeature[]>();
+  const values = Array.isArray(input)
+    ? input
+    : isRecord(input)
+      ? Object.values(input)
+      : [];
+
+  for (const entry of values) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const sentenceHash = readString(entry.sentenceHash);
+    if (!sentenceHash || !Array.isArray(entry.grammarFeatures)) {
+      continue;
+    }
+
+    const features = entry.grammarFeatures.flatMap(
+      (feature): CachedGrammarFeature[] => {
+        const parsedFeature = normalizeCachedGrammarFeature(feature);
+        return parsedFeature ? [parsedFeature] : [];
+      }
+    );
+    if (features.length > 0) {
+      featuresBySentenceHash.set(sentenceHash, features);
+    }
+  }
+
+  return featuresBySentenceHash;
+}
+
+function normalizeCachedGrammarFeature(value: unknown): CachedGrammarFeature | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const featureKey = readString(value.featureKey);
+  const label = readString(value.label);
+  const category = readGrammarFeatureCategory(value.category);
+  if (!featureKey || !label || !category) {
+    return null;
+  }
+
+  return {
+    featureId: readString(value.featureId) ?? `grammar:${featureKey}`,
+    featureKey,
+    label,
+    category,
+    sourceText: readString(value.sourceText) ?? label,
+    confidence: readNumber(value.confidence, 0)
+  };
+}
+
 function normalizeCachedPhraseMatch(
   fallbackSentenceHash: string,
   input: unknown
@@ -755,6 +820,18 @@ function readPhraseCategory(value: unknown): CachedPhraseMatch["category"] | nul
     value === "grammar-carrier" ||
     value === "adjective-noun" ||
     value === "noun-chunk"
+    ? value
+    : null;
+}
+
+function readGrammarFeatureCategory(
+  value: unknown
+): CachedGrammarFeature["category"] | null {
+  return value === "tense-aspect" ||
+    value === "modality" ||
+    value === "syntax" ||
+    value === "function" ||
+    value === "other"
     ? value
     : null;
 }
