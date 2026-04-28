@@ -1,6 +1,7 @@
 import type {
   AssistEventMessage,
   LearningItem,
+  LearningUnitType,
   QualifiedExposureEventMessage,
   ReviewEvent,
   ReviewGrade
@@ -8,6 +9,7 @@ import type {
 import {
   REVIEW_INTERVALS_MS,
   RuntimeMessageType,
+  resolveActiveCurriculumBand,
   scheduleAssistReview,
   scheduleQualifiedExposure
 } from "@immersionkit/shared";
@@ -23,6 +25,7 @@ import {
   type LearningItemRecord,
   type LearningItemRepository
 } from "./learning-item-repository";
+import { loadBackgroundRuntimeConfig } from "./settings";
 
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
 const EXPOSURE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
@@ -32,7 +35,10 @@ export class BackgroundLearningItemService {
     private readonly historyRepository: LearningHistoryRepository =
       new IndexedDbLearningHistoryRepository(),
     private readonly itemRepository: LearningItemRepository =
-      new IndexedDbLearningItemRepository()
+      new IndexedDbLearningItemRepository(),
+    private readonly resolveActiveBandId: (
+      unitType: LearningUnitType
+    ) => Promise<string | null> = resolveActiveLearningBandId
   ) {}
 
   async listItems(): Promise<LearningItem[]> {
@@ -65,7 +71,8 @@ export class BackgroundLearningItemService {
       return null;
     }
 
-    const nextItem = scheduleAssistReview(item, now);
+    const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
+    const nextItem = scheduleAssistReview(bandedItem, now);
 
     state.items[nextItem.itemId] = nextItem;
     state.events.push(createReviewEvent(message, "hard", now));
@@ -88,6 +95,7 @@ export class BackgroundLearningItemService {
       return null;
     }
 
+    const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
     const contextUpdate = updateContextHistory({
       history: state.contextHistory[message.itemId],
       itemId: message.itemId,
@@ -96,11 +104,12 @@ export class BackgroundLearningItemService {
     });
     state.contextHistory[message.itemId] = contextUpdate.history;
     if (contextUpdate.isDuplicateWithinWindow) {
+      state.items[bandedItem.itemId] = bandedItem;
       await this.persistState(state);
-      return item;
+      return bandedItem;
     }
 
-    const scheduled = scheduleQualifiedExposure(item, {
+    const scheduled = scheduleQualifiedExposure(bandedItem, {
       now,
       wasAssisted: message.wasAssisted,
       isDistinctContext: contextUpdate.isNewContext
@@ -179,6 +188,31 @@ function ensureLearningItem(
   }
 
   return isWordItemId(itemId) ? ensureWordLearningItem(existing, itemId, now) : null;
+}
+
+async function assignBandIfMissing(
+  item: LearningItem,
+  resolveActiveBandId: (unitType: LearningUnitType) => Promise<string | null>
+): Promise<LearningItem> {
+  if (item.bandId) {
+    return item;
+  }
+
+  const bandId = await resolveActiveBandId(item.unitType);
+  return bandId ? { ...item, bandId } : item;
+}
+
+async function resolveActiveLearningBandId(
+  unitType: LearningUnitType
+): Promise<string | null> {
+  const runtimeConfig = await loadBackgroundRuntimeConfig();
+  return (
+    resolveActiveCurriculumBand(
+      runtimeConfig.curriculum.config,
+      unitType,
+      runtimeConfig.curriculum.profile
+    )?.bandId ?? null
+  );
 }
 
 function createReviewEvent(

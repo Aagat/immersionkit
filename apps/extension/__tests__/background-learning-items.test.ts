@@ -1,5 +1,9 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
-import type { LearningItem, ReviewEvent } from "@immersionkit/shared";
+import type {
+  LearningItem,
+  LearningUnitType,
+  ReviewEvent
+} from "@immersionkit/shared";
 import { describe, expect, it } from "vitest";
 
 import { BackgroundLearningItemService } from "../src/background/learning-items";
@@ -82,6 +86,63 @@ describe("background learning item service", () => {
         contextSentenceHash: "sentence-1"
       })
     ]);
+  });
+
+  it("assigns the active curriculum band when evidence creates a learning item", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository();
+    const service = new BackgroundLearningItemService(
+      history,
+      items,
+      createBandResolver("level-1a")
+    );
+
+    const item = await service.recordAssist({
+      type: RuntimeMessageType.AssistEvent,
+      eventId: "assist-band-1",
+      itemId: "word:lemma-city",
+      assistType: "manual-lookup",
+      contextSentenceHash: "sentence-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      createdAt: "2026-04-18T10:00:00.000Z"
+    });
+
+    expect(item?.bandId).toBe("level-1a");
+    expect(items.items["word:lemma-city"]?.bandId).toBe("level-1a");
+  });
+
+  it("preserves existing learning item bands when evidence is recorded", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository({
+      "phrase:pattern:used-to-visit": createLearningItem({
+        itemId: "phrase:pattern:used-to-visit",
+        unitRefId: "pattern:used-to-visit",
+        unitType: "phrase",
+        sourceText: "used to visit",
+        targetText: "solia visitar",
+        bandId: "level-1b"
+      })
+    });
+    const service = new BackgroundLearningItemService(
+      history,
+      items,
+      createBandResolver("level-2a")
+    );
+
+    const item = await service.recordAssist({
+      type: RuntimeMessageType.AssistEvent,
+      eventId: "assist-band-phrase-1",
+      itemId: "phrase:pattern:used-to-visit",
+      assistType: "phrase-gloss-reveal",
+      contextSentenceHash: "sentence-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      createdAt: "2026-04-18T10:00:00.000Z"
+    });
+
+    expect(item?.bandId).toBe("level-1b");
+    expect(items.items["phrase:pattern:used-to-visit"]?.bandId).toBe("level-1b");
   });
 
   it("lists learning items by durable unit ref ids", async () => {
@@ -358,6 +419,10 @@ function createReviewEvent(): ReviewEvent {
     sessionId: "session-1",
     createdAt: "2026-04-18T10:00:00.000Z"
   };
+}
+
+function createBandResolver(bandId: string) {
+  return (_unitType: LearningUnitType) => Promise.resolve(bandId);
 }
 
 class InMemoryLearningItemRepository implements LearningItemRepository {
