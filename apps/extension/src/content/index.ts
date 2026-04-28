@@ -29,6 +29,7 @@ import {
   applySentenceAnalysisDecisions,
   applyTokenStatusUpdate,
   processTextNode,
+  type PhraseRenderRejection,
   readAnnotatedNodeOriginalText,
   readPhraseMetadata,
   readTokenMetadata,
@@ -112,6 +113,7 @@ type ProcessingState = {
   curriculumConfig: CurriculumConfig;
   learningProfile: CurriculumRuntimeProfileInput;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
+  unrenderedPhraseRejections: PhraseRenderRejection[];
   pendingRoots: Set<ParentNode>;
   flushHandle: number | null;
   observer: MutationObserver | null;
@@ -429,6 +431,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       curriculumConfig: processingContext.curriculumConfig,
       learningProfile: processingContext.learningProfile,
       sentenceRankingReasons: [],
+      unrenderedPhraseRejections: [],
       pendingRoots: new Set<ParentNode>(),
       flushHandle: null,
       observer: null,
@@ -644,6 +647,12 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
       contextSkippedTokens += result.contextSkippedCount;
       curriculumSkippedWords += result.curriculumSkippedWordCount;
       curriculumSkippedPhrases += result.curriculumSkippedPhraseCount;
+      if (result.unrenderedPhraseRejections.length > 0) {
+        state.unrenderedPhraseRejections = [
+          ...state.unrenderedPhraseRejections,
+          ...result.unrenderedPhraseRejections
+        ].slice(-PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
+      }
 
       if (!result.replaced) {
         continue;
@@ -1934,7 +1943,9 @@ function updateDiagnostics(runtimeState: RuntimeState) {
   }
 
   runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
-  runtimeState.diagnostics.phraseDecisionSamples = collectPhraseDecisionSamples();
+  runtimeState.diagnostics.phraseDecisionSamples = collectPhraseDecisionSamples(
+    runtimeState.processing
+  );
   runtimeState.diagnostics.tokenDecisionSamples = collectTokenDecisionSamples();
   runtimeState.diagnostics.updatedAt = new Date().toISOString();
 }
@@ -1978,7 +1989,9 @@ function collectTokenDecisionSamples(): PageDiagnosticsTokenSample[] {
     }));
 }
 
-function collectPhraseDecisionSamples(): PageDiagnosticsPhraseSample[] {
+function collectPhraseDecisionSamples(
+  state: ProcessingState | null = null
+): PageDiagnosticsPhraseSample[] {
   const selected = Array.from(
     document.querySelectorAll<HTMLElement>("[data-ik-unit-kind='phrase']")
   ).map((phrase): PageDiagnosticsPhraseSample => ({
@@ -1999,7 +2012,29 @@ function collectPhraseDecisionSamples(): PageDiagnosticsPhraseSample[] {
     document.querySelectorAll<HTMLElement>("[data-ik-phrase-rejection-details]")
   ).flatMap(readPhraseRejectionDetails);
 
-  return [...selected, ...rejected].slice(0, PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
+  return [
+    ...selected,
+    ...rejected,
+    ...(state?.unrenderedPhraseRejections.map(toRejectedPhraseDecisionSample) ?? [])
+  ].slice(0, PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
+}
+
+function toRejectedPhraseDecisionSample(
+  entry: PhraseRenderRejection
+): PageDiagnosticsPhraseSample {
+  return {
+    phraseId: entry.phraseId,
+    sourceText: entry.sourceText,
+    targetText: entry.targetText,
+    selected: false,
+    rejectedReason: entry.reason,
+    sourceKind: entry.sourceKind,
+    category: entry.category,
+    dueStatus: null,
+    schedulerReason: null,
+    sentenceHash: entry.sentenceHash,
+    exposureEligible: false
+  };
 }
 
 function readPhraseRejectionDetails(

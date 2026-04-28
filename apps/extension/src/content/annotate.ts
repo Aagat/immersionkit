@@ -52,6 +52,7 @@ export type ProcessTextNodeResult = {
   curriculumSkippedWordCount: number;
   curriculumSkippedPhraseCount: number;
   sentenceCandidates: SentenceCandidateMetadata[];
+  unrenderedPhraseRejections: PhraseRenderRejection[];
 };
 
 export type ActivationDecision = {
@@ -136,6 +137,9 @@ function processWindowedTextNode(
     mergedResult.curriculumSkippedPhraseCount +=
       rendered.result.curriculumSkippedPhraseCount;
     mergedResult.sentenceCandidates.push(...rendered.result.sentenceCandidates);
+    mergedResult.unrenderedPhraseRejections.push(
+      ...rendered.result.unrenderedPhraseRejections
+    );
 
     if (rendered.replaced) {
       fragment.append(rendered.node);
@@ -399,7 +403,8 @@ function renderTextWindow(input: {
         contextSkippedCount,
         phraseRejectedCount: phraseCandidates.rejected.length,
         curriculumSkippedWordCount,
-        curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount
+        curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount,
+        unrenderedPhraseRejections: phraseCandidates.rejected
       }
     };
   }
@@ -417,7 +422,8 @@ function renderTextWindow(input: {
       phraseRejectedCount: phraseCandidates.rejected.length,
       curriculumSkippedWordCount,
       curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount,
-      sentenceCandidates
+      sentenceCandidates,
+      unrenderedPhraseRejections: []
     }
   };
 }
@@ -788,7 +794,7 @@ type PhraseRenderCandidate = {
   isDueForReview: boolean;
 };
 
-type PhraseRenderRejection = {
+export type PhraseRenderRejection = {
   phraseId: string;
   reason: string;
   sourceText: string | null;
@@ -1146,6 +1152,7 @@ function emptyResult(): ProcessTextNodeResult {
     phraseRejectedCount: 0,
     curriculumSkippedWordCount: 0,
     curriculumSkippedPhraseCount: 0,
-    sentenceCandidates: []
+    sentenceCandidates: [],
+    unrenderedPhraseRejections: []
   };
 }

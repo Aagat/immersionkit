@@ -1028,6 +1028,128 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("keeps diagnostics for phrase rejections when no wrapper is rendered", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "The old city holds quiet memory.";
+        const sentenceHash = hashSentence(sourceSentence);
+        const phraseId = "phrase:chunk:old-city:empty";
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": {
+            ...BASE_SETTINGS,
+            discoveryRate: 0
+          },
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 0,
+              updatedAt: "2026-04-18T10:14:00.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetLearningItems
+          ) {
+            return {
+              ok: true,
+              items: []
+            };
+          }
+
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetSentenceAnalysisCache
+          ) {
+            return {
+              ok: true,
+              entries: [
+                {
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  analyzerId: "fixture-annotated",
+                  sourceText: sourceSentence,
+                  tokens: [],
+                  lemmas: [],
+                  posTags: [],
+                  chunks: [],
+                  grammarFeatures: [],
+                  createdAt: "2026-04-18T10:14:00.000Z",
+                  lastAccessedAt: "2026-04-18T10:14:00.000Z",
+                  contextualWordCandidates: [],
+                  phraseMatches: [
+                    {
+                      occurrenceId: "occurrence-old-city",
+                      phraseId,
+                      sentenceHash,
+                      analyzerVersion: "fixture-v1",
+                      sourceText: "old city",
+                      normalizedSourceText: "old city",
+                      sourceKind: "chunk",
+                      category: "noun-chunk",
+                      ruleId: "chunk-noun-coherent-v1",
+                      span: {
+                        startToken: 1,
+                        endToken: 3,
+                        startChar: 4,
+                        endChar: 12
+                      },
+                      confidence: 0.88
+                    }
+                  ]
+                }
+              ]
+            };
+          }
+
+          return undefined;
+        });
+
+        try {
+          await bootContentScript();
+          await wait(80);
+
+          expect(document.querySelector("[data-ik-phrase-rejection-details]")).toBeNull();
+
+          const diagnostics = (
+            await chromeStub.dispatchRuntimeMessage({
+              type: PAGE_DIAGNOSTICS_MESSAGE_TYPE
+            })
+          )[0] as {
+            rejectedPhrases?: number;
+            phraseDecisionSamples?: Array<{
+              phraseId: string | null;
+              selected: boolean;
+              rejectedReason: string | null;
+            }>;
+          };
+
+          expect(diagnostics.rejectedPhrases).toBe(1);
+          expect(diagnostics.phraseDecisionSamples).toContainEqual(
+            expect.objectContaining({
+              phraseId,
+              selected: false,
+              rejectedReason: "missing-active-learning-item"
+            })
+          );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("uses cached analysis to skip unsafe ambiguous words before initial injection", async () => {
     await withFixtureDom(
       "article-basic.html",
