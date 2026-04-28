@@ -284,6 +284,7 @@ export type LearningItem = {
 export type ReviewEvent = {
   eventId: string;
   itemId: string;
+  unitType?: LearningUnitType;
   eventType: ReviewEventType;
   grade: ReviewGrade;
   contextSentenceHash?: string;

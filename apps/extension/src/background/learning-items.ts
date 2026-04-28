@@ -1,5 +1,6 @@
 import type {
   AssistEventMessage,
+  GrammarFeatureMatch,
   LearningItem,
   LearningUnitType,
   QualifiedExposureEventMessage,
@@ -57,6 +58,31 @@ export class BackgroundLearningItemService {
     return Object.values(await this.itemRepository.loadAll()).filter((item) =>
       requested.has(item.unitRefId)
     );
+  }
+
+  async upsertGrammarFeatureItems(
+    features: readonly GrammarFeatureMatch[],
+    now: string = new Date().toISOString()
+  ): Promise<LearningItem[]> {
+    const uniqueFeatures = dedupeGrammarFeatures(features);
+    if (uniqueFeatures.length === 0) {
+      return [];
+    }
+
+    const items = await this.itemRepository.loadAll();
+    const updatedItems: LearningItem[] = [];
+    for (const feature of uniqueFeatures) {
+      const item = await this.buildGrammarFeatureLearningItem(
+        items[buildGrammarFeatureItemId(feature.featureKey)],
+        feature,
+        now
+      );
+      items[item.itemId] = item;
+      updatedItems.push(item);
+    }
+
+    await this.itemRepository.persistAll(items);
+    return updatedItems;
   }
 
   async backfillMissingBands(limit: number = DEFAULT_BAND_BACKFILL_LIMIT): Promise<{
@@ -128,6 +154,41 @@ export class BackgroundLearningItemService {
     state.events.push(createReviewEvent(message, "hard", now));
     await this.persistState(state);
     return nextItem;
+  }
+
+  private async buildGrammarFeatureLearningItem(
+    existing: LearningItem | undefined,
+    feature: GrammarFeatureMatch,
+    now: string
+  ): Promise<LearningItem> {
+    const itemId = buildGrammarFeatureItemId(feature.featureKey);
+    const baseItem: LearningItem = existing
+      ? {
+          ...existing,
+          unitRefId: feature.featureKey,
+          unitType: "grammar-feature",
+          sourceText: feature.label || feature.featureKey
+        }
+      : {
+          itemId,
+          unitRefId: feature.featureKey,
+          unitType: "grammar-feature",
+          sourceText: feature.label || feature.featureKey,
+          targetText: "",
+          status: "new",
+          introducedAt: now,
+          nextReviewAt: now,
+          interval: REVIEW_INTERVALS_MS[0],
+          ease: 2.3,
+          lapses: 0,
+          assistCount: 0,
+          qualifiedExposureCount: 0,
+          consecutiveUnassistedCount: 0,
+          distinctContextCount: 0,
+          suspended: false
+        };
+
+    return assignBandIfMissing(baseItem, this.resolveActiveBandId);
   }
 
   async recordQualifiedExposure(
@@ -240,6 +301,31 @@ function ensureLearningItem(
   return isWordItemId(itemId) ? ensureWordLearningItem(existing, itemId, now) : null;
 }
 
+function buildGrammarFeatureItemId(featureKey: string): string {
+  return `grammar-feature:${featureKey}`;
+}
+
+function dedupeGrammarFeatures(
+  features: readonly GrammarFeatureMatch[]
+): GrammarFeatureMatch[] {
+  const seen = new Set<string>();
+  const output: GrammarFeatureMatch[] = [];
+  for (const feature of features) {
+    const featureKey = feature.featureKey.trim();
+    if (!featureKey || seen.has(featureKey)) {
+      continue;
+    }
+
+    seen.add(featureKey);
+    output.push({
+      ...feature,
+      featureKey
+    });
+  }
+
+  return output;
+}
+
 async function assignBandIfMissing(
   item: LearningItem,
   resolveActiveBandId: (unitType: LearningUnitType) => Promise<string | null>
@@ -273,6 +359,7 @@ function createReviewEvent(
   return {
     eventId: `${message.eventId}:review`,
     itemId: message.itemId,
+    unitType: readLearningUnitTypeFromItemId(message.itemId),
     eventType: "implicit-exposure",
     grade,
     contextSentenceHash: isQualifiedExposureMessage(message)
@@ -295,7 +382,23 @@ function isWordItemId(itemId: string): boolean {
 }
 
 function isSupportedLearningItemId(itemId: string): boolean {
-  return /^(word|phrase):[a-zA-Z0-9:_-]+$/.test(itemId);
+  return /^(word|phrase|grammar-feature):[a-zA-Z0-9:_-]+$/.test(itemId);
+}
+
+function readLearningUnitTypeFromItemId(itemId: string): LearningUnitType | undefined {
+  if (itemId.startsWith("word:")) {
+    return "word";
+  }
+
+  if (itemId.startsWith("phrase:")) {
+    return "phrase";
+  }
+
+  if (itemId.startsWith("grammar-feature:")) {
+    return "grammar-feature";
+  }
+
+  return undefined;
 }
 
 function readString(value: unknown): string | null {

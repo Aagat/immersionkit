@@ -30,6 +30,7 @@ import {
   IndexedDbPhraseRegistryRepository,
   type PhraseRegistryRepository
 } from "./phrase-registry";
+import { BackgroundLearningItemService } from "./learning-items";
 import {
   IndexedDbSentenceAnalysisCacheRepository,
   type SentenceAnalysisCacheRepository
@@ -74,6 +75,7 @@ export type AnalyzedSentenceCandidate = {
 type SentenceAnalysisServiceOptions = {
   cache?: SentenceAnalysisCacheRepository;
   phraseRegistry?: PhraseRegistryRepository;
+  learningItems?: Pick<BackgroundLearningItemService, "upsertGrammarFeatureItems">;
   analyzer?: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>);
   loadLexicon?: () => Promise<SeedLexiconEntry[]>;
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
@@ -98,6 +100,10 @@ type PhraseTargetResolver = (input: {
 export class SentenceAnalysisService {
   private readonly cache: SentenceAnalysisCacheRepository;
   private readonly phraseRegistry: PhraseRegistryRepository;
+  private readonly learningItems: Pick<
+    BackgroundLearningItemService,
+    "upsertGrammarFeatureItems"
+  >;
   private readonly analyzerLoader: () => Promise<SentenceAnalyzer>;
   private readonly loadLexicon: () => Promise<SeedLexiconEntry[]>;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
@@ -106,6 +112,7 @@ export class SentenceAnalysisService {
     this.cache = options.cache ?? new IndexedDbSentenceAnalysisCacheRepository();
     this.phraseRegistry =
       options.phraseRegistry ?? new IndexedDbPhraseRegistryRepository();
+    this.learningItems = options.learningItems ?? new BackgroundLearningItemService();
     if (!options.analyzer) {
       this.analyzerLoader = getDefaultSentenceAnalyzer;
     } else if (isSentenceAnalyzer(options.analyzer)) {
@@ -173,6 +180,10 @@ export class SentenceAnalysisService {
     await this.cache.putMany(entriesToPersist);
     await this.phraseRegistry.upsertOccurrences(
       results.flatMap((result) => result.entry.phraseMatches),
+      now
+    );
+    await this.learningItems.upsertGrammarFeatureItems(
+      results.flatMap((result) => result.entry.grammarFeatures),
       now
     );
     return results;

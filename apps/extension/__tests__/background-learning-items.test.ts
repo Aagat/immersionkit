@@ -1,5 +1,6 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
+  GrammarFeatureMatch,
   LearningItem,
   LearningUnitType,
   ReviewEvent
@@ -82,6 +83,7 @@ describe("background learning item service", () => {
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({
         itemId: "phrase:pattern:used-to-visit",
+        unitType: "phrase",
         grade: "hard",
         contextSentenceHash: "sentence-1"
       })
@@ -190,6 +192,49 @@ describe("background learning item service", () => {
     expect(items.items["word:lemma-city"]?.bandId).toBe("level-1a");
     expect(items.items["phrase:pattern:used-to-visit"]?.bandId).toBe("level-2a");
     expect(items.items["word:lemma-town"]?.bandId).toBe("level-1b");
+  });
+
+  it("creates durable grammar feature learning items with active grammar bands", async () => {
+    const items = new InMemoryLearningItemRepository();
+    const service = new BackgroundLearningItemService(
+      new InMemoryLearningHistoryRepository(),
+      items,
+      createUnitBandResolver({
+        word: "level-1a",
+        phrase: "level-2a",
+        "grammar-feature": "level-3a"
+      })
+    );
+
+    const created = await service.upsertGrammarFeatureItems(
+      [
+        createGrammarFeature({
+          featureKey: "aspect:have-been",
+          label: "Have been"
+        }),
+        createGrammarFeature({
+          featureKey: "aspect:have-been",
+          label: "Have been"
+        })
+      ],
+      "2026-04-18T10:00:00.000Z"
+    );
+
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      itemId: "grammar-feature:aspect:have-been",
+      unitRefId: "aspect:have-been",
+      unitType: "grammar-feature",
+      sourceText: "Have been",
+      targetText: "",
+      bandId: "level-3a",
+      status: "new"
+    });
+    expect(items.items["grammar-feature:aspect:have-been"]).toMatchObject({
+      itemId: "grammar-feature:aspect:have-been",
+      unitRefId: "aspect:have-been",
+      bandId: "level-3a"
+    });
   });
 
   it("bounds learning item band backfills", async () => {
@@ -401,8 +446,8 @@ describe("background learning item service", () => {
       qualifiedExposureCount: 1
     });
     expect(history.reviewEvents).toEqual([
-      expect.objectContaining({ eventId: "assist-1:review" }),
-      expect.objectContaining({ eventId: "exposure-1:review" })
+      expect.objectContaining({ eventId: "assist-1:review", unitType: "word" }),
+      expect.objectContaining({ eventId: "exposure-1:review", unitType: "word" })
     ]);
     expect(history.contextHistory["word:lemma-city"]?.contexts).toEqual([
       expect.objectContaining({
@@ -462,6 +507,28 @@ function createLearningItem(overrides: Partial<LearningItem> = {}): LearningItem
     consecutiveUnassistedCount: 1,
     distinctContextCount: 1,
     suspended: false,
+    ...overrides
+  };
+}
+
+function createGrammarFeature(
+  overrides: Partial<GrammarFeatureMatch> = {}
+): GrammarFeatureMatch {
+  return {
+    featureId: "grammar:aspect:have-been",
+    featureKey: "aspect:have-been",
+    label: "Have been",
+    category: "tense-aspect",
+    sourceText: "has been",
+    normalizedSourceText: "has been",
+    span: {
+      startToken: 0,
+      endToken: 2,
+      startChar: 0,
+      endChar: 8
+    },
+    evidence: ["fixture"],
+    confidence: 0.86,
     ...overrides
   };
 }

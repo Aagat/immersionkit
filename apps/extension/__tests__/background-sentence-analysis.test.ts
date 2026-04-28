@@ -112,9 +112,13 @@ describe("background sentence analysis service", () => {
     const analyzer = createAnalyzer("fixture-v1", () =>
       createAnalyzerOutput(sourceText, sentenceHash)
     );
+    const learningItems = {
+      upsertGrammarFeatureItems: vi.fn(async () => [])
+    };
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
+      learningItems,
       loadLexicon: () => Promise.resolve(createLexicon()),
       loadVocab: () =>
         Promise.resolve(
@@ -132,6 +136,14 @@ describe("background sentence analysis service", () => {
     expect(analysis?.entry.difficultyBand).toMatch(/core|stretch|defer/);
     expect(analysis?.suitabilitySignals.chunkUsefulness).toBeGreaterThan(0);
     expect(analysis?.entry.vocabStats?.totalWordCount).toBeGreaterThan(0);
+    expect(learningItems.upsertGrammarFeatureItems).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          featureKey: "aspect:have-been"
+        })
+      ],
+      expect.any(String)
+    );
   });
 
   it("resolves fixed phrase targets before registry persistence", async () => {
