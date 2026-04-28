@@ -7,8 +7,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   CurriculumProgressionService,
+  type CurriculumProgressionDecisionDiagnostics,
+  type CurriculumProgressionDiagnosticsStore,
   type LearningProfileStore
 } from "../src/background/curriculum-progression";
+import { refreshTabsAfterCurriculumProgression } from "../src/background/runtime";
+import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("background curriculum progression", () => {
   it("advances mixed active bands after implicit evidence meets band requirements", async () => {
@@ -18,9 +22,13 @@ describe("background curriculum progression", () => {
       activeGrammarBandId: "level-1a",
       unlockedBandIds: ["level-1a"]
     });
-    const service = new CurriculumProgressionService(profileStore);
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
 
-    const nextProfile = await service.advanceAfterImplicitEvidence({
+    const result = await service.advanceAfterImplicitEvidence({
       config: DEFAULT_CURRICULUM_CONFIG,
       items: [
         createLearningItem("word:lemma-city", "word", "level-1a"),
@@ -29,12 +37,19 @@ describe("background curriculum progression", () => {
       now: "2026-04-28T12:00:00.000Z"
     });
 
-    expect(nextProfile).toMatchObject({
+    expect(result.profile).toMatchObject({
       activeVocabularyBandId: "level-1b",
       activePhraseBandId: "level-1b",
       activeGrammarBandId: "level-1b",
       unlockedBandIds: ["level-1a", "level-1b"]
     });
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1a",
+      nextBandId: "level-1b",
+      eligible: true,
+      reason: "advanced"
+    });
+    expect(diagnosticsStore.diagnostics).toMatchObject(result.diagnostics);
     await expect(profileStore.load()).resolves.toMatchObject({
       activeVocabularyBandId: "level-1b"
     });
@@ -47,18 +62,59 @@ describe("background curriculum progression", () => {
       activeGrammarBandId: "level-1c",
       unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
     });
-    const service = new CurriculumProgressionService(profileStore);
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
 
-    const nextProfile = await service.advanceAfterImplicitEvidence({
+    const result = await service.advanceAfterImplicitEvidence({
       config: DEFAULT_CURRICULUM_CONFIG,
       items: [createLearningItem("word:lemma-city", "word", "level-1c")],
       now: "2026-04-28T12:00:00.000Z"
     });
 
-    expect(nextProfile).toBeNull();
+    expect(result.profile).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1c",
+      nextBandId: "level-2a",
+      eligible: false,
+      reason: "checkpoint-required",
+      unmetRequirements: ["checkpoint"],
+      checkpointBoundary: true
+    });
+    expect(diagnosticsStore.diagnostics).toMatchObject(result.diagnostics);
     await expect(profileStore.load()).resolves.toMatchObject({
       activeVocabularyBandId: "level-1c"
     });
+  });
+
+  it("delivers progression refreshes to the source tab and active HTTP tabs", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      { id: 11, active: true, url: "https://example.test/article" },
+      { id: 12, active: true, url: "chrome://extensions" },
+      { id: 13, active: false, url: "https://inactive.test/article" }
+    ] as chrome.tabs.Tab[]);
+
+    try {
+      await expect(refreshTabsAfterCurriculumProgression(10)).resolves.toEqual([
+        10,
+        11
+      ]);
+      expect(chromeStub.sentTabMessages).toEqual([
+        {
+          tabId: 10,
+          message: { type: "settings/refresh-active-tab" }
+        },
+        {
+          tabId: 11,
+          message: { type: "settings/refresh-active-tab" }
+        }
+      ]);
+    } finally {
+      chromeStub.restore();
+    }
   });
 });
 
@@ -71,6 +127,16 @@ class InMemoryLearningProfileStore implements LearningProfileStore {
 
   async persist(profile: CurriculumRuntimeProfileInput): Promise<void> {
     this.profile = profile;
+  }
+}
+
+class InMemoryCurriculumProgressionDiagnosticsStore
+  implements CurriculumProgressionDiagnosticsStore
+{
+  diagnostics: CurriculumProgressionDecisionDiagnostics | null = null;
+
+  async persist(diagnostics: CurriculumProgressionDecisionDiagnostics): Promise<void> {
+    this.diagnostics = diagnostics;
   }
 }
 

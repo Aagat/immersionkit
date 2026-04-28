@@ -3,6 +3,7 @@ import {
   RuntimeMessageType,
   clampUnitInterval,
   resolveExtensionSettings,
+  type CurriculumRuntimeProfileInput,
   type ExtensionSettings,
   type ProviderName,
   type ResolvedExtensionSettings,
@@ -43,6 +44,13 @@ export const SENTENCE_QUEUE_STORAGE_KEYS = [
   "immersionkit.sentenceQueue",
   "sentenceQueue",
   "immersionkit.pendingSentences"
+] as const;
+export const LEARNING_PROFILE_STORAGE_KEYS = [
+  "immersionkit.learningProfile",
+  "learningProfile"
+] as const;
+export const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
+  "immersionkit.curriculum.lastProgressionDecision"
 ] as const;
 
 export type ProficiencySeed = "beginner" | "intermediate" | "advanced";
@@ -112,6 +120,26 @@ export type SentenceStats = {
 };
 
 export type PageDiagnostics = PageDiagnosticsSnapshot;
+
+export type CurriculumProgressionDiagnostics = {
+  decidedAt: string;
+  configId: string;
+  previousBandId: string | null;
+  nextBandId: string | null;
+  eligible: boolean;
+  reason: string;
+  unmetRequirements: string[];
+  checkpointBoundary: boolean;
+  activeVocabularyBandId: string | null;
+  activePhraseBandId: string | null;
+  activeGrammarBandId: string | null;
+  unlockedBandIds: string[];
+};
+
+export type CurriculumDiagnostics = {
+  profile: CurriculumRuntimeProfileInput;
+  lastProgressionDecision: CurriculumProgressionDiagnostics | null;
+};
 
 export async function loadSettingsState(): Promise<SettingsState> {
   const storage = await getStorageValues([
@@ -247,6 +275,22 @@ export async function loadSentenceStats(): Promise<SentenceStats> {
       countEntries(pickFirstDefinedValue(storage, SENTENCE_CACHE_STORAGE_KEYS)),
     pendingCount: countEntries(
       pickFirstDefinedValue(storage, SENTENCE_QUEUE_STORAGE_KEYS)
+    )
+  };
+}
+
+export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics> {
+  const storage = await getStorageValues([
+    ...LEARNING_PROFILE_STORAGE_KEYS,
+    ...CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS
+  ]);
+
+  return {
+    profile: parseLearningProfile(
+      pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS)
+    ),
+    lastProgressionDecision: parseCurriculumProgressionDiagnostics(
+      pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
     )
   };
 }
@@ -514,6 +558,68 @@ function countEntries(value: unknown): number {
   }
 
   return Object.keys(value).length;
+}
+
+function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
+  if (!isRecord(input)) {
+    return {};
+  }
+
+  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
+  const activePhraseBandId = readString(input.activePhraseBandId);
+  const activeGrammarBandId = readString(input.activeGrammarBandId);
+  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
+    ? input.unlockedBandIds.flatMap((value): string[] => {
+        const bandId = readString(value);
+        return bandId ? [bandId] : [];
+      })
+    : undefined;
+
+  return {
+    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
+    ...(activePhraseBandId ? { activePhraseBandId } : {}),
+    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
+    ...(unlockedBandIds ? { unlockedBandIds } : {})
+  };
+}
+
+function parseCurriculumProgressionDiagnostics(
+  input: unknown
+): CurriculumProgressionDiagnostics | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const decidedAt = readString(input.decidedAt);
+  const configId = readString(input.configId);
+  if (!decidedAt || !configId) {
+    return null;
+  }
+
+  return {
+    decidedAt,
+    configId,
+    previousBandId: readString(input.previousBandId),
+    nextBandId: readString(input.nextBandId),
+    eligible: input.eligible === true,
+    reason: readString(input.reason) ?? "unknown",
+    unmetRequirements: Array.isArray(input.unmetRequirements)
+      ? input.unmetRequirements.flatMap((value): string[] => {
+          const requirement = readString(value);
+          return requirement ? [requirement] : [];
+        })
+      : [],
+    checkpointBoundary: input.checkpointBoundary === true,
+    activeVocabularyBandId: readString(input.activeVocabularyBandId),
+    activePhraseBandId: readString(input.activePhraseBandId),
+    activeGrammarBandId: readString(input.activeGrammarBandId),
+    unlockedBandIds: Array.isArray(input.unlockedBandIds)
+      ? input.unlockedBandIds.flatMap((value): string[] => {
+          const bandId = readString(value);
+          return bandId ? [bandId] : [];
+        })
+      : []
+  };
 }
 
 async function getStorageValues(keys: readonly string[]): Promise<StorageRecord> {

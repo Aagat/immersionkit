@@ -4,6 +4,7 @@ import {
   PROFICIENCY_SEED_OPTIONS,
   isProviderKeyValid,
   loadActiveTabContext,
+  loadCurriculumDiagnostics,
   loadPageDiagnostics,
   loadSentenceStats,
   loadSettingsState,
@@ -18,6 +19,7 @@ import {
   type SiteSettingsMap,
   type VocabStats,
   type ActiveTabContext,
+  type CurriculumDiagnostics,
   type PageDiagnostics
 } from "./state";
 
@@ -42,6 +44,11 @@ const EMPTY_ACTIVE_TAB_CONTEXT: ActiveTabContext = {
   supportMessage: "Active tab has not been checked yet."
 };
 
+const EMPTY_CURRICULUM_DIAGNOSTICS: CurriculumDiagnostics = {
+  profile: {},
+  lastProgressionDecision: null
+};
+
 const SHOW_ADVANCED_TAB = true;
 
 type OptionsTab = "general" | "translation" | "advanced";
@@ -54,6 +61,8 @@ export function OptionsApp() {
   const [activeTabContext, setActiveTabContext] = useState<ActiveTabContext>(
     EMPTY_ACTIVE_TAB_CONTEXT
   );
+  const [curriculumDiagnostics, setCurriculumDiagnostics] =
+    useState<CurriculumDiagnostics>(EMPTY_CURRICULUM_DIAGNOSTICS);
   const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>("general");
   const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +82,7 @@ export function OptionsApp() {
         loadedVocabStats,
         loadedSiteSettings,
         loadedSentenceStats,
+        loadedCurriculumDiagnostics,
         loadedActiveTabContext
       ] =
         await Promise.all([
@@ -80,6 +90,7 @@ export function OptionsApp() {
           loadVocabStats(),
           loadSiteSettingsMap(),
           loadSentenceStats(),
+          loadCurriculumDiagnostics(),
           loadActiveTabContext()
         ]);
 
@@ -91,6 +102,7 @@ export function OptionsApp() {
       setVocabStats(loadedVocabStats);
       setSiteSettings(loadedSiteSettings);
       setSentenceStats(loadedSentenceStats);
+      setCurriculumDiagnostics(loadedCurriculumDiagnostics);
       setActiveTabContext(loadedActiveTabContext);
       setPageDiagnostics(loadedPageDiagnostics);
     } catch {
@@ -286,6 +298,8 @@ export function OptionsApp() {
     sentenceTranslationEnabled: Boolean(settingsState?.settings.sentenceTranslationEnabled),
     providerKeyValid
   });
+  const lastProgressionDecision =
+    curriculumDiagnostics.lastProgressionDecision;
 
   return (
     <main className="panel-shell options-shell">
@@ -648,6 +662,26 @@ export function OptionsApp() {
                   label="Translation"
                   value={Boolean(settingsState?.settings.sentenceTranslationEnabled) ? "On" : "Off"}
                 />
+                <MetricCard
+                  label="Vocabulary band"
+                  value={
+                    curriculumDiagnostics.profile.activeVocabularyBandId ?? "default"
+                  }
+                />
+                <MetricCard
+                  label="Phrase band"
+                  value={curriculumDiagnostics.profile.activePhraseBandId ?? "default"}
+                />
+                <MetricCard
+                  label="Grammar band"
+                  value={curriculumDiagnostics.profile.activeGrammarBandId ?? "default"}
+                />
+                <MetricCard
+                  label="Unlocked bands"
+                  value={formatUnlockedBands(
+                    curriculumDiagnostics.profile.unlockedBandIds
+                  )}
+                />
               </div>
 
               <p className="support-line muted">
@@ -735,6 +769,58 @@ export function OptionsApp() {
                 Queue storage has {formatCount(sentenceStats.pendingCount)} pending and{" "}
                 {formatCount(sentenceStats.cacheSize)} cached sentence records.
               </p>
+            </section>
+
+            <section className="panel-card">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Curriculum</p>
+                  <h2>Last implicit decision</h2>
+                </div>
+                <span
+                  className={
+                    lastProgressionDecision?.eligible
+                      ? "badge-soft badge-soft--on"
+                      : "badge-soft badge-soft--off"
+                  }
+                >
+                  {lastProgressionDecision?.eligible ? "Advanced" : "Blocked"}
+                </span>
+              </div>
+
+              {lastProgressionDecision ? (
+                <>
+                  <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
+                    <MetricCard
+                      label="Previous"
+                      value={lastProgressionDecision.previousBandId ?? "unknown"}
+                    />
+                    <MetricCard
+                      label="Next"
+                      value={lastProgressionDecision.nextBandId ?? "none"}
+                    />
+                    <MetricCard
+                      label="Reason"
+                      value={lastProgressionDecision.reason}
+                    />
+                    <MetricCard
+                      label="Checkpoint"
+                      value={
+                        lastProgressionDecision.checkpointBoundary
+                          ? "Required"
+                          : "Clear"
+                      }
+                    />
+                  </div>
+                  <p className="support-line muted">
+                    {formatProgressionDecision(lastProgressionDecision)}
+                  </p>
+                </>
+              ) : (
+                <p className="helper-line muted" style={{ marginTop: 0 }}>
+                  No implicit curriculum decision has been recorded yet.
+                </p>
+              )}
             </section>
 
             <section className="panel-card">
@@ -1046,6 +1132,29 @@ function shortenHash(value: string): string {
 
 function formatCount(value: number): string {
   return value.toLocaleString();
+}
+
+function formatUnlockedBands(bandIds: readonly string[] | undefined): string {
+  if (!bandIds?.length) {
+    return "default";
+  }
+
+  return bandIds.length <= 2 ? bandIds.join(", ") : `${bandIds.length} bands`;
+}
+
+function formatProgressionDecision(
+  decision: NonNullable<CurriculumDiagnostics["lastProgressionDecision"]>
+): string {
+  const requirements = decision.unmetRequirements.length
+    ? `Blocked by ${decision.unmetRequirements.join(", ")}.`
+    : "No unmet requirements.";
+  const when = formatUpdatedAt(decision.decidedAt);
+
+  if (decision.eligible) {
+    return `Advanced from ${decision.previousBandId ?? "unknown"} to ${decision.nextBandId ?? "unknown"} on ${when}.`;
+  }
+
+  return `${requirements} Last checked ${when}.`;
 }
 
 function describeDiscoveryRate(percent: number): string {

@@ -8,7 +8,9 @@ type StorageValues = Record<string, unknown>;
 
 export type ChromeTestStub = {
   sentMessages: unknown[];
+  sentTabMessages: { tabId: number; message: unknown }[];
   setStorageValues: (values: StorageValues) => void;
+  setTabs: (tabs: chrome.tabs.Tab[]) => void;
   setSendMessageHandler: (
     handler: ((message: unknown) => unknown | Promise<unknown>) | null
   ) => void;
@@ -24,7 +26,9 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
   const existingChrome = (globalThis as { chrome?: typeof chrome }).chrome;
   const listeners = new Set<RuntimeListener>();
   const sentMessages: unknown[] = [];
+  const sentTabMessages: { tabId: number; message: unknown }[] = [];
   const storageValues: StorageValues = { ...initialStorage };
+  let tabs: chrome.tabs.Tab[] = [];
   let sendMessageHandler:
     | ((message: unknown) => unknown | Promise<unknown>)
     | null = null;
@@ -80,10 +84,11 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
       }
     },
     tabs: {
-      query(_queryInfo: unknown, callback: (tabs: chrome.tabs.Tab[]) => void) {
-        callback([]);
+      query(queryInfo: unknown, callback: (tabs: chrome.tabs.Tab[]) => void) {
+        callback(filterTabs(queryInfo, tabs));
       },
-      sendMessage(_tabId: number, _message: unknown, callback?: () => void) {
+      sendMessage(tabId: number, message: unknown, callback?: () => void) {
+        sentTabMessages.push({ tabId, message });
         callback?.();
       }
     }
@@ -93,8 +98,12 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
 
   return {
     sentMessages,
+    sentTabMessages,
     setStorageValues(values: StorageValues) {
       Object.assign(storageValues, values);
+    },
+    setTabs(nextTabs: chrome.tabs.Tab[]) {
+      tabs = [...nextTabs];
     },
     setSendMessageHandler(handler) {
       sendMessageHandler = handler;
@@ -127,6 +136,32 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
       delete (globalThis as { chrome?: typeof chrome }).chrome;
     }
   };
+}
+
+function filterTabs(queryInfo: unknown, tabs: chrome.tabs.Tab[]): chrome.tabs.Tab[] {
+  if (!queryInfo || typeof queryInfo !== "object") {
+    return tabs;
+  }
+
+  const query = queryInfo as { active?: unknown; url?: unknown };
+  return tabs.filter((tab) => {
+    if (typeof query.active === "boolean" && tab.active !== query.active) {
+      return false;
+    }
+
+    if (Array.isArray(query.url)) {
+      const tabUrl = typeof tab.url === "string" ? tab.url : "";
+      return query.url.some((pattern) =>
+        pattern === "http://*/*"
+          ? tabUrl.startsWith("http://")
+          : pattern === "https://*/*"
+            ? tabUrl.startsWith("https://")
+            : false
+      );
+    }
+
+    return true;
+  });
 }
 
 function resolveStorageRead(

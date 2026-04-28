@@ -133,7 +133,7 @@ export class BackgroundRuntimeCoordinator {
       }
 
       if (message.type === RuntimeMessageType.QualifiedExposureEvent) {
-        void this.handleQualifiedExposureEvent(message, sendResponse);
+        void this.handleQualifiedExposureEvent(message, sender, sendResponse);
         return true;
       }
 
@@ -261,12 +261,13 @@ export class BackgroundRuntimeCoordinator {
 
   private async handleQualifiedExposureEvent(
     message: QualifiedExposureEventMessage,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response: { ok: true; stored: boolean } | ErrorResponse) => void
   ) {
     try {
       const item = await this.learningItems.recordQualifiedExposure(message);
       if (item) {
-        await this.advanceCurriculumAfterExposure();
+        await this.advanceCurriculumAfterExposure(sender.tab?.id);
       }
       sendResponse({
         ok: true,
@@ -281,14 +282,17 @@ export class BackgroundRuntimeCoordinator {
     }
   }
 
-  private async advanceCurriculumAfterExposure(): Promise<void> {
+  private async advanceCurriculumAfterExposure(sourceTabId: number | undefined): Promise<void> {
     try {
       const runtimeConfig = await loadBackgroundRuntimeConfig();
-      await this.curriculumProgression.advanceAfterImplicitEvidence({
+      const result = await this.curriculumProgression.advanceAfterImplicitEvidence({
         config: runtimeConfig.curriculum.config,
         profile: runtimeConfig.curriculum.profile,
         items: await this.learningItems.listItems()
       });
+      if (result.profile) {
+        void refreshTabsAfterCurriculumProgression(sourceTabId);
+      }
     } catch (error) {
       console.warn("ImmersionKit curriculum progression failed.", error);
     }
@@ -359,6 +363,55 @@ async function sendRefreshMessageToTab(
     chrome.tabs.sendMessage(tabId, message, () => {
       resolve(!chrome.runtime.lastError);
     });
+  });
+}
+
+export async function refreshTabsAfterCurriculumProgression(
+  sourceTabId: number | undefined
+): Promise<number[]> {
+  const tabIds = new Set<number>();
+  if (typeof sourceTabId === "number") {
+    tabIds.add(sourceTabId);
+  }
+
+  for (const tabId of await getActiveHttpTabIds()) {
+    tabIds.add(tabId);
+  }
+
+  const refreshed: number[] = [];
+  await Promise.all(
+    [...tabIds].map(async (tabId) => {
+      const sent = await sendRefreshMessageToTab(tabId, {
+        type: RuntimeMessageType.RefreshActiveTab
+      });
+      if (sent) {
+        refreshed.push(tabId);
+      }
+    })
+  );
+  return refreshed.sort((left, right) => left - right);
+}
+
+async function getActiveHttpTabIds(): Promise<number[]> {
+  return new Promise((resolve) => {
+    chrome.tabs.query(
+      {
+        active: true,
+        url: ["http://*/*", "https://*/*"]
+      },
+      (tabs) => {
+        if (chrome.runtime.lastError) {
+          resolve([]);
+          return;
+        }
+
+        resolve(
+          (tabs ?? []).flatMap((tab) =>
+            typeof tab.id === "number" ? [tab.id] : []
+          )
+        );
+      }
+    );
   });
 }
 
