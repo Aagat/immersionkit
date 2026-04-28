@@ -126,6 +126,54 @@ describe("content phrase-unit rendering", () => {
       expect(document.querySelector("[data-ik-phrase-id='phrase:pattern:used-to']")).toBeNull();
     });
   });
+
+  it("skips cached phrase units when the active curriculum gate rejects them", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sentence = "I used to visit the old city often.";
+      const textNode = document.createTextNode(sentence);
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "phrase-curriculum-test",
+        createNodeId: () => "ikn-phrase-curriculum-test",
+        lexiconLookup: new Map(),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
+          createPhraseMatch(sentence, {
+            phraseId: "phrase:pattern:used-to-visit",
+            sourceText: "used to visit",
+            startChar: 2,
+            endChar: 15
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "phrase:pattern:used-to-visit",
+            createPhraseLearningItem({
+              phraseId: "phrase:pattern:used-to-visit",
+              sourceText: "used to visit",
+              targetText: "solia visitar",
+              nextReviewAt: "2099-04-26T10:00:00.000Z"
+            })
+          ]
+        ]),
+        shouldActivatePhrase: () => ({
+          eligible: false,
+          configId: "test-curriculum",
+          activeBandId: "level-1a",
+          skipReason: "outside-active-band-items"
+        })
+      });
+
+      expect(result.phraseInjectedCount).toBe(0);
+      expect(result.curriculumSkippedPhraseCount).toBe(1);
+      expect(result.phraseRejectedCount).toBe(1);
+      expect(document.querySelector("[data-ik-unit-kind='phrase']")).toBeNull();
+      expect(document.body.textContent).toContain(sentence);
+    });
+  });
 });
 
 function phraseMatchesFor(
@@ -167,6 +215,7 @@ function createPhraseLearningItem(input: {
   phraseId: string;
   sourceText: string;
   targetText: string;
+  nextReviewAt?: string;
 }): LearningItem {
   return {
     itemId: `phrase:${input.phraseId}`,
@@ -176,7 +225,7 @@ function createPhraseLearningItem(input: {
     targetText: input.targetText,
     status: "new",
     introducedAt: "2026-04-25T10:00:00.000Z",
-    nextReviewAt: "2026-04-25T10:00:00.000Z",
+    nextReviewAt: input.nextReviewAt ?? "2026-04-25T10:00:00.000Z",
     interval: 600000,
     ease: 2.3,
     lapses: 0,

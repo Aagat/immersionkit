@@ -45,7 +45,9 @@ export const STORAGE_KEYS = {
   settings: ["immersionkit.settings", "settings"] as const,
   siteSettings: ["immersionkit.siteSettings", "siteSettings"] as const,
   vocab: ["immersionkit.vocab", "vocab", "vocabEntries"] as const,
-  seedLexicon: ["immersionkit.seedLexicon", "seedLexicon", "lexicon"] as const
+  seedLexicon: ["immersionkit.seedLexicon", "seedLexicon", "lexicon"] as const,
+  curriculumConfig: ["immersionkit.curriculum.config", "curriculumConfig"] as const,
+  learningProfile: ["immersionkit.learningProfile", "learningProfile"] as const
 };
 
 export const FALLBACK_SEED_LEXICON: SeedLexiconEntry[] = [

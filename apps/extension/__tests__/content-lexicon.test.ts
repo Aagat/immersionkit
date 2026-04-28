@@ -64,4 +64,76 @@ describe("content lexicon lookup", () => {
       expect(document.body.textContent).not.toContain("poquito casa");
     });
   });
+
+  it("skips new discovery words when the active curriculum gate rejects them", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode("The telescope watched the comet.");
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "curriculum-word-test",
+        createNodeId: () => "ikn-curriculum-word-test",
+        lexiconLookup: buildLexiconLookup([
+          {
+            lemmaId: "en:telescope:noun",
+            sourceLemma: "telescope",
+            targetLemma: "telescopio",
+            pos: "noun",
+            frequencyRank: 2800,
+            confidence: 0.91
+          }
+        ]),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        shouldActivateWord: () => ({
+          eligible: false,
+          configId: "test-curriculum",
+          activeBandId: "level-1a",
+          skipReason: "above-active-band-difficulty"
+        })
+      });
+
+      expect(result.replaced).toBe(false);
+      expect(result.curriculumSkippedWordCount).toBe(1);
+      expect(document.body.textContent).toContain("The telescope watched the comet.");
+      expect(document.body.textContent).not.toContain("telescopio");
+    });
+  });
+
+  it("lets due discovery words bypass the active curriculum gate", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode("The telescope watched the comet.");
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "curriculum-due-word-test",
+        createNodeId: () => "ikn-curriculum-due-word-test",
+        lexiconLookup: buildLexiconLookup([
+          {
+            lemmaId: "en:telescope:noun",
+            sourceLemma: "telescope",
+            targetLemma: "telescopio",
+            pos: "noun",
+            frequencyRank: 2800,
+            confidence: 0.91
+          }
+        ]),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        isDueForReview: () => true,
+        shouldActivateWord: () => ({
+          eligible: false,
+          configId: "test-curriculum",
+          activeBandId: "level-1a",
+          skipReason: "above-active-band-difficulty"
+        })
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(result.curriculumSkippedWordCount).toBe(0);
+      expect(document.body.textContent).toContain("The telescopio watched the comet.");
+    });
+  });
 });

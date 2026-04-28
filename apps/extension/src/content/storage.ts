@@ -1,5 +1,7 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
+  CurriculumConfig,
+  CurriculumRuntimeProfileInput,
   ContextualWordCandidate,
   ExtensionSettings,
   LearningItem,
@@ -9,6 +11,7 @@ import type {
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
+import { resolveCurriculumConfig } from "@immersionkit/shared";
 
 import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
 import {
@@ -56,6 +59,8 @@ export type ProcessingContext = {
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  curriculumConfig: CurriculumConfig;
+  learningProfile: CurriculumRuntimeProfileInput;
 };
 
 export type CachedSentenceAnalysisContext = {
@@ -101,12 +106,13 @@ export async function loadProcessingContext(
     ...STORAGE_KEYS.settings,
     ...STORAGE_KEYS.siteSettings,
     ...STORAGE_KEYS.vocab,
-    ...STORAGE_KEYS.seedLexicon
+    ...STORAGE_KEYS.seedLexicon,
+    ...STORAGE_KEYS.curriculumConfig,
+    ...STORAGE_KEYS.learningProfile
   ]);
 
-  const settings = parseSettings(
-    pickFirstDefinedValue(storage, STORAGE_KEYS.settings)
-  );
+  const rawSettings = pickFirstDefinedValue(storage, STORAGE_KEYS.settings);
+  const settings = parseSettings(rawSettings);
 
   const siteSetting = parseSiteSetting(
     pickFirstDefinedValue(storage, STORAGE_KEYS.siteSettings),
@@ -122,6 +128,12 @@ export async function loadProcessingContext(
   );
 
   const sentenceAnalysisContext = await loadCachedSentenceAnalysisContext(sentenceHashes);
+  const rawCurriculumConfig =
+    pickFirstDefinedValue(storage, STORAGE_KEYS.curriculumConfig) ??
+    (isRecord(rawSettings) ? rawSettings.curriculumConfig : null);
+  const rawLearningProfile =
+    pickFirstDefinedValue(storage, STORAGE_KEYS.learningProfile) ??
+    (isRecord(rawSettings) ? rawSettings.learningProfile : null);
 
   return {
     settings,
@@ -142,7 +154,13 @@ export async function loadProcessingContext(
     cachedContextSkipDecisions:
       sentenceAnalysisContext.cachedContextSkipDecisions,
     cachedPhraseMatchesBySentenceHash:
-      sentenceAnalysisContext.cachedPhraseMatchesBySentenceHash
+      sentenceAnalysisContext.cachedPhraseMatchesBySentenceHash,
+    curriculumConfig: resolveCurriculumConfig(
+      isRecord(rawCurriculumConfig)
+        ? (rawCurriculumConfig as Partial<CurriculumConfig>)
+        : null
+    ),
+    learningProfile: parseLearningProfile(rawLearningProfile)
   };
 }
 
@@ -407,6 +425,29 @@ function parseLearningItems(input: unknown): Map<string, LearningItem> {
   }
 
   return new Map(items.map((item) => [item.unitRefId, item]));
+}
+
+function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
+  if (!isRecord(input)) {
+    return {};
+  }
+
+  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
+  const activePhraseBandId = readString(input.activePhraseBandId);
+  const activeGrammarBandId = readString(input.activeGrammarBandId);
+  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
+    ? input.unlockedBandIds.flatMap((value): string[] => {
+        const bandId = readString(value);
+        return bandId ? [bandId] : [];
+      })
+    : undefined;
+
+  return {
+    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
+    ...(activePhraseBandId ? { activePhraseBandId } : {}),
+    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
+    ...(unlockedBandIds ? { unlockedBandIds } : {})
+  };
 }
 
 function parseCachedContextSkipDecisions(

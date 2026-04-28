@@ -36,6 +36,8 @@ export type ProcessTextNodeContext = {
   cachedContextSkipDecisions?: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
   learningItemsByUnitRefId?: Map<string, LearningItem>;
+  shouldActivateWord?: (input: WordActivationInput) => ActivationDecision;
+  shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
   allowPhraseOnlyCandidates?: boolean;
 };
 
@@ -47,7 +49,32 @@ export type ProcessTextNodeResult = {
   contextSkippedCount: number;
   phraseInjectedCount: number;
   phraseRejectedCount: number;
+  curriculumSkippedWordCount: number;
+  curriculumSkippedPhraseCount: number;
   sentenceCandidates: SentenceCandidateMetadata[];
+};
+
+export type ActivationDecision = {
+  eligible: boolean;
+  configId?: string;
+  activeBandId?: string | null;
+  skipReason?: string | null;
+};
+
+export type WordActivationInput = {
+  lexiconEntry: SeedLexiconEntry;
+  learningItem: LearningItem | null;
+  status: VocabStatus;
+  isDueForReview: boolean;
+};
+
+export type PhraseActivationInput = {
+  phraseId: string;
+  learningItem: LearningItem;
+  confidence: number;
+  sourceKind: CachedPhraseMatch["sourceKind"];
+  category: CachedPhraseMatch["category"];
+  isDueForReview: boolean;
 };
 
 export function processTextNode(
@@ -75,7 +102,7 @@ export function processTextNode(
     offsetBase: 0
   });
   if (!rendered.replaced) {
-    return emptyResult();
+    return rendered.result;
   }
 
   node.replaceWith(rendered.node);
@@ -98,23 +125,28 @@ function processWindowedTextNode(
       offsetBase: window.start
     });
 
+    mergedResult.injectedCount += rendered.result.injectedCount;
+    mergedResult.knownCount += rendered.result.knownCount;
+    mergedResult.discoveryCount += rendered.result.discoveryCount;
+    mergedResult.contextSkippedCount += rendered.result.contextSkippedCount;
+    mergedResult.phraseInjectedCount += rendered.result.phraseInjectedCount;
+    mergedResult.phraseRejectedCount += rendered.result.phraseRejectedCount;
+    mergedResult.curriculumSkippedWordCount +=
+      rendered.result.curriculumSkippedWordCount;
+    mergedResult.curriculumSkippedPhraseCount +=
+      rendered.result.curriculumSkippedPhraseCount;
+    mergedResult.sentenceCandidates.push(...rendered.result.sentenceCandidates);
+
     if (rendered.replaced) {
       fragment.append(rendered.node);
       mergedResult.replaced = true;
-      mergedResult.injectedCount += rendered.result.injectedCount;
-      mergedResult.knownCount += rendered.result.knownCount;
-      mergedResult.discoveryCount += rendered.result.discoveryCount;
-      mergedResult.contextSkippedCount += rendered.result.contextSkippedCount;
-      mergedResult.phraseInjectedCount += rendered.result.phraseInjectedCount;
-      mergedResult.phraseRejectedCount += rendered.result.phraseRejectedCount;
-      mergedResult.sentenceCandidates.push(...rendered.result.sentenceCandidates);
     } else {
       fragment.append(window.text);
     }
   }
 
   if (!mergedResult.replaced) {
-    return emptyResult();
+    return mergedResult;
   }
 
   node.replaceWith(fragment);
@@ -145,7 +177,8 @@ function renderTextWindow(input: {
     sourceText,
     sentences,
     cachedPhraseMatchesBySentenceHash: context.cachedPhraseMatchesBySentenceHash,
-    learningItemsByUnitRefId: context.learningItemsByUnitRefId
+    learningItemsByUnitRefId: context.learningItemsByUnitRefId,
+    shouldActivatePhrase: context.shouldActivatePhrase
   });
   const injectedSentenceHashes = new Set<string>();
   const wrapper = document.createElement("span");
@@ -160,6 +193,7 @@ function renderTextWindow(input: {
   let knownCount = 0;
   let discoveryCount = 0;
   let contextSkippedCount = 0;
+  let curriculumSkippedWordCount = 0;
   let phraseInjectedCount = 0;
   let tokenIndex = 0;
   let cursor = 0;
@@ -228,6 +262,27 @@ function renderTextWindow(input: {
 
     const wordKind: InjectedWordKind = status === "known" ? "known" : "discovery";
     const isDueForReview = context.isDueForReview?.(lexiconEntry.lemmaId) ?? false;
+    const learningItem =
+      context.learningItemsByUnitRefId?.get(lexiconEntry.lemmaId) ?? null;
+    if (
+      status === "new" &&
+      !isDueForReview &&
+      context.shouldActivateWord
+    ) {
+      const curriculumDecision = context.shouldActivateWord({
+        lexiconEntry,
+        learningItem,
+        status,
+        isDueForReview
+      });
+      if (!curriculumDecision.eligible) {
+        wrapper.append(segment.value);
+        curriculumSkippedWordCount += 1;
+        cursor = segment.end;
+        continue;
+      }
+    }
+
     if (
       wordKind === "discovery" &&
       !isDueForReview &&
@@ -342,7 +397,13 @@ function renderTextWindow(input: {
     return {
       replaced: false,
       node: document.createTextNode(sourceText),
-      result: emptyResult()
+      result: {
+        ...emptyResult(),
+        contextSkippedCount,
+        phraseRejectedCount: phraseCandidates.rejected.length,
+        curriculumSkippedWordCount,
+        curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount
+      }
     };
   }
 
@@ -357,6 +418,8 @@ function renderTextWindow(input: {
       contextSkippedCount,
       phraseInjectedCount,
       phraseRejectedCount: phraseCandidates.rejected.length,
+      curriculumSkippedWordCount,
+      curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount,
       sentenceCandidates
     }
   };
@@ -710,13 +773,16 @@ function selectPhraseRenderCandidates(input: {
   sentences: ReturnType<typeof segmentSentences>;
   cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
   learningItemsByUnitRefId?: Map<string, LearningItem>;
+  shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
 }): {
   acceptedByStart: Map<number, PhraseRenderCandidate>;
   rejected: { phraseId: string; reason: string }[];
+  curriculumSkippedCount: number;
 } {
   const acceptedByStart = new Map<number, PhraseRenderCandidate>();
   const rejected: { phraseId: string; reason: string }[] = [];
   const candidates: PhraseRenderCandidate[] = [];
+  let curriculumSkippedCount = 0;
 
   for (const sentence of input.sentences) {
     const matches = input.cachedPhraseMatchesBySentenceHash?.get(sentence.hash) ?? [];
@@ -739,6 +805,28 @@ function selectPhraseRenderCandidates(input: {
         continue;
       }
 
+      const isDueForReview =
+        Boolean(learningItem.nextReviewAt) &&
+        Date.parse(learningItem.nextReviewAt ?? "") <= Date.now();
+      if (!isDueForReview && input.shouldActivatePhrase) {
+        const curriculumDecision = input.shouldActivatePhrase({
+          phraseId: match.phraseId,
+          learningItem,
+          confidence: match.confidence,
+          sourceKind: match.sourceKind,
+          category: match.category,
+          isDueForReview
+        });
+        if (!curriculumDecision.eligible) {
+          rejected.push({
+            phraseId: match.phraseId,
+            reason: `curriculum-${curriculumDecision.skipReason ?? "skip"}`
+          });
+          curriculumSkippedCount += 1;
+          continue;
+        }
+      }
+
       candidates.push({
         phraseId: match.phraseId,
         itemId: learningItem.itemId,
@@ -750,9 +838,7 @@ function selectPhraseRenderCandidates(input: {
         end,
         targetText: learningItem.targetText,
         sentence,
-        isDueForReview:
-          Boolean(learningItem.nextReviewAt) &&
-          Date.parse(learningItem.nextReviewAt ?? "") <= Date.now()
+        isDueForReview
       });
     }
   }
@@ -774,7 +860,8 @@ function selectPhraseRenderCandidates(input: {
 
   return {
     acceptedByStart,
-    rejected
+    rejected,
+    curriculumSkippedCount
   };
 }
 
@@ -980,6 +1067,8 @@ function emptyResult(): ProcessTextNodeResult {
     contextSkippedCount: 0,
     phraseInjectedCount: 0,
     phraseRejectedCount: 0,
+    curriculumSkippedWordCount: 0,
+    curriculumSkippedPhraseCount: 0,
     sentenceCandidates: []
   };
 }

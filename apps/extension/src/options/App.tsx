@@ -710,8 +710,16 @@ export function OptionsApp() {
                   value={pageDiagnostics?.activeCurriculumBandId ?? "unknown"}
                 />
                 <MetricCard
-                  label="Band skips"
+                  label="Sentence band skips"
                   value={formatCount(pageDiagnostics?.curriculumSkippedSentences ?? 0)}
+                />
+                <MetricCard
+                  label="Word band skips"
+                  value={formatCount(pageDiagnostics?.curriculumSkippedWords ?? 0)}
+                />
+                <MetricCard
+                  label="Phrase band skips"
+                  value={formatCount(pageDiagnostics?.curriculumSkippedPhrases ?? 0)}
                 />
               </div>
 

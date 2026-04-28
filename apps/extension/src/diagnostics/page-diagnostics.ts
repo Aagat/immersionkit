@@ -29,6 +29,8 @@ export type PageDiagnosticsSnapshot = {
   curriculumConfigId: string | null;
   activeCurriculumBandId: string | null;
   curriculumSkippedSentences: number;
+  curriculumSkippedWords: number;
+  curriculumSkippedPhrases: number;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   phraseDecisionSamples: PageDiagnosticsPhraseSample[];
   tokenDecisionSamples: PageDiagnosticsTokenSample[];

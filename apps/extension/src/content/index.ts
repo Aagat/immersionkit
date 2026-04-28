@@ -1,9 +1,13 @@
 import {
+  evaluateCurriculumEligibility,
   RuntimeMessageType,
   hashString,
+  resolveActiveCurriculumBand,
   shouldReceiveDueReviewBoost
 } from "@immersionkit/shared";
 import type {
+  CurriculumConfig,
+  CurriculumRuntimeProfileInput,
   QueuedSentenceCandidate,
   LearningItem,
   SeedLexiconEntry,
@@ -27,6 +31,10 @@ import {
   readPhraseMetadata,
   readTokenMetadata,
   restoreAnnotatedNodes
+} from "./annotate";
+import type {
+  PhraseActivationInput,
+  WordActivationInput
 } from "./annotate";
 import {
   IMMERSIONKIT_RESTORE_EVENT,
@@ -91,6 +99,10 @@ type ProcessingState = {
   curriculumConfigId: string | null;
   activeCurriculumBandId: string | null;
   curriculumSkippedSentences: number;
+  curriculumSkippedWords: number;
+  curriculumSkippedPhrases: number;
+  curriculumConfig: CurriculumConfig;
+  learningProfile: CurriculumRuntimeProfileInput;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   pendingRoots: Set<ParentNode>;
   flushHandle: number | null;
@@ -335,6 +347,8 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       curriculumConfigId: null,
       activeCurriculumBandId: null,
       curriculumSkippedSentences: 0,
+      curriculumSkippedWords: 0,
+      curriculumSkippedPhrases: 0,
       sentenceRankingReasons: [],
       phraseDecisionSamples: collectPhraseDecisionSamples(),
       tokenDecisionSamples: collectTokenDecisionSamples(),
@@ -389,9 +403,18 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       sentenceNotesRendered: 0,
       mutationCacheRefreshes: 0,
       mutationCacheRefreshHits: 0,
-      curriculumConfigId: null,
-      activeCurriculumBandId: null,
+      curriculumConfigId: processingContext.curriculumConfig.configId,
+      activeCurriculumBandId:
+        resolveActiveCurriculumBand(
+          processingContext.curriculumConfig,
+          "word",
+          processingContext.learningProfile
+        )?.bandId ?? null,
       curriculumSkippedSentences: 0,
+      curriculumSkippedWords: 0,
+      curriculumSkippedPhrases: 0,
+      curriculumConfig: processingContext.curriculumConfig,
+      learningProfile: processingContext.learningProfile,
       sentenceRankingReasons: [],
       pendingRoots: new Set<ParentNode>(),
       flushHandle: null,
@@ -576,6 +599,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
   let injectedPhrases = 0;
   let rejectedPhrases = 0;
   let contextSkippedTokens = 0;
+  let curriculumSkippedWords = 0;
+  let curriculumSkippedPhrases = 0;
 
   for (const root of roots) {
     const nodes = collectEligibleTextNodes(root);
@@ -590,20 +615,26 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         cachedContextSkipDecisions: state.cachedContextSkipDecisions,
         cachedPhraseMatchesBySentenceHash: state.cachedPhraseMatchesBySentenceHash,
         learningItemsByUnitRefId: state.learningItemsByUnitRefId,
+        shouldActivateWord: (input) => shouldActivateWordByCurriculum(state, input),
+        shouldActivatePhrase: (input) => shouldActivatePhraseByCurriculum(state, input),
         isKnownWordForScoring: (word) => isKnownWord(state, word),
         isDueForReview: (lemmaId) => isDueLearningItem(state, lemmaId),
         allowPhraseOnlyCandidates: true
       });
 
-      if (!result.replaced) {
-        continue;
+      if (result.replaced) {
+        processedNodes += 1;
       }
-
-      processedNodes += 1;
       injectedTokens += result.injectedCount;
       injectedPhrases += result.phraseInjectedCount;
       rejectedPhrases += result.phraseRejectedCount;
       contextSkippedTokens += result.contextSkippedCount;
+      curriculumSkippedWords += result.curriculumSkippedWordCount;
+      curriculumSkippedPhrases += result.curriculumSkippedPhraseCount;
+
+      if (!result.replaced) {
+        continue;
+      }
 
       for (const candidate of result.sentenceCandidates) {
         if (state.seenSentenceHashes.has(candidate.sentenceHash)) {
@@ -625,6 +656,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
   state.injectedPhrases += injectedPhrases;
   state.rejectedPhrases += rejectedPhrases;
   state.contextSkippedTokens += contextSkippedTokens;
+  state.curriculumSkippedWords += curriculumSkippedWords;
+  state.curriculumSkippedPhrases += curriculumSkippedPhrases;
   state.evidenceTracker.registerRenderedTokens(document);
   queueSentenceCandidates(state, queuedCandidates);
 }
@@ -814,6 +847,55 @@ function isKnownWord(state: ProcessingState, normalizedWord: string): boolean {
 function isDueLearningItem(state: ProcessingState, lemmaId: string): boolean {
   const item = state.learningItemsByUnitRefId.get(lemmaId);
   return shouldReceiveDueReviewBoost(item, Date.now());
+}
+
+function shouldActivateWordByCurriculum(
+  state: ProcessingState,
+  input: WordActivationInput
+) {
+  if (input.isDueForReview || input.status !== "new") {
+    return { eligible: true };
+  }
+
+  const decision = evaluateCurriculumEligibility(state.curriculumConfig, {
+    unitType: "word",
+    itemId: input.lexiconEntry.lemmaId,
+    bandId: input.learningItem?.bandId ?? null,
+    score: scoreSeedLexiconDifficulty(input.lexiconEntry),
+    profile: state.learningProfile
+  });
+
+  state.curriculumConfigId = decision.configId;
+  state.activeCurriculumBandId = decision.activeBandId;
+  return decision;
+}
+
+function shouldActivatePhraseByCurriculum(
+  state: ProcessingState,
+  input: PhraseActivationInput
+) {
+  if (input.isDueForReview) {
+    return { eligible: true };
+  }
+
+  const decision = evaluateCurriculumEligibility(state.curriculumConfig, {
+    unitType: "phrase",
+    itemId: input.phraseId,
+    bandId: input.learningItem.bandId ?? null,
+    profile: state.learningProfile
+  });
+
+  state.curriculumConfigId = decision.configId;
+  state.activeCurriculumBandId = decision.activeBandId;
+  return decision;
+}
+
+function scoreSeedLexiconDifficulty(entry: SeedLexiconEntry): number | null {
+  if (typeof entry.frequencyRank !== "number" || !Number.isFinite(entry.frequencyRank)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(1, entry.frequencyRank / 5000));
 }
 
 function openPopover(
@@ -1606,6 +1688,8 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     curriculumConfigId: null,
     activeCurriculumBandId: null,
     curriculumSkippedSentences: 0,
+    curriculumSkippedWords: 0,
+    curriculumSkippedPhrases: 0,
     sentenceRankingReasons: [],
     phraseDecisionSamples: collectPhraseDecisionSamples(),
     tokenDecisionSamples: collectTokenDecisionSamples(),
@@ -1641,6 +1725,10 @@ function updateDiagnostics(runtimeState: RuntimeState) {
       processing.activeCurriculumBandId;
     runtimeState.diagnostics.curriculumSkippedSentences =
       processing.curriculumSkippedSentences;
+    runtimeState.diagnostics.curriculumSkippedWords =
+      processing.curriculumSkippedWords;
+    runtimeState.diagnostics.curriculumSkippedPhrases =
+      processing.curriculumSkippedPhrases;
     runtimeState.diagnostics.sentenceRankingReasons =
       processing.sentenceRankingReasons;
   }
