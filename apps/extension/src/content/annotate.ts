@@ -835,6 +835,15 @@ function selectPhraseRenderCandidates(input: {
         continue;
       }
 
+      if (!hasUsablePhraseTarget(learningItem.targetText)) {
+        rejected.push(
+          createPhraseRenderRejection(match, sentence.hash, "blank-target", {
+            targetText: learningItem.targetText
+          })
+        );
+        continue;
+      }
+
       const start = sentence.start + match.span.startChar;
       const end = sentence.start + match.span.endChar;
       const sourceSlice = input.sourceText.slice(start, end);
@@ -976,6 +985,10 @@ function spansOverlap(
 
 function normalizePhraseText(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function hasUsablePhraseTarget(value: string): boolean {
+  return value.trim().length > 0;
 }
 
 function truncateSentenceMetadata(input: string): string {

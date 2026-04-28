@@ -1028,6 +1028,166 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("suppresses fresh phrase units with blank targets and reports diagnostics", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        const sourceSentence = "The old city holds quiet memory.";
+        const sentenceHash = hashSentence(sourceSentence);
+        const phraseId = "phrase:chunk:old-city:empty";
+        const phraseLearningItem = {
+          itemId: `phrase:${phraseId}`,
+          unitRefId: phraseId,
+          unitType: "phrase",
+          sourceText: "old city",
+          targetText: "",
+          status: "learning",
+          introducedAt: "2026-04-18T10:00:00.000Z",
+          nextReviewAt: "2026-04-19T10:00:00.000Z",
+          interval: 600000,
+          ease: 2.3,
+          lapses: 0,
+          assistCount: 0,
+          qualifiedExposureCount: 0,
+          consecutiveUnassistedCount: 0,
+          distinctContextCount: 0,
+          suspended: false
+        };
+        document.body.innerHTML = `<p>${sourceSentence}</p>`;
+
+        const chromeStub = installChromeStub({
+          "immersionkit.settings": BASE_SETTINGS,
+          "immersionkit.seedLexicon": SEED_LEXICON,
+          "immersionkit.siteSettings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:14:00.000Z"
+            }
+          }
+        });
+        chromeStub.setSendMessageHandler((message) => {
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetLearningItems
+          ) {
+            return {
+              ok: true,
+              items: [phraseLearningItem]
+            };
+          }
+
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.GetSentenceAnalysisCache
+          ) {
+            return {
+              ok: true,
+              entries: []
+            };
+          }
+
+          if (
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === RuntimeMessageType.QueueSentenceCandidates
+          ) {
+            return {
+              ok: true,
+              analysisResults: [
+                {
+                  cacheHit: false,
+                  entry: {
+                    sentenceHash,
+                    analyzerVersion: "fixture-v1",
+                    analyzerId: "fixture-annotated",
+                    sourceText: sourceSentence,
+                    tokens: [],
+                    lemmas: [],
+                    posTags: [],
+                    chunks: [],
+                    grammarFeatures: [],
+                    createdAt: "2026-04-18T10:14:00.000Z",
+                    lastAccessedAt: "2026-04-18T10:14:00.000Z",
+                    contextualWordCandidates: [],
+                    phraseMatches: [
+                      {
+                        occurrenceId: "occurrence-old-city",
+                        phraseId,
+                        sentenceHash,
+                        analyzerVersion: "fixture-v1",
+                        sourceText: "old city",
+                        normalizedSourceText: "old city",
+                        sourceKind: "chunk",
+                        category: "noun-chunk",
+                        ruleId: "chunk-noun-coherent-v1",
+                        span: {
+                          startToken: 1,
+                          endToken: 3,
+                          startChar: 4,
+                          endChar: 12
+                        },
+                        confidence: 0.88
+                      }
+                    ]
+                  }
+                }
+              ],
+              cachedResults: []
+            };
+          }
+
+          return undefined;
+        });
+
+        try {
+          await bootContentScript();
+          await wait(160);
+
+          expect(
+            document.querySelector(`[data-ik-phrase-id='${phraseId}']`)
+          ).toBeNull();
+          expect(document.body.textContent).toContain("old ciudad");
+
+          const diagnostics = (
+            await chromeStub.dispatchRuntimeMessage({
+              type: PAGE_DIAGNOSTICS_MESSAGE_TYPE
+            })
+          )[0] as {
+            rejectedPhrases?: number;
+            phraseDecisionSamples?: Array<{
+              phraseId: string | null;
+              selected: boolean;
+              rejectedReason: string | null;
+              targetText: string | null;
+              exposureEligible: boolean;
+            }>;
+          };
+
+          expect(diagnostics.rejectedPhrases).toBe(1);
+          expect(diagnostics.phraseDecisionSamples).toContainEqual(
+            expect.objectContaining({
+              phraseId,
+              selected: false,
+              rejectedReason: "blank-target",
+              targetText: null,
+              exposureEligible: false
+            })
+          );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("keeps diagnostics for phrase rejections when no wrapper is rendered", async () => {
     await withFixtureDom(
       "article-basic.html",

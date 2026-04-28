@@ -190,6 +190,53 @@ describe("content phrase-unit rendering", () => {
       expect(document.body.textContent).toContain(sentence);
     });
   });
+
+  it("rejects cached phrase units with blank targets", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sentence = "The old city holds quiet memory.";
+      const textNode = document.createTextNode(sentence);
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 0,
+        samplingSeed: "phrase-blank-target-test",
+        createNodeId: () => "ikn-phrase-blank-target-test",
+        lexiconLookup: new Map(),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
+          createPhraseMatch(sentence, {
+            phraseId: "phrase:chunk:old-city:empty",
+            sourceText: "old city",
+            startChar: 4,
+            endChar: 12
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "phrase:chunk:old-city:empty",
+            createPhraseLearningItem({
+              phraseId: "phrase:chunk:old-city:empty",
+              sourceText: "old city",
+              targetText: "   "
+            })
+          ]
+        ])
+      });
+
+      expect(result.phraseInjectedCount).toBe(0);
+      expect(result.phraseRejectedCount).toBe(1);
+      expect(document.querySelector("[data-ik-unit-kind='phrase']")).toBeNull();
+      expect(document.body.textContent).toContain(sentence);
+      expect(result.unrenderedPhraseRejections[0]).toMatchObject({
+        phraseId: "phrase:chunk:old-city:empty",
+        reason: "blank-target",
+        sourceText: "old city",
+        targetText: "   ",
+        sentenceHash: hashSentence(sentence)
+      });
+    });
+  });
 });
 
 function phraseMatchesFor(
