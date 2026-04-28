@@ -69,6 +69,8 @@ export type PhraseCandidate = {
   ruleId: string;
   sourceText: string;
   normalizedSourceText: string;
+  targetText?: string;
+  normalizedTargetText?: string;
   canonicalPhraseKey: string;
   confidence: number;
   ruleStrength: number;

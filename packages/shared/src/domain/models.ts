@@ -193,6 +193,8 @@ export type PhraseOccurrence = {
   analyzerVersion: string;
   sourceText: string;
   normalizedSourceText: string;
+  targetText?: string;
+  normalizedTargetText?: string;
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
   ruleId: string;

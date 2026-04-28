@@ -307,12 +307,14 @@ function buildPhraseOccurrences(
     phraseId: buildRuntimePhraseId({
       normalizedSourceText: candidate.normalizedSourceText,
       sourceKind: candidate.sourceKind,
-      normalizedTargetText: ""
+      normalizedTargetText: candidate.normalizedTargetText ?? ""
     }),
     sentenceHash: analyzerOutput.sentenceHash,
     analyzerVersion: analyzerOutput.analyzerVersion,
     sourceText: candidate.sourceText,
     normalizedSourceText: candidate.normalizedSourceText,
+    targetText: candidate.targetText,
+    normalizedTargetText: candidate.normalizedTargetText,
     sourceKind: candidate.sourceKind,
     category: candidate.category,
     ruleId: candidate.ruleId,

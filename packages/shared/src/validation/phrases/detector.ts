@@ -37,6 +37,8 @@ type BuildCandidateInput = {
   category: PhraseCandidate["category"];
   lane: PhraseCandidate["lane"];
   ruleId: string;
+  targetText?: string;
+  normalizedTargetText?: string;
   confidence: number;
   startToken: number;
   endToken: number;
@@ -224,6 +226,8 @@ export function detectFixedPhraseLane(
           category: phrase.category,
           lane: "fixed",
           ruleId: phrase.phraseId,
+          targetText: phrase.targetText,
+          normalizedTargetText: phrase.normalizedTargetText,
           confidence: phrase.confidence,
           startToken,
           endToken: startToken + phraseLength,
@@ -530,6 +534,8 @@ function buildPhraseCandidate(input: BuildCandidateInput): PhraseCandidate {
     ruleId: input.ruleId,
     sourceText: input.sourceText.slice(start.startChar, end.endChar),
     normalizedSourceText,
+    targetText: input.targetText,
+    normalizedTargetText: input.normalizedTargetText,
     canonicalPhraseKey,
     confidence: input.confidence,
     ruleStrength: input.confidence,

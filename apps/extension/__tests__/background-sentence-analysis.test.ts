@@ -134,6 +134,38 @@ describe("background sentence analysis service", () => {
     expect(analysis?.entry.vocabStats?.totalWordCount).toBeGreaterThan(0);
   });
 
+  it("resolves fixed phrase targets before registry persistence", async () => {
+    const sourceText = "We take care of the old city.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createFixedPhraseAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const fixedPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceKind === "fixed-phrase"
+    );
+
+    expect(fixedPhrase).toMatchObject({
+      sourceText: "take care of",
+      targetText: "cuidar de",
+      normalizedTargetText: "cuidar de",
+      phraseId: "phrase:fixed-phrase:take-care-of:cuidar-de"
+    });
+    await expect(phraseRegistry.get(fixedPhrase?.phraseId ?? "")).resolves.toMatchObject({
+      canonicalTargetText: "cuidar de",
+      normalizedTargetText: "cuidar de"
+    });
+  });
+
   it("merges repeated phrase sightings into durable registry identities", async () => {
     const sourceText = "The captain of the football team has been patient.";
     const sentenceHash = hashSentence(sourceText);
@@ -280,6 +312,29 @@ function createAnalyzerOutput(
         confidence: 0.86
       }
     ]
+  };
+}
+
+function createFixedPhraseAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("We", "we", "pronoun", 0, 2, ["PRP", "pronoun"]),
+      token("take", "take", "verb", 3, 7, ["VB", "verb"]),
+      token("care", "care", "noun", 8, 12, ["NN", "noun"]),
+      token("of", "of", "preposition", 13, 15, ["IN", "preposition"]),
+      token("the", "the", "determiner", 16, 19, ["DT", "determiner"]),
+      token("old", "old", "adjective", 20, 23, ["JJ", "adjective"]),
+      token("city", "city", "noun", 24, 28, ["NN", "noun"])
+    ],
+    chunks: [],
+    grammarFeatures: []
   };
 }
 

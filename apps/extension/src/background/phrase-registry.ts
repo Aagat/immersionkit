@@ -135,7 +135,7 @@ export function mergePhraseOccurrence(
   if (!existing) {
     return createRuntimePhraseRegistryEntry({
       sourceText: occurrence.sourceText,
-      targetText: "",
+      targetText: occurrence.targetText ?? "",
       sourceKind: occurrence.sourceKind,
       category: occurrence.category,
       confidence: occurrence.confidence,
@@ -149,6 +149,14 @@ export function mergePhraseOccurrence(
     ...existing,
     category: existing.category,
     confidence: Math.max(existing.confidence, occurrence.confidence),
+    canonicalTargetText:
+      occurrence.targetText && occurrence.targetText.trim().length > 0
+        ? occurrence.targetText.trim()
+        : existing.canonicalTargetText,
+    normalizedTargetText:
+      occurrence.normalizedTargetText && occurrence.normalizedTargetText.trim().length > 0
+        ? occurrence.normalizedTargetText.trim()
+        : existing.normalizedTargetText,
     lastSeenAt: now,
     exposureCount: existing.exposureCount + 1
   };
@@ -218,7 +226,13 @@ function ensurePhraseLearningItem(
   now: string
 ): void {
   const itemId = `phrase:${entry.phraseId}`;
-  if (learningItems[itemId]) {
+  const existing = learningItems[itemId];
+  if (existing) {
+    learningItems[itemId] = {
+      ...existing,
+      sourceText: entry.normalizedSourceText,
+      targetText: entry.canonicalTargetText
+    };
     return;
   }
 
