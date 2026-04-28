@@ -54,6 +54,7 @@ export type PageDiagnosticsSentenceRankingReason = {
     vocabularyFit: number;
     grammarFit: number;
     dueTargetValue: number;
+    grammarDueValue?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
   };

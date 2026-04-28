@@ -1867,6 +1867,8 @@ function readRankingSignals(
   const grammarFit = typeof value.grammarFit === "number" ? value.grammarFit : null;
   const dueTargetValue =
     typeof value.dueTargetValue === "number" ? value.dueTargetValue : null;
+  const grammarDueValue =
+    typeof value.grammarDueValue === "number" ? value.grammarDueValue : undefined;
   const chunkUsefulness =
     typeof value.chunkUsefulness === "number" ? value.chunkUsefulness : null;
   const ambiguityPenalty =
@@ -1886,6 +1888,7 @@ function readRankingSignals(
     vocabularyFit,
     grammarFit,
     dueTargetValue,
+    grammarDueValue,
     chunkUsefulness,
     ambiguityPenalty
   };

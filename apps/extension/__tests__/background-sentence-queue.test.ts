@@ -2,6 +2,7 @@ import {
   DEFAULT_CURRICULUM_CONFIG,
   DEFAULT_EXTENSION_SETTINGS,
   RuntimeMessageType,
+  type LearningItem,
   type SentenceLearningNote,
   hashSentence,
   type SentenceCacheEntry,
@@ -368,6 +369,83 @@ describe("sentence queue orchestration", () => {
     });
   });
 
+  it("boosts sentence ranking for due grammar feature items", () => {
+    const grammarSentence = {
+      sentenceHash: "sentence-grammar-due",
+      sourceText: "The city has been important."
+    };
+    const ordinarySentence = {
+      sentenceHash: "sentence-ordinary",
+      sourceText: "The city is important."
+    };
+    const dueGrammarItem = createLearningItem({
+      itemId: "grammar-feature:aspect:have-been",
+      unitRefId: "aspect:have-been",
+      unitType: "grammar-feature",
+      nextReviewAt: "2026-04-18T09:00:00.000Z"
+    });
+
+    const ranked = rankCandidatesByAnalysis(
+      [ordinarySentence, grammarSentence],
+      [
+        createSignalOnlyAnalysisResult(ordinarySentence.sentenceHash, {
+          vocabularyFit: 0.35,
+          grammarFit: 0.2,
+          dueTargetValue: 0,
+          chunkUsefulness: 0,
+          ambiguityPenalty: 0,
+          stretchDemand: 0
+        }),
+        {
+          ...createSignalOnlyAnalysisResult(grammarSentence.sentenceHash, {
+            vocabularyFit: 0.35,
+            grammarFit: 0.2,
+            dueTargetValue: 0,
+            chunkUsefulness: 0,
+            ambiguityPenalty: 0,
+            stretchDemand: 0
+          }),
+          entry: {
+            ...createSignalOnlyAnalysisResult(grammarSentence.sentenceHash, {
+              vocabularyFit: 0.35,
+              grammarFit: 0.2,
+              dueTargetValue: 0,
+              chunkUsefulness: 0,
+              ambiguityPenalty: 0,
+              stretchDemand: 0
+            }).entry,
+            grammarFeatures: [createGrammarFeature("aspect:have-been")]
+          }
+        }
+      ],
+      null,
+      [dueGrammarItem]
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      grammarSentence.sentenceHash,
+      ordinarySentence.sentenceHash
+    ]);
+    expect(ranked.reasons).toEqual([
+      expect.objectContaining({
+        sentenceHash: grammarSentence.sentenceHash,
+        rank: 1,
+        primaryReason: "grammar-due-value",
+        signals: expect.objectContaining({
+          grammarDueValue: 0.86
+        })
+      }),
+      expect.objectContaining({
+        sentenceHash: ordinarySentence.sentenceHash,
+        rank: 2,
+        primaryReason: "vocab-fit",
+        signals: expect.objectContaining({
+          grammarDueValue: 0
+        })
+      })
+    ]);
+  });
+
   it("skips out-of-band sentence candidates through curriculum policy", () => {
     const easier = {
       sentenceHash: "sentence-easy",
@@ -377,17 +455,30 @@ describe("sentence queue orchestration", () => {
       sentenceHash: "sentence-hard",
       sourceText: "The diplomatic delegation negotiated procedural amendments."
     };
+    const dueGrammarItem = createLearningItem({
+      itemId: "grammar-feature:aspect:have-been",
+      unitRefId: "aspect:have-been",
+      unitType: "grammar-feature",
+      nextReviewAt: "2026-04-18T09:00:00.000Z"
+    });
 
     const ranked = rankCandidatesByAnalysis(
       [tooHard, easier],
       [
-        createAnalysisResult(tooHard.sentenceHash, 0.4),
+        {
+          ...createAnalysisResult(tooHard.sentenceHash, 0.4),
+          entry: {
+            ...createAnalysisResult(tooHard.sentenceHash, 0.4).entry,
+            grammarFeatures: [createGrammarFeature("aspect:have-been")]
+          }
+        },
         createAnalysisResult(easier.sentenceHash, 0.8)
       ],
       {
         config: DEFAULT_CURRICULUM_CONFIG,
         profile: {}
-      }
+      },
+      [dueGrammarItem]
     );
 
     expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
@@ -408,6 +499,9 @@ describe("sentence queue orchestration", () => {
         sentenceHash: tooHard.sentenceHash,
         rank: 0,
         primaryReason: "curriculum-gate",
+        signals: expect.objectContaining({
+          grammarDueValue: 0.86
+        }),
         curriculum: expect.objectContaining({
           activeBandId: "level-1a",
           eligible: false,
@@ -552,6 +646,47 @@ function createSignalOnlyAnalysisResult(
       ...createAnalysisResult(sentenceHash, 0).entry,
       difficultyScore: undefined
     }
+  };
+}
+
+function createGrammarFeature(featureKey: string) {
+  return {
+    featureId: `grammar:${featureKey}`,
+    featureKey,
+    label: "Have been",
+    category: "tense-aspect" as const,
+    sourceText: "has been",
+    normalizedSourceText: "has been",
+    span: {
+      startToken: 2,
+      endToken: 4,
+      startChar: 9,
+      endChar: 17
+    },
+    evidence: ["fixture"],
+    confidence: 0.86
+  };
+}
+
+function createLearningItem(overrides: Partial<LearningItem> = {}): LearningItem {
+  return {
+    itemId: "word:lemma-city",
+    unitRefId: "lemma-city",
+    unitType: "word",
+    sourceText: "city",
+    targetText: "ciudad",
+    status: "learning",
+    introducedAt: "2026-04-18T09:00:00.000Z",
+    nextReviewAt: "2026-04-18T09:30:00.000Z",
+    interval: 600000,
+    ease: 2.3,
+    lapses: 0,
+    assistCount: 0,
+    qualifiedExposureCount: 1,
+    consecutiveUnassistedCount: 1,
+    distinctContextCount: 1,
+    suspended: false,
+    ...overrides
   };
 }
 

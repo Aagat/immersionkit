@@ -1,9 +1,11 @@
 import {
   evaluateCurriculumEligibility,
   hashSentence,
+  shouldReceiveDueReviewBoost,
   type CurriculumConfig,
   type CurriculumEligibilityDecision,
-  type CurriculumRuntimeProfileInput
+  type CurriculumRuntimeProfileInput,
+  type LearningItem
 } from "@immersionkit/shared";
 import type {
   QueueSentenceCandidatesMessage,
@@ -26,6 +28,7 @@ import {
   loadBackgroundRuntimeConfig,
   type BackgroundRuntimeConfig
 } from "./settings";
+import { BackgroundLearningItemService } from "./learning-items";
 
 const MAX_CANDIDATES_PER_MESSAGE = 12;
 const MAX_SENTENCE_QUEUE_SIZE = 150;
@@ -50,6 +53,7 @@ export type SentenceRankingPrimaryReason =
   | "difficulty-score"
   | "vocab-fit"
   | "due-target-value"
+  | "grammar-due-value"
   | "phrase-value"
   | "ambiguity-penalty"
   | "curriculum-gate"
@@ -70,6 +74,7 @@ export type SentenceRankingReason = {
     vocabularyFit: number;
     grammarFit: number;
     dueTargetValue: number;
+    grammarDueValue?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
   };
@@ -88,6 +93,7 @@ export type SentenceTranslationDelivery = {
 type SentenceQueueOrchestratorOptions = {
   sentenceCache?: SentenceCacheRepository;
   sentenceAnalysisService?: SentenceAnalysisService;
+  learningItems?: Pick<BackgroundLearningItemService, "listItems">;
   loadRuntimeConfig?: () => Promise<BackgroundRuntimeConfig>;
   createProviderClient?: typeof createSentenceProviderClient;
   notifyFreshTranslations?: (
@@ -113,6 +119,7 @@ export type QueueSentenceCandidatesResponse = {
 export class SentenceQueueOrchestrator {
   private readonly sentenceCache: SentenceCacheRepository;
   private readonly sentenceAnalysisService: SentenceAnalysisService;
+  private readonly learningItems: Pick<BackgroundLearningItemService, "listItems">;
   private readonly loadRuntimeConfig: () => Promise<BackgroundRuntimeConfig>;
   private readonly createProviderClient: typeof createSentenceProviderClient;
   private readonly notifyFreshTranslations: (
@@ -130,6 +137,7 @@ export class SentenceQueueOrchestrator {
       options.sentenceCache ?? new IndexedDbSentenceCacheRepository();
     this.sentenceAnalysisService =
       options.sentenceAnalysisService ?? new SentenceAnalysisService();
+    this.learningItems = options.learningItems ?? new BackgroundLearningItemService();
     this.loadRuntimeConfig =
       options.loadRuntimeConfig ?? loadBackgroundRuntimeConfig;
     this.createProviderClient =
@@ -166,13 +174,15 @@ export class SentenceQueueOrchestrator {
 
     const config = await this.loadRuntimeConfig();
     const analysisResults = await this.analyzeSentenceCandidates(candidates);
+    const learningItems = await this.loadLearningItemsForRanking();
     const translationAvailability = resolveTranslationAvailability(config);
     const cacheHits = await this.findCachedEntries(candidates, config);
     const cachedByHash = new Set(cacheHits.map((entry) => entry.sentenceHash));
     const rankedCandidates = rankCandidatesByAnalysis(
       candidates.filter((candidate) => !cachedByHash.has(candidate.sentenceHash)),
       analysisResults,
-      config.curriculum
+      config.curriculum,
+      learningItems
     );
     const uncachedCandidates = rankedCandidates.candidates;
 
@@ -213,6 +223,15 @@ export class SentenceQueueOrchestrator {
       return await this.sentenceAnalysisService.analyzeCandidates(candidates);
     } catch (error) {
       console.warn("ImmersionKit sentence analysis failed closed.", error);
+      return [];
+    }
+  }
+
+  private async loadLearningItemsForRanking(): Promise<LearningItem[]> {
+    try {
+      return await this.learningItems.listItems();
+    } catch (error) {
+      console.warn("ImmersionKit learning item ranking read failed.", error);
       return [];
     }
   }
@@ -566,11 +585,13 @@ function addNormalizedSentenceCandidate(
 export function rankCandidatesByAnalysis(
   candidates: readonly ProviderSentenceCandidate[],
   analysisResults: readonly AnalyzedSentenceCandidate[],
-  curriculum?: CurriculumRuntimePolicy | null
+  curriculum?: CurriculumRuntimePolicy | null,
+  learningItems: readonly LearningItem[] = []
 ): { candidates: ProviderSentenceCandidate[]; reasons: SentenceRankingReason[] } {
   const analysisByHash = new Map(
     analysisResults.map((result) => [result.entry.sentenceHash, result] as const)
   );
+  const dueGrammarFeatureKeys = buildDueGrammarFeatureKeySet(learningItems);
 
   const rankedEntries = candidates
     .map((candidate, index) => ({
@@ -579,7 +600,8 @@ export function rankCandidatesByAnalysis(
       ranking: buildRankingReason(
         candidate.sentenceHash,
         analysisByHash.get(candidate.sentenceHash),
-        curriculum
+        curriculum,
+        dueGrammarFeatureKeys
       )
     }));
   const eligible = rankedEntries
@@ -604,7 +626,8 @@ export function rankCandidatesByAnalysis(
 function buildRankingReason(
   sentenceHash: string,
   result: AnalyzedSentenceCandidate | undefined,
-  curriculum?: CurriculumRuntimePolicy | null
+  curriculum?: CurriculumRuntimePolicy | null,
+  dueGrammarFeatureKeys: ReadonlySet<string> = new Set()
 ): SentenceRankingReason {
   if (!result) {
     return {
@@ -615,7 +638,9 @@ function buildRankingReason(
     };
   }
 
-  const score = result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result);
+  const grammarDueValue = computeGrammarDueValue(result, dueGrammarFeatureKeys);
+  const score =
+    result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result, grammarDueValue);
   const curriculumDecision = curriculum
     ? evaluateCurriculumEligibility(curriculum.config, {
         unitType: "sentence",
@@ -631,7 +656,7 @@ function buildRankingReason(
     primaryReason:
       curriculumDecision?.eligible === false
         ? "curriculum-gate"
-        : choosePrimaryRankingReason(result),
+        : choosePrimaryRankingReason(result, grammarDueValue),
     curriculum: curriculumDecision
       ? serializeCurriculumDecision(curriculumDecision)
       : undefined,
@@ -639,6 +664,7 @@ function buildRankingReason(
       vocabularyFit: roundSignal(result.suitabilitySignals.vocabularyFit),
       grammarFit: roundSignal(result.suitabilitySignals.grammarFit),
       dueTargetValue: roundSignal(result.suitabilitySignals.dueTargetValue),
+      grammarDueValue: roundSignal(grammarDueValue),
       chunkUsefulness: roundSignal(result.suitabilitySignals.chunkUsefulness),
       ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty)
     }
@@ -665,7 +691,8 @@ function serializeCurriculumDecision(decision: CurriculumEligibilityDecision) {
 }
 
 function choosePrimaryRankingReason(
-  result: AnalyzedSentenceCandidate
+  result: AnalyzedSentenceCandidate,
+  grammarDueValue = 0
 ): SentenceRankingPrimaryReason {
   if (typeof result.entry.difficultyScore === "number") {
     return "difficulty-score";
@@ -678,6 +705,7 @@ function choosePrimaryRankingReason(
   }[] = [
     { reason: "vocab-fit", value: signals.vocabularyFit },
     { reason: "due-target-value", value: signals.dueTargetValue },
+    { reason: "grammar-due-value", value: grammarDueValue },
     { reason: "phrase-value", value: signals.chunkUsefulness }
   ];
   const bestPositive = positiveSignals.sort((left, right) => right.value - left.value)[0];
@@ -693,15 +721,63 @@ function roundSignal(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
 
-function scoreFromSuitabilitySignals(result: AnalyzedSentenceCandidate): number {
+function scoreFromSuitabilitySignals(
+  result: AnalyzedSentenceCandidate,
+  grammarDueValue = 0
+): number {
   return (
     result.suitabilitySignals.vocabularyFit * 0.28 +
     result.suitabilitySignals.grammarFit * 0.16 +
     result.suitabilitySignals.dueTargetValue * 0.18 +
+    grammarDueValue * 0.12 +
     result.suitabilitySignals.chunkUsefulness * 0.14 -
     result.suitabilitySignals.ambiguityPenalty * 0.16 -
     result.suitabilitySignals.stretchDemand * 0.08
   );
+}
+
+function buildDueGrammarFeatureKeySet(
+  learningItems: readonly LearningItem[]
+): ReadonlySet<string> {
+  const dueFeatureKeys = new Set<string>();
+  for (const item of learningItems) {
+    if (item.unitType !== "grammar-feature") {
+      continue;
+    }
+
+    if (!shouldReceiveDueReviewBoost(item)) {
+      continue;
+    }
+
+    const featureKey = item.unitRefId.trim();
+    if (featureKey) {
+      dueFeatureKeys.add(featureKey);
+    }
+  }
+
+  return dueFeatureKeys;
+}
+
+function computeGrammarDueValue(
+  result: AnalyzedSentenceCandidate,
+  dueGrammarFeatureKeys: ReadonlySet<string>
+): number {
+  if (dueGrammarFeatureKeys.size === 0 || result.entry.grammarFeatures.length === 0) {
+    return 0;
+  }
+
+  const dueMatches = result.entry.grammarFeatures.filter((feature) =>
+    dueGrammarFeatureKeys.has(feature.featureKey)
+  );
+  if (dueMatches.length === 0) {
+    return 0;
+  }
+
+  const confidence = dueMatches.reduce(
+    (total, feature) => total + Math.max(0, Math.min(1, feature.confidence)),
+    0
+  );
+  return Math.min(1, confidence / Math.max(1, result.entry.grammarFeatures.length));
 }
 
 function resolveTranslationAvailability(
