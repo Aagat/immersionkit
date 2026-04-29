@@ -3,12 +3,14 @@ import {
   PROFICIENCY_SEED_OPTIONS,
   getSiteEnabledForHost,
   loadActiveTabContext,
+  loadCheckpointEligibilityPreview,
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
   notifySettingsRefresh,
   upsertSiteEnabledState,
   type ActiveTabContext,
+  type CheckpointEligibilityPreview,
   type SettingsState,
   type SiteSettingsMap,
   type VocabStats
@@ -30,28 +32,47 @@ const DEFAULT_TAB_CONTEXT: ActiveTabContext = {
   supportMessage: "Open an HTTP(S) page to manage this site."
 };
 
+const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
+  activeBandId: null,
+  activeBandLabel: null,
+  nextBandId: null,
+  nextBandLabel: null,
+  checkpointRequired: false,
+  checkpointIsOnlyBlocker: false,
+  unmetRequirements: []
+};
+
 export function PopupApp() {
   const [activeTab, setActiveTab] = useState<ActiveTabContext>(DEFAULT_TAB_CONTEXT);
   const [settingsState, setSettingsState] = useState<SettingsState | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettingsMap>({});
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
+  const [checkpointPreview, setCheckpointPreview] =
+    useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadSnapshot = useCallback(async () => {
     const tabContext = await loadActiveTabContext();
-    const [loadedSettingsState, loadedSiteSettings, loadedVocabStats] = await Promise.all([
+    const [
+      loadedSettingsState,
+      loadedSiteSettings,
+      loadedVocabStats,
+      loadedCheckpointPreview
+    ] = await Promise.all([
       loadSettingsState(),
       loadSiteSettingsMap(),
-      loadVocabStats()
+      loadVocabStats(),
+      loadCheckpointEligibilityPreview()
     ]);
 
     return {
       tabContext,
       loadedSettingsState,
       loadedSiteSettings,
-      loadedVocabStats
+      loadedVocabStats,
+      loadedCheckpointPreview
     };
   }, []);
 
@@ -65,6 +86,7 @@ export function PopupApp() {
       setSettingsState(snapshot.loadedSettingsState);
       setSiteSettings(snapshot.loadedSiteSettings);
       setVocabStats(snapshot.loadedVocabStats);
+      setCheckpointPreview(snapshot.loadedCheckpointPreview);
     } catch {
       setErrorMessage("Unable to load your reading controls right now.");
     } finally {
@@ -183,6 +205,10 @@ export function PopupApp() {
         </div>
 
         <p className="support-line muted">
+          {formatPopupCheckpointHint(checkpointPreview)}
+        </p>
+
+        <p className="support-line muted">
           {translationEnabled
             ? "Sentence help is enabled globally."
             : "Sentence help is currently off."}{" "}
@@ -235,6 +261,32 @@ function describeDiscoveryRate(rate: number): string {
 
 function formatCount(value: number): string {
   return value.toLocaleString();
+}
+
+function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): string {
+  if (!preview.activeBandId) {
+    return "Progress gate: starting band not loaded yet.";
+  }
+
+  const activeBand = preview.activeBandLabel ?? preview.activeBandId;
+  const nextBand = preview.nextBandLabel ?? preview.nextBandId;
+
+  if (preview.checkpointIsOnlyBlocker) {
+    return `Progress gate: ${activeBand} is ready for checkpoint completion in settings.`;
+  }
+
+  if (preview.unmetRequirements.length > 0) {
+    const missingCount = preview.unmetRequirements.filter(
+      (requirement) => requirement !== "checkpoint"
+    ).length;
+    return `Progress gate: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} evidence gate${missingCount === 1 ? "" : "s"} left.`;
+  }
+
+  if (nextBand) {
+    return `Progress gate: ${activeBand} can continue toward ${nextBand}.`;
+  }
+
+  return `Progress gate: ${activeBand} is the latest available band.`;
 }
 
 function getPageStatus(input: {
