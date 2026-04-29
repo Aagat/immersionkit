@@ -5,6 +5,7 @@ import {
   isProviderKeyValid,
   loadActiveTabContext,
   loadCurriculumDiagnostics,
+  loadGrammarEvidenceStats,
   loadPageDiagnostics,
   loadSentenceStats,
   loadSettingsState,
@@ -20,6 +21,7 @@ import {
   type VocabStats,
   type ActiveTabContext,
   type CurriculumDiagnostics,
+  type GrammarEvidenceStats,
   type PageDiagnostics
 } from "./state";
 
@@ -49,6 +51,13 @@ const EMPTY_CURRICULUM_DIAGNOSTICS: CurriculumDiagnostics = {
   lastProgressionDecision: null
 };
 
+const EMPTY_GRAMMAR_EVIDENCE_STATS: GrammarEvidenceStats = {
+  featureCount: 0,
+  assistCount: 0,
+  qualifiedExposureCount: 0,
+  dueCount: 0
+};
+
 const SHOW_ADVANCED_TAB = true;
 
 type OptionsTab = "general" | "translation" | "advanced";
@@ -63,6 +72,8 @@ export function OptionsApp() {
   );
   const [curriculumDiagnostics, setCurriculumDiagnostics] =
     useState<CurriculumDiagnostics>(EMPTY_CURRICULUM_DIAGNOSTICS);
+  const [grammarEvidenceStats, setGrammarEvidenceStats] =
+    useState<GrammarEvidenceStats>(EMPTY_GRAMMAR_EVIDENCE_STATS);
   const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>("general");
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +94,7 @@ export function OptionsApp() {
         loadedSiteSettings,
         loadedSentenceStats,
         loadedCurriculumDiagnostics,
+        loadedGrammarEvidenceStats,
         loadedActiveTabContext
       ] =
         await Promise.all([
@@ -91,6 +103,7 @@ export function OptionsApp() {
           loadSiteSettingsMap(),
           loadSentenceStats(),
           loadCurriculumDiagnostics(),
+          loadGrammarEvidenceStats(),
           loadActiveTabContext()
         ]);
 
@@ -103,6 +116,7 @@ export function OptionsApp() {
       setSiteSettings(loadedSiteSettings);
       setSentenceStats(loadedSentenceStats);
       setCurriculumDiagnostics(loadedCurriculumDiagnostics);
+      setGrammarEvidenceStats(loadedGrammarEvidenceStats);
       setActiveTabContext(loadedActiveTabContext);
       setPageDiagnostics(loadedPageDiagnostics);
     } catch {
@@ -766,6 +780,22 @@ export function OptionsApp() {
                 <MetricCard
                   label="Due grammar"
                   value={formatCount(pageDiagnostics?.grammarDueSentenceCount ?? 0)}
+                />
+                <MetricCard
+                  label="Grammar items"
+                  value={formatCount(grammarEvidenceStats.featureCount)}
+                />
+                <MetricCard
+                  label="Grammar assists"
+                  value={formatCount(grammarEvidenceStats.assistCount)}
+                />
+                <MetricCard
+                  label="Grammar exposures"
+                  value={formatCount(grammarEvidenceStats.qualifiedExposureCount)}
+                />
+                <MetricCard
+                  label="Due grammar items"
+                  value={formatCount(grammarEvidenceStats.dueCount)}
                 />
               </div>
 

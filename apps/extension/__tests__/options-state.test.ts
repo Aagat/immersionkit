@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { LearningItem } from "@immersionkit/shared";
 
-import { loadCurriculumDiagnostics } from "../src/options/state";
+import {
+  loadCurriculumDiagnostics,
+  summarizeGrammarEvidenceStats
+} from "../src/options/state";
 import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("options state", () => {
@@ -55,4 +59,74 @@ describe("options state", () => {
       chromeStub.restore();
     }
   });
+
+  it("summarizes grammar evidence from durable learning items", () => {
+    expect(
+      summarizeGrammarEvidenceStats(
+        [
+          createLearningItem({
+            itemId: "grammar-feature:aspect:have-been",
+            unitRefId: "aspect:have-been",
+            unitType: "grammar-feature",
+            assistCount: 2,
+            qualifiedExposureCount: 3,
+            nextReviewAt: "2026-04-29T10:00:00.000Z"
+          }),
+          createLearningItem({
+            itemId: "grammar-feature:clause:if",
+            unitRefId: "clause:if",
+            unitType: "grammar-feature",
+            assistCount: 1,
+            qualifiedExposureCount: 0,
+            nextReviewAt: "2026-05-01T10:00:00.000Z"
+          }),
+          createLearningItem({
+            itemId: "grammar-feature:suspended",
+            unitRefId: "suspended",
+            unitType: "grammar-feature",
+            assistCount: 10,
+            qualifiedExposureCount: 10,
+            suspended: true
+          }),
+          createLearningItem({
+            itemId: "word:city",
+            unitRefId: "city",
+            unitType: "word",
+            assistCount: 5,
+            qualifiedExposureCount: 5
+          })
+        ],
+        Date.parse("2026-04-29T12:00:00.000Z")
+      )
+    ).toEqual({
+      featureCount: 2,
+      assistCount: 3,
+      qualifiedExposureCount: 3,
+      dueCount: 1
+    });
+  });
 });
+
+function createLearningItem(
+  input: Pick<LearningItem, "itemId" | "unitRefId" | "unitType"> &
+    Partial<LearningItem>
+): LearningItem {
+  return {
+    itemId: input.itemId,
+    unitRefId: input.unitRefId,
+    unitType: input.unitType,
+    sourceText: input.sourceText ?? input.unitRefId,
+    targetText: input.targetText ?? "",
+    status: input.status ?? "new",
+    introducedAt: input.introducedAt ?? "2026-04-29T09:00:00.000Z",
+    nextReviewAt: input.nextReviewAt,
+    interval: input.interval ?? 600000,
+    ease: input.ease ?? 2.3,
+    lapses: input.lapses ?? 0,
+    assistCount: input.assistCount ?? 0,
+    qualifiedExposureCount: input.qualifiedExposureCount ?? 0,
+    consecutiveUnassistedCount: input.consecutiveUnassistedCount ?? 0,
+    distinctContextCount: input.distinctContextCount ?? 0,
+    suspended: input.suspended ?? false
+  };
+}

@@ -5,6 +5,7 @@ import {
   resolveExtensionSettings,
   type CurriculumRuntimeProfileInput,
   type ExtensionSettings,
+  type LearningItem,
   type ProviderName,
   type ResolvedExtensionSettings,
   type SiteSetting,
@@ -18,6 +19,7 @@ import {
   INDEXEDDB_STORES,
   countIndexedDbStore
 } from "../background/indexeddb";
+import { IndexedDbLearningItemRepository } from "../background/learning-item-repository";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -139,6 +141,13 @@ export type CurriculumProgressionDiagnostics = {
 export type CurriculumDiagnostics = {
   profile: CurriculumRuntimeProfileInput;
   lastProgressionDecision: CurriculumProgressionDiagnostics | null;
+};
+
+export type GrammarEvidenceStats = {
+  featureCount: number;
+  assistCount: number;
+  qualifiedExposureCount: number;
+  dueCount: number;
 };
 
 export async function loadSettingsState(): Promise<SettingsState> {
@@ -293,6 +302,40 @@ export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics
       pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
     )
   };
+}
+
+export async function loadGrammarEvidenceStats(): Promise<GrammarEvidenceStats> {
+  const repository = new IndexedDbLearningItemRepository();
+  return summarizeGrammarEvidenceStats(Object.values(await repository.loadAll()));
+}
+
+export function summarizeGrammarEvidenceStats(
+  items: readonly LearningItem[],
+  nowMs: number = Date.now()
+): GrammarEvidenceStats {
+  const stats: GrammarEvidenceStats = {
+    featureCount: 0,
+    assistCount: 0,
+    qualifiedExposureCount: 0,
+    dueCount: 0
+  };
+
+  for (const item of items) {
+    if (item.unitType !== "grammar-feature" || item.suspended) {
+      continue;
+    }
+
+    stats.featureCount += 1;
+    stats.assistCount += item.assistCount;
+    stats.qualifiedExposureCount += item.qualifiedExposureCount;
+
+    const nextReviewMs = item.nextReviewAt ? Date.parse(item.nextReviewAt) : NaN;
+    if (Number.isFinite(nextReviewMs) && nextReviewMs <= nowMs) {
+      stats.dueCount += 1;
+    }
+  }
+
+  return stats;
 }
 
 export async function loadActiveTabContext(): Promise<ActiveTabContext> {
