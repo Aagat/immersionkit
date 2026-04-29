@@ -255,6 +255,69 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("resolves runtime phrase targets from the imported phrase target asset", async () => {
+    const sourceText = "The public transport system plan needs support.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createPublicTransportPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const chunkPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceText === "public transport system plan"
+    );
+
+    expect(chunkPhrase).toMatchObject({
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      targetText: "plan del sistema de transporte publico",
+      normalizedTargetText: "plan del sistema de transporte publico",
+      phraseId:
+        "phrase:chunk:public-transport-system-plan:plan-del-sistema-de-transporte-publico"
+    });
+  });
+
+  it("keeps unresolved runtime phrases targetless for inline suppression", async () => {
+    const sourceText = "The local garden gate design needs paint.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createUnresolvedChunkAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const chunkPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceText === "local garden gate design"
+    );
+
+    expect(chunkPhrase).toMatchObject({
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      targetText: undefined,
+      normalizedTargetText: undefined,
+      phraseId: "phrase:chunk:local-garden-gate-design:empty"
+    });
+    await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
+      canonicalTargetText: "",
+      normalizedTargetText: ""
+    });
+  });
+
   it("merges repeated phrase sightings into durable registry identities", async () => {
     const sourceText = "The captain of the football team has been patient.";
     const sentenceHash = hashSentence(sourceText);
@@ -482,6 +545,70 @@ function createCuratedPhraseTargetAnalyzerOutput(
       {
         text: "public health care system",
         normalized: "public health care system",
+        type: "noun-phrase",
+        tokenStart: 1,
+        tokenEnd: 5,
+        confidence: 0.9
+      }
+    ],
+    grammarFeatures: []
+  };
+}
+
+function createPublicTransportPhraseTargetAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
+      token("public", "public", "adjective", 4, 10, ["JJ", "adjective"]),
+      token("transport", "transport", "noun", 11, 20, ["NN", "noun"]),
+      token("system", "system", "noun", 21, 27, ["NN", "noun"]),
+      token("plan", "plan", "noun", 28, 32, ["NN", "noun"]),
+      token("needs", "needs", "verb", 33, 38, ["VBZ", "verb"]),
+      token("support", "support", "noun", 39, 46, ["NN", "noun"])
+    ],
+    chunks: [
+      {
+        text: "public transport system plan",
+        normalized: "public transport system plan",
+        type: "noun-phrase",
+        tokenStart: 1,
+        tokenEnd: 5,
+        confidence: 0.9
+      }
+    ],
+    grammarFeatures: []
+  };
+}
+
+function createUnresolvedChunkAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
+      token("local", "local", "adjective", 4, 9, ["JJ", "adjective"]),
+      token("garden", "garden", "noun", 10, 16, ["NN", "noun"]),
+      token("gate", "gate", "noun", 17, 21, ["NN", "noun"]),
+      token("design", "design", "noun", 22, 28, ["NN", "noun"]),
+      token("needs", "needs", "verb", 29, 34, ["VBZ", "verb"]),
+      token("paint", "paint", "noun", 35, 40, ["NN", "noun"])
+    ],
+    chunks: [
+      {
+        text: "local garden gate design",
+        normalized: "local garden gate design",
         type: "noun-phrase",
         tokenStart: 1,
         tokenEnd: 5,

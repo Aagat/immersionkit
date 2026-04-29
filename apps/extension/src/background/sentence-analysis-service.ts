@@ -1,7 +1,7 @@
 import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
+import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
-  CURATED_PHRASE_TARGET_LEXICON,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
   detectPhraseCandidatesFromAnalyzerOutput,
@@ -16,6 +16,7 @@ import {
   type AnalyzerToken,
   type ContextChunkType,
   type ContextualWordCandidate,
+  type CuratedPhraseTargetEntry,
   type ObservedContextPos,
   type PhraseOccurrence,
   type SafeInjectionPos,
@@ -47,6 +48,7 @@ const SEED_LEXICON_STORAGE_KEYS = [
   "seedLexicon",
   "lexicon"
 ] as const;
+const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
 
 export type SentenceAnalysisCandidate = {
   sentenceHash?: string;
@@ -380,7 +382,7 @@ function buildSeedLexiconPhraseTargetResolver(
       return null;
     }
 
-    const curatedTarget = CURATED_PHRASE_TARGET_LEXICON.find(
+    const curatedTarget = RUNTIME_PHRASE_TARGET_LEXICON.find(
       (entry) =>
         entry.sourceKind === input.sourceKind &&
         entry.category === input.category &&
@@ -408,6 +410,57 @@ function buildSeedLexiconPhraseTargetResolver(
       normalizedTargetText: normalizeToken(entry.targetLemma)
     };
   };
+}
+
+function parsePhraseTargetAsset(value: unknown): readonly CuratedPhraseTargetEntry[] {
+  if (!isRecord(value) || !Array.isArray(value.entries)) {
+    return [];
+  }
+
+  return value.entries.flatMap((entry): CuratedPhraseTargetEntry[] => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+
+    const sourceText = readString(entry.sourceText);
+    const targetText = readString(entry.targetText);
+    const sourceKind = readPhraseTargetSourceKind(entry.sourceKind);
+    const category = readPhraseCategory(entry.category);
+    const confidence =
+      typeof entry.confidence === "number" && Number.isFinite(entry.confidence)
+        ? Math.max(0, Math.min(1, entry.confidence))
+        : null;
+
+    if (!sourceText || !targetText || !sourceKind || !category || confidence === null) {
+      return [];
+    }
+
+    return [
+      {
+        sourceText,
+        targetText,
+        sourceKind,
+        category,
+        confidence,
+        normalizedSourceText: normalizeToken(sourceText),
+        normalizedTargetText: normalizeToken(targetText)
+      }
+    ];
+  });
+}
+
+function readPhraseTargetSourceKind(
+  value: unknown
+): CuratedPhraseTargetEntry["sourceKind"] | null {
+  return value === "chunk" || value === "pattern-match" ? value : null;
+}
+
+function readPhraseCategory(value: unknown): CuratedPhraseTargetEntry["category"] | null {
+  return value === "noun-chunk" ||
+    value === "adjective-noun" ||
+    value === "grammar-carrier"
+    ? value
+    : null;
 }
 
 function computeSuitabilitySignals(
