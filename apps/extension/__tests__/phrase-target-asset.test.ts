@@ -44,6 +44,18 @@ describe("phrase target asset", () => {
           targetText: "reunion de funcionarios del gobierno local",
           sourceKind: "chunk",
           category: "noun-chunk"
+        }),
+        expect.objectContaining({
+          sourceText: "emergency response plan update",
+          targetText: "actualizacion del plan de respuesta de emergencia",
+          sourceKind: "chunk",
+          category: "noun-chunk"
+        }),
+        expect.objectContaining({
+          sourceText: "school board meeting schedule",
+          targetText: "calendario de reuniones de la junta escolar",
+          sourceKind: "chunk",
+          category: "noun-chunk"
         })
       ])
     );

@@ -315,6 +315,40 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("resolves release-batch curated phrase target asset entries", async () => {
+    const sourceText = "The school board meeting schedule needs support.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createSchoolBoardPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const chunkPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceText === "school board meeting schedule"
+    );
+
+    expect(chunkPhrase).toMatchObject({
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      targetText: "calendario de reuniones de la junta escolar",
+      normalizedTargetText: "calendario de reuniones de la junta escolar",
+      phraseId:
+        "phrase:chunk:school-board-meeting-schedule:calendario-de-reuniones-de-la-junta-escolar"
+    });
+    await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
+      canonicalTargetText: "calendario de reuniones de la junta escolar",
+      normalizedTargetText: "calendario de reuniones de la junta escolar"
+    });
+  });
+
   it("keeps unresolved runtime phrases targetless for inline suppression", async () => {
     const sourceText = "The local garden gate design needs paint.";
     const sentenceHash = hashSentence(sourceText);
@@ -639,6 +673,38 @@ function createRenewableEnergyPhraseTargetAnalyzerOutput(
       {
         text: "renewable energy project plan",
         normalized: "renewable energy project plan",
+        type: "noun-phrase",
+        tokenStart: 1,
+        tokenEnd: 5,
+        confidence: 0.9
+      }
+    ],
+    grammarFeatures: []
+  };
+}
+
+function createSchoolBoardPhraseTargetAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
+      token("school", "school", "noun", 4, 10, ["NN", "noun"]),
+      token("board", "board", "noun", 11, 16, ["NN", "noun"]),
+      token("meeting", "meeting", "noun", 17, 24, ["NN", "noun"]),
+      token("schedule", "schedule", "noun", 25, 33, ["NN", "noun"]),
+      token("needs", "needs", "verb", 34, 39, ["VBZ", "verb"]),
+      token("support", "support", "noun", 40, 47, ["NN", "noun"])
+    ],
+    chunks: [
+      {
+        text: "school board meeting schedule",
+        normalized: "school board meeting schedule",
         type: "noun-phrase",
         tokenStart: 1,
         tokenEnd: 5,
