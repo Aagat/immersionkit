@@ -3,6 +3,7 @@ import type { LearningItem } from "@immersionkit/shared";
 
 import {
   loadCurriculumDiagnostics,
+  summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
 } from "../src/options/state";
 import { installChromeStub } from "./helpers/chrome-stub";
@@ -105,6 +106,72 @@ describe("options state", () => {
       dueCount: 1
     });
   });
+
+  it("previews checkpoint-only curriculum blockers without advancing bands", () => {
+    const preview = summarizeCheckpointEligibilityPreview({
+      profile: {
+        activeVocabularyBandId: "level-1c",
+        activePhraseBandId: "level-1c",
+        activeGrammarBandId: "level-1c"
+      },
+      items: [
+        createLearningItem({
+          itemId: "word:city",
+          unitRefId: "city",
+          unitType: "word",
+          bandId: "level-1c",
+          status: "reviewing",
+          qualifiedExposureCount: 2
+        }),
+        createLearningItem({
+          itemId: "phrase:used-to",
+          unitRefId: "used-to",
+          unitType: "phrase",
+          bandId: "level-1c",
+          status: "mastered",
+          qualifiedExposureCount: 3
+        })
+      ],
+      now: "2026-04-29T12:00:00.000Z"
+    });
+
+    expect(preview).toMatchObject({
+      activeBandId: "level-1c",
+      activeBandLabel: "Level 1C",
+      nextBandId: "level-2a",
+      nextBandLabel: "Level 2A",
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: true,
+      unmetRequirements: ["checkpoint"]
+    });
+  });
+
+  it("keeps unmet evidence requirements visible in checkpoint preview", () => {
+    const preview = summarizeCheckpointEligibilityPreview({
+      profile: {
+        activeVocabularyBandId: "level-1c"
+      },
+      items: [
+        createLearningItem({
+          itemId: "word:city",
+          unitRefId: "city",
+          unitType: "word",
+          bandId: "level-1c",
+          status: "new",
+          qualifiedExposureCount: 0
+        })
+      ],
+      now: "2026-04-29T12:00:00.000Z"
+    });
+
+    expect(preview.checkpointRequired).toBe(true);
+    expect(preview.checkpointIsOnlyBlocker).toBe(false);
+    expect(preview.unmetRequirements).toEqual([
+      "stable-item-ratio",
+      "qualified-exposures",
+      "checkpoint"
+    ]);
+  });
 });
 
 function createLearningItem(
@@ -118,6 +185,7 @@ function createLearningItem(
     sourceText: input.sourceText ?? input.unitRefId,
     targetText: input.targetText ?? "",
     status: input.status ?? "new",
+    bandId: input.bandId,
     introducedAt: input.introducedAt ?? "2026-04-29T09:00:00.000Z",
     nextReviewAt: input.nextReviewAt,
     interval: input.interval ?? 600000,

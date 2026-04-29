@@ -4,6 +4,7 @@ import {
   PROFICIENCY_SEED_OPTIONS,
   isProviderKeyValid,
   loadActiveTabContext,
+  loadCheckpointEligibilityPreview,
   loadCurriculumDiagnostics,
   loadGrammarEvidenceStats,
   loadPageDiagnostics,
@@ -20,6 +21,7 @@ import {
   type SiteSettingsMap,
   type VocabStats,
   type ActiveTabContext,
+  type CheckpointEligibilityPreview,
   type CurriculumDiagnostics,
   type GrammarEvidenceStats,
   type PageDiagnostics
@@ -58,6 +60,16 @@ const EMPTY_GRAMMAR_EVIDENCE_STATS: GrammarEvidenceStats = {
   dueCount: 0
 };
 
+const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
+  activeBandId: null,
+  activeBandLabel: null,
+  nextBandId: null,
+  nextBandLabel: null,
+  checkpointRequired: false,
+  checkpointIsOnlyBlocker: false,
+  unmetRequirements: []
+};
+
 const SHOW_ADVANCED_TAB = true;
 
 type OptionsTab = "general" | "translation" | "advanced";
@@ -74,6 +86,8 @@ export function OptionsApp() {
     useState<CurriculumDiagnostics>(EMPTY_CURRICULUM_DIAGNOSTICS);
   const [grammarEvidenceStats, setGrammarEvidenceStats] =
     useState<GrammarEvidenceStats>(EMPTY_GRAMMAR_EVIDENCE_STATS);
+  const [checkpointPreview, setCheckpointPreview] =
+    useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
   const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>("general");
   const [isLoading, setIsLoading] = useState(true);
@@ -95,6 +109,7 @@ export function OptionsApp() {
         loadedSentenceStats,
         loadedCurriculumDiagnostics,
         loadedGrammarEvidenceStats,
+        loadedCheckpointPreview,
         loadedActiveTabContext
       ] =
         await Promise.all([
@@ -104,6 +119,7 @@ export function OptionsApp() {
           loadSentenceStats(),
           loadCurriculumDiagnostics(),
           loadGrammarEvidenceStats(),
+          loadCheckpointEligibilityPreview(),
           loadActiveTabContext()
         ]);
 
@@ -117,6 +133,7 @@ export function OptionsApp() {
       setSentenceStats(loadedSentenceStats);
       setCurriculumDiagnostics(loadedCurriculumDiagnostics);
       setGrammarEvidenceStats(loadedGrammarEvidenceStats);
+      setCheckpointPreview(loadedCheckpointPreview);
       setActiveTabContext(loadedActiveTabContext);
       setPageDiagnostics(loadedPageDiagnostics);
     } catch {
@@ -860,6 +877,49 @@ export function OptionsApp() {
             <section className="panel-card">
               <div className="section-heading">
                 <div>
+                  <p className="eyebrow">Checkpoint</p>
+                  <h2>Eligibility preview</h2>
+                </div>
+                <span
+                  className={
+                    checkpointPreview.checkpointIsOnlyBlocker
+                      ? "badge-soft badge-soft--off"
+                      : "badge-soft badge-soft--on"
+                  }
+                >
+                  {checkpointPreview.checkpointIsOnlyBlocker
+                    ? "Checkpoint needed"
+                    : "No checkpoint block"}
+                </span>
+              </div>
+
+              <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
+                <MetricCard
+                  label="Active band"
+                  value={checkpointPreview.activeBandLabel ?? "unknown"}
+                />
+                <MetricCard
+                  label="Next band"
+                  value={checkpointPreview.nextBandLabel ?? "none"}
+                />
+                <MetricCard
+                  label="Boundary"
+                  value={checkpointPreview.checkpointRequired ? "Required" : "Clear"}
+                />
+                <MetricCard
+                  label="Missing"
+                  value={formatCount(checkpointPreview.unmetRequirements.length)}
+                />
+              </div>
+
+              <p className="support-line muted">
+                {formatCheckpointPreview(checkpointPreview)}
+              </p>
+            </section>
+
+            <section className="panel-card">
+              <div className="section-heading">
+                <div>
                   <p className="eyebrow">Site Overrides</p>
                   <h2>Saved site decisions</h2>
                 </div>
@@ -1190,6 +1250,26 @@ function formatProgressionDecision(
   }
 
   return `${requirements} Last checked ${when}.`;
+}
+
+function formatCheckpointPreview(preview: CheckpointEligibilityPreview): string {
+  if (!preview.activeBandId) {
+    return "No active curriculum band is available for checkpoint preview.";
+  }
+
+  if (preview.checkpointIsOnlyBlocker) {
+    return `Ready for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"} after an explicit checkpoint.`;
+  }
+
+  if (preview.unmetRequirements.length > 0) {
+    return `Checkpoint is not the only blocker: ${preview.unmetRequirements.join(", ")}.`;
+  }
+
+  if (preview.nextBandId) {
+    return `No checkpoint block is active before ${preview.nextBandLabel ?? preview.nextBandId}.`;
+  }
+
+  return "No next curriculum band is available.";
 }
 
 function describeDiscoveryRate(percent: number): string {
