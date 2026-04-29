@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-25T17:00:21.058Z",
+  "generatedAt": "2026-04-29T14:49:24.395Z",
   "browserContext": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -153,9 +153,9 @@
       "label": "compromise/three + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 103,
-        "averageCaseMs": 0.18727272727272729,
-        "casesPerSecond": 5339.805825242719,
+        "totalMs": 106,
+        "averageCaseMs": 0.19272727272727272,
+        "casesPerSecond": 5188.679245283019,
         "repeatCount": 25
       },
       "overall": {
