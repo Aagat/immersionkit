@@ -60,6 +60,17 @@ export type GetSentenceAnalysisCacheResponse =
     }
   | ErrorResponse;
 
+export type GraduateCheckpointResponse =
+  | {
+      ok: true;
+      advanced: boolean;
+      previousBandId: string | null;
+      nextBandId: string | null;
+      reason: string;
+      unmetRequirements: string[];
+    }
+  | ErrorResponse;
+
 const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType));
 
 export class BackgroundRuntimeCoordinator {
@@ -121,6 +132,11 @@ export class BackgroundRuntimeCoordinator {
 
       if (message.type === RuntimeMessageType.GetSentenceAnalysisCache) {
         void this.handleGetSentenceAnalysisCache(message.sentenceHashes, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.GraduateCheckpoint) {
+        void this.handleGraduateCheckpoint(sendResponse);
         return true;
       }
 
@@ -238,6 +254,36 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "sentence-analysis-cache-read-failed"
+      });
+    }
+  }
+
+  private async handleGraduateCheckpoint(
+    sendResponse: (response: GraduateCheckpointResponse) => void
+  ) {
+    try {
+      const runtimeConfig = await loadBackgroundRuntimeConfig();
+      const result = await this.curriculumProgression.advanceAfterExplicitCheckpoint({
+        config: runtimeConfig.curriculum.config,
+        profile: runtimeConfig.curriculum.profile,
+        items: await this.learningItems.listItems()
+      });
+      if (result.profile) {
+        void refreshTabsAfterCurriculumProgression(undefined);
+      }
+      sendResponse({
+        ok: true,
+        advanced: Boolean(result.profile),
+        previousBandId: result.diagnostics.previousBandId,
+        nextBandId: result.diagnostics.nextBandId,
+        reason: result.diagnostics.reason,
+        unmetRequirements: result.diagnostics.unmetRequirements
+      });
+    } catch (error) {
+      console.warn("ImmersionKit checkpoint graduation failed.", error);
+      sendResponse({
+        ok: false,
+        error: "checkpoint-graduation-failed"
       });
     }
   }

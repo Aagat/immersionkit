@@ -12,6 +12,7 @@ import {
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
+  graduateCheckpoint,
   normalizeDiscoveryRate,
   notifySettingsRefresh,
   parseProficiencySeed,
@@ -92,6 +93,7 @@ export function OptionsApp() {
   const [activeTab, setActiveTab] = useState<OptionsTab>("general");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -311,6 +313,30 @@ export function OptionsApp() {
     setStatusMessage(null);
     setErrorMessage(null);
   }, []);
+
+  const handleCheckpointGraduation = useCallback(async () => {
+    setStatusMessage(null);
+    setErrorMessage(null);
+    setIsGraduatingCheckpoint(true);
+
+    try {
+      const result = await graduateCheckpoint();
+      if (!result.advanced) {
+        await loadState();
+        setErrorMessage(formatCheckpointGraduationBlock(result));
+        return;
+      }
+
+      await loadState();
+      setStatusMessage(
+        `Checkpoint complete. Advanced to ${result.nextBandId ?? "the next band"}.`
+      );
+    } catch {
+      setErrorMessage("Unable to complete checkpoint graduation. Try again.");
+    } finally {
+      setIsGraduatingCheckpoint(false);
+    }
+  }, [loadState]);
 
   const discoveryRatePercent = Math.round(
     (settingsState?.settings.discoveryRate ?? 0) * 100
@@ -915,6 +941,24 @@ export function OptionsApp() {
               <p className="support-line muted">
                 {formatCheckpointPreview(checkpointPreview)}
               </p>
+
+              <div className="field-action-row">
+                <button
+                  type="button"
+                  className="button-primary"
+                  disabled={
+                    isLoading ||
+                    isSaving ||
+                    isGraduatingCheckpoint ||
+                    !checkpointPreview.checkpointIsOnlyBlocker
+                  }
+                  onClick={() => {
+                    void handleCheckpointGraduation();
+                  }}
+                >
+                  {isGraduatingCheckpoint ? "Completing..." : "Complete checkpoint"}
+                </button>
+              </div>
             </section>
 
             <section className="panel-card">
@@ -1270,6 +1314,25 @@ function formatCheckpointPreview(preview: CheckpointEligibilityPreview): string 
   }
 
   return "No next curriculum band is available.";
+}
+
+function formatCheckpointGraduationBlock(input: {
+  reason: string;
+  unmetRequirements: readonly string[];
+}): string {
+  if (input.unmetRequirements.length > 0) {
+    return `Checkpoint is still blocked by ${input.unmetRequirements.join(", ")}.`;
+  }
+
+  if (input.reason === "no-checkpoint-boundary") {
+    return "There is no checkpoint boundary to complete right now.";
+  }
+
+  if (input.reason === "no-next-band") {
+    return "There is no next curriculum band available right now.";
+  }
+
+  return "Checkpoint graduation is not available yet.";
 }
 
 function describeDiscoveryRate(percent: number): string {

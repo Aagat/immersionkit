@@ -163,6 +163,14 @@ export type CheckpointEligibilityPreview = {
   unmetRequirements: string[];
 };
 
+export type CheckpointGraduationResult = {
+  advanced: boolean;
+  previousBandId: string | null;
+  nextBandId: string | null;
+  reason: string;
+  unmetRequirements: string[];
+};
+
 export async function loadSettingsState(): Promise<SettingsState> {
   const storage = await getStorageValues([
     ...SETTINGS_STORAGE_KEYS,
@@ -332,6 +340,27 @@ export async function loadCheckpointEligibilityPreview(): Promise<CheckpointElig
     profile: curriculumDiagnostics.profile,
     items: Object.values(itemsById)
   });
+}
+
+export async function graduateCheckpoint(): Promise<CheckpointGraduationResult> {
+  const response = await sendRuntimeMessage<
+    | ({ ok: true } & CheckpointGraduationResult)
+    | { ok: false; error?: string }
+  >({
+    type: RuntimeMessageType.GraduateCheckpoint
+  });
+
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "checkpoint-graduation-unavailable");
+  }
+
+  return {
+    advanced: response.advanced,
+    previousBandId: response.previousBandId,
+    nextBandId: response.nextBandId,
+    reason: response.reason,
+    unmetRequirements: response.unmetRequirements
+  };
 }
 
 export function summarizeCheckpointEligibilityPreview(input: {

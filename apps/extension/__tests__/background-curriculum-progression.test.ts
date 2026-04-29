@@ -89,6 +89,82 @@ describe("background curriculum progression", () => {
     });
   });
 
+  it("advances checkpoint-gated boundaries after explicit checkpoint when evidence gates are met", async () => {
+    const profileStore = new InMemoryLearningProfileStore({
+      activeVocabularyBandId: "level-1c",
+      activePhraseBandId: "level-1c",
+      activeGrammarBandId: "level-1c",
+      unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
+    });
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
+
+    const result = await service.advanceAfterExplicitCheckpoint({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      items: [createLearningItem("word:lemma-city", "word", "level-1c")],
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(result.profile).toMatchObject({
+      activeVocabularyBandId: "level-2a",
+      activePhraseBandId: "level-2a",
+      activeGrammarBandId: "level-2a",
+      unlockedBandIds: ["level-1a", "level-1b", "level-1c", "level-2a"]
+    });
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1c",
+      nextBandId: "level-2a",
+      eligible: true,
+      reason: "checkpoint-advanced",
+      unmetRequirements: []
+    });
+    expect(diagnosticsStore.diagnostics).toMatchObject(result.diagnostics);
+  });
+
+  it("keeps explicit checkpoint graduation blocked until non-checkpoint evidence gates are met", async () => {
+    const profileStore = new InMemoryLearningProfileStore({
+      activeVocabularyBandId: "level-1c",
+      activePhraseBandId: "level-1c",
+      activeGrammarBandId: "level-1c",
+      unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
+    });
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
+
+    const result = await service.advanceAfterExplicitCheckpoint({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      items: [
+        createLearningItem("word:lemma-city", "word", "level-1c", {
+          status: "new",
+          qualifiedExposureCount: 0
+        })
+      ],
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(result.profile).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1c",
+      nextBandId: "level-2a",
+      eligible: false,
+      reason: "checkpoint-requirements-unmet",
+      unmetRequirements: [
+        "stable-item-ratio",
+        "qualified-exposures",
+        "checkpoint"
+      ]
+    });
+    await expect(profileStore.load()).resolves.toMatchObject({
+      activeVocabularyBandId: "level-1c"
+    });
+  });
+
   it("delivers progression refreshes to the source tab and active HTTP tabs", async () => {
     const chromeStub = installChromeStub();
     chromeStub.setTabs([
@@ -143,7 +219,8 @@ class InMemoryCurriculumProgressionDiagnosticsStore
 function createLearningItem(
   itemId: string,
   unitType: LearningItem["unitType"],
-  bandId: string
+  bandId: string,
+  overrides: Partial<LearningItem> = {}
 ): LearningItem {
   return {
     itemId,
@@ -151,7 +228,7 @@ function createLearningItem(
     unitType,
     sourceText: itemId,
     targetText: "target",
-    status: "reviewing",
+    status: overrides.status ?? "reviewing",
     bandId,
     introducedAt: "2026-04-20T12:00:00.000Z",
     nextReviewAt: "2026-04-29T12:00:00.000Z",
@@ -159,7 +236,7 @@ function createLearningItem(
     ease: 2.3,
     lapses: 0,
     assistCount: 0,
-    qualifiedExposureCount: 2,
+    qualifiedExposureCount: overrides.qualifiedExposureCount ?? 2,
     consecutiveUnassistedCount: 2,
     distinctContextCount: 2,
     suspended: false

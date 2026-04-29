@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LearningItem } from "@immersionkit/shared";
 
 import {
+  graduateCheckpoint,
   loadCurriculumDiagnostics,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
@@ -171,6 +172,38 @@ describe("options state", () => {
       "qualified-exposures",
       "checkpoint"
     ]);
+  });
+
+  it("requests explicit checkpoint graduation through the background runtime", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setSendMessageHandler((message) => {
+      expect(message).toEqual({
+        type: "curriculum/graduate-checkpoint"
+      });
+      return {
+        ok: true,
+        advanced: true,
+        previousBandId: "level-1c",
+        nextBandId: "level-2a",
+        reason: "checkpoint-advanced",
+        unmetRequirements: []
+      };
+    });
+
+    try {
+      await expect(graduateCheckpoint()).resolves.toEqual({
+        advanced: true,
+        previousBandId: "level-1c",
+        nextBandId: "level-2a",
+        reason: "checkpoint-advanced",
+        unmetRequirements: []
+      });
+      expect(chromeStub.sentMessages).toEqual([
+        { type: "curriculum/graduate-checkpoint" }
+      ]);
+    } finally {
+      chromeStub.restore();
+    }
   });
 });
 

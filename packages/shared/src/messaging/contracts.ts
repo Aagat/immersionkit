@@ -10,6 +10,7 @@ export enum RuntimeMessageType {
   RefreshActiveTab = "settings/refresh-active-tab",
   GetLearningItems = "learning-items/get",
   GetSentenceAnalysisCache = "sentence-analysis-cache/get",
+  GraduateCheckpoint = "curriculum/graduate-checkpoint",
   QueueSentenceCandidates = "sentence/queue-candidates",
   SentenceTranslationResult = "sentence/translation-result",
   AssistEvent = "evidence/assist-event",
@@ -32,6 +33,10 @@ export type GetLearningItemsMessage = {
 export type GetSentenceAnalysisCacheMessage = {
   type: RuntimeMessageType.GetSentenceAnalysisCache;
   sentenceHashes?: string[];
+};
+
+export type GraduateCheckpointMessage = {
+  type: RuntimeMessageType.GraduateCheckpoint;
 };
 
 export type QueuedSentenceCandidate = {
@@ -81,6 +86,7 @@ export type RuntimeMessage =
   | RefreshActiveTabMessage
   | GetLearningItemsMessage
   | GetSentenceAnalysisCacheMessage
+  | GraduateCheckpointMessage
   | QueueSentenceCandidatesMessage
   | SentenceTranslationResultMessage
   | AssistEventMessage

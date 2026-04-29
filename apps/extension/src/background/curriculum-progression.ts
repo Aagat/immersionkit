@@ -146,6 +146,82 @@ export class CurriculumProgressionService {
     await this.diagnosticsStore.persist(diagnostics);
     return { profile: nextProfile, diagnostics };
   }
+
+  async advanceAfterExplicitCheckpoint(input: {
+    config: Partial<CurriculumConfig> | null | undefined;
+    profile?: CurriculumRuntimeProfileInput | null;
+    items: readonly LearningItem[];
+    now?: string;
+  }): Promise<CurriculumProgressionResult> {
+    const config = resolveCurriculumConfig(input.config);
+    const profile = input.profile ?? (await this.profileStore.load());
+    const decidedAt = input.now ?? new Date().toISOString();
+    const activeBand = resolveActiveCurriculumBand(config, "word", profile);
+    if (!activeBand) {
+      const diagnostics = createProgressionDiagnostics({
+        decidedAt,
+        configId: config.configId,
+        profile,
+        activeBand: null,
+        decision: null,
+        reason: "unknown-active-band"
+      });
+      await this.diagnosticsStore.persist(diagnostics);
+      return { profile: null, diagnostics };
+    }
+
+    const recentLapseRate = estimateRecentLapseRate(input.items, decidedAt);
+    const blockedDecision = evaluateCurriculumBandTransition(config, {
+      bandId: activeBand.bandId,
+      items: input.items,
+      recentLapseRate,
+      checkpointPassed: false
+    });
+    const checkpointDecision = evaluateCurriculumBandTransition(config, {
+      bandId: activeBand.bandId,
+      items: input.items,
+      recentLapseRate,
+      checkpointPassed: true
+    });
+    const checkpointIsOnlyBlocker =
+      blockedDecision.unmetRequirements.length === 1 &&
+      blockedDecision.unmetRequirements[0] === "checkpoint" &&
+      checkpointDecision.eligible &&
+      Boolean(checkpointDecision.nextBand);
+
+    if (!checkpointIsOnlyBlocker || !checkpointDecision.nextBand) {
+      const diagnostics = createProgressionDiagnostics({
+        decidedAt,
+        configId: config.configId,
+        profile,
+        activeBand,
+        decision: blockedDecision,
+        reason: blockedDecision.unmetRequirements.includes("checkpoint")
+          ? "checkpoint-requirements-unmet"
+          : blockedDecision.nextBand
+            ? "no-checkpoint-boundary"
+            : "no-next-band"
+      });
+      await this.diagnosticsStore.persist(diagnostics);
+      return { profile: null, diagnostics };
+    }
+
+    const nextProfile = applyActiveBand(
+      profile,
+      checkpointDecision.nextBand.bandId
+    );
+    await this.profileStore.persist(nextProfile);
+    const diagnostics = createProgressionDiagnostics({
+      decidedAt,
+      configId: config.configId,
+      profile: nextProfile,
+      activeBand,
+      decision: checkpointDecision,
+      reason: "checkpoint-advanced"
+    });
+    await this.diagnosticsStore.persist(diagnostics);
+    return { profile: nextProfile, diagnostics };
+  }
 }
 
 function createProgressionDiagnostics(input: {
