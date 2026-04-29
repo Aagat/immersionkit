@@ -285,6 +285,36 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("resolves newly expanded curated phrase target asset entries", async () => {
+    const sourceText = "The renewable energy project plan needs support.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createRenewableEnergyPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const chunkPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.sourceText === "renewable energy project plan"
+    );
+
+    expect(chunkPhrase).toMatchObject({
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      targetText: "plan de proyectos de energia renovable",
+      normalizedTargetText: "plan de proyectos de energia renovable",
+      phraseId:
+        "phrase:chunk:renewable-energy-project-plan:plan-de-proyectos-de-energia-renovable"
+    });
+  });
+
   it("keeps unresolved runtime phrases targetless for inline suppression", async () => {
     const sourceText = "The local garden gate design needs paint.";
     const sentenceHash = hashSentence(sourceText);
@@ -577,6 +607,38 @@ function createPublicTransportPhraseTargetAnalyzerOutput(
       {
         text: "public transport system plan",
         normalized: "public transport system plan",
+        type: "noun-phrase",
+        tokenStart: 1,
+        tokenEnd: 5,
+        confidence: 0.9
+      }
+    ],
+    grammarFeatures: []
+  };
+}
+
+function createRenewableEnergyPhraseTargetAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: [
+      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
+      token("renewable", "renewable", "adjective", 4, 13, ["JJ", "adjective"]),
+      token("energy", "energy", "noun", 14, 20, ["NN", "noun"]),
+      token("project", "project", "noun", 21, 28, ["NN", "noun"]),
+      token("plan", "plan", "noun", 29, 33, ["NN", "noun"]),
+      token("needs", "needs", "verb", 34, 39, ["VBZ", "verb"]),
+      token("support", "support", "noun", 40, 47, ["NN", "noun"])
+    ],
+    chunks: [
+      {
+        text: "renewable energy project plan",
+        normalized: "renewable energy project plan",
         type: "noun-phrase",
         tokenStart: 1,
         tokenEnd: 5,
