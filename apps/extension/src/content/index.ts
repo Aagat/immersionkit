@@ -1480,6 +1480,7 @@ function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
   meta.textContent = [
     formatPhraseLabel(detail.category),
     formatPhraseLabel(detail.sourceKind),
+    formatPhraseReviewLabel(detail),
     detail.confidence === null ? null : `confidence ${detail.confidence.toFixed(2)}`
   ]
     .filter(Boolean)
@@ -1499,6 +1500,18 @@ function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
 
 function formatPhraseLabel(value: string): string {
   return value.replace(/-/g, " ");
+}
+
+function formatPhraseReviewLabel(detail: PhraseActivatedDetail): string | null {
+  if (detail.dueStatus === "due") {
+    return "review due";
+  }
+
+  if (detail.dueStatus === "not-due") {
+    return "learning queue";
+  }
+
+  return null;
 }
 
 function collectSentencePopoverSections(
