@@ -329,7 +329,7 @@ export function OptionsApp() {
 
       await loadState();
       setStatusMessage(
-        `Checkpoint complete. Advanced to ${result.nextBandId ?? "the next band"}.`
+        `Progress checkpoint complete. Advanced to ${result.nextBandId ?? "the next level"}.`
       );
     } catch {
       setErrorMessage("Unable to complete checkpoint graduation. Try again.");
@@ -443,14 +443,14 @@ export function OptionsApp() {
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Reading Feel</p>
-                  <h2>Discovery rate</h2>
+                  <h2>New word pace</h2>
                 </div>
                 <span className="badge-soft">{describeDiscoveryRate(discoveryRatePercent)}</span>
               </div>
 
               <div className="slider-wrap">
                 <p className="slider-value">
-                  Inject new words at <strong>{discoveryRatePercent}%</strong>
+                  Show new words at <strong>{discoveryRatePercent}%</strong>
                 </p>
                 <input
                   id="settings-discovery-rate"
@@ -481,7 +481,7 @@ export function OptionsApp() {
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Starting Point</p>
-                  <h2>Current level</h2>
+                  <h2>Reading level</h2>
                 </div>
               </div>
 
@@ -569,8 +569,8 @@ export function OptionsApp() {
           <section className="panel-card">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Progress Gate</p>
-                <h2>Checkpoint status</h2>
+                <p className="eyebrow">Level Progress</p>
+                <h2>Ready for what is next?</h2>
               </div>
               <span className={checkpointStatus.badgeClass}>
                 {checkpointStatus.badgeLabel}
@@ -579,20 +579,20 @@ export function OptionsApp() {
 
             <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
               <MetricCard
-                label="Current band"
+                label="Current step"
                 value={checkpointPreview.activeBandLabel ?? "Starting"}
               />
               <MetricCard
-                label="Next band"
+                label="Next step"
                 value={checkpointPreview.nextBandLabel ?? "None"}
               />
               <MetricCard
-                label="Missing"
+                label="Signals left"
                 value={formatCount(checkpointPreview.unmetRequirements.length)}
               />
               <MetricCard
-                label="Boundary"
-                value={checkpointPreview.checkpointRequired ? "Checkpoint" : "Open"}
+                label="Advance"
+                value={checkpointPreview.checkpointRequired ? "Checkpoint" : "Automatic"}
               />
             </div>
 
@@ -614,7 +614,7 @@ export function OptionsApp() {
                   void handleCheckpointGraduation();
                 }}
               >
-                {isGraduatingCheckpoint ? "Completing..." : "Complete checkpoint"}
+                {isGraduatingCheckpoint ? "Advancing..." : "Move to next level"}
               </button>
             </div>
           </section>
@@ -1379,7 +1379,7 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
     return {
       badgeClass: "badge-soft badge-soft--off",
       badgeLabel: "Unavailable",
-      description: "Checkpoint progress is not available until a curriculum band is active."
+      description: "Reading progress will appear after your starting level is loaded."
     };
   }
 
@@ -1387,7 +1387,7 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
     return {
       badgeClass: "status-badge status-badge--warning",
       badgeLabel: "Ready",
-      description: `You have met the evidence gates for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"}. Complete the checkpoint when you are ready to move forward.`
+      description: `You have enough reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next level"}. Move forward when you are ready.`
     };
   }
 
@@ -1399,8 +1399,8 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
       badgeClass: "badge-soft badge-soft--off",
       badgeLabel: "Building",
       description: blockers
-        ? `Keep reading to clear ${blockers}; checkpoint completion unlocks after those evidence gates are met.`
-        : "Keep reading to gather the evidence needed for the next checkpoint."
+        ? `Keep reading to build ${blockers}; the next level unlocks after those signals are met.`
+        : "Keep reading to gather the signals needed for the next level."
     };
   }
 
@@ -1408,7 +1408,7 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
     return {
       badgeClass: "badge-soft badge-soft--on",
       badgeLabel: "Open",
-      description: `No checkpoint is blocking ${preview.nextBandLabel ?? preview.nextBandId} right now.`
+      description: `Nothing is blocking ${preview.nextBandLabel ?? preview.nextBandId} right now.`
     };
   }
 
@@ -1424,18 +1424,18 @@ function formatCheckpointGraduationBlock(input: {
   unmetRequirements: readonly string[];
 }): string {
   if (input.unmetRequirements.length > 0) {
-    return `Checkpoint is still blocked by ${input.unmetRequirements.join(", ")}.`;
+    return `The next level is still waiting on ${input.unmetRequirements.join(", ")}.`;
   }
 
   if (input.reason === "no-checkpoint-boundary") {
-    return "There is no checkpoint boundary to complete right now.";
+    return "There is no level checkpoint to complete right now.";
   }
 
   if (input.reason === "no-next-band") {
     return "There is no next curriculum band available right now.";
   }
 
-  return "Checkpoint graduation is not available yet.";
+  return "Level advancement is not available yet.";
 }
 
 function describeDiscoveryRate(percent: number): string {

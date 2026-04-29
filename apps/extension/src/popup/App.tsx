@@ -198,7 +198,7 @@ export function PopupApp() {
         </div>
 
         <div className="metric-grid metric-grid--compact">
-          <MetricCard label="Current level" value={proficiencyLabel} />
+          <MetricCard label="Reading level" value={proficiencyLabel} />
           <MetricCard label="Known words" value={formatCount(vocabStats.known)} />
           <MetricCard label="Learning now" value={formatCount(vocabStats.learning)} />
           <MetricCard label="Tracked words" value={formatCount(vocabStats.total)} />
@@ -265,28 +265,28 @@ function formatCount(value: number): string {
 
 function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): string {
   if (!preview.activeBandId) {
-    return "Progress gate: starting band not loaded yet.";
+    return "Next step: loading your reading progress.";
   }
 
   const activeBand = preview.activeBandLabel ?? preview.activeBandId;
   const nextBand = preview.nextBandLabel ?? preview.nextBandId;
 
   if (preview.checkpointIsOnlyBlocker) {
-    return `Progress gate: ${activeBand} is ready for checkpoint completion in settings.`;
+    return `Next step: ${activeBand} is ready to advance in settings.`;
   }
 
   if (preview.unmetRequirements.length > 0) {
     const missingCount = preview.unmetRequirements.filter(
       (requirement) => requirement !== "checkpoint"
     ).length;
-    return `Progress gate: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} evidence gate${missingCount === 1 ? "" : "s"} left.`;
+    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading signal${missingCount === 1 ? "" : "s"} left.`;
   }
 
   if (nextBand) {
-    return `Progress gate: ${activeBand} can continue toward ${nextBand}.`;
+    return `Next step: keep building ${activeBand} toward ${nextBand}.`;
   }
 
-  return `Progress gate: ${activeBand} is the latest available band.`;
+  return `Next step: ${activeBand} is the latest available level.`;
 }
 
 function getPageStatus(input: {
