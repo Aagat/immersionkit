@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-04-29T18:29:12.297Z",
+  "capturedAt": "2026-04-29T21:19:07.491Z",
   "status": "pass",
   "result": {
-    "generatedAt": "2026-04-29T18:29:11.786Z",
+    "generatedAt": "2026-04-29T21:19:06.982Z",
     "browserUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "corpusVersion": "1.0.0",
     "summary": {
@@ -2154,9 +2154,9 @@
         "label": "compromise/three derived features",
         "inputMode": "library-derived",
         "runtime": {
-          "totalMs": 130,
-          "averageCaseMs": 0.17333333333333334,
-          "casesPerSecond": 5769.230769230769,
+          "totalMs": 134,
+          "averageCaseMs": 0.17866666666666667,
+          "casesPerSecond": 5597.014925373134,
           "repeatCount": 25
         },
         "featureAgreement": {
@@ -3218,9 +3218,9 @@
         "label": "wink-nlp derived features",
         "inputMode": "library-derived",
         "runtime": {
-          "totalMs": 14,
-          "averageCaseMs": 0.018666666666666668,
-          "casesPerSecond": 53571.42857142857,
+          "totalMs": 15,
+          "averageCaseMs": 0.02,
+          "casesPerSecond": 50000,
           "repeatCount": 25
         },
         "featureAgreement": {

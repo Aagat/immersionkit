@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-29T18:29:10.243Z",
+  "generatedAt": "2026-04-29T21:19:05.460Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -33,17 +33,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 14.399999618530273,
-      "hotPerSentenceLatencyMs": 0.3314285721097674,
+      "coldStartLatencyMs": 14.199999809265137,
+      "hotPerSentenceLatencyMs": 0.3385714292526245,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 2.3000001907348633,
-        "perSentenceLatencyMs": 0.23000001907348633
+        "totalLatencyMs": 2.5999999046325684,
+        "perSentenceLatencyMs": 0.25999999046325684
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 11.899999618530273,
-        "perSentenceLatencyMs": 0.2479166587193807
+        "totalLatencyMs": 11.800000190734863,
+        "perSentenceLatencyMs": 0.24583333730697632
       },
       "payload": {
         "averageBytesPerSentence": 1006.25,
@@ -63,9 +63,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 19.800000190734863,
-        "withCacheLatencyMs": 4.5,
-        "savedLatencyMs": 15.300000190734863
+        "noCacheLatencyMs": 20.300000190734863,
+        "withCacheLatencyMs": 4.400000095367432,
+        "savedLatencyMs": 15.900000095367432
       },
       "quality": {
         "corpusVersion": "2026-04-21",
@@ -1058,12 +1058,12 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.700000286102295,
-      "hotPerSentenceLatencyMs": 0.4949999979564122,
+      "coldStartLatencyMs": 1.5,
+      "hotPerSentenceLatencyMs": 0.4921428578240531,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 4.300000190734863,
-        "perSentenceLatencyMs": 0.43000001907348634
+        "totalLatencyMs": 4.400000095367432,
+        "perSentenceLatencyMs": 0.4400000095367432
       },
       "mediumBatch": {
         "sentenceCount": 48,
@@ -1088,9 +1088,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 38.69999980926514,
-        "withCacheLatencyMs": 7.400000095367432,
-        "savedLatencyMs": 31.299999713897705
+        "noCacheLatencyMs": 37.59999990463257,
+        "withCacheLatencyMs": 7.199999809265137,
+        "savedLatencyMs": 30.40000009536743
       },
       "quality": {
         "corpusVersion": "2026-04-21",
@@ -2121,17 +2121,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.1999998092651367,
-      "hotPerSentenceLatencyMs": 0.06428571428571428,
+      "coldStartLatencyMs": 0.7999997138977051,
+      "hotPerSentenceLatencyMs": 0.06357142925262452,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 0.20000028610229492,
-        "perSentenceLatencyMs": 0.02000002861022949
+        "totalLatencyMs": 0.19999980926513672,
+        "perSentenceLatencyMs": 0.019999980926513672
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 1.299999713897705,
-        "perSentenceLatencyMs": 0.027083327372868855
+        "totalLatencyMs": 1,
+        "perSentenceLatencyMs": 0.020833333333333332
       },
       "payload": {
         "averageBytesPerSentence": 918.2708333333334,
@@ -2152,8 +2152,8 @@
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
         "noCacheLatencyMs": 1.5,
-        "withCacheLatencyMs": 0.5,
-        "savedLatencyMs": 1
+        "withCacheLatencyMs": 0.40000009536743164,
+        "savedLatencyMs": 1.0999999046325684
       },
       "quality": {
         "corpusVersion": "2026-04-21",
