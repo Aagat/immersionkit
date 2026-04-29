@@ -4,6 +4,7 @@ import type { LearningItem } from "@immersionkit/shared";
 import {
   graduateCheckpoint,
   loadCurriculumDiagnostics,
+  summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
 } from "../src/options/state";
@@ -42,6 +43,34 @@ describe("options state", () => {
           activeGrammarBandId: "level-1a",
           unlockedBandIds: ["level-1a", "level-1b"]
         },
+        activeContent: {
+          bandId: "level-1b",
+          bandLabel: "Level 1B",
+          vocabularyDomains: [
+            "places",
+            "days",
+            "time words",
+            "weather",
+            "family",
+            "frequency adverbs"
+          ],
+          phraseChunks: [
+            "in the morning",
+            "on Monday",
+            "at school",
+            "literal noun chunks with connectors"
+          ],
+          currentGrammarKeys: [],
+          plannedGrammarKeys: [
+            "question:basic-wh",
+            "present:simple",
+            "adverb:frequency"
+          ],
+          sentenceTokenRange: [5, 9],
+          sentenceClausePolicy: "single clause",
+          sentenceTargetPolicy: "0-1 target",
+          sentenceNotes: "Low ambiguity with clear time or place anchoring."
+        },
         lastProgressionDecision: {
           decidedAt: "2026-04-28T12:00:00.000Z",
           configId: "en-es-default-v1",
@@ -60,6 +89,22 @@ describe("options state", () => {
     } finally {
       chromeStub.restore();
     }
+  });
+
+  it("summarizes active curriculum content for options diagnostics", () => {
+    expect(
+      summarizeActiveCurriculumContent({
+        activeVocabularyBandId: "level-4a"
+      })
+    ).toMatchObject({
+      bandId: "level-4a",
+      bandLabel: "Level 4A",
+      vocabularyDomains: expect.arrayContaining(["explanation", "systems"]),
+      phraseChunks: expect.arrayContaining(["for example"]),
+      currentGrammarKeys: ["aspect:have-been"],
+      sentenceTokenRange: [10, 20],
+      sentenceClausePolicy: "multi-clause allowed"
+    });
   });
 
   it("summarizes grammar evidence from durable learning items", () => {

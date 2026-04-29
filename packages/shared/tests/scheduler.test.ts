@@ -1,5 +1,6 @@
 import {
   evaluateLearningItemSchedule,
+  inferAssistReviewGrade,
   scheduleAssistReview,
   scheduleQualifiedExposure,
   shouldReceiveDueReviewBoost,
@@ -51,6 +52,22 @@ describe("learning scheduler", () => {
     });
   });
 
+  it("boosts near-due items without treating them as due reviews", () => {
+    expect(
+      evaluateLearningItemSchedule(
+        {
+          ...BASE_ITEM,
+          nextReviewAt: "2026-04-18T10:10:00.000Z"
+        },
+        "2026-04-18T10:00:00.000Z"
+      )
+    ).toMatchObject({
+      isDue: false,
+      receivesDueBoost: true,
+      reason: "near-due"
+    });
+  });
+
   it("does not boost suspended items", () => {
     expect(
       shouldReceiveDueReviewBoost(
@@ -72,6 +89,23 @@ describe("learning scheduler", () => {
     expect(item.consecutiveUnassistedCount).toBe(0);
     expect(item.interval).toBe(10 * 60 * 1000);
     expect(item.nextReviewAt).toBe("2026-04-18T10:10:00.000Z");
+  });
+
+  it("infers repeated assists as again reviews", () => {
+    expect(
+      inferAssistReviewGrade(
+        {
+          ...BASE_ITEM,
+          assistCount: 1,
+          lastReviewedAt: "2026-04-18T10:00:00.000Z"
+        },
+        "2026-04-18T10:05:00.000Z"
+      )
+    ).toBe("again");
+
+    expect(inferAssistReviewGrade(BASE_ITEM, "2026-04-18T10:05:00.000Z")).toBe(
+      "hard"
+    );
   });
 
   it("advances due unassisted exposures and records new contexts", () => {
@@ -126,5 +160,24 @@ describe("learning scheduler", () => {
     expect(result.grade).toBe("hard");
     expect(result.item.consecutiveUnassistedCount).toBe(0);
     expect(result.item.ease).toBeCloseTo(2.22);
+  });
+
+  it("infers easy for due unassisted exposures with repeated distinct success", () => {
+    const result = scheduleQualifiedExposure(
+      {
+        ...BASE_ITEM,
+        interval: 24 * 60 * 60 * 1000,
+        consecutiveUnassistedCount: 2,
+        distinctContextCount: 2
+      },
+      {
+        now: "2026-04-18T10:00:00.000Z",
+        wasAssisted: false,
+        isDistinctContext: true
+      }
+    );
+
+    expect(result.grade).toBe("easy");
+    expect(result.item.nextReviewAt).toBe("2026-04-25T10:00:00.000Z");
   });
 });

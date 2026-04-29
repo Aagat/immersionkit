@@ -3,6 +3,7 @@ import {
   DEFAULT_EXTENSION_SETTINGS,
   RuntimeMessageType,
   type LearningItem,
+  type AnalyzerToken,
   type SentenceLearningNote,
   hashSentence,
   type SentenceCacheEntry,
@@ -510,6 +511,91 @@ describe("sentence queue orchestration", () => {
       })
     ]);
   });
+
+  it("applies active curriculum sentence policy to ranking diagnostics", () => {
+    const inBand = {
+      sentenceHash: "sentence-in-band",
+      sourceText: "The city is quiet today."
+    };
+    const outOfBand = {
+      sentenceHash: "sentence-too-long",
+      sourceText: "The quiet city center opened several public gardens for local families today."
+    };
+
+    const ranked = rankCandidatesByAnalysis(
+      [outOfBand, inBand],
+      [
+        withTokenCount(
+          createSignalOnlyAnalysisResult(outOfBand.sentenceHash, {
+            vocabularyFit: 0.4,
+            grammarFit: 0.4,
+            dueTargetValue: 0.4,
+            chunkUsefulness: 0.4,
+            ambiguityPenalty: 0,
+            stretchDemand: 0
+          }),
+          11
+        ),
+        withTokenCount(
+          createSignalOnlyAnalysisResult(inBand.sentenceHash, {
+            vocabularyFit: 0.4,
+            grammarFit: 0.4,
+            dueTargetValue: 0.4,
+            chunkUsefulness: 0.4,
+            ambiguityPenalty: 0,
+            stretchDemand: 0
+          }),
+          5
+        )
+      ],
+      {
+        config: {
+          ...DEFAULT_CURRICULUM_CONFIG,
+          bands: DEFAULT_CURRICULUM_CONFIG.bands.map((band) =>
+            band.bandId === "level-1a"
+              ? {
+                  ...band,
+                  difficultyLimits: {
+                    minimumScore: 0,
+                    maximumScore: 1
+                  }
+                }
+              : band
+          )
+        },
+        profile: {}
+      }
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      inBand.sentenceHash,
+      outOfBand.sentenceHash
+    ]);
+    expect(ranked.reasons).toEqual([
+      expect.objectContaining({
+        sentenceHash: inBand.sentenceHash,
+        sentencePolicy: expect.objectContaining({
+          activeBandId: "level-1a",
+          tokenCount: 5,
+          tokenRange: [5, 8],
+          outsideRange: false
+        })
+      }),
+      expect.objectContaining({
+        sentenceHash: outOfBand.sentenceHash,
+        primaryReason: "curriculum-sentence-policy",
+        sentencePolicy: expect.objectContaining({
+          activeBandId: "level-1a",
+          tokenCount: 11,
+          tokenRange: [5, 8],
+          outsideRange: true
+        }),
+        signals: expect.objectContaining({
+          sentencePolicyFit: 0.625
+        })
+      })
+    ]);
+  });
 });
 
 type Deferred<T> = {
@@ -665,6 +751,31 @@ function createGrammarFeature(featureKey: string) {
     },
     evidence: ["fixture"],
     confidence: 0.86
+  };
+}
+
+function withTokenCount(
+  result: AnalyzedSentenceCandidate,
+  tokenCount: number
+): AnalyzedSentenceCandidate {
+  return {
+    ...result,
+    entry: {
+      ...result.entry,
+      tokens: Array.from({ length: tokenCount }, (_, index) => createToken(index))
+    }
+  };
+}
+
+function createToken(index: number): AnalyzerToken {
+  return {
+    text: `token-${index}`,
+    normalized: `token-${index}`,
+    lemma: `token-${index}`,
+    pos: "NOUN",
+    tags: ["NOUN"],
+    startOffset: index * 2,
+    endOffset: index * 2 + 1
   };
 }
 

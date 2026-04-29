@@ -199,8 +199,8 @@ export function PopupApp() {
 
         <div className="metric-grid metric-grid--compact">
           <MetricCard label="Reading level" value={proficiencyLabel} />
-          <MetricCard label="Known words" value={formatCount(vocabStats.known)} />
-          <MetricCard label="Learning now" value={formatCount(vocabStats.learning)} />
+          <MetricCard label="Comfortable" value={formatCount(vocabStats.known)} />
+          <MetricCard label="In practice" value={formatCount(vocabStats.learning)} />
           <MetricCard label="Tracked words" value={formatCount(vocabStats.total)} />
         </div>
 

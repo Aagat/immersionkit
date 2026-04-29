@@ -150,9 +150,9 @@ const STATUS_BUTTONS: readonly {
   status: InteractiveVocabStatus;
   label: string;
 }[] = [
-  { status: "known", label: "Known" },
-  { status: "learning", label: "Learning" },
-  { status: "ignored", label: "Ignored" }
+  { status: "known", label: "I know this" },
+  { status: "learning", label: "Practice" },
+  { status: "ignored", label: "Hide" }
 ] as const;
 
 void boot();
@@ -1839,7 +1839,8 @@ function readRankingReasonsFromQueueResponse(
           score,
           primaryReason,
           curriculum: readRankingCurriculum(reason.curriculum),
-          signals: readRankingSignals(reason.signals)
+          signals: readRankingSignals(reason.signals),
+          sentencePolicy: readRankingSentencePolicy(reason.sentencePolicy)
         }
       ];
     }
@@ -1896,6 +1897,8 @@ function readRankingSignals(
     typeof value.chunkUsefulness === "number" ? value.chunkUsefulness : null;
   const ambiguityPenalty =
     typeof value.ambiguityPenalty === "number" ? value.ambiguityPenalty : null;
+  const sentencePolicyFit =
+    typeof value.sentencePolicyFit === "number" ? value.sentencePolicyFit : undefined;
 
   if (
     vocabularyFit === null ||
@@ -1913,7 +1916,58 @@ function readRankingSignals(
     dueTargetValue,
     grammarDueValue,
     chunkUsefulness,
-    ambiguityPenalty
+    ambiguityPenalty,
+    sentencePolicyFit
+  };
+}
+
+function readRankingSentencePolicy(
+  value: unknown
+): PageDiagnosticsSentenceRankingReason["sentencePolicy"] {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const activeBandId = readNonEmptyString(
+    typeof value.activeBandId === "string" ? value.activeBandId : null
+  );
+  const tokenCount = typeof value.tokenCount === "number" ? value.tokenCount : null;
+  const tokenRange = Array.isArray(value.tokenRange)
+    ? value.tokenRange.filter((entry): entry is number => typeof entry === "number")
+    : [];
+  const fit = typeof value.fit === "number" ? value.fit : null;
+  const penalty = typeof value.penalty === "number" ? value.penalty : null;
+  const outsideRange =
+    typeof value.outsideRange === "boolean" ? value.outsideRange : null;
+  const clausePolicy = readNonEmptyString(
+    typeof value.clausePolicy === "string" ? value.clausePolicy : null
+  );
+  const targetPolicy = readNonEmptyString(
+    typeof value.targetPolicy === "string" ? value.targetPolicy : null
+  );
+
+  if (
+    !activeBandId ||
+    tokenCount === null ||
+    tokenRange.length !== 2 ||
+    fit === null ||
+    penalty === null ||
+    outsideRange === null ||
+    !clausePolicy ||
+    !targetPolicy
+  ) {
+    return undefined;
+  }
+
+  return {
+    activeBandId,
+    tokenCount,
+    tokenRange: [tokenRange[0] ?? 0, tokenRange[1] ?? 0],
+    fit,
+    penalty,
+    outsideRange,
+    clausePolicy,
+    targetPolicy
   };
 }
 

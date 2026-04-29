@@ -58,6 +58,17 @@ export type PageDiagnosticsSentenceRankingReason = {
     grammarDueValue?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
+    sentencePolicyFit?: number;
+  };
+  sentencePolicy?: {
+    activeBandId: string;
+    tokenCount: number;
+    tokenRange: readonly [number, number];
+    fit: number;
+    penalty: number;
+    outsideRange: boolean;
+    clausePolicy: string;
+    targetPolicy: string;
   };
 };
 

@@ -51,6 +51,7 @@ const EMPTY_ACTIVE_TAB_CONTEXT: ActiveTabContext = {
 
 const EMPTY_CURRICULUM_DIAGNOSTICS: CurriculumDiagnostics = {
   profile: {},
+  activeContent: null,
   lastProgressionDecision: null
 };
 
@@ -514,8 +515,8 @@ export function OptionsApp() {
               </div>
 
               <div className="metric-grid metric-grid--wide">
-                <MetricCard label="Known words" value={formatCount(vocabStats.known)} />
-                <MetricCard label="Learning now" value={formatCount(vocabStats.learning)} />
+                <MetricCard label="Comfortable" value={formatCount(vocabStats.known)} />
+                <MetricCard label="In practice" value={formatCount(vocabStats.learning)} />
                 <MetricCard label="Still new" value={formatCount(vocabStats.newCount)} />
                 <MetricCard label="Tracked total" value={formatCount(vocabStats.total)} />
               </div>
@@ -1057,6 +1058,55 @@ export function OptionsApp() {
           <section className="panel-card">
             <div className="section-heading">
               <div>
+                <p className="eyebrow">Curriculum Content</p>
+                <h2>Active band map</h2>
+              </div>
+              <span className="mini-badge">
+                {curriculumDiagnostics.activeContent?.bandLabel ?? "Default"}
+              </span>
+            </div>
+
+            {curriculumDiagnostics.activeContent ? (
+              <>
+                <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
+                  <MetricCard
+                    label="Vocabulary"
+                    value={formatListPreview(
+                      curriculumDiagnostics.activeContent.vocabularyDomains
+                    )}
+                  />
+                  <MetricCard
+                    label="Phrases"
+                    value={formatListPreview(
+                      curriculumDiagnostics.activeContent.phraseChunks
+                    )}
+                  />
+                  <MetricCard
+                    label="Grammar now"
+                    value={formatListPreview(
+                      curriculumDiagnostics.activeContent.currentGrammarKeys,
+                      "detector-light"
+                    )}
+                  />
+                  <MetricCard
+                    label="Sentence range"
+                    value={`${curriculumDiagnostics.activeContent.sentenceTokenRange[0]}-${curriculumDiagnostics.activeContent.sentenceTokenRange[1]} tokens`}
+                  />
+                </div>
+                <p className="support-line muted">
+                  {formatActiveCurriculumContent(curriculumDiagnostics.activeContent)}
+                </p>
+              </>
+            ) : (
+              <p className="helper-line muted" style={{ marginTop: 0 }}>
+                No active curriculum content map is available.
+              </p>
+            )}
+          </section>
+
+          <section className="panel-card">
+            <div className="section-heading">
+              <div>
                 <p className="eyebrow">Sentence Queue</p>
                 <h2>Ranking reasons</h2>
               </div>
@@ -1294,7 +1344,10 @@ function formatRankingSignals(
     `due ${signals.dueTargetValue.toFixed(2)}`,
     signals.grammarDueValue ? `grammar due ${signals.grammarDueValue.toFixed(2)}` : null,
     `phrase ${signals.chunkUsefulness.toFixed(2)}`,
-    `ambiguity ${signals.ambiguityPenalty.toFixed(2)}`
+    `ambiguity ${signals.ambiguityPenalty.toFixed(2)}`,
+    typeof signals.sentencePolicyFit === "number"
+      ? `band fit ${signals.sentencePolicyFit.toFixed(2)}`
+      : null
   ].filter(Boolean).join(" · ");
 }
 
@@ -1306,9 +1359,16 @@ function formatRankingCurriculum(
     return "";
   }
 
+  const sentencePolicy = reason.sentencePolicy;
+  const sentencePolicyText = sentencePolicy
+    ? ` · ${sentencePolicy.tokenCount} tokens, target ${sentencePolicy.tokenRange[0]}-${sentencePolicy.tokenRange[1]}${
+        sentencePolicy.outsideRange ? " · outside band policy" : ""
+      }`
+    : "";
+
   return ` · band ${curriculum.activeBandId ?? "unknown"}${
     curriculum.skipReason ? ` · skipped ${curriculum.skipReason}` : ""
-  }`;
+  }${sentencePolicyText}`;
 }
 
 function formatTokenPair(sourceToken: string | null, targetToken: string | null): string {
@@ -1333,6 +1393,27 @@ function formatUnlockedBands(bandIds: readonly string[] | undefined): string {
   }
 
   return bandIds.length <= 2 ? bandIds.join(", ") : `${bandIds.length} bands`;
+}
+
+function formatListPreview(
+  values: readonly string[],
+  fallback: string = "none yet"
+): string {
+  if (values.length === 0) {
+    return fallback;
+  }
+
+  return values.length <= 2 ? values.join(", ") : `${values.slice(0, 2).join(", ")} +${values.length - 2}`;
+}
+
+function formatActiveCurriculumContent(
+  content: NonNullable<CurriculumDiagnostics["activeContent"]>
+): string {
+  const plannedGrammar = content.plannedGrammarKeys.length
+    ? ` Planned grammar: ${content.plannedGrammarKeys.slice(0, 3).join(", ")}.`
+    : "";
+
+  return `${content.bandLabel} focuses on ${content.vocabularyDomains.slice(0, 4).join(", ")} with ${content.sentenceClausePolicy}; ${content.sentenceTargetPolicy}. ${content.sentenceNotes}${plannedGrammar}`;
 }
 
 function formatProgressionDecision(

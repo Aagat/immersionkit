@@ -3,9 +3,11 @@ import {
   RuntimeMessageType,
   clampUnitInterval,
   evaluateCurriculumBandTransition,
+  getActiveCurriculumContent,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   resolveExtensionSettings,
+  type CurriculumBandContent,
   type CurriculumRuntimeProfileInput,
   type ExtensionSettings,
   type LearningItem,
@@ -143,7 +145,21 @@ export type CurriculumProgressionDiagnostics = {
 
 export type CurriculumDiagnostics = {
   profile: CurriculumRuntimeProfileInput;
+  activeContent: ActiveCurriculumContentSummary | null;
   lastProgressionDecision: CurriculumProgressionDiagnostics | null;
+};
+
+export type ActiveCurriculumContentSummary = {
+  bandId: string;
+  bandLabel: string;
+  vocabularyDomains: readonly string[];
+  phraseChunks: readonly string[];
+  currentGrammarKeys: readonly string[];
+  plannedGrammarKeys: readonly string[];
+  sentenceTokenRange: readonly [number, number];
+  sentenceClausePolicy: string;
+  sentenceTargetPolicy: string;
+  sentenceNotes: string;
 };
 
 export type GrammarEvidenceStats = {
@@ -314,11 +330,13 @@ export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics
     ...LEARNING_PROFILE_STORAGE_KEYS,
     ...CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS
   ]);
+  const profile = parseLearningProfile(
+    pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS)
+  );
 
   return {
-    profile: parseLearningProfile(
-      pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS)
-    ),
+    profile,
+    activeContent: summarizeActiveCurriculumContent(profile),
     lastProgressionDecision: parseCurriculumProgressionDiagnostics(
       pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
     )
@@ -440,6 +458,36 @@ export function summarizeGrammarEvidenceStats(
   }
 
   return stats;
+}
+
+export function summarizeActiveCurriculumContent(
+  profile?: CurriculumRuntimeProfileInput | null
+): ActiveCurriculumContentSummary | null {
+  const active = getActiveCurriculumContent({ profile });
+  if (!active.band || !active.content) {
+    return null;
+  }
+
+  return toActiveCurriculumContentSummary(active.band.bandId, active.band.label, active.content);
+}
+
+function toActiveCurriculumContentSummary(
+  bandId: string,
+  bandLabel: string,
+  content: CurriculumBandContent
+): ActiveCurriculumContentSummary {
+  return {
+    bandId,
+    bandLabel,
+    vocabularyDomains: content.vocabularyDomains,
+    phraseChunks: content.phraseChunks,
+    currentGrammarKeys: content.currentGrammarKeys,
+    plannedGrammarKeys: content.plannedGrammarKeys,
+    sentenceTokenRange: content.sentencePolicy.tokenRange,
+    sentenceClausePolicy: content.sentencePolicy.clausePolicy,
+    sentenceTargetPolicy: content.sentencePolicy.targetPolicy,
+    sentenceNotes: content.sentencePolicy.notes
+  };
 }
 
 function estimateRecentLapseRate(

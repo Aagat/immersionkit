@@ -1,5 +1,6 @@
 import {
   evaluateCurriculumEligibility,
+  getActiveCurriculumContent,
   hashSentence,
   shouldReceiveDueReviewBoost,
   type CurriculumConfig,
@@ -56,6 +57,7 @@ export type SentenceRankingPrimaryReason =
   | "grammar-due-value"
   | "phrase-value"
   | "ambiguity-penalty"
+  | "curriculum-sentence-policy"
   | "curriculum-gate"
   | "fallback-original-order";
 
@@ -77,6 +79,17 @@ export type SentenceRankingReason = {
     grammarDueValue?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
+    sentencePolicyFit?: number;
+  };
+  sentencePolicy?: {
+    activeBandId: string;
+    tokenCount: number;
+    tokenRange: readonly [number, number];
+    fit: number;
+    penalty: number;
+    outsideRange: boolean;
+    clausePolicy: string;
+    targetPolicy: string;
   };
 };
 
@@ -639,8 +652,13 @@ function buildRankingReason(
   }
 
   const grammarDueValue = computeGrammarDueValue(result, dueGrammarFeatureKeys);
-  const score =
-    result.entry.difficultyScore ?? scoreFromSuitabilitySignals(result, grammarDueValue);
+  const sentencePolicy = curriculum
+    ? evaluateSentencePolicyFit(result, curriculum)
+    : null;
+  const baseScore =
+    result.entry.difficultyScore ??
+    scoreFromSuitabilitySignals(result, grammarDueValue, sentencePolicy?.fit);
+  const score = Math.max(0, baseScore - (sentencePolicy?.penalty ?? 0));
   const curriculumDecision = curriculum
     ? evaluateCurriculumEligibility(curriculum.config, {
         unitType: "sentence",
@@ -656,7 +674,7 @@ function buildRankingReason(
     primaryReason:
       curriculumDecision?.eligible === false
         ? "curriculum-gate"
-        : choosePrimaryRankingReason(result, grammarDueValue),
+        : choosePrimaryRankingReason(result, grammarDueValue, sentencePolicy),
     curriculum: curriculumDecision
       ? serializeCurriculumDecision(curriculumDecision)
       : undefined,
@@ -666,8 +684,10 @@ function buildRankingReason(
       dueTargetValue: roundSignal(result.suitabilitySignals.dueTargetValue),
       grammarDueValue: roundSignal(grammarDueValue),
       chunkUsefulness: roundSignal(result.suitabilitySignals.chunkUsefulness),
-      ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty)
-    }
+      ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty),
+      sentencePolicyFit: sentencePolicy ? roundSignal(sentencePolicy.fit) : undefined
+    },
+    sentencePolicy: sentencePolicy ? serializeSentencePolicyFit(sentencePolicy) : undefined
   };
 }
 
@@ -692,8 +712,13 @@ function serializeCurriculumDecision(decision: CurriculumEligibilityDecision) {
 
 function choosePrimaryRankingReason(
   result: AnalyzedSentenceCandidate,
-  grammarDueValue = 0
+  grammarDueValue = 0,
+  sentencePolicy: SentencePolicyFit | null = null
 ): SentenceRankingPrimaryReason {
+  if (sentencePolicy?.outsideRange && sentencePolicy.penalty >= 0.05) {
+    return "curriculum-sentence-policy";
+  }
+
   if (typeof result.entry.difficultyScore === "number") {
     return "difficulty-score";
   }
@@ -723,7 +748,8 @@ function roundSignal(value: number): number {
 
 function scoreFromSuitabilitySignals(
   result: AnalyzedSentenceCandidate,
-  grammarDueValue = 0
+  grammarDueValue = 0,
+  sentencePolicyFit = 0
 ): number {
   return (
     result.suitabilitySignals.vocabularyFit * 0.28 +
@@ -732,8 +758,74 @@ function scoreFromSuitabilitySignals(
     grammarDueValue * 0.12 +
     result.suitabilitySignals.chunkUsefulness * 0.14 -
     result.suitabilitySignals.ambiguityPenalty * 0.16 -
-    result.suitabilitySignals.stretchDemand * 0.08
+    result.suitabilitySignals.stretchDemand * 0.08 +
+    sentencePolicyFit * 0.08
   );
+}
+
+type SentencePolicyFit = {
+  activeBandId: string;
+  tokenCount: number;
+  tokenRange: readonly [number, number];
+  fit: number;
+  penalty: number;
+  outsideRange: boolean;
+  clausePolicy: string;
+  targetPolicy: string;
+};
+
+function evaluateSentencePolicyFit(
+  result: AnalyzedSentenceCandidate,
+  curriculum: CurriculumRuntimePolicy
+): SentencePolicyFit | null {
+  if (result.entry.tokens.length === 0) {
+    return null;
+  }
+
+  const activeContent = getActiveCurriculumContent({
+    config: curriculum.config,
+    profile: curriculum.profile
+  });
+  if (!activeContent.band || !activeContent.content) {
+    return null;
+  }
+
+  const tokenCount = result.entry.tokens.length;
+  const tokenRange = activeContent.content.sentencePolicy.tokenRange;
+  const [minimumTokens, maximumTokens] = tokenRange;
+  const outsideRange = tokenCount < minimumTokens || tokenCount > maximumTokens;
+  const distance =
+    tokenCount < minimumTokens
+      ? minimumTokens - tokenCount
+      : tokenCount > maximumTokens
+        ? tokenCount - maximumTokens
+        : 0;
+  const fit = Math.max(0, 1 - distance / Math.max(1, maximumTokens));
+  const penalty = outsideRange ? Math.min(0.22, distance * 0.025) : 0;
+
+  return {
+    activeBandId: activeContent.band.bandId,
+    tokenCount,
+    tokenRange,
+    fit,
+    penalty,
+    outsideRange,
+    clausePolicy: activeContent.content.sentencePolicy.clausePolicy,
+    targetPolicy: activeContent.content.sentencePolicy.targetPolicy
+  };
+}
+
+function serializeSentencePolicyFit(policy: SentencePolicyFit) {
+  return {
+    activeBandId: policy.activeBandId,
+    tokenCount: policy.tokenCount,
+    tokenRange: policy.tokenRange,
+    fit: roundSignal(policy.fit),
+    penalty: roundSignal(policy.penalty),
+    outsideRange: policy.outsideRange,
+    clausePolicy: policy.clausePolicy,
+    targetPolicy: policy.targetPolicy
+  };
 }
 
 function buildDueGrammarFeatureKeySet(

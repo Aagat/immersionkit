@@ -50,6 +50,37 @@ describe("background learning item service", () => {
     ]);
   });
 
+  it("records repeated assist evidence as an again review", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository({
+      "word:lemma-city": createLearningItem({
+        assistCount: 1,
+        lastReviewedAt: "2026-04-18T10:00:00.000Z"
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    await service.recordAssist({
+      type: RuntimeMessageType.AssistEvent,
+      eventId: "assist-repeat",
+      itemId: "word:lemma-city",
+      assistType: "manual-lookup",
+      contextSentenceHash: "sentence-1",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      createdAt: "2026-04-18T10:06:00.000Z"
+    });
+
+    expect(history.reviewEvents).toEqual([
+      expect.objectContaining({
+        itemId: "word:lemma-city",
+        grade: "again",
+        contextSentenceHash: "sentence-1"
+      })
+    ]);
+  });
+
+
   it("persists assist evidence for existing phrase learning items", async () => {
     const history = new InMemoryLearningHistoryRepository();
     const items = new InMemoryLearningItemRepository({

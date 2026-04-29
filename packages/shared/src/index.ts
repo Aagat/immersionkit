@@ -1,6 +1,7 @@
 export * from "./domain/analysis";
 export * from "./domain/models";
 export * from "./curriculum/config";
+export * from "./curriculum/content";
 export * from "./messaging/contracts";
 export * from "./scoring/difficulty";
 export * from "./scoring/scheduler";

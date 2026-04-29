@@ -10,6 +10,7 @@ import type {
 import {
   REVIEW_INTERVALS_MS,
   RuntimeMessageType,
+  inferAssistReviewGrade,
   resolveActiveCurriculumBand,
   scheduleAssistReview,
   scheduleQualifiedExposure
@@ -148,10 +149,11 @@ export class BackgroundLearningItemService {
     }
 
     const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
+    const grade = inferAssistReviewGrade(bandedItem, now);
     const nextItem = scheduleAssistReview(bandedItem, now);
 
     state.items[nextItem.itemId] = nextItem;
-    state.events.push(createReviewEvent(message, "hard", now));
+    state.events.push(createReviewEvent(message, grade, now));
     await this.persistState(state);
     return nextItem;
   }

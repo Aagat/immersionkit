@@ -13,6 +13,7 @@ import type {
 
 import { BackgroundLearningItemService } from "./learning-items";
 import { CurriculumProgressionService } from "./curriculum-progression";
+import { IndexedDbPhraseRegistryRepository } from "./phrase-registry";
 import { IndexedDbSentenceAnalysisCacheRepository } from "./sentence-analysis-cache";
 import {
   SentenceQueueOrchestrator,
@@ -77,6 +78,7 @@ export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
   private readonly learningItems: BackgroundLearningItemService;
   private readonly curriculumProgression: CurriculumProgressionService;
+  private readonly phraseRegistry: IndexedDbPhraseRegistryRepository;
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
   private isBooted = false;
 
@@ -87,6 +89,7 @@ export class BackgroundRuntimeCoordinator {
     });
     this.learningItems = new BackgroundLearningItemService();
     this.curriculumProgression = new CurriculumProgressionService();
+    this.phraseRegistry = new IndexedDbPhraseRegistryRepository();
     this.sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
   }
 
@@ -98,11 +101,13 @@ export class BackgroundRuntimeCoordinator {
     this.isBooted = true;
     void this.bootstrapSeedLexicon();
     void this.backfillLearningItemBands();
+    void this.cleanupLegacyPhraseIdentities();
 
     chrome.runtime.onInstalled.addListener(() => {
       console.info("ImmersionKit background service worker installed.");
       void this.bootstrapSeedLexicon();
       void this.backfillLearningItemBands();
+      void this.cleanupLegacyPhraseIdentities();
     });
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -198,6 +203,17 @@ export class BackgroundRuntimeCoordinator {
         ok: false,
         error: "refresh-active-tab-failed"
       });
+    }
+  }
+
+  private async cleanupLegacyPhraseIdentities(): Promise<void> {
+    try {
+      const result = await this.phraseRegistry.cleanupLegacyBlankTargetDuplicates();
+      if (result.removedRegistryEntries > 0 || result.removedLearningItems > 0) {
+        console.info("ImmersionKit cleaned legacy phrase identities.", result);
+      }
+    } catch (error) {
+      console.warn("ImmersionKit legacy phrase cleanup failed.", error);
     }
   }
 

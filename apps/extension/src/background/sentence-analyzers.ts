@@ -228,6 +228,27 @@ function detectGrammarFeatures(
     }
 
     if (
+      HAVE_FORMS.has(token.normalized) &&
+      nextToken?.normalized === "to" &&
+      trailingToken?.pos === "verb"
+    ) {
+      features.push(
+        buildGrammarFeature({
+          sentenceHash,
+          sentence,
+          tokens,
+          startToken: index,
+          endToken: index + 2,
+          featureKey: "modal:have-to",
+          label: "Have to",
+          category: "modality",
+          evidence: ["have-form-before-to-verb"],
+          confidence: 0.82
+        })
+      );
+    }
+
+    if (
       token.normalized === "used" &&
       nextToken?.normalized === "to" &&
       trailingToken?.pos === "verb"
@@ -244,6 +265,40 @@ function detectGrammarFeatures(
           category: "tense-aspect",
           evidence: ["used-to-before-verb"],
           confidence: 0.85
+        })
+      );
+    }
+
+    if (token.normalized === "because") {
+      features.push(
+        buildGrammarFeature({
+          sentenceHash,
+          sentence,
+          tokens,
+          startToken: index,
+          endToken: Math.min(tokens.length, index + 2),
+          featureKey: "clause:because-basic",
+          label: "Because clause",
+          category: "syntax",
+          evidence: ["because-connector"],
+          confidence: 0.8
+        })
+      );
+    }
+
+    if (token.normalized === "when") {
+      features.push(
+        buildGrammarFeature({
+          sentenceHash,
+          sentence,
+          tokens,
+          startToken: index,
+          endToken: Math.min(tokens.length, index + 2),
+          featureKey: "clause:when-basic",
+          label: "When clause",
+          category: "syntax",
+          evidence: ["when-connector"],
+          confidence: 0.8
         })
       );
     }

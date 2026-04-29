@@ -10,10 +10,19 @@ export const REVIEW_INTERVALS_MS = [
   60 * 24 * 60 * 60 * 1000
 ] as const;
 
+export const NEAR_DUE_REVIEW_WINDOW_MS = 15 * 60 * 1000;
+export const REPEAT_ASSIST_WINDOW_MS = 10 * 60 * 1000;
+
 export type SchedulerDecision = {
   isDue: boolean;
   receivesDueBoost: boolean;
-  reason: "suspended" | "new-item" | "missing-review-date" | "due" | "not-due";
+  reason:
+    | "suspended"
+    | "new-item"
+    | "missing-review-date"
+    | "due"
+    | "near-due"
+    | "not-due";
 };
 
 export type QualifiedExposureScheduleResult = {
@@ -52,11 +61,18 @@ export function evaluateLearningItemSchedule(
     };
   }
 
-  const due = Date.parse(item.nextReviewAt) <= coerceTimeMs(now);
+  const nowMs = coerceTimeMs(now);
+  const nextReviewMs = Date.parse(item.nextReviewAt);
+  const due = nextReviewMs <= nowMs;
+  const nearDue =
+    !due &&
+    Number.isFinite(nowMs) &&
+    Number.isFinite(nextReviewMs) &&
+    nextReviewMs - nowMs <= NEAR_DUE_REVIEW_WINDOW_MS;
   return {
     isDue: due,
-    receivesDueBoost: due,
-    reason: due ? "due" : "not-due"
+    receivesDueBoost: due || nearDue,
+    reason: due ? "due" : nearDue ? "near-due" : "not-due"
   };
 }
 
@@ -88,6 +104,24 @@ export function scheduleAssistReview(
   };
 }
 
+export function inferAssistReviewGrade(
+  item: LearningItem,
+  now: string | number | Date = Date.now()
+): Extract<ReviewGrade, "again" | "hard"> {
+  if (item.assistCount <= 0 || !item.lastReviewedAt) {
+    return "hard";
+  }
+
+  const nowMs = coerceTimeMs(now);
+  const lastReviewedMs = Date.parse(item.lastReviewedAt);
+  const repeated =
+    Number.isFinite(nowMs) &&
+    Number.isFinite(lastReviewedMs) &&
+    nowMs - lastReviewedMs <= REPEAT_ASSIST_WINDOW_MS;
+
+  return repeated ? "again" : "hard";
+}
+
 export function scheduleQualifiedExposure(
   item: LearningItem,
   input: {
@@ -97,14 +131,21 @@ export function scheduleQualifiedExposure(
   }
 ): QualifiedExposureScheduleResult {
   const schedule = evaluateLearningItemSchedule(item, input.now);
+  const grade = inferQualifiedExposureGrade(item, {
+    ...input,
+    isDue: schedule.isDue
+  });
+  const intervalStep = grade === "easy" ? 2 : 1;
   const nextReviewIndex = schedule.isDue
-    ? Math.min(REVIEW_INTERVALS_MS.length - 1, reviewIntervalIndex(item.interval) + 1)
+    ? Math.min(
+        REVIEW_INTERVALS_MS.length - 1,
+        reviewIntervalIndex(item.interval) + intervalStep
+      )
     : reviewIntervalIndex(item.interval);
   const nextInterval = REVIEW_INTERVALS_MS[nextReviewIndex];
   const nextConsecutiveUnassisted = input.wasAssisted
     ? 0
     : item.consecutiveUnassistedCount + 1;
-  const grade: ReviewGrade = input.wasAssisted ? "hard" : "good";
   const shouldCreateReviewEvent = schedule.isDue || !item.nextReviewAt;
 
   return {
@@ -135,6 +176,30 @@ export function scheduleQualifiedExposure(
       suspended: false
     }
   };
+}
+
+function inferQualifiedExposureGrade(
+  item: LearningItem,
+  input: {
+    wasAssisted: boolean;
+    isDistinctContext: boolean;
+    isDue: boolean;
+  }
+): ReviewGrade {
+  if (input.wasAssisted) {
+    return "hard";
+  }
+
+  if (
+    input.isDue &&
+    input.isDistinctContext &&
+    item.consecutiveUnassistedCount >= 2 &&
+    item.distinctContextCount >= 2
+  ) {
+    return "easy";
+  }
+
+  return "good";
 }
 
 export function reviewIntervalIndex(interval: number): number {

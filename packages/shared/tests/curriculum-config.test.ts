@@ -1,7 +1,12 @@
 import {
   DEFAULT_CURRICULUM_CONFIG,
+  DEFAULT_CURRICULUM_CONTENT,
+  FIXED_PHRASE_LEXICON,
   evaluateCurriculumBandTransition,
   evaluateCurriculumEligibility,
+  getActiveCurriculumContent,
+  getCurriculumContentForBand,
+  normalizePhraseText,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   type CurriculumConfig,
@@ -36,6 +41,83 @@ describe("curriculum configuration", () => {
     expect(config.levels).toHaveLength(5);
     expect(config.bands).toHaveLength(13);
     expect(config.levels[0]?.bandIds).toEqual(["level-1a", "level-1b", "level-1c"]);
+  });
+
+  it("ships a typed content map for every runtime band", () => {
+    const config = resolveCurriculumConfig(null);
+    const contentBandIds = new Set(DEFAULT_CURRICULUM_CONTENT.map((entry) => entry.bandId));
+
+    expect(DEFAULT_CURRICULUM_CONTENT).toHaveLength(config.bands.length);
+    for (const band of config.bands) {
+      const content = getCurriculumContentForBand(band.bandId);
+      expect(contentBandIds.has(band.bandId)).toBe(true);
+      expect(content?.vocabularyDomains.length).toBeGreaterThan(0);
+      expect(content?.phraseChunks.length).toBeGreaterThan(0);
+      expect(content?.sentencePolicy.tokenRange[0]).toBeLessThanOrEqual(
+        content?.sentencePolicy.tokenRange[1] ?? 0
+      );
+    }
+  });
+
+  it("resolves active curriculum content from the runtime profile", () => {
+    expect(
+      getActiveCurriculumContent({
+        profile: {
+          activeVocabularyBandId: "level-3b"
+        }
+      })
+    ).toMatchObject({
+      band: expect.objectContaining({ bandId: "level-3b" }),
+      content: expect.objectContaining({
+        vocabularyDomains: expect.arrayContaining(["short narratives"]),
+        currentGrammarKeys: expect.arrayContaining(["aspect:used-to"])
+      })
+    });
+  });
+
+  it("backs conservative curriculum phrase chunks with fixed phrase targets", () => {
+    const fixedPhraseTargets = new Set(
+      FIXED_PHRASE_LEXICON.map((entry) => normalizePhraseText(entry.sourceText))
+    );
+    const curriculumFixedPhrases = [
+      "at home",
+      "right now",
+      "a lot",
+      "in the morning",
+      "at school",
+      "of course",
+      "for now",
+      "every day",
+      "on the way",
+      "next week",
+      "take care of",
+      "make sure",
+      "more than",
+      "a few",
+      "the same as",
+      "in the middle of",
+      "because of",
+      "after that",
+      "at the end",
+      "in order to",
+      "as soon as",
+      "for example",
+      "as a result",
+      "in fact",
+      "at least",
+      "as well as",
+      "on the other hand",
+      "in terms of",
+      "with respect to",
+      "to some extent",
+      "as opposed to",
+      "in light of",
+      "for the sake of"
+    ];
+
+    for (const phrase of curriculumFixedPhrases) {
+      expect(fixedPhraseTargets.has(normalizePhraseText(phrase))).toBe(true);
+    }
   });
 
   it("evaluates band transitions from config instead of hardcoded thresholds", () => {
