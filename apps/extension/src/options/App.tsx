@@ -357,6 +357,7 @@ export function OptionsApp() {
   });
   const lastProgressionDecision =
     curriculumDiagnostics.lastProgressionDecision;
+  const checkpointStatus = getCheckpointStatus(checkpointPreview);
 
   return (
     <main className="panel-shell options-shell">
@@ -564,6 +565,59 @@ export function OptionsApp() {
               )}
             </section>
           </div>
+
+          <section className="panel-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Progress Gate</p>
+                <h2>Checkpoint status</h2>
+              </div>
+              <span className={checkpointStatus.badgeClass}>
+                {checkpointStatus.badgeLabel}
+              </span>
+            </div>
+
+            <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
+              <MetricCard
+                label="Current band"
+                value={checkpointPreview.activeBandLabel ?? "Starting"}
+              />
+              <MetricCard
+                label="Next band"
+                value={checkpointPreview.nextBandLabel ?? "None"}
+              />
+              <MetricCard
+                label="Missing"
+                value={formatCount(checkpointPreview.unmetRequirements.length)}
+              />
+              <MetricCard
+                label="Boundary"
+                value={checkpointPreview.checkpointRequired ? "Checkpoint" : "Open"}
+              />
+            </div>
+
+            <p className="support-line muted">
+              {checkpointStatus.description}
+            </p>
+
+            <div className="field-action-row">
+              <button
+                type="button"
+                className="button-primary"
+                disabled={
+                  isLoading ||
+                  isSaving ||
+                  isGraduatingCheckpoint ||
+                  !checkpointPreview.checkpointIsOnlyBlocker
+                }
+                onClick={() => {
+                  void handleCheckpointGraduation();
+                }}
+              >
+                {isGraduatingCheckpoint ? "Completing..." : "Complete checkpoint"}
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
 
@@ -1314,6 +1368,55 @@ function formatCheckpointPreview(preview: CheckpointEligibilityPreview): string 
   }
 
   return "No next curriculum band is available.";
+}
+
+function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
+  badgeClass: string;
+  badgeLabel: string;
+  description: string;
+} {
+  if (!preview.activeBandId) {
+    return {
+      badgeClass: "badge-soft badge-soft--off",
+      badgeLabel: "Unavailable",
+      description: "Checkpoint progress is not available until a curriculum band is active."
+    };
+  }
+
+  if (preview.checkpointIsOnlyBlocker) {
+    return {
+      badgeClass: "status-badge status-badge--warning",
+      badgeLabel: "Ready",
+      description: `You have met the evidence gates for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"}. Complete the checkpoint when you are ready to move forward.`
+    };
+  }
+
+  if (preview.unmetRequirements.length > 0) {
+    const blockers = preview.unmetRequirements
+      .filter((requirement) => requirement !== "checkpoint")
+      .join(", ");
+    return {
+      badgeClass: "badge-soft badge-soft--off",
+      badgeLabel: "Building",
+      description: blockers
+        ? `Keep reading to clear ${blockers}; checkpoint completion unlocks after those evidence gates are met.`
+        : "Keep reading to gather the evidence needed for the next checkpoint."
+    };
+  }
+
+  if (preview.nextBandId) {
+    return {
+      badgeClass: "badge-soft badge-soft--on",
+      badgeLabel: "Open",
+      description: `No checkpoint is blocking ${preview.nextBandLabel ?? preview.nextBandId} right now.`
+    };
+  }
+
+  return {
+    badgeClass: "badge-soft badge-soft--on",
+    badgeLabel: "Complete",
+    description: "There is no next curriculum band to unlock right now."
+  };
 }
 
 function formatCheckpointGraduationBlock(input: {
