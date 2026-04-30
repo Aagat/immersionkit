@@ -4,6 +4,8 @@ import {
   FIXED_PHRASE_LEXICON,
   evaluateCurriculumBandTransition,
   evaluateCurriculumEligibility,
+  evaluatePhraseCurriculumContentInventory,
+  evaluateWordCurriculumContentInventory,
   getActiveCurriculumContent,
   getCurriculumContentForBand,
   normalizePhraseText,
@@ -52,7 +54,9 @@ describe("curriculum configuration", () => {
       const content = getCurriculumContentForBand(band.bandId);
       expect(contentBandIds.has(band.bandId)).toBe(true);
       expect(content?.vocabularyDomains.length).toBeGreaterThan(0);
+      expect(content?.vocabularyMaxFrequencyRank).toBeGreaterThan(0);
       expect(content?.phraseChunks.length).toBeGreaterThan(0);
+      expect(content?.phraseInventory.exactSourceTexts.length).toBeGreaterThan(0);
       expect(content?.sentencePolicy.tokenRange[0]).toBeLessThanOrEqual(
         content?.sentencePolicy.tokenRange[1] ?? 0
       );
@@ -196,6 +200,104 @@ describe("curriculum configuration", () => {
       eligible: false,
       activeBandId: "level-1a",
       skipReason: "above-active-band-difficulty"
+    });
+  });
+
+  it("uses active curriculum content as a stricter word inventory gate", () => {
+    const activeContent = getActiveCurriculumContent({
+      profile: {
+        activeVocabularyBandId: "level-1a"
+      }
+    });
+
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        lexiconEntry: {
+          lemmaId: "en:house:noun",
+          sourceLemma: "house",
+          targetLemma: "casa",
+          pos: "noun",
+          frequencyRank: 430,
+          confidence: 0.97
+        }
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "level-1a",
+      skipReason: null
+    });
+
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        lexiconEntry: {
+          lemmaId: "en:telescope:noun",
+          sourceLemma: "telescope",
+          targetLemma: "telescopio",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91
+        }
+      })
+    ).toMatchObject({
+      eligible: false,
+      activeBandId: "level-1a",
+      skipReason: "word-rank-outside-content"
+    });
+  });
+
+  it("uses active curriculum content as a phrase inventory gate", () => {
+    const level1a = getActiveCurriculumContent({
+      profile: {
+        activePhraseBandId: "level-1a"
+      },
+      unitType: "phrase"
+    });
+    const level4a = getActiveCurriculumContent({
+      profile: {
+        activePhraseBandId: "level-4a"
+      },
+      unitType: "phrase"
+    });
+
+    expect(
+      evaluatePhraseCurriculumContentInventory({
+        activeContent: level1a,
+        sourceText: "right now",
+        sourceKind: "fixed-phrase",
+        category: "fixed-idiom"
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "level-1a",
+      skipReason: null
+    });
+
+    expect(
+      evaluatePhraseCurriculumContentInventory({
+        activeContent: level1a,
+        sourceText: "public health care system",
+        sourceKind: "chunk",
+        category: "noun-chunk"
+      })
+    ).toMatchObject({
+      eligible: false,
+      activeBandId: "level-1a",
+      skipReason: "phrase-outside-content"
+    });
+
+    expect(
+      evaluatePhraseCurriculumContentInventory({
+        activeContent: level4a,
+        sourceText: "public health care system",
+        sourceKind: "chunk",
+        category: "noun-chunk"
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "level-4a",
+      skipReason: null
     });
   });
 

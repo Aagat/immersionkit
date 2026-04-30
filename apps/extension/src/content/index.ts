@@ -1,5 +1,8 @@
 import {
   evaluateCurriculumEligibility,
+  evaluatePhraseCurriculumContentInventory,
+  evaluateWordCurriculumContentInventory,
+  getActiveCurriculumContent,
   RuntimeMessageType,
   hashString,
   normalizeToken,
@@ -114,6 +117,8 @@ type ProcessingState = {
   curriculumSkippedPhrases: number;
   curriculumConfig: CurriculumConfig;
   learningProfile: CurriculumRuntimeProfileInput;
+  activeWordCurriculumContent: ReturnType<typeof getActiveCurriculumContent>;
+  activePhraseCurriculumContent: ReturnType<typeof getActiveCurriculumContent>;
   sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
   unrenderedPhraseRejections: PhraseRenderRejection[];
   pendingRoots: Set<ParentNode>;
@@ -435,6 +440,16 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       curriculumSkippedPhrases: 0,
       curriculumConfig: processingContext.curriculumConfig,
       learningProfile: processingContext.learningProfile,
+      activeWordCurriculumContent: getActiveCurriculumContent({
+        config: processingContext.curriculumConfig,
+        profile: processingContext.learningProfile,
+        unitType: "word"
+      }),
+      activePhraseCurriculumContent: getActiveCurriculumContent({
+        config: processingContext.curriculumConfig,
+        profile: processingContext.learningProfile,
+        unitType: "phrase"
+      }),
       sentenceRankingReasons: [],
       unrenderedPhraseRejections: [],
       pendingRoots: new Set<ParentNode>(),
@@ -1110,6 +1125,23 @@ function shouldActivateWordByCurriculum(
 
   state.curriculumConfigId = decision.configId;
   state.activeCurriculumBandId = decision.activeBandId;
+  if (!decision.eligible) {
+    return decision;
+  }
+
+  const inventoryDecision = evaluateWordCurriculumContentInventory({
+    lexiconEntry: input.lexiconEntry,
+    activeContent: state.activeWordCurriculumContent
+  });
+  if (!inventoryDecision.eligible) {
+    return {
+      eligible: false,
+      configId: decision.configId,
+      activeBandId: inventoryDecision.activeBandId,
+      skipReason: inventoryDecision.skipReason
+    };
+  }
+
   return decision;
 }
 
@@ -1130,6 +1162,25 @@ function shouldActivatePhraseByCurriculum(
 
   state.curriculumConfigId = decision.configId;
   state.activeCurriculumBandId = decision.activeBandId;
+  if (!decision.eligible) {
+    return decision;
+  }
+
+  const inventoryDecision = evaluatePhraseCurriculumContentInventory({
+    sourceText: input.sourceText,
+    sourceKind: input.sourceKind,
+    category: input.category,
+    activeContent: state.activePhraseCurriculumContent
+  });
+  if (!inventoryDecision.eligible) {
+    return {
+      eligible: false,
+      configId: decision.configId,
+      activeBandId: inventoryDecision.activeBandId,
+      skipReason: inventoryDecision.skipReason
+    };
+  }
+
   return decision;
 }
 

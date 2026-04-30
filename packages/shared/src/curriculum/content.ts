@@ -1,9 +1,16 @@
-import type { CurriculumBand } from "../domain/models";
+import type {
+  CurriculumBand,
+  PhraseCategory,
+  PhraseSourceKind,
+  SeedLexiconEntry
+} from "../domain/models";
+import { normalizePhraseText } from "../text/phrases";
 import {
   DEFAULT_CURRICULUM_CONFIG,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   type CurriculumConfig,
+  type CurriculumGateUnitType,
   type CurriculumRuntimeProfileInput
 } from "./config";
 
@@ -17,7 +24,13 @@ export type SentenceComplexityPolicy = {
 export type CurriculumBandContent = {
   bandId: string;
   vocabularyDomains: readonly string[];
+  vocabularyMaxFrequencyRank: number;
   phraseChunks: readonly string[];
+  phraseInventory: {
+    exactSourceTexts: readonly string[];
+    allowedCategories: readonly PhraseCategory[];
+    allowedSourceKinds: readonly PhraseSourceKind[];
+  };
   currentGrammarKeys: readonly string[];
   plannedGrammarKeys: readonly string[];
   sentencePolicy: SentenceComplexityPolicy;
@@ -28,11 +41,35 @@ export type ActiveCurriculumContent = {
   content: CurriculumBandContent | null;
 };
 
+export type CurriculumContentInventoryDecision = {
+  eligible: boolean;
+  activeBandId: string | null;
+  skipReason:
+    | "unknown-active-content"
+    | "word-rank-outside-content"
+    | "phrase-outside-content"
+    | null;
+};
+
 export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-1a",
-    vocabularyDomains: ["people", "home", "food", "common objects", "colors", "size", "quality"],
+    vocabularyDomains: [
+      "people",
+      "home",
+      "food",
+      "common objects",
+      "colors",
+      "size",
+      "quality"
+    ],
+    vocabularyMaxFrequencyRank: 600,
     phraseChunks: ["at home", "right now", "a lot", "clear adjective+noun spans"],
+    phraseInventory: phraseInventory(
+      ["at home", "right now", "a lot"],
+      ["adjective-noun"],
+      ["fixed-phrase", "pattern-match"]
+    ),
     currentGrammarKeys: [],
     plannedGrammarKeys: ["copula:be", "existential:there-is", "negation:basic-not"],
     sentencePolicy: {
@@ -44,8 +81,21 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-1b",
-    vocabularyDomains: ["places", "days", "time words", "weather", "family", "frequency adverbs"],
+    vocabularyDomains: [
+      "places",
+      "days",
+      "time words",
+      "weather",
+      "family",
+      "frequency adverbs"
+    ],
+    vocabularyMaxFrequencyRank: 900,
     phraseChunks: ["in the morning", "on Monday", "at school", "literal noun chunks with connectors"],
+    phraseInventory: phraseInventory(
+      ["in the morning", "on Monday", "at school"],
+      ["fixed-idiom", "function-phrase"],
+      ["fixed-phrase"]
+    ),
     currentGrammarKeys: [],
     plannedGrammarKeys: ["question:basic-wh", "present:simple", "adverb:frequency"],
     sentencePolicy: {
@@ -58,7 +108,13 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-1c",
     vocabularyDomains: ["routines", "descriptive contrasts", "common environments", "Level 1 review"],
+    vocabularyMaxFrequencyRank: 1200,
     phraseChunks: ["of course", "for now", "simple noun chunks"],
+    phraseInventory: phraseInventory(
+      ["of course", "for now"],
+      ["fixed-idiom", "function-phrase", "noun-chunk"],
+      ["fixed-phrase", "chunk"]
+    ),
     currentGrammarKeys: [],
     plannedGrammarKeys: ["negation:do-not", "imperative:basic", "determiner:quantity-basic"],
     sentencePolicy: {
@@ -71,7 +127,13 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-2a",
     vocabularyDomains: ["routine actions", "schedules", "movement", "locations", "errands"],
+    vocabularyMaxFrequencyRank: 1500,
     phraseChunks: ["every day", "on the way", "next week", "safe adjective+noun spans"],
+    phraseInventory: phraseInventory(
+      ["every day", "on the way", "next week"],
+      ["function-phrase", "adjective-noun"],
+      ["fixed-phrase", "pattern-match"]
+    ),
     currentGrammarKeys: ["modal:can"],
     plannedGrammarKeys: ["past:simple-regular", "future:will", "preposition:place-basic"],
     sentencePolicy: {
@@ -84,7 +146,13 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-2b",
     vocabularyDomains: ["past events", "future plans", "logistics", "social interactions"],
+    vocabularyMaxFrequencyRank: 1800,
     phraseChunks: ["take care of", "make sure", "modal carriers"],
+    phraseInventory: phraseInventory(
+      ["take care of", "make sure", "going to"],
+      ["fixed-idiom", "function-phrase", "grammar-carrier"],
+      ["fixed-phrase", "pattern-match"]
+    ),
     currentGrammarKeys: ["future:going-to", "modal:should"],
     plannedGrammarKeys: ["past:simple-irregular", "modal:have-to", "time:sequence-basic"],
     sentencePolicy: {
@@ -97,7 +165,13 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-2c",
     vocabularyDomains: ["comparison", "quantity", "travel-adjacent words", "community vocabulary"],
+    vocabularyMaxFrequencyRank: 2100,
     phraseChunks: ["more than", "a few", "the same as"],
+    phraseInventory: phraseInventory(
+      ["more than", "a few", "the same as"],
+      ["fixed-idiom", "function-phrase", "grammar-carrier"],
+      ["fixed-phrase", "pattern-match"]
+    ),
     currentGrammarKeys: ["modal:can", "modal:should"],
     plannedGrammarKeys: ["comparison:comparative", "comparison:superlative", "future:plan-basic"],
     sentencePolicy: {
@@ -109,8 +183,19 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-3a",
-    vocabularyDomains: ["ongoing activity", "movement/change", "situations", "descriptive verbs through context"],
+    vocabularyDomains: [
+      "ongoing activity",
+      "movement/change",
+      "situations",
+      "descriptive verbs through context"
+    ],
+    vocabularyMaxFrequencyRank: 2400,
     phraseChunks: ["in the middle of", "on the way to", "progressive chunks"],
+    phraseInventory: phraseInventory(
+      ["in the middle of", "on the way to"],
+      ["fixed-idiom", "function-phrase", "grammar-carrier"],
+      ["fixed-phrase", "pattern-match"]
+    ),
     currentGrammarKeys: ["future:going-to"],
     plannedGrammarKeys: ["aspect:present-progressive", "clause:when-basic"],
     sentencePolicy: {
@@ -123,7 +208,13 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-3b",
     vocabularyDomains: ["short narratives", "cause/effect", "time sequencing", "richer collocations"],
+    vocabularyMaxFrequencyRank: 2700,
     phraseChunks: ["because of", "after that", "at the end"],
+    phraseInventory: phraseInventory(
+      ["because of", "after that", "at the end"],
+      ["fixed-idiom", "function-phrase", "noun-chunk"],
+      ["fixed-phrase", "chunk"]
+    ),
     currentGrammarKeys: ["aspect:used-to"],
     plannedGrammarKeys: ["aspect:past-progressive", "clause:because-basic", "clause:when-basic"],
     sentencePolicy: {
@@ -136,7 +227,13 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   {
     bandId: "level-3c",
     vocabularyDomains: ["work", "media", "travel", "daily-life stories", "early abstract description"],
+    vocabularyMaxFrequencyRank: 3000,
     phraseChunks: ["in order to", "as soon as", "used to"],
+    phraseInventory: phraseInventory(
+      ["in order to", "as soon as", "used to"],
+      ["fixed-idiom", "function-phrase", "grammar-carrier", "noun-chunk"],
+      ["fixed-phrase", "pattern-match", "chunk"]
+    ),
     currentGrammarKeys: ["aspect:used-to", "future:going-to"],
     plannedGrammarKeys: ["gerund:subject-or-object", "infinitive:purpose", "connector:sequence"],
     sentencePolicy: {
@@ -148,8 +245,20 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-4a",
-    vocabularyDomains: ["explanation", "process", "systems", "comparison", "opinion vocabulary"],
+    vocabularyDomains: [
+      "explanation",
+      "process",
+      "systems",
+      "comparison",
+      "opinion vocabulary"
+    ],
+    vocabularyMaxFrequencyRank: 3400,
     phraseChunks: ["for example", "as a result", "in fact"],
+    phraseInventory: phraseInventory(
+      ["for example", "as a result", "in fact"],
+      ["fixed-idiom", "function-phrase", "adjective-noun", "noun-chunk"],
+      ["fixed-phrase", "pattern-match", "chunk"]
+    ),
     currentGrammarKeys: ["aspect:have-been"],
     plannedGrammarKeys: ["passive:be-plus-participle", "present-perfect:basic", "contrast:although"],
     sentencePolicy: {
@@ -161,8 +270,25 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-4b",
-    vocabularyDomains: ["opinion/evidence", "passive recognition", "conditional reasoning", "abstract nouns"],
+    vocabularyDomains: [
+      "opinion/evidence",
+      "passive recognition",
+      "conditional reasoning",
+      "abstract nouns"
+    ],
+    vocabularyMaxFrequencyRank: 3800,
     phraseChunks: ["on the other hand", "at least", "as well as"],
+    phraseInventory: phraseInventory(
+      ["on the other hand", "at least", "as well as"],
+      [
+        "fixed-idiom",
+        "function-phrase",
+        "grammar-carrier",
+        "adjective-noun",
+        "noun-chunk"
+      ],
+      ["fixed-phrase", "pattern-match", "chunk"]
+    ),
     currentGrammarKeys: ["aspect:have-been", "modal:*"],
     plannedGrammarKeys: ["conditional:if-basic", "passive:agentless", "concession:however"],
     sentencePolicy: {
@@ -174,8 +300,26 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-5a",
-    vocabularyDomains: ["editorial", "analytical", "institutional", "cultural", "academic-adjacent terms"],
+    vocabularyDomains: [
+      "editorial",
+      "analytical",
+      "institutional",
+      "cultural",
+      "academic-adjacent terms"
+    ],
+    vocabularyMaxFrequencyRank: 4400,
     phraseChunks: ["in terms of", "with respect to", "to some extent"],
+    phraseInventory: phraseInventory(
+      ["in terms of", "with respect to", "to some extent"],
+      [
+        "fixed-idiom",
+        "function-phrase",
+        "grammar-carrier",
+        "adjective-noun",
+        "noun-chunk"
+      ],
+      ["fixed-phrase", "pattern-match", "chunk"]
+    ),
     currentGrammarKeys: ["all current keys as review"],
     plannedGrammarKeys: ["subordination:relative-clause", "reported-speech:basic", "perfect:contrast"],
     sentencePolicy: {
@@ -187,8 +331,24 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-5b",
-    vocabularyDomains: ["broad domain expansion", "specialized interests", "long-term weak-point review"],
+    vocabularyDomains: [
+      "broad domain expansion",
+      "specialized interests",
+      "long-term weak-point review"
+    ],
+    vocabularyMaxFrequencyRank: 5000,
     phraseChunks: ["as opposed to", "in light of", "for the sake of"],
+    phraseInventory: phraseInventory(
+      ["as opposed to", "in light of", "for the sake of"],
+      [
+        "fixed-idiom",
+        "function-phrase",
+        "grammar-carrier",
+        "adjective-noun",
+        "noun-chunk"
+      ],
+      ["fixed-phrase", "pattern-match", "chunk"]
+    ),
     currentGrammarKeys: ["all current keys as adaptive review"],
     plannedGrammarKeys: ["conditional:advanced", "subordination:embedded", "discourse:stance-marker"],
     sentencePolicy: {
@@ -215,12 +375,104 @@ export function getActiveCurriculumContent(input?: {
   config?: Partial<CurriculumConfig> | null;
   profile?: CurriculumRuntimeProfileInput | null;
   content?: readonly CurriculumBandContent[];
+  unitType?: CurriculumGateUnitType;
 }): ActiveCurriculumContent {
   const config = resolveCurriculumConfig(input?.config ?? DEFAULT_CURRICULUM_CONFIG);
-  const band = resolveActiveCurriculumBand(config, "word", input?.profile);
+  const band = resolveActiveCurriculumBand(
+    config,
+    input?.unitType ?? "word",
+    input?.profile
+  );
 
   return {
     band,
     content: getCurriculumContentForBand(band?.bandId, input?.content)
+  };
+}
+
+export function evaluateWordCurriculumContentInventory(input: {
+  lexiconEntry: SeedLexiconEntry;
+  activeContent: ActiveCurriculumContent;
+}): CurriculumContentInventoryDecision {
+  const activeBandId = input.activeContent.band?.bandId ?? null;
+  const content = input.activeContent.content;
+  if (!activeBandId || !content) {
+    return {
+      eligible: false,
+      activeBandId,
+      skipReason: "unknown-active-content"
+    };
+  }
+
+  const frequencyRank = input.lexiconEntry.frequencyRank;
+  if (
+    typeof frequencyRank !== "number" ||
+    !Number.isFinite(frequencyRank) ||
+    frequencyRank < 1 ||
+    frequencyRank > content.vocabularyMaxFrequencyRank
+  ) {
+    return {
+      eligible: false,
+      activeBandId,
+      skipReason: "word-rank-outside-content"
+    };
+  }
+
+  return {
+    eligible: true,
+    activeBandId,
+    skipReason: null
+  };
+}
+
+export function evaluatePhraseCurriculumContentInventory(input: {
+  sourceText: string;
+  sourceKind: PhraseSourceKind;
+  category: PhraseCategory;
+  activeContent: ActiveCurriculumContent;
+}): CurriculumContentInventoryDecision {
+  const activeBandId = input.activeContent.band?.bandId ?? null;
+  const content = input.activeContent.content;
+  if (!activeBandId || !content) {
+    return {
+      eligible: false,
+      activeBandId,
+      skipReason: "unknown-active-content"
+    };
+  }
+
+  const normalizedSourceText = normalizePhraseText(input.sourceText);
+  const exactSourceTexts = new Set(
+    content.phraseInventory.exactSourceTexts.map((phrase) => normalizePhraseText(phrase))
+  );
+  const exactMatchAllowed = exactSourceTexts.has(normalizedSourceText);
+  const ruleFamilyAllowed =
+    content.phraseInventory.allowedCategories.includes(input.category) &&
+    content.phraseInventory.allowedSourceKinds.includes(input.sourceKind);
+
+  if (!exactMatchAllowed && !ruleFamilyAllowed) {
+    return {
+      eligible: false,
+      activeBandId,
+      skipReason: "phrase-outside-content"
+    };
+  }
+
+  return {
+    eligible: true,
+    activeBandId,
+    skipReason: null
+  };
+}
+
+function phraseInventory(
+  exactSourceTexts: readonly string[],
+  allowedCategories: readonly PhraseCategory[],
+  allowedSourceKinds: readonly PhraseSourceKind[]
+): CurriculumBandContent["phraseInventory"] {
+  return {
+    exactSourceTexts,
+    allowedCategories,
+    allowedSourceKinds
   };
 }

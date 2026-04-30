@@ -191,6 +191,59 @@ describe("content phrase-unit rendering", () => {
     });
   });
 
+  it("passes phrase source text into the active curriculum inventory gate", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sentence = "The public health care system needs support.";
+      const textNode = document.createTextNode(sentence);
+      document.body.append(textNode);
+      const gateInputs: string[] = [];
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "phrase-content-inventory-test",
+        createNodeId: () => "ikn-phrase-content-inventory-test",
+        lexiconLookup: new Map(),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
+          createPhraseMatch(sentence, {
+            phraseId: "phrase:chunk:public-health-care-system:sistema-de-salud-publica",
+            sourceText: "public health care system",
+            startChar: 4,
+            endChar: 29,
+            sourceKind: "chunk",
+            category: "noun-chunk"
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "phrase:chunk:public-health-care-system:sistema-de-salud-publica",
+            createPhraseLearningItem({
+              phraseId: "phrase:chunk:public-health-care-system:sistema-de-salud-publica",
+              sourceText: "public health care system",
+              targetText: "sistema de salud publica",
+              nextReviewAt: "2099-04-26T10:00:00.000Z"
+            })
+          ]
+        ]),
+        shouldActivatePhrase: (input) => {
+          gateInputs.push(input.sourceText);
+          return {
+            eligible: false,
+            configId: "test-curriculum",
+            activeBandId: "level-1a",
+            skipReason: "phrase-outside-content"
+          };
+        }
+      });
+
+      expect(gateInputs).toEqual(["public health care system"]);
+      expect(result.phraseInjectedCount).toBe(0);
+      expect(result.curriculumSkippedPhraseCount).toBe(1);
+      expect(result.phraseRejectedCount).toBe(1);
+    });
+  });
+
   it("rejects cached phrase units with blank targets", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const sentence = "The old city holds quiet memory.";
@@ -253,6 +306,8 @@ function createPhraseMatch(
     sourceText: string;
     startChar: number;
     endChar: number;
+    sourceKind?: CachedPhraseMatch["sourceKind"];
+    category?: CachedPhraseMatch["category"];
   }
 ): CachedPhraseMatch {
   return {
@@ -261,8 +316,8 @@ function createPhraseMatch(
     sentenceHash: hashSentence(sentence),
     sourceText: input.sourceText,
     normalizedSourceText: input.sourceText.toLowerCase(),
-    sourceKind: "pattern-match",
-    category: "grammar-carrier",
+    sourceKind: input.sourceKind ?? "pattern-match",
+    category: input.category ?? "grammar-carrier",
     ruleId: "used-to",
     span: {
       startToken: 1,

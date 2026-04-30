@@ -71,6 +71,7 @@ export type WordActivationInput = {
 
 export type PhraseActivationInput = {
   phraseId: string;
+  sourceText: string;
   learningItem: LearningItem;
   confidence: number;
   sourceKind: CachedPhraseMatch["sourceKind"];
@@ -866,6 +867,7 @@ function selectPhraseRenderCandidates(input: {
       if (!isDueForReview && input.shouldActivatePhrase) {
         const curriculumDecision = input.shouldActivatePhrase({
           phraseId: match.phraseId,
+          sourceText: match.sourceText,
           learningItem,
           confidence: match.confidence,
           sourceKind: match.sourceKind,
