@@ -9,6 +9,7 @@ export * from "./scoring/sentence";
 export * from "./storage/adapter";
 export * from "./storage/repositories";
 export * from "./text/hash";
+export * from "./text/cognates";
 export * from "./text/normalize";
 export * from "./text/phrases";
 export * from "./text/tokenize";

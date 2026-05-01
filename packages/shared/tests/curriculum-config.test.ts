@@ -232,9 +232,9 @@ describe("curriculum configuration", () => {
       evaluateWordCurriculumContentInventory({
         activeContent,
         lexiconEntry: {
-          lemmaId: "en:telescope:noun",
-          sourceLemma: "telescope",
-          targetLemma: "telescopio",
+          lemmaId: "en:river:noun",
+          sourceLemma: "river",
+          targetLemma: "rio",
           pos: "noun",
           frequencyRank: 2800,
           confidence: 0.91
@@ -244,6 +244,33 @@ describe("curriculum configuration", () => {
       eligible: false,
       activeBandId: "level-1a",
       skipReason: "word-rank-outside-content"
+    });
+  });
+
+  it("lets high-confidence beginner cognates through the early inventory gate", () => {
+    const activeContent = getActiveCurriculumContent({
+      profile: {
+        activeVocabularyBandId: "level-1a"
+      }
+    });
+
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        lexiconEntry: {
+          lemmaId: "en:telescope:noun",
+          sourceLemma: "telescope",
+          targetLemma: "telescopio",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91
+        }
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "level-1a",
+      matchReason: "beginner-cognate",
+      skipReason: null
     });
   });
 

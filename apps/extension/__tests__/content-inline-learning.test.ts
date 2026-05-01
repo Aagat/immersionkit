@@ -1596,11 +1596,13 @@ describe("content inline learning loop", () => {
             document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
               ?.textContent
           ).toBe("ciudad");
-          expect(
-            document.querySelector<HTMLElement>(
-              "[data-ik-lemma-id='lemma-important']"
-            )
-          ).toBeNull();
+          const cognateToken = document.querySelector<HTMLElement>(
+            "[data-ik-lemma-id='lemma-important']"
+          );
+          expect(cognateToken?.textContent).toBe("importante");
+          expect(cognateToken?.getAttribute("data-ik-scheduler-reason")).toBe(
+            "beginner-cognate"
+          );
         } finally {
           chromeStub.restore();
         }

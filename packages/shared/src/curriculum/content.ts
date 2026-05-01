@@ -4,6 +4,10 @@ import type {
   PhraseSourceKind,
   SeedLexiconEntry
 } from "../domain/models";
+import {
+  isBeginnerCognateBand,
+  isBeginnerConfidenceCognate
+} from "../text/cognates";
 import { normalizePhraseText } from "../text/phrases";
 import {
   DEFAULT_CURRICULUM_CONFIG,
@@ -44,6 +48,7 @@ export type ActiveCurriculumContent = {
 export type CurriculumContentInventoryDecision = {
   eligible: boolean;
   activeBandId: string | null;
+  matchReason: "frequency-rank" | "beginner-cognate" | "phrase-inventory" | null;
   skipReason:
     | "unknown-active-content"
     | "word-rank-outside-content"
@@ -400,28 +405,43 @@ export function evaluateWordCurriculumContentInventory(input: {
     return {
       eligible: false,
       activeBandId,
+      matchReason: null,
       skipReason: "unknown-active-content"
     };
   }
 
   const frequencyRank = input.lexiconEntry.frequencyRank;
+  const rankIsInBand =
+    typeof frequencyRank === "number" &&
+    Number.isFinite(frequencyRank) &&
+    frequencyRank >= 1 &&
+    frequencyRank <= content.vocabularyMaxFrequencyRank;
+  if (rankIsInBand) {
+    return {
+      eligible: true,
+      activeBandId,
+      matchReason: "frequency-rank",
+      skipReason: null
+    };
+  }
+
   if (
-    typeof frequencyRank !== "number" ||
-    !Number.isFinite(frequencyRank) ||
-    frequencyRank < 1 ||
-    frequencyRank > content.vocabularyMaxFrequencyRank
+    isBeginnerCognateBand(activeBandId) &&
+    isBeginnerConfidenceCognate(input.lexiconEntry)
   ) {
     return {
-      eligible: false,
+      eligible: true,
       activeBandId,
-      skipReason: "word-rank-outside-content"
+      matchReason: "beginner-cognate",
+      skipReason: null
     };
   }
 
   return {
-    eligible: true,
+    eligible: false,
     activeBandId,
-    skipReason: null
+    matchReason: null,
+    skipReason: "word-rank-outside-content"
   };
 }
 
@@ -437,6 +457,7 @@ export function evaluatePhraseCurriculumContentInventory(input: {
     return {
       eligible: false,
       activeBandId,
+      matchReason: null,
       skipReason: "unknown-active-content"
     };
   }
@@ -454,6 +475,7 @@ export function evaluatePhraseCurriculumContentInventory(input: {
     return {
       eligible: false,
       activeBandId,
+      matchReason: null,
       skipReason: "phrase-outside-content"
     };
   }
@@ -461,6 +483,7 @@ export function evaluatePhraseCurriculumContentInventory(input: {
   return {
     eligible: true,
     activeBandId,
+    matchReason: "phrase-inventory",
     skipReason: null
   };
 }

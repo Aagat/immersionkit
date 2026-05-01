@@ -59,6 +59,8 @@ export type ActivationDecision = {
   eligible: boolean;
   configId?: string;
   activeBandId?: string | null;
+  discoveryRateFloor?: number | null;
+  activationReason?: string | null;
   skipReason?: string | null;
 };
 
@@ -269,18 +271,19 @@ function renderTextWindow(input: {
     const isDueForReview = context.isDueForReview?.(lexiconEntry.lemmaId) ?? false;
     const learningItem =
       context.learningItemsByUnitRefId?.get(lexiconEntry.lemmaId) ?? null;
+    let activationDecision: ActivationDecision | null = null;
     if (
       status === "new" &&
       !isDueForReview &&
       context.shouldActivateWord
     ) {
-      const curriculumDecision = context.shouldActivateWord({
+      activationDecision = context.shouldActivateWord({
         lexiconEntry,
         learningItem,
         status,
         isDueForReview
       });
-      if (!curriculumDecision.eligible) {
+      if (!activationDecision.eligible) {
         wrapper.append(segment.value);
         curriculumSkippedWordCount += 1;
         cursor = segment.end;
@@ -293,7 +296,7 @@ function renderTextWindow(input: {
       !isDueForReview &&
       !shouldInjectDiscoveryToken(
         `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`,
-        context.discoveryRate
+        effectiveDiscoveryRate(context.discoveryRate, activationDecision)
       )
     ) {
       wrapper.append(segment.value);
@@ -334,7 +337,8 @@ function renderTextWindow(input: {
       lexiconEntry,
       status,
       wordKind,
-      isDueForReview
+      isDueForReview,
+      activationReason: activationDecision?.activationReason ?? null
     });
 
     wrapper.append(tokenElement);
@@ -665,6 +669,7 @@ function createTokenElement(input: {
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
+  activationReason?: string | null;
 }): HTMLSpanElement {
   const element = document.createElement("span");
 
@@ -693,7 +698,9 @@ function createTokenElement(input: {
       ? "due-review"
       : input.wordKind === "known"
         ? "known-status"
-        : "discovery-sampling"
+        : input.activationReason === "beginner-cognate"
+          ? "beginner-cognate"
+          : "discovery-sampling"
   );
   element.setAttribute(
     "aria-label",
@@ -1037,6 +1044,18 @@ function shouldInjectDiscoveryToken(seed: string, discoveryRate: number): boolea
   const hashPrefix = hashString(seed).slice(0, 8);
   const hashValue = Number.parseInt(hashPrefix, 16);
   return hashValue / 0xffffffff <= discoveryRate;
+}
+
+function effectiveDiscoveryRate(
+  baseRate: number,
+  activationDecision: ActivationDecision | null
+): number {
+  const floor = activationDecision?.discoveryRateFloor;
+  if (typeof floor !== "number" || !Number.isFinite(floor)) {
+    return baseRate;
+  }
+
+  return Math.min(1, Math.max(baseRate, floor));
 }
 
 type TextWindow = {

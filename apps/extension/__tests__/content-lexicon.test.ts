@@ -136,4 +136,47 @@ describe("content lexicon lookup", () => {
       expect(document.body.textContent).toContain("The telescopio watched the comet.");
     });
   });
+
+  it("uses activation discovery floors for beginner cognate replacements", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode("The telescope watched the comet.");
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 0,
+        samplingSeed: "beginner-cognate-word-test",
+        createNodeId: () => "ikn-beginner-cognate-word-test",
+        lexiconLookup: buildLexiconLookup([
+          {
+            lemmaId: "en:telescope:noun",
+            sourceLemma: "telescope",
+            targetLemma: "telescopio",
+            pos: "noun",
+            frequencyRank: 2800,
+            confidence: 0.91
+          }
+        ]),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        shouldActivateWord: () => ({
+          eligible: true,
+          configId: "test-curriculum",
+          activeBandId: "level-1a",
+          discoveryRateFloor: 1,
+          activationReason: "beginner-cognate",
+          skipReason: null
+        })
+      });
+
+      const token = document.querySelector<HTMLElement>(
+        "[data-ik-lemma-id='en:telescope:noun']"
+      );
+
+      expect(result.replaced).toBe(true);
+      expect(document.body.textContent).toContain("The telescopio watched the comet.");
+      expect(token?.getAttribute("data-ik-scheduler-reason")).toBe(
+        "beginner-cognate"
+      );
+    });
+  });
 });

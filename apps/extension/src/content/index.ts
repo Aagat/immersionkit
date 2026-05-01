@@ -2,6 +2,7 @@ import {
   evaluateCurriculumEligibility,
   evaluatePhraseCurriculumContentInventory,
   evaluateWordCurriculumContentInventory,
+  beginnerCognateDiscoveryRateFloor,
   getActiveCurriculumContent,
   RuntimeMessageType,
   hashString,
@@ -1142,7 +1143,20 @@ function shouldActivateWordByCurriculum(
     };
   }
 
-  return decision;
+  const cognateDiscoveryRateFloor = beginnerCognateDiscoveryRateFloor(
+    input.lexiconEntry,
+    inventoryDecision.activeBandId
+  );
+
+  return {
+    ...decision,
+    discoveryRateFloor: cognateDiscoveryRateFloor,
+    activationReason:
+      inventoryDecision.matchReason === "beginner-cognate" ||
+      cognateDiscoveryRateFloor !== null
+        ? "beginner-cognate"
+        : null
+  };
 }
 
 function shouldActivatePhraseByCurriculum(

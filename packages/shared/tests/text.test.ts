@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import {
+  beginnerCognateDiscoveryRateFloor,
+  evaluateEnglishSpanishCognate,
+  scoreOrthographicSimilarity
+} from "../src/text/cognates";
 import { hashSentence, hashString, normalizeSentenceForHash } from "../src/text/hash";
 import {
   normalizeSentenceText,
@@ -72,5 +77,52 @@ describe("sentence hashing", () => {
 
     expect(baseline).toBe(variant);
     expect(baseline.startsWith("v1:")).toBe(true);
+  });
+});
+
+describe("English-Spanish cognate scoring", () => {
+  it("scores close translation pairs as beginner confidence cognates", () => {
+    const result = evaluateEnglishSpanishCognate({
+      sourceLemma: "important",
+      targetLemma: "importante",
+      confidence: 0.95
+    });
+
+    expect(result).toMatchObject({
+      isCognate: true,
+      reason: "cognate"
+    });
+    expect(result.similarity).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it("does not treat meaning-backed but visually distant translations as cognates", () => {
+    expect(
+      evaluateEnglishSpanishCognate({
+        sourceLemma: "city",
+        targetLemma: "ciudad",
+        confidence: 0.98
+      })
+    ).toMatchObject({
+      isCognate: false,
+      reason: "low-similarity"
+    });
+  });
+
+  it("normalizes Spanish accents before measuring distance", () => {
+    expect(scoreOrthographicSimilarity("information", "información")).toBeGreaterThan(
+      0.7
+    );
+  });
+
+  it("only boosts cognates in beginner bands", () => {
+    const entry = {
+      sourceLemma: "telescope",
+      targetLemma: "telescopio",
+      confidence: 0.91,
+      frequencyRank: 2800
+    };
+
+    expect(beginnerCognateDiscoveryRateFloor(entry, "level-1a")).toBeGreaterThan(0);
+    expect(beginnerCognateDiscoveryRateFloor(entry, "level-2a")).toBeNull();
   });
 });
