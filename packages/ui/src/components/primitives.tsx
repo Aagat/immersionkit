@@ -2,6 +2,8 @@ import type { CSSProperties, ReactNode } from "react";
 
 type Tone = "accent" | "muted" | "warning" | "danger" | "info";
 type Size = "sm" | "md" | "lg";
+export type TokenKind = "word" | "phrase" | "sentence";
+export type TokenStatus = "new" | "learning" | "known" | "muted";
 
 export type IconName =
   | "band"
@@ -458,10 +460,37 @@ export function Popover({
 
 export function WordMark({
   children,
-  kind = "word"
+  kind = "word",
+  status = "learning",
+  label,
+  onClick
 }: {
   children: ReactNode;
-  kind?: "word" | "phrase" | "sentence";
+  kind?: TokenKind;
+  status?: TokenStatus;
+  label?: string;
+  onClick?: () => void;
 }) {
-  return <span className={`ik-ui-mark ik-ui-mark--${kind}`}>{children}</span>;
+  const className = `ik-ui-mark ik-ui-mark--${kind} ik-ui-mark--${status}`;
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={className}
+        aria-label={label}
+        data-kind={kind}
+        data-status={status}
+        onClick={onClick}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <span className={className} aria-label={label} data-kind={kind} data-status={status}>
+      {children}
+    </span>
+  );
 }

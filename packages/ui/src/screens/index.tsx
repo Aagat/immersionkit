@@ -16,6 +16,7 @@ export type PopupState = "supported" | "unsupported";
 export type SiteControlState = "on" | "paused";
 export type ArticleState = "supported" | "word" | "phrase" | "sentence";
 export type OptionsSection = "General" | "Translation" | "Advanced";
+type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
 
 const settingsTabs: OptionsSection[] = ["General", "Translation", "Advanced"];
 
@@ -349,18 +350,18 @@ function TravelArticle() {
           <p>
             Kyoto is famous for its temples and gardens, but some of its best moments
             happen between the big sights. On quiet mornings, the city invites you to
-            move <WordMark kind="phrase">con calma</WordMark> and notice the small details.
+            move <WordMark kind="phrase" status="known">con calma</WordMark> and notice the small details.
           </p>
           <p>
-            Start with a short <WordMark>lectura</WordMark> in a local cafe. A few pages
+            Start with a short <WordMark status="learning">lectura</WordMark> in a local cafe. A few pages
             can shift your mood for the whole day.
           </p>
           <p>
-            Travel days go better with <WordMark kind="phrase">pequenas decisiones</WordMark>.
+            Travel days go better with <WordMark kind="phrase" status="new">pequenas decisiones</WordMark>.
             Take the side street, choose the tiny shop, say yes to tea.
           </p>
           <p>
-            Kyoto keeps things simple, and that's what <WordMark>mantiene</WordMark> its charm.
+            Kyoto keeps things simple, and that's what <WordMark status="known">mantiene</WordMark> its charm.
           </p>
           <div className="ik-ui-article-photo" />
         </section>
@@ -408,20 +409,20 @@ function HabitsArticle({ active }: { active: ArticleState }) {
         <p className="ik-ui-byline">By Ana Lewis | May 10, 2024 | 5 min read</p>
         <p>Big changes don't happen overnight. Real progress comes from small, consistent actions.</p>
         <p>
-          Start with a short <WordMark>lectura</WordMark> each morning. Ten minutes is enough
+          Start with a short <WordMark status="new">lectura</WordMark> each morning. Ten minutes is enough
           to reset your mind.
         </p>
         <p>
-          The magic is in <WordMark kind="phrase">pequenas decisiones</WordMark> you repeat
+          The magic is in <WordMark kind="phrase" status="learning">pequenas decisiones</WordMark> you repeat
           every day.
         </p>
         <p>
           You don't need more time; you need focus, and the willingness to move{" "}
-          <WordMark kind="phrase">con calma</WordMark>.
+          <WordMark kind="phrase" status="known">con calma</WordMark>.
         </p>
         {sentence ? (
           <p>
-            A few minutes of <WordMark>lectura</WordMark> can make the day feel slower.
+            A few minutes of <WordMark status="learning">lectura</WordMark> can make the day feel slower.
             <button type="button" className="ik-ui-sentence-chip" aria-label="Open sentence help">
               <Icon name="spark" />
             </button>
@@ -615,6 +616,8 @@ function OptionsHeader({ active }: { active: OptionsSection }) {
 }
 
 function OptionsGeneralPanel() {
+  const [readingLevel, setReadingLevel] = useState<ReadingLevel>("False beginner");
+
   return (
     <div className="ik-ui-options-panel">
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
@@ -637,10 +640,25 @@ function OptionsGeneralPanel() {
         <Card>
           <h2>Starting point</h2>
           <p>Pick the option that best matches your current reading in Spanish.</p>
-          <div className="ik-ui-choice-grid ik-ui-choice-grid--three">
-            <Choice title="Beginner" copy="Just starting. Simple words and phrases." />
-            <Choice title="False beginner" copy="I know some basics but need more exposure." selected />
-            <Choice title="Intermediate" copy="Comfortable with most everyday reading." />
+          <div className="ik-ui-choice-grid ik-ui-choice-grid--three" role="radiogroup" aria-label="Reading level">
+            <Choice
+              title="Beginner"
+              copy="Just starting. Simple words and phrases."
+              selected={readingLevel === "Beginner"}
+              onSelect={() => setReadingLevel("Beginner")}
+            />
+            <Choice
+              title="False beginner"
+              copy="I know some basics but need more exposure."
+              selected={readingLevel === "False beginner"}
+              onSelect={() => setReadingLevel("False beginner")}
+            />
+            <Choice
+              title="Intermediate"
+              copy="Comfortable with most everyday reading."
+              selected={readingLevel === "Intermediate"}
+              onSelect={() => setReadingLevel("Intermediate")}
+            />
           </div>
         </Card>
       </div>
@@ -869,14 +887,22 @@ function SentenceBlock({ label, text }: { label: string; text: string }) {
 function Choice({
   title,
   copy,
-  selected = false
+  selected = false,
+  onSelect
 }: {
-  title: string;
+  title: ReadingLevel;
   copy: string;
   selected?: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <button type="button" className={`ik-ui-choice${selected ? " is-selected" : ""}`}>
+    <button
+      type="button"
+      className={`ik-ui-choice${selected ? " is-selected" : ""}`}
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+    >
       <span className="ik-ui-radio" />
       <strong>{title}</strong>
       <small>{copy}</small>

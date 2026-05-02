@@ -24,6 +24,13 @@ mounting separate screens for each screenshot state.
   validation.
 - Inline language marks should look reversible and low-pressure: subtle fill,
   clear underline, and no dense decoration.
+- Inline tokens use two independent axes:
+  - `kind`: word, phrase, or sentence.
+  - `status`: new, learning, known, or muted.
+- Status color should stay soft. New uses a warm coral underline, learning uses
+  amber, known uses green, and muted uses gray. Kind changes the mark structure:
+  words get one underline, phrases get a double underline, and sentences get a
+  dotted sentence-level treatment.
 - Popovers should stay close to the selected token and never require scheduler
   or diagnostics language.
 - The popup prioritizes one site-level control. Secondary controls remain
