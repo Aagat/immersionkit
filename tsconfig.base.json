@@ -13,8 +13,9 @@
     "baseUrl": ".",
     "paths": {
       "@immersionkit/shared": ["packages/shared/src/index.ts"],
-      "@immersionkit/shared/*": ["packages/shared/src/*"]
+      "@immersionkit/shared/*": ["packages/shared/src/*"],
+      "@immersionkit/ui": ["packages/ui/src/index.ts"],
+      "@immersionkit/ui/*": ["packages/ui/src/*"]
     }
   }
 }
-
