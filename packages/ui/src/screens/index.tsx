@@ -96,6 +96,7 @@ export type ExtensionPopupProps = {
   localFooterText?: string;
   unsupportedMessage?: string;
   firstRunIntro?: boolean;
+  errorMessage?: string | null;
   sentenceHelpSummary?: string;
   isSavingSite?: boolean;
   onSiteToggle?: () => void;
@@ -120,6 +121,7 @@ export function ExtensionPopup({
   localFooterText,
   unsupportedMessage = "Open a normal HTTP(S) page to manage reading mode for that site.",
   firstRunIntro = false,
+  errorMessage = null,
   sentenceHelpSummary,
   isSavingSite = false,
   onSiteToggle,
@@ -136,6 +138,12 @@ export function ExtensionPopup({
     <div className={chromeFrame ? "ik-ui-popup-anchor" : undefined}>
       <PopupPanel>
         <PopupHeader onOpenSettings={onOpenSettings} />
+        {errorMessage ? (
+          <div className="ik-ui-warning-banner" role="status">
+            <Icon name="info" />
+            {errorMessage}
+          </div>
+        ) : null}
         {firstRunIntro ? (
           <Card className="ik-ui-note-card ik-ui-note-card--blue">
             <Icon name="shield" />
@@ -1090,7 +1098,6 @@ function OptionsTranslationPanel({
             <p>Choose a provider for sentence help.</p>
             <label className="ik-ui-field">
               <select
-                className="select-input"
                 value={provider}
                 onChange={(event) => {
                   const nextProvider = event.target.value === "openai" ? "openai" : "none";

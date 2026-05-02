@@ -98,7 +98,7 @@ describe("extension E2E harness", () => {
     await page.keyboard.press("Escape").catch(() => undefined);
     await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
     const phrasePopoverText = await page.locator("[data-ik-popover='true']").innerText();
-    expect(phrasePopoverText).toContain("A phrase is shown as one useful chunk");
+    expect(phrasePopoverText).toContain("A reusable phrase you may see again");
     expect(phrasePopoverText).not.toMatch(/learning queue|review due|confidence/);
 
     const diagnostics = await readPageDiagnostics(serviceWorker, fixtureUrl);
@@ -144,7 +144,7 @@ describe("extension E2E harness", () => {
       .getByLabel("Options sections")
       .getByRole("button", { name: "Translation" })
       .click();
-    await options.locator("select.select-input").selectOption("openai");
+    await options.locator(".ik-ui-field select").selectOption("openai");
     await options
       .getByRole("switch", { name: "Enable sentence help" })
       .click();

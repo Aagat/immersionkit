@@ -165,6 +165,7 @@ export function PopupApp() {
         progressDetail={progressDetail}
         unsupportedMessage={activeTab.supportMessage}
         firstRunIntro={showFirstRunIntro}
+        errorMessage={errorMessage}
         isSavingSite={isSavingSite}
         metrics={[
           { label: "Comfortable", value: formatCount(vocabStats.known), icon: "check" },
@@ -185,28 +186,7 @@ export function PopupApp() {
           void handleDismissFirstRunIntro();
         }}
       />
-      {errorMessage ? (
-        <section className="status-banner status-banner--error" role="status">
-          <p>{errorMessage}</p>
-        </section>
-      ) : null}
     </>
-  );
-}
-
-type MetricCardProps = {
-  label: string;
-  value: number | string;
-};
-
-function MetricCard({ label, value }: MetricCardProps) {
-  const valueIsText = typeof value === "string";
-
-  return (
-    <div className="metric-card">
-      <p className="metric-label">{label}</p>
-      <p className={`metric-value${valueIsText ? " metric-value--text" : ""}`}>{value}</p>
-    </div>
   );
 }
 

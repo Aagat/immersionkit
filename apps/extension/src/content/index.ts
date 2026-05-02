@@ -87,6 +87,7 @@ import {
 } from "./storage";
 import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
 import type { CachedGrammarFeature } from "./storage";
+import "@immersionkit/ui/styles.css";
 import "./styles.css";
 
 type ProcessingState = {
@@ -156,9 +157,9 @@ const STATUS_BUTTONS: readonly {
   status: InteractiveVocabStatus;
   label: string;
 }[] = [
-  { status: "known", label: "I know this" },
-  { status: "learning", label: "Practice" },
-  { status: "ignored", label: "Hide" }
+  { status: "known", label: "Comfortable" },
+  { status: "learning", label: "Practicing" },
+  { status: "ignored", label: "Hide word" }
 ] as const;
 
 void boot();
@@ -1405,18 +1406,14 @@ async function handlePopoverStatusAction(
 }
 
 function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
-  const popover = document.createElement("div");
-  popover.className = "ik-popover";
-  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
-  popover.setAttribute("data-immersionkit-ignore", "true");
-  popover.setAttribute("role", "dialog");
-  popover.setAttribute("aria-live", "polite");
+  const popover = createUiPopover("word");
+  popover.append(createPopoverHeading(detail.targetToken, wordStatusLabel(detail.status)));
 
   const pair = document.createElement("div");
-  pair.className = "ik-popover__pair";
-  pair.append(createTokenPill("ik-popover__source", detail.sourceToken));
-  pair.append(createArrow());
-  pair.append(createTokenPill("ik-popover__target", detail.targetToken));
+  pair.className = "ik-ui-token-pair";
+  pair.append(createTokenBox(detail.sourceToken));
+  pair.append(createTokenArrow());
+  pair.append(createTokenBox(detail.targetToken));
   popover.append(pair);
 
   const nativeExample = readNonEmptyString(detail.exampleSentenceNative);
@@ -1425,30 +1422,36 @@ function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
 
   if (nativeExample) {
     const sentence = document.createElement("p");
-    sentence.className = "ik-popover__sentence";
     sentence.textContent = nativeExample;
     popover.append(sentence);
   }
 
   if (englishExample) {
     const sentence = document.createElement("p");
-    sentence.className = nativeExample ? "ik-popover__meta" : "ik-popover__sentence";
+    sentence.className = nativeExample ? "ik-content-popover-muted" : "";
     sentence.textContent = englishExample;
     popover.append(sentence);
   } else if (pageSentence) {
     const sentence = document.createElement("p");
-    sentence.className = "ik-popover__sentence";
     sentence.textContent = pageSentence;
     popover.append(sentence);
   }
 
+  const info = document.createElement("div");
+  info.className = "ik-ui-info-line";
+  info.append(createTextIcon("i"));
+  const infoText = document.createElement("span");
+  infoText.textContent = "Opening this helps ImmersionKit adapt.";
+  info.append(infoText);
+  popover.append(info);
+
   const actions = document.createElement("div");
-  actions.className = "ik-popover__actions";
+  actions.className = "ik-ui-quiet-actions";
 
   for (const action of STATUS_BUTTONS) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "ik-popover__action";
+    button.className = "ik-ui-button ik-ui-button--secondary ik-ui-button--sm";
     button.setAttribute(POPOVER_ACTION_ATTRIBUTE, action.status);
     button.setAttribute(
       "aria-pressed",
@@ -1471,51 +1474,38 @@ function renderSentencePopover(
   noteElement: HTMLElement,
   detail: SentenceNoteMetadata
 ): HTMLDivElement {
-  const popover = document.createElement("div");
-  popover.className = "ik-popover";
-  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
-  popover.setAttribute("data-immersionkit-ignore", "true");
-  popover.setAttribute("role", "dialog");
-  popover.setAttribute("aria-live", "polite");
+  const popover = createUiPopover("sentence");
+  popover.append(createPopoverHeading("Sentence help", "optional"));
 
   const summary = document.createElement("p");
-  summary.className = "ik-popover__sentence";
   summary.textContent = detail.learningNote.summary;
   popover.append(summary);
 
   for (const section of collectSentencePopoverSections(detail)) {
-    const block = document.createElement("section");
-    block.className = "ik-popover__sentence-detail";
+    const block = document.createElement("div");
+    block.className = "ik-ui-sentence-block";
 
     const label = document.createElement("p");
-    label.className = "ik-popover__sentence-detail-label";
     label.textContent = section.label;
     block.append(label);
 
     if (section.lines.length === 1) {
-      const text = document.createElement("p");
-      text.className = "ik-popover__sentence-detail-text";
+      const text = document.createElement("span");
       text.textContent = section.lines[0] ?? "";
       block.append(text);
     } else {
-      const list = document.createElement("div");
-      list.className = "ik-popover__sentence-detail-list";
-
       for (const line of section.lines) {
-        const item = document.createElement("p");
-        item.className = "ik-popover__sentence-detail-line";
+        const item = document.createElement("span");
         item.textContent = line;
-        list.append(item);
+        block.append(item);
       }
-
-      block.append(list);
     }
 
     popover.append(block);
   }
 
   const actions = document.createElement("div");
-  actions.className = "ik-popover__actions";
+  actions.className = "ik-ui-sentence-actions";
   actions.append(createSentencePopoverActionButton("toggle-source"));
   actions.append(createSentencePopoverActionButton("close"));
   popover.append(actions);
@@ -1526,30 +1516,24 @@ function renderSentencePopover(
 }
 
 function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
-  const popover = document.createElement("div");
-  popover.className = "ik-popover";
-  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
-  popover.setAttribute("data-immersionkit-ignore", "true");
-  popover.setAttribute("role", "dialog");
-  popover.setAttribute("aria-live", "polite");
+  const popover = createUiPopover("phrase");
+  popover.append(createPopoverHeading(detail.targetText, "phrase"));
 
   const pair = document.createElement("div");
-  pair.className = "ik-popover__pair";
-  pair.append(createTokenPill("ik-popover__source", detail.sourceText));
-  pair.append(createArrow());
-  pair.append(createTokenPill("ik-popover__target", detail.targetText));
+  pair.className = "ik-ui-token-pair";
+  pair.append(createTokenBox(detail.sourceText));
+  pair.append(createTokenArrow());
+  pair.append(createTokenBox(detail.targetText));
   popover.append(pair);
 
   const help = document.createElement("p");
-  help.className = "ik-popover__meta";
   help.textContent =
-    "A phrase is shown as one useful chunk so it is easier to recognize again.";
+    "A reusable phrase you may see again when it fits the page.";
   popover.append(help);
 
   const pageSentence = readNonEmptyString(detail.sentence);
   if (pageSentence) {
     const sentence = document.createElement("p");
-    sentence.className = "ik-popover__sentence";
     sentence.textContent = pageSentence;
     popover.append(sentence);
   }
@@ -1734,18 +1718,67 @@ function findTokenElement(tokenId: string): HTMLElement | null {
   return null;
 }
 
-function createTokenPill(className: string, text: string): HTMLSpanElement {
+function createUiPopover(kind: "word" | "phrase" | "sentence"): HTMLDivElement {
+  const popover = document.createElement("div");
+  popover.className = "ik-ui-popover ik-content-popover";
+  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
+  popover.setAttribute("data-ik-popover-kind", kind);
+  popover.setAttribute("data-immersionkit-ignore", "true");
+  popover.setAttribute("role", "dialog");
+  popover.setAttribute("aria-live", "polite");
+  return popover;
+}
+
+function createPopoverHeading(title: string, badge: string): HTMLElement {
+  const heading = document.createElement("header");
+  heading.className = "ik-ui-popover-heading";
+
+  const headingText = document.createElement("h3");
+  headingText.textContent = title;
+  heading.append(headingText);
+
+  const badgeElement = document.createElement("span");
+  badgeElement.className = "ik-ui-badge ik-ui-badge--accent";
+  badgeElement.textContent = badge;
+  heading.append(badgeElement);
+
+  return heading;
+}
+
+function createTokenBox(text: string): HTMLSpanElement {
   const element = document.createElement("span");
-  element.className = `ik-popover__pill ${className}`;
   element.textContent = text;
   return element;
 }
 
-function createArrow(): HTMLSpanElement {
+function createTokenArrow(): HTMLSpanElement {
   const element = document.createElement("span");
-  element.className = "ik-popover__arrow";
   element.textContent = "→";
   return element;
+}
+
+function createTextIcon(text: string): HTMLSpanElement {
+  const element = document.createElement("span");
+  element.className = "ik-content-popover-icon";
+  element.setAttribute("aria-hidden", "true");
+  element.textContent = text;
+  return element;
+}
+
+function wordStatusLabel(status: VocabStatus): string {
+  if (status === "known") {
+    return "comfortable";
+  }
+
+  if (status === "learning") {
+    return "practicing";
+  }
+
+  if (status === "ignored") {
+    return "hidden";
+  }
+
+  return "new";
 }
 
 function readInteractiveStatus(value: string | null): InteractiveVocabStatus | null {
@@ -1761,7 +1794,7 @@ function createSentencePopoverActionButton(
 ): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "ik-popover__action";
+  button.className = "ik-ui-button ik-ui-button--secondary ik-ui-button--sm";
   button.setAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE, action);
   return button;
 }

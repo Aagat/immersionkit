@@ -204,7 +204,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(token?.getAttribute("data-ik-status")).toBe("ignored");
-          expect(token?.classList.contains("ik-word--ignored")).toBe(true);
+          expect(token?.getAttribute("data-status")).toBe("muted");
           expect(token?.textContent).toBe("city");
           expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
 
@@ -579,7 +579,7 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).toContain("used to visit");
           expect(popover?.textContent).toContain("solia visitar");
           expect(popover?.textContent).toContain(
-            "A phrase is shown as one useful chunk"
+            "A reusable phrase you may see again"
           );
           expect(popover?.textContent).not.toContain("grammar carrier");
           expect(popover?.textContent).not.toContain("review due");
@@ -710,7 +710,7 @@ describe("content inline learning loop", () => {
           expect(canToken).toBeTruthy();
           expect(canToken?.textContent).toBe("can");
           expect(canToken?.getAttribute("data-ik-context-decision")).toBe("skip");
-          expect(canToken?.classList.contains("ik-word--suppressed")).toBe(true);
+          expect(canToken?.getAttribute("data-status")).toBe("muted");
         } finally {
           chromeStub.restore();
         }
@@ -1817,8 +1817,11 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).toContain(learningNote.summary);
           expect(popover?.textContent).toContain("Word-by-word");
           const glossLines = [
-            ...document.querySelectorAll<HTMLElement>(".ik-popover__sentence-detail-line")
-          ].map((node) => node.textContent);
+            ...document.querySelectorAll<HTMLElement>(".ik-ui-sentence-block span")
+          ]
+            .map((node) => node.textContent)
+            .filter((text): text is string => Boolean(text?.includes(" = ")))
+            .slice(0, 3);
           expect(glossLines).toEqual([
             "\"la ciudad\" = the city",
             "\"es importante\" = is important",

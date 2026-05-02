@@ -577,15 +577,13 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   }
 
   token.setAttribute("data-ik-status", update.status);
-  token.classList.remove("ik-word--known", "ik-word--discovery", "ik-word--ignored");
+  token.setAttribute("data-status", toUiTokenStatus(update.status));
 
   if (update.status === "known") {
     const targetToken = token.getAttribute("data-ik-target-token");
     if (targetToken) {
       token.textContent = targetToken;
     }
-
-    token.classList.add("ik-word--known");
     token.setAttribute("data-ik-word-kind", "known");
     return true;
   }
@@ -595,8 +593,6 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
     if (sourceToken) {
       token.textContent = sourceToken;
     }
-
-    token.classList.add("ik-word--ignored");
     token.setAttribute("data-ik-word-kind", "discovery");
     return true;
   }
@@ -605,8 +601,6 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   if (targetToken) {
     token.textContent = targetToken;
   }
-
-  token.classList.add("ik-word--discovery");
   token.setAttribute("data-ik-word-kind", "discovery");
   return true;
 }
@@ -640,8 +634,7 @@ export function applySentenceAnalysisDecisions(
         }
 
         token.textContent = sourceToken;
-        token.classList.remove("ik-word--known", "ik-word--discovery");
-        token.classList.add("ik-word--suppressed");
+        token.setAttribute("data-status", "muted");
         token.setAttribute("data-ik-context-decision", "skip");
         token.setAttribute("data-ik-context-rationale", candidate.rationale ?? "");
         token.setAttribute(
@@ -673,13 +666,15 @@ function createTokenElement(input: {
 }): HTMLSpanElement {
   const element = document.createElement("span");
 
-  element.className = `ik-word ik-word--${input.wordKind}`;
+  element.className = "ik-ui-mark ik-ui-mark--word";
   element.textContent = input.targetToken;
   element.tabIndex = 0;
   element.setAttribute("role", "button");
   element.setAttribute("data-ik-source-language", "en");
   element.setAttribute("data-ik-target-language", "es");
   element.setAttribute("data-ik-unit-kind", "word");
+  element.setAttribute("data-kind", "word");
+  element.setAttribute("data-status", toUiTokenStatus(input.status));
   element.setAttribute("data-ik-phrase-render-hook", "reserved");
   element.setAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE, input.tokenId);
   element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
@@ -751,13 +746,15 @@ function createPhraseElement(input: {
 }): HTMLSpanElement {
   const element = document.createElement("span");
 
-  element.className = "ik-word ik-word--discovery ik-phrase";
+  element.className = "ik-ui-mark ik-ui-mark--phrase";
   element.textContent = preserveWordCasing(input.sourceText, input.targetText);
   element.tabIndex = 0;
   element.setAttribute("role", "button");
   element.setAttribute("data-ik-source-language", "en");
   element.setAttribute("data-ik-target-language", "es");
   element.setAttribute("data-ik-unit-kind", "phrase");
+  element.setAttribute("data-kind", "phrase");
+  element.setAttribute("data-status", input.isDueForReview ? "learning" : "new");
   element.setAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE, input.tokenId);
   element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
   element.setAttribute("data-ik-source-token", input.sourceText);
@@ -782,6 +779,14 @@ function createPhraseElement(input: {
   );
 
   return element;
+}
+
+function toUiTokenStatus(status: VocabStatus): "new" | "learning" | "known" | "muted" {
+  if (status === "ignored") {
+    return "muted";
+  }
+
+  return status;
 }
 
 type PhraseRenderCandidate = {

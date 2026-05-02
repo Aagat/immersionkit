@@ -1,3 +1,42 @@
+:root {
+  --ik-ui-bg: #f7fafc;
+  --ik-ui-browser: #ffffff;
+  --ik-ui-surface: #ffffff;
+  --ik-ui-surface-soft: #f5f9fa;
+  --ik-ui-surface-tint: #eefafa;
+  --ik-ui-ink: #07163a;
+  --ik-ui-text: #192744;
+  --ik-ui-muted: #53617d;
+  --ik-ui-soft-muted: #78849a;
+  --ik-ui-line: #d9e1eb;
+  --ik-ui-line-strong: #bfc9d8;
+  --ik-ui-accent: #008f96;
+  --ik-ui-accent-strong: #007b82;
+  --ik-ui-accent-soft: #e6f8f8;
+  --ik-ui-blue: #2e62e9;
+  --ik-ui-blue-soft: #eef4ff;
+  --ik-ui-warning: #db6400;
+  --ik-ui-warning-soft: #fff8eb;
+  --ik-ui-danger: #ca3f3c;
+  --ik-ui-danger-soft: #fff1f0;
+  --ik-ui-shadow-sm: 0 8px 22px rgba(7, 22, 58, 0.1);
+  --ik-ui-shadow-md: 0 24px 70px rgba(7, 22, 58, 0.18);
+  --ik-ui-radius: 8px;
+  --ik-ui-font: "Inter", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}
+
+body:has(.ik-ui-frame) {
+  margin: 0;
+  min-width: 320px;
+  background: var(--ik-ui-bg);
+}
+
+html:has(.ik-ui-frame),
+body:has(.ik-ui-frame),
+#root:has(.ik-ui-frame) {
+  min-height: 100vh;
+}
+
 .ik-ui-frame {
   --ik-ui-bg: #f7fafc;
   --ik-ui-browser: #ffffff;

@@ -215,7 +215,7 @@ function createSentenceNote(
 ): HTMLElement {
   const note = document.createElement("span");
 
-  note.className = "ik-sentence-note";
+  note.className = "ik-ui-mark ik-ui-mark--sentence ik-sentence-note";
   note.tabIndex = 0;
   note.setAttribute("role", "button");
   note.setAttribute("title", "Click for details. Double-click to reveal original.");
