@@ -96,6 +96,86 @@
   min-height: 900px;
 }
 
+.ik-ui-frame--popup {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.ik-ui-frame--popup .ik-ui-popup {
+  width: 380px;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.ik-ui-frame--popup .ik-ui-popup::before {
+  display: none;
+}
+
+.ik-ui-frame--popup .ik-ui-brand {
+  font-size: 1.05rem;
+}
+
+.ik-ui-frame--popup .ik-ui-band-hero {
+  grid-template-columns: 54px 1fr;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.ik-ui-frame--popup .ik-ui-band-icon {
+  width: 48px;
+  height: 48px;
+  border-width: 2px;
+  border-radius: 14px;
+}
+
+.ik-ui-frame--popup .ik-ui-band-hero h2 {
+  font-size: 1.15rem;
+}
+
+.ik-ui-frame--popup .ik-ui-band-hero p,
+.ik-ui-frame--popup .ik-ui-progress-copy {
+  font-size: 0.86rem;
+}
+
+.ik-ui-frame--popup .ik-ui-site-card {
+  gap: 14px;
+  padding: 16px;
+}
+
+.ik-ui-frame--popup .ik-ui-site-card h1 {
+  max-width: 210px;
+  margin-top: 10px;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.ik-ui-frame--popup .ik-ui-power-button {
+  width: 76px;
+  height: 76px;
+  border-width: 6px;
+  font-size: 2.1rem;
+}
+
+.ik-ui-frame--popup .ik-ui-metric-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ik-ui-frame--popup .ik-ui-metric {
+  min-height: 76px;
+  padding: 10px;
+}
+
+.ik-ui-frame--popup .ik-ui-metric p {
+  font-size: 1rem;
+}
+
+.ik-ui-frame--popup .ik-ui-metric span {
+  font-size: 0.66rem;
+}
+
 .ik-ui-logo {
   position: relative;
   display: inline-grid;
@@ -1600,6 +1680,22 @@ button.ik-ui-mark:active {
   border-radius: var(--ik-ui-radius);
   color: #171f35;
   background: var(--ik-ui-warning-soft);
+}
+
+.ik-ui-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 58px;
+  padding: 0 18px;
+  border: 1px solid var(--ik-ui-line);
+  border-radius: var(--ik-ui-radius);
+}
+
+.ik-ui-status-banner--success {
+  color: var(--ik-ui-accent-strong);
+  background: var(--ik-ui-accent-soft);
+  border-color: rgba(0, 143, 150, 0.24);
 }
 
 .ik-ui-switch-row {

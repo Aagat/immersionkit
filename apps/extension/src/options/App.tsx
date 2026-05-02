@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ExtensionOptions, type OptionsSection } from "@immersionkit/ui";
 import type { ProviderName } from "@immersionkit/shared";
 import {
   PROFICIENCY_SEED_OPTIONS,
@@ -27,7 +28,8 @@ import {
   type CheckpointEligibilityPreview,
   type CurriculumDiagnostics,
   type GrammarEvidenceStats,
-  type PageDiagnostics
+  type PageDiagnostics,
+  type ProficiencySeed
 } from "./state";
 
 const EMPTY_STATS: VocabStats = {
@@ -377,6 +379,75 @@ export function OptionsApp() {
   const lastProgressionDecision =
     curriculumDiagnostics.lastProgressionDecision;
   const checkpointStatus = getCheckpointStatus(checkpointPreview);
+
+  return (
+    <ExtensionOptions
+      chromeFrame={false}
+      activeSection={toUiOptionsSection(activeTab)}
+      showAdvanced={showAdvancedTab}
+      firstRunIntro={showFirstRunIntro}
+      statusMessage={statusMessage}
+      errorMessage={errorMessage}
+      isSaving={isSaving}
+      isLoading={isLoading}
+      discoveryRatePercent={discoveryRatePercent}
+      readingLevel={toUiReadingLevel(settingsState?.proficiencySeed)}
+      stats={{
+        comfortable: formatCount(vocabStats.known),
+        practice: formatCount(vocabStats.learning),
+        newCount: formatCount(vocabStats.newCount),
+        total: formatCount(vocabStats.total)
+      }}
+      checkpoint={{
+        currentBand: checkpointPreview.activeBandLabel ?? "Starting",
+        nextBand: checkpointPreview.nextBandLabel ?? "Next band",
+        progressValue: estimateCheckpointProgress(checkpointPreview),
+        progressLabel: `${formatCount(countPublicSignalsLeft(checkpointPreview))} reading signal${countPublicSignalsLeft(checkpointPreview) === 1 ? "" : "s"} left`,
+        description: checkpointStatus.description,
+        canWiden: checkpointPreview.checkpointIsOnlyBlocker,
+        isWidening: isGraduatingCheckpoint,
+        onWiden: () => {
+          void handleCheckpointGraduation();
+        }
+      }}
+      sentenceHelpEnabled={Boolean(settingsState?.settings.sentenceTranslationEnabled)}
+      provider={settingsState?.settings.provider ?? "none"}
+      apiKey={settingsState?.providerApiKey ?? ""}
+      apiKeyValid={providerKeyValid}
+      showApiKey={showApiKey}
+      translationSummary={translationSummary.description}
+      savedSiteCount={formatCount(siteEntries.length)}
+      pausedSiteCount={formatCount(disabledSiteCount)}
+      siteSummary={
+        siteEntries.length > 0
+          ? `Recent site choices: ${siteEntries.slice(0, 3).map((entry) => entry.hostname).join(", ")}.`
+          : "No site-specific overrides yet."
+      }
+      onSectionChange={(section) => {
+        setActiveTab(toLocalOptionsTab(section));
+      }}
+      onSave={() => {
+        void handleSave();
+      }}
+      onReload={() => {
+        void loadState();
+      }}
+      onDismissIntro={() => {
+        void handleDismissFirstRunIntro();
+      }}
+      onDiscoveryRateChange={handleDiscoveryRateChange}
+      onReadingLevelChange={(level) => {
+        handleProficiencySeedChange(toProficiencySeed(level));
+      }}
+      onSentenceHelpChange={handleSentenceTranslationChange}
+      onProviderChange={handleProviderChange}
+      onApiKeyChange={handleApiKeyChange}
+      onToggleApiKeyVisibility={() => {
+        setShowApiKey((current) => !current);
+      }}
+      onClearApiKey={handleClearApiKey}
+    />
+  );
 
   return (
     <main className="panel-shell options-shell">
@@ -781,7 +852,7 @@ export function OptionsApp() {
                 <button
                   type="button"
                   className="field-button"
-                  disabled={!settingsState || settingsState.providerApiKey.length === 0 || isSaving}
+                  disabled={!settingsState || (settingsState?.providerApiKey.length ?? 0) === 0 || isSaving}
                   onClick={handleClearApiKey}
                 >
                   Clear key
@@ -868,7 +939,7 @@ export function OptionsApp() {
 
               <p className="helper-line muted" style={{ marginTop: 0 }}>
                 {pageDiagnostics
-                  ? `${pageDiagnostics.pageHostname}${pageDiagnostics.pagePathname}`
+                  ? `${pageDiagnostics?.pageHostname ?? ""}${pageDiagnostics?.pagePathname ?? ""}`
                   : activeTabContext.supportMessage}
               </p>
 
@@ -979,27 +1050,27 @@ export function OptionsApp() {
                   <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
                     <MetricCard
                       label="Previous"
-                      value={lastProgressionDecision.previousBandId ?? "unknown"}
+                      value={lastProgressionDecision!.previousBandId ?? "unknown"}
                     />
                     <MetricCard
                       label="Next"
-                      value={lastProgressionDecision.nextBandId ?? "none"}
+                      value={lastProgressionDecision!.nextBandId ?? "none"}
                     />
                     <MetricCard
                       label="Reason"
-                      value={lastProgressionDecision.reason}
+                      value={lastProgressionDecision!.reason}
                     />
                     <MetricCard
                       label="Checkpoint"
                       value={
-                        lastProgressionDecision.checkpointBoundary
+                        lastProgressionDecision!.checkpointBoundary
                           ? "Required"
                           : "Clear"
                       }
                     />
                   </div>
                   <p className="support-line muted">
-                    {formatProgressionDecision(lastProgressionDecision)}
+                    {formatProgressionDecision(lastProgressionDecision!)}
                   </p>
                 </>
               ) : (
@@ -1126,29 +1197,29 @@ export function OptionsApp() {
                   <MetricCard
                     label="Vocabulary"
                     value={formatListPreview(
-                      curriculumDiagnostics.activeContent.vocabularyDomains
+                      curriculumDiagnostics.activeContent!.vocabularyDomains
                     )}
                   />
                   <MetricCard
                     label="Phrases"
                     value={formatListPreview(
-                      curriculumDiagnostics.activeContent.phraseChunks
+                      curriculumDiagnostics.activeContent!.phraseChunks
                     )}
                   />
                   <MetricCard
                     label="Grammar now"
                     value={formatListPreview(
-                      curriculumDiagnostics.activeContent.currentGrammarKeys,
+                      curriculumDiagnostics.activeContent!.currentGrammarKeys,
                       "detector-light"
                     )}
                   />
                   <MetricCard
                     label="Sentence range"
-                    value={`${curriculumDiagnostics.activeContent.sentenceTokenRange[0]}-${curriculumDiagnostics.activeContent.sentenceTokenRange[1]} tokens`}
+                    value={`${curriculumDiagnostics.activeContent!.sentenceTokenRange[0]}-${curriculumDiagnostics.activeContent!.sentenceTokenRange[1]} tokens`}
                   />
                 </div>
                 <p className="support-line muted">
-                  {formatActiveCurriculumContent(curriculumDiagnostics.activeContent)}
+                  {formatActiveCurriculumContent(curriculumDiagnostics.activeContent!)}
                 </p>
               </>
             ) : (
@@ -1439,6 +1510,54 @@ function shortenHash(value: string): string {
 
 function formatCount(value: number): string {
   return value.toLocaleString();
+}
+
+function toUiOptionsSection(tab: OptionsTab): OptionsSection {
+  if (tab === "translation") {
+    return "Translation";
+  }
+
+  if (tab === "advanced") {
+    return "Advanced";
+  }
+
+  return "General";
+}
+
+function toLocalOptionsTab(section: OptionsSection): OptionsTab {
+  if (section === "Translation") {
+    return "translation";
+  }
+
+  if (section === "Advanced") {
+    return "advanced";
+  }
+
+  return "general";
+}
+
+function toUiReadingLevel(seed: ProficiencySeed | undefined) {
+  if (seed === "intermediate" || seed === "advanced") {
+    return "Intermediate";
+  }
+
+  return "Beginner";
+}
+
+function toProficiencySeed(level: "Beginner" | "False beginner" | "Intermediate"): ProficiencySeed {
+  if (level === "Intermediate") {
+    return "intermediate";
+  }
+
+  return "beginner";
+}
+
+function estimateCheckpointProgress(preview: CheckpointEligibilityPreview): number {
+  if (!preview.activeBandId) {
+    return 0;
+  }
+
+  return Math.max(12, Math.min(100, 100 - countPublicSignalsLeft(preview) * 20));
 }
 
 function countPublicSignalsLeft(preview: CheckpointEligibilityPreview): number {

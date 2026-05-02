@@ -122,8 +122,9 @@ describe("extension E2E harness", () => {
     });
     await popup.waitForSelector("text=ImmersionKit", { timeout: 10_000 });
     const popupText = await popup.locator("body").innerText();
-    expect(popupText).toContain("Learning snapshot");
-    expect(popupText).toContain("Sentence help is currently off");
+    expect(popupText).toContain("Read normally. We add a little Spanish.");
+    expect(popupText).toContain("This page is not supported");
+    expect(popupText).toContain("Your reading data stays on this device.");
 
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`, {
@@ -131,7 +132,7 @@ describe("extension E2E harness", () => {
     });
     await options.waitForSelector("text=New word pace", { timeout: 10_000 });
     await options.locator("#settings-discovery-rate").fill("7");
-    await options.getByRole("button", { name: "Intermediate" }).click();
+    await options.getByRole("radio", { name: "Intermediate" }).click();
     await options.getByRole("button", { name: "Save changes" }).click();
     await options.waitForSelector("text=Settings saved.", { timeout: 5_000 });
 
@@ -139,10 +140,13 @@ describe("extension E2E harness", () => {
     expect(savedSettings.discoveryRate).toBe(0.07);
     expect(savedSettings.proficiencySeed).toBe("intermediate");
 
-    await options.getByRole("button", { name: "Translation" }).click();
+    await options
+      .getByLabel("Options sections")
+      .getByRole("button", { name: "Translation" })
+      .click();
     await options.locator("select.select-input").selectOption("openai");
     await options
-      .getByRole("switch", { name: "Enable sentence translation and grammar notes" })
+      .getByRole("switch", { name: "Enable sentence help" })
       .click();
     await options.waitForSelector(
       "text=Add a valid OpenAI API key before turning sentence help on.",

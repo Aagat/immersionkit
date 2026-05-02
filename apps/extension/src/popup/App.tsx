@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ExtensionPopup } from "@immersionkit/ui";
 import {
   PROFICIENCY_SEED_OPTIONS,
   getSiteEnabledForHost,
@@ -149,123 +150,47 @@ export function PopupApp() {
       ?.label ?? "Beginner";
   const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
-  const pageStatus = getPageStatus({
-    activeTab,
-    isLoading,
-    siteEnabled
-  });
+  const progressDetail = formatPopupCheckpointHint(checkpointPreview);
 
   return (
-    <main className="panel-shell popup-shell">
-      <div className="popup-topbar">
-        <div className="brand-mark">ImmersionKit</div>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="Open settings"
-          onClick={handleOpenOptions}
-        >
-          <SettingsIcon />
-        </button>
-      </div>
-
-      {showFirstRunIntro ? (
-        <section className="panel-card intro-card" aria-live="polite">
-          <div>
-            <p className="eyebrow">Public preview</p>
-            <h2>Read normally. We add a little Spanish.</h2>
-          </div>
-          <p className="helper-line muted">
-            A few Spanish words and phrases can appear on supported pages. Your
-            reading progress stays on this device, and sentence help is optional
-            and off until you set it up.
-          </p>
-          <div className="toolbar-actions">
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => {
-                void handleDismissFirstRunIntro();
-              }}
-            >
-              Got it
-            </button>
-            <button type="button" className="button-primary" onClick={handleOpenOptions}>
-              Adjust setup
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="panel-card hero-card" aria-live="polite">
-        <div className="hero-copy">
-          <span className={pageStatus.badgeClass}>{pageStatus.badgeLabel}</span>
-          <h1 className="hero-title">{pageStatus.title}</h1>
-          <p className="hero-text muted">{pageStatus.description}</p>
-        </div>
-
-        <div className="hero-toggle">
-          <button
-            type="button"
-            className={`power-toggle${siteEnabled ? " is-on" : ""}`}
-            role="switch"
-            aria-checked={siteEnabled}
-            aria-label={siteEnabled ? "Pause reading mode on this site" : "Enable reading mode on this site"}
-            disabled={!activeTab.isSupportedPage || isLoading || isSavingSite}
-            onClick={() => {
-              void handleSiteToggle();
-            }}
-          >
-            <PowerIcon />
-          </button>
-          <p className="toggle-caption">
-            {isSavingSite
-              ? "Saving..."
-              : siteEnabled
-                ? "On for this site"
-                : "Off for this site"}
-          </p>
-        </div>
-      </section>
-
-      <section className="panel-card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Your Progress</p>
-            <h2>Learning snapshot</h2>
-          </div>
-          <span className="badge-soft">{discoverySummary}</span>
-        </div>
-
-        <div className="metric-grid metric-grid--compact">
-          <MetricCard label="Reading level" value={proficiencyLabel} />
-          <MetricCard label="Comfortable" value={formatCount(vocabStats.known)} />
-          <MetricCard label="In practice" value={formatCount(vocabStats.learning)} />
-          <MetricCard label="Tracked words" value={formatCount(vocabStats.total)} />
-        </div>
-
-        <p className="support-line muted">
-          {formatPopupCheckpointHint(checkpointPreview)}
-        </p>
-
-        <p className="support-line muted">
-          {translationEnabled
-            ? "Sentence help is enabled globally."
-            : "Sentence help is currently off."}{" "}
-          Fine-tune the rest in{" "}
-          <button type="button" className="inline-link" onClick={handleOpenOptions}>
-            settings
-          </button>
-          .
-        </p>
-      </section>
-
+    <>
+      <ExtensionPopup
+        chromeFrame={false}
+        state={activeTab.isSupportedPage && !isLoading ? "supported" : "unsupported"}
+        siteState={siteEnabled ? "on" : "paused"}
+        bandTitle={checkpointPreview.activeBandLabel ?? proficiencyLabel}
+        bandSubtitle={`${discoverySummary}. Words + phrases.`}
+        progressValue={estimateProgressValue(checkpointPreview)}
+        progressLabel={progressDetail}
+        progressDetail={progressDetail}
+        unsupportedMessage={activeTab.supportMessage}
+        firstRunIntro={showFirstRunIntro}
+        isSavingSite={isSavingSite}
+        metrics={[
+          { label: "Comfortable", value: formatCount(vocabStats.known), icon: "check" },
+          { label: "In practice", value: formatCount(vocabStats.learning), icon: "pause" },
+          { label: "Tracked words", value: formatCount(vocabStats.total), icon: "spark" }
+        ]}
+        sentenceHelpSummary={
+          translationEnabled
+            ? "Stored on this device. Sentence help is enabled."
+            : "Stored on this device. Sentence help is off."
+        }
+        onSiteToggle={() => {
+          void handleSiteToggle();
+        }}
+        onOpenSettings={handleOpenOptions}
+        onAdjustPace={handleOpenOptions}
+        onDismissIntro={() => {
+          void handleDismissFirstRunIntro();
+        }}
+      />
       {errorMessage ? (
         <section className="status-banner status-banner--error" role="status">
           <p>{errorMessage}</p>
         </section>
       ) : null}
-    </main>
+    </>
   );
 }
 
@@ -327,6 +252,17 @@ function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): strin
   }
 
   return `Next step: ${activeBand} is the latest available level.`;
+}
+
+function estimateProgressValue(preview: CheckpointEligibilityPreview): number {
+  if (!preview.activeBandId) {
+    return 0;
+  }
+
+  const publicSignalsLeft = preview.unmetRequirements.filter(
+    (requirement) => requirement !== "checkpoint"
+  ).length;
+  return Math.max(12, Math.min(100, 100 - publicSignalsLeft * 20));
 }
 
 function getPageStatus(input: {

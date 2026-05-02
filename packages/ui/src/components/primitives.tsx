@@ -349,11 +349,13 @@ export function ProgressRing({
 export function Toggle({
   checked,
   label,
-  disabled = false
+  disabled = false,
+  onChange
 }: {
   checked: boolean;
   label: string;
   disabled?: boolean;
+  onChange?: (checked: boolean) => void;
 }) {
   return (
     <button
@@ -363,6 +365,9 @@ export function Toggle({
       aria-checked={checked}
       aria-label={label}
       disabled={disabled}
+      onClick={() => {
+        onChange?.(!checked);
+      }}
     >
       <span />
     </button>

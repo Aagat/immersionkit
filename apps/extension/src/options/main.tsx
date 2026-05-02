@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "@immersionkit/ui/styles.css";
 import { OptionsApp } from "./App";
 import "../styles/theme.css";
 
@@ -8,4 +9,3 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <OptionsApp />
   </React.StrictMode>
 );
-

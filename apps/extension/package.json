@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@immersionkit/shared": "workspace:*",
+    "@immersionkit/ui": "workspace:*",
     "compromise": "^14.14.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

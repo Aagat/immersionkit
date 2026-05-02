@@ -16,131 +16,276 @@ export type PopupState = "supported" | "unsupported";
 export type SiteControlState = "on" | "paused";
 export type ArticleState = "supported" | "word" | "phrase" | "sentence";
 export type OptionsSection = "General" | "Translation" | "Advanced";
-type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
+export type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
 
 const settingsTabs: OptionsSection[] = ["General", "Translation", "Advanced"];
 
+export type PopupMetric = {
+  label: string;
+  value: string | number;
+  icon?: Parameters<typeof Icon>[0]["name"];
+};
+
+export type OptionsStats = {
+  comfortable: string | number;
+  practice: string | number;
+  newCount: string | number;
+  total: string | number;
+};
+
+export type OptionsCheckpoint = {
+  currentBand: string;
+  nextBand: string;
+  progressValue: number;
+  progressLabel: string;
+  description: string;
+  canWiden: boolean;
+  isWidening?: boolean;
+  onWiden?: () => void;
+};
+
+export type ExtensionOptionsProps = {
+  initialSection?: OptionsSection;
+  activeSection?: OptionsSection;
+  chromeFrame?: boolean;
+  showAdvanced?: boolean;
+  firstRunIntro?: boolean;
+  statusMessage?: string | null;
+  errorMessage?: string | null;
+  isSaving?: boolean;
+  isLoading?: boolean;
+  discoveryRatePercent?: number;
+  readingLevel?: ReadingLevel;
+  stats?: OptionsStats;
+  checkpoint?: OptionsCheckpoint;
+  sentenceHelpEnabled?: boolean;
+  provider?: "none" | "openai";
+  apiKey?: string;
+  apiKeyValid?: boolean;
+  showApiKey?: boolean;
+  translationSummary?: string;
+  siteSummary?: string;
+  pausedSiteCount?: string | number;
+  savedSiteCount?: string | number;
+  onSectionChange?: (section: OptionsSection) => void;
+  onSave?: () => void;
+  onReload?: () => void;
+  onDismissIntro?: () => void;
+  onDiscoveryRateChange?: (percent: number) => void;
+  onReadingLevelChange?: (level: ReadingLevel) => void;
+  onSentenceHelpChange?: (enabled: boolean) => void;
+  onProviderChange?: (provider: "none" | "openai") => void;
+  onApiKeyChange?: (apiKey: string) => void;
+  onToggleApiKeyVisibility?: () => void;
+  onClearApiKey?: () => void;
+};
+
+export type ExtensionPopupProps = {
+  state?: PopupState;
+  siteState?: SiteControlState;
+  initialSiteState?: SiteControlState;
+  chromeFrame?: boolean;
+  title?: string;
+  url?: string;
+  bandTitle?: string;
+  bandSubtitle?: string;
+  progressValue?: number;
+  progressLabel?: string;
+  progressDetail?: string;
+  metrics?: PopupMetric[];
+  localFooterText?: string;
+  unsupportedMessage?: string;
+  firstRunIntro?: boolean;
+  sentenceHelpSummary?: string;
+  isSavingSite?: boolean;
+  onSiteToggle?: () => void;
+  onOpenSettings?: () => void;
+  onAdjustPace?: () => void;
+  onDismissIntro?: () => void;
+};
+
 export function ExtensionPopup({
   state = "supported",
-  initialSiteState = "on"
-}: {
-  state?: PopupState;
-  initialSiteState?: SiteControlState;
-}) {
-  const [siteState, setSiteState] = useState<SiteControlState>(initialSiteState);
+  siteState,
+  initialSiteState = "on",
+  chromeFrame = true,
+  title,
+  url,
+  bandTitle = "Reading band 1",
+  bandSubtitle = "Words + phrases",
+  progressValue = 38,
+  progressLabel = "42 / 120 local signals",
+  progressDetail = "A few more reading signals will widen your band.",
+  metrics,
+  localFooterText,
+  unsupportedMessage = "Open a normal HTTP(S) page to manage reading mode for that site.",
+  firstRunIntro = false,
+  sentenceHelpSummary,
+  isSavingSite = false,
+  onSiteToggle,
+  onOpenSettings,
+  onAdjustPace,
+  onDismissIntro
+}: ExtensionPopupProps) {
+  const [localSiteState, setLocalSiteState] =
+    useState<SiteControlState>(initialSiteState);
+  const resolvedSiteState = siteState ?? localSiteState;
   const supported = state === "supported";
-  const enabled = supported && siteState === "on";
+  const enabled = supported && resolvedSiteState === "on";
+  const popupContent = (
+    <div className={chromeFrame ? "ik-ui-popup-anchor" : undefined}>
+      <PopupPanel>
+        <PopupHeader onOpenSettings={onOpenSettings} />
+        {firstRunIntro ? (
+          <Card className="ik-ui-note-card ik-ui-note-card--blue">
+            <Icon name="shield" />
+            <div>
+              <h3>Read normally. We add a little Spanish.</h3>
+              <p>
+                A few Spanish words and phrases can appear on supported pages.
+                Progress stays on this device, and sentence help is optional.
+              </p>
+              <button type="button" className="ik-ui-popover-link" onClick={onDismissIntro}>
+                Got it
+              </button>
+            </div>
+          </Card>
+        ) : null}
+        {supported ? (
+          <>
+            <div className="ik-ui-band-hero">
+              <div className="ik-ui-band-icon">
+                <Icon name="book" />
+              </div>
+              <div>
+                <h2>{bandTitle}</h2>
+                <p>{bandSubtitle}</p>
+              </div>
+            </div>
+            <ProgressBar
+              value={progressValue}
+              label={progressLabel}
+              detail={progressDetail}
+            />
+            <div className="ik-ui-popup-rule" />
+            <Card className={`ik-ui-site-card${enabled ? "" : " is-paused"}`}>
+              <div>
+                <Badge tone={enabled ? "accent" : "muted"}>
+                  {enabled ? "On for this site" : "Paused for this site"}
+                </Badge>
+                <h1>
+                  {enabled
+                    ? "A few Spanish words will appear while you read."
+                    : "Spanish words are paused on this site."}
+                </h1>
+              </div>
+              <button
+                type="button"
+                className={`ik-ui-power-button${enabled ? " is-on" : ""}`}
+                aria-label={enabled ? "Pause reading mode" : "Resume reading mode"}
+                aria-pressed={enabled}
+                disabled={isSavingSite}
+                onClick={() => {
+                  if (onSiteToggle) {
+                    onSiteToggle();
+                    return;
+                  }
+                  setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
+                }}
+              >
+                <Icon name="power" />
+              </button>
+            </Card>
+            <div className="ik-ui-metric-grid ik-ui-metric-grid--three">
+              {(metrics ?? [
+                { label: "Comfortable", value: 0, icon: "check" },
+                { label: "In practice", value: 0, icon: "pause" },
+                { label: "Tracked words", value: 0, icon: "spark" }
+              ]).map((metric) => (
+                <MetricStat
+                  key={metric.label}
+                  label={metric.label}
+                  value={metric.value}
+                  icon={metric.icon ?? "spark"}
+                />
+              ))}
+            </div>
+            <LocalFooter
+              text={
+                localFooterText ??
+                sentenceHelpSummary ??
+                (enabled
+                  ? "Stored on this device. Sentence help is off."
+                  : "Stored on this device. Reading mode is paused here.")
+              }
+              action="Settings"
+              onAction={onOpenSettings}
+            />
+            <Button
+              variant="primary"
+              icon={enabled ? undefined : "power"}
+              onClick={enabled ? undefined : onSiteToggle}
+            >
+              {enabled ? "Keep reading" : "Resume reading"}
+            </Button>
+            <button
+              type="button"
+              className="ik-ui-standalone-link"
+              onClick={onAdjustPace ?? onOpenSettings}
+            >
+              Adjust pace
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="ik-ui-unsupported-block">
+              <Badge tone="muted">Unavailable here</Badge>
+              <h1>This page is not supported</h1>
+              <p>{unsupportedMessage}</p>
+              <button
+                type="button"
+                className="ik-ui-power-button ik-ui-power-button--disabled"
+                aria-label="Controls unavailable"
+                disabled
+              >
+                <Icon name="power" />
+              </button>
+              <span>Controls unavailable</span>
+            </div>
+            <Card className="ik-ui-note-card">
+              <Icon name="shield" />
+              <p>We skip private, browser, form-heavy, and sensitive pages.</p>
+            </Card>
+            <Card className="ik-ui-progress-card">
+              <div className="ik-ui-card-row">
+                <h3>{bandTitle}</h3>
+                <span>{progressLabel}</span>
+              </div>
+              <ProgressBar
+                value={progressValue}
+                detail="Your progress is saved and will be ready when you return to a supported page."
+              />
+            </Card>
+            <LocalFooter text="Your reading data stays on this device." />
+            <Button variant="secondary" onClick={onOpenSettings}>Open settings</Button>
+          </>
+        )}
+      </PopupPanel>
+    </div>
+  );
+
+  if (!chromeFrame) {
+    return <ImmersionFrame variant="popup">{popupContent}</ImmersionFrame>;
+  }
 
   return (
     <ImmersionFrame variant="browser">
       <BrowserChrome
-        title={supported ? "Kyoto in Slow Season" : "Settings"}
-        url={supported ? "travelguide/kyoto" : "chrome://settings/privacy"}
+        title={title ?? (supported ? "Kyoto in Slow Season" : "Settings")}
+        url={url ?? (supported ? "travelguide/kyoto" : "chrome://settings/privacy")}
         blurred
       >
-        <div className="ik-ui-popup-anchor">
-          <PopupPanel>
-            <PopupHeader />
-            {supported ? (
-              <>
-                <div className="ik-ui-band-hero">
-                  <div className="ik-ui-band-icon">
-                    <Icon name="book" />
-                  </div>
-                  <div>
-                    <h2>Reading band 1</h2>
-                    <p>Words + phrases</p>
-                  </div>
-                </div>
-                <ProgressBar
-                  value={38}
-                  label="42 / 120 local signals"
-                  detail="A few more reading signals will widen your band."
-                />
-                <div className="ik-ui-popup-rule" />
-                <Card className={`ik-ui-site-card${enabled ? "" : " is-paused"}`}>
-                  <div>
-                    <Badge tone={enabled ? "accent" : "muted"}>
-                      {enabled ? "On for this site" : "Paused for this site"}
-                    </Badge>
-                    <h1>
-                      {enabled
-                        ? "A few Spanish words will appear while you read."
-                        : "Spanish words are paused on this site."}
-                    </h1>
-                  </div>
-                  <button
-                    type="button"
-                    className={`ik-ui-power-button${enabled ? " is-on" : ""}`}
-                    aria-label={enabled ? "Pause reading mode" : "Resume reading mode"}
-                    aria-pressed={enabled}
-                    onClick={() =>
-                      setSiteState((value) => (value === "on" ? "paused" : "on"))
-                    }
-                  >
-                    <Icon name="power" />
-                  </button>
-                </Card>
-                <div className="ik-ui-metric-grid ik-ui-metric-grid--three">
-                  <MetricStat label="Comfortable" value="0" icon="check" />
-                  <MetricStat label="In practice" value="0" icon="pause" />
-                  <MetricStat label="New today" value="0" icon="spark" />
-                </div>
-                <LocalFooter
-                  text={
-                    enabled
-                      ? "Stored on this device. Sentence help is off."
-                      : "Stored on this device. Reading mode is paused here."
-                  }
-                  action="Settings"
-                />
-                <Button
-                  variant="primary"
-                  icon={enabled ? undefined : "power"}
-                  onClick={enabled ? undefined : () => setSiteState("on")}
-                >
-                  {enabled ? "Keep reading" : "Resume reading"}
-                </Button>
-                <button type="button" className="ik-ui-standalone-link">
-                  Adjust pace
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="ik-ui-unsupported-block">
-                  <Badge tone="muted">Unavailable here</Badge>
-                  <h1>This page is not supported</h1>
-                  <p>Open a normal HTTP(S) page to manage reading mode for that site.</p>
-                  <button
-                    type="button"
-                    className="ik-ui-power-button ik-ui-power-button--disabled"
-                    aria-label="Controls unavailable"
-                    disabled
-                  >
-                    <Icon name="power" />
-                  </button>
-                  <span>Controls unavailable</span>
-                </div>
-                <Card className="ik-ui-note-card">
-                  <Icon name="shield" />
-                  <p>We skip private, browser, form-heavy, and sensitive pages.</p>
-                </Card>
-                <Card className="ik-ui-progress-card">
-                  <div className="ik-ui-card-row">
-                    <h3>Reading band 1</h3>
-                    <span>42 / 120 local signals</span>
-                  </div>
-                  <ProgressBar
-                    value={38}
-                    detail="Your progress is saved and will be ready when you return to a supported page."
-                  />
-                </Card>
-                <LocalFooter text="Your reading data stays on this device." />
-                <Button variant="secondary">Open settings</Button>
-              </>
-            )}
-          </PopupPanel>
-        </div>
+        {popupContent}
       </BrowserChrome>
     </ImmersionFrame>
   );
@@ -176,11 +321,135 @@ export function ReadingPage({
 }
 
 export function ExtensionOptions({
-  initialSection = "General"
-}: {
-  initialSection?: OptionsSection;
-}) {
-  const [active, setActive] = useState<OptionsSection>(initialSection);
+  initialSection = "General",
+  activeSection,
+  chromeFrame = true,
+  showAdvanced = true,
+  firstRunIntro = false,
+  statusMessage,
+  errorMessage,
+  isSaving = false,
+  isLoading = false,
+  discoveryRatePercent = 8,
+  readingLevel,
+  stats,
+  checkpoint,
+  sentenceHelpEnabled = false,
+  provider = "none",
+  apiKey = "",
+  apiKeyValid = false,
+  showApiKey = false,
+  translationSummary,
+  siteSummary,
+  pausedSiteCount = 0,
+  savedSiteCount = 0,
+  onSectionChange,
+  onSave,
+  onReload,
+  onDismissIntro,
+  onDiscoveryRateChange,
+  onReadingLevelChange,
+  onSentenceHelpChange,
+  onProviderChange,
+  onApiKeyChange,
+  onToggleApiKeyVisibility,
+  onClearApiKey
+}: ExtensionOptionsProps) {
+  const [localActive, setLocalActive] = useState<OptionsSection>(initialSection);
+  const active = activeSection ?? localActive;
+  const visibleTabs = settingsTabs.filter((tab) => showAdvanced || tab !== "Advanced");
+  const setActive = (section: OptionsSection) => {
+    setLocalActive(section);
+    onSectionChange?.(section);
+  };
+
+  const optionsContent = (
+    <div className="ik-ui-options-layout">
+      <OptionsSidebar active={active} setActive={setActive} tabs={visibleTabs} />
+      <main className="ik-ui-options-main">
+        <OptionsHeader
+          active={active}
+          isSaving={isSaving}
+          isLoading={isLoading}
+          onSave={onSave}
+          onReload={onReload}
+        />
+        {firstRunIntro ? (
+          <Card className="ik-ui-note-card ik-ui-note-card--blue">
+            <Icon name="shield" />
+            <div>
+              <h2>What happens while you read</h2>
+              <p>
+                Spanish appears gently on supported pages, progress stays on
+                this device, and selected sentence text is sent to OpenAI only
+                if sentence help is enabled.
+              </p>
+              <Button variant="secondary" size="sm" onClick={onDismissIntro}>
+                Got it
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+        {statusMessage ? (
+          <div className="ik-ui-status-banner ik-ui-status-banner--success">
+            {statusMessage}
+          </div>
+        ) : null}
+        {errorMessage ? (
+          <div className="ik-ui-warning-banner">
+            <Icon name="info" />
+            {errorMessage}
+          </div>
+        ) : null}
+        <div className="ik-ui-tabs" role="tablist" aria-label="Options sections">
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={tab === active ? "is-active" : ""}
+              aria-pressed={tab === active}
+              onClick={() => setActive(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        {active === "General" ? (
+          <OptionsGeneralPanel
+            discoveryRatePercent={discoveryRatePercent}
+            readingLevel={readingLevel}
+            stats={stats}
+            checkpoint={checkpoint}
+            siteSummary={siteSummary}
+            pausedSiteCount={pausedSiteCount}
+            savedSiteCount={savedSiteCount}
+            onDiscoveryRateChange={onDiscoveryRateChange}
+            onReadingLevelChange={onReadingLevelChange}
+          />
+        ) : null}
+        {active === "Translation" ? (
+          <OptionsTranslationPanel
+            sentenceHelpEnabled={sentenceHelpEnabled}
+            provider={provider}
+            apiKey={apiKey}
+            apiKeyValid={apiKeyValid}
+            showApiKey={showApiKey}
+            translationSummary={translationSummary}
+            onSentenceHelpChange={onSentenceHelpChange}
+            onProviderChange={onProviderChange}
+            onApiKeyChange={onApiKeyChange}
+            onToggleApiKeyVisibility={onToggleApiKeyVisibility}
+            onClearApiKey={onClearApiKey}
+          />
+        ) : null}
+        {active === "Advanced" ? <OptionsAdvancedPanel /> : null}
+      </main>
+    </div>
+  );
+
+  if (!chromeFrame) {
+    return <ImmersionFrame variant="settings">{optionsContent}</ImmersionFrame>;
+  }
 
   return (
     <ImmersionFrame variant="settings">
@@ -189,28 +458,7 @@ export function ExtensionOptions({
         url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : ""}`}
         appFrame
       >
-        <div className="ik-ui-options-layout">
-          <OptionsSidebar active={active} setActive={setActive} />
-          <main className="ik-ui-options-main">
-            <OptionsHeader active={active} />
-            <div className="ik-ui-tabs" role="tablist" aria-label="Options sections">
-              {settingsTabs.map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={tab === active ? "is-active" : ""}
-                  aria-pressed={tab === active}
-                  onClick={() => setActive(tab)}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-            {active === "General" ? <OptionsGeneralPanel /> : null}
-            {active === "Translation" ? <OptionsTranslationPanel /> : null}
-            {active === "Advanced" ? <OptionsAdvancedPanel /> : null}
-          </main>
-        </div>
+        {optionsContent}
       </BrowserChrome>
     </ImmersionFrame>
   );
@@ -221,7 +469,7 @@ function ImmersionFrame({
   variant
 }: {
   children: ReactNode;
-  variant: "settings" | "browser";
+  variant: "settings" | "browser" | "popup";
 }) {
   return <div className={`ik-ui-frame ik-ui-frame--${variant}`}>{children}</div>;
 }
@@ -314,14 +562,21 @@ function PopupPanel({ children }: { children: ReactNode }) {
   return <section className="ik-ui-popup">{children}</section>;
 }
 
-function PopupHeader() {
+function PopupHeader({ onOpenSettings }: { onOpenSettings?: () => void }) {
   return (
     <header className="ik-ui-popup-header">
       <div className="ik-ui-brand">
         <ImmersionLogo />
         <span>ImmersionKit</span>
       </div>
-      <IconButton label="Open settings" icon="gear" />
+      <button
+        type="button"
+        className="ik-ui-icon-button"
+        aria-label="Open settings"
+        onClick={onOpenSettings}
+      >
+        <Icon name="gear" />
+      </button>
     </header>
   );
 }
@@ -544,10 +799,12 @@ function PopoverFrame({
 
 function OptionsSidebar({
   active,
-  setActive
+  setActive,
+  tabs = settingsTabs
 }: {
   active: OptionsSection;
   setActive: (section: OptionsSection) => void;
+  tabs?: OptionsSection[];
 }) {
   return (
     <aside className="ik-ui-options-sidebar">
@@ -556,7 +813,7 @@ function OptionsSidebar({
         <span>ImmersionKit</span>
       </div>
       <nav aria-label="Options navigation">
-        {settingsTabs.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             type="button"
@@ -585,7 +842,19 @@ function OptionsSidebar({
   );
 }
 
-function OptionsHeader({ active }: { active: OptionsSection }) {
+function OptionsHeader({
+  active,
+  isSaving = false,
+  isLoading = false,
+  onSave,
+  onReload
+}: {
+  active: OptionsSection;
+  isSaving?: boolean;
+  isLoading?: boolean;
+  onSave?: () => void;
+  onReload?: () => void;
+}) {
   const copy = {
     General: [
       "Make reading feel guided, not crowded.",
@@ -608,15 +877,46 @@ function OptionsHeader({ active }: { active: OptionsSection }) {
         <p>{copy[1]}</p>
       </div>
       <div className="ik-ui-quiet-actions">
-        <Button variant="primary">Save changes</Button>
-        <Button variant="secondary" icon="spark">Reload</Button>
+        <Button variant="primary" disabled={isSaving || isLoading} onClick={onSave}>
+          {isSaving ? "Saving..." : "Save changes"}
+        </Button>
+        <Button variant="secondary" icon="spark" disabled={isSaving} onClick={onReload}>
+          Reload
+        </Button>
       </div>
     </header>
   );
 }
 
-function OptionsGeneralPanel() {
-  const [readingLevel, setReadingLevel] = useState<ReadingLevel>("False beginner");
+function OptionsGeneralPanel({
+  discoveryRatePercent = 8,
+  readingLevel,
+  stats,
+  checkpoint,
+  siteSummary,
+  pausedSiteCount = 0,
+  savedSiteCount = 0,
+  onDiscoveryRateChange,
+  onReadingLevelChange
+}: Pick<
+  ExtensionOptionsProps,
+  | "discoveryRatePercent"
+  | "readingLevel"
+  | "stats"
+  | "checkpoint"
+  | "siteSummary"
+  | "pausedSiteCount"
+  | "savedSiteCount"
+  | "onDiscoveryRateChange"
+  | "onReadingLevelChange"
+>) {
+  const [localReadingLevel, setLocalReadingLevel] =
+    useState<ReadingLevel>("False beginner");
+  const resolvedReadingLevel = readingLevel ?? localReadingLevel;
+  const chooseReadingLevel = (level: ReadingLevel) => {
+    setLocalReadingLevel(level);
+    onReadingLevelChange?.(level);
+  };
 
   return (
     <div className="ik-ui-options-panel">
@@ -628,8 +928,17 @@ function OptionsGeneralPanel() {
           </div>
           <p>Choose how many new Spanish words appear while you read.</p>
           <div className="ik-ui-slider-row">
-            <input type="range" min={0} max={20} value={8} readOnly />
-            <strong>8%</strong>
+            <input
+              id="settings-discovery-rate"
+              type="range"
+              min={0}
+              max={20}
+              value={discoveryRatePercent}
+              onChange={(event) => {
+                onDiscoveryRateChange?.(Number(event.target.value));
+              }}
+            />
+            <strong>{discoveryRatePercent}%</strong>
           </div>
           <div className="ik-ui-scale">
             <span>Subtle</span>
@@ -644,20 +953,20 @@ function OptionsGeneralPanel() {
             <Choice
               title="Beginner"
               copy="Just starting. Simple words and phrases."
-              selected={readingLevel === "Beginner"}
-              onSelect={() => setReadingLevel("Beginner")}
+              selected={resolvedReadingLevel === "Beginner"}
+              onSelect={() => chooseReadingLevel("Beginner")}
             />
             <Choice
               title="False beginner"
               copy="I know some basics but need more exposure."
-              selected={readingLevel === "False beginner"}
-              onSelect={() => setReadingLevel("False beginner")}
+              selected={resolvedReadingLevel === "False beginner"}
+              onSelect={() => chooseReadingLevel("False beginner")}
             />
             <Choice
               title="Intermediate"
               copy="Comfortable with most everyday reading."
-              selected={readingLevel === "Intermediate"}
-              onSelect={() => setReadingLevel("Intermediate")}
+              selected={resolvedReadingLevel === "Intermediate"}
+              onSelect={() => chooseReadingLevel("Intermediate")}
             />
           </div>
         </Card>
@@ -667,10 +976,10 @@ function OptionsGeneralPanel() {
           <h2>Learning snapshot</h2>
           <p>Your progress while reading across sites.</p>
           <div className="ik-ui-metric-grid ik-ui-metric-grid--four">
-            <MetricStat label="Comfortable" value="18" icon="check" />
-            <MetricStat label="In practice" value="43" icon="spark" />
-            <MetricStat label="Still new" value="72" icon="band" />
-            <MetricStat label="Tracked total" value="133" icon="book" />
+            <MetricStat label="Comfortable" value={stats?.comfortable ?? 0} icon="check" />
+            <MetricStat label="In practice" value={stats?.practice ?? 0} icon="spark" />
+            <MetricStat label="Still new" value={stats?.newCount ?? 0} icon="band" />
+            <MetricStat label="Tracked total" value={stats?.total ?? 0} icon="book" />
           </div>
         </Card>
         <Card>
@@ -679,15 +988,23 @@ function OptionsGeneralPanel() {
               <h2>Reading band</h2>
               <p>Grow your reading range as you see more in context.</p>
             </div>
-            <span>86 / 120 local signals</span>
+            <span>{checkpoint?.progressLabel ?? "0 local signals"}</span>
           </div>
-          <ProgressBar value={72} />
+          <ProgressBar value={checkpoint?.progressValue ?? 0} />
           <div className="ik-ui-band-step">
-            <span>Band 1</span>
+            <span>{checkpoint?.currentBand ?? "Starting"}</span>
             <Icon name="chevron" />
-            <span>Band 2</span>
-            <Button variant="secondary" disabled icon="lock">Widen reading band</Button>
+            <span>{checkpoint?.nextBand ?? "Next band"}</span>
+            <Button
+              variant="secondary"
+              disabled={!checkpoint?.canWiden || checkpoint.isWidening}
+              icon={checkpoint?.canWiden ? "band" : "lock"}
+              onClick={checkpoint?.onWiden}
+            >
+              {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
+            </Button>
           </div>
+          <p>{checkpoint?.description}</p>
         </Card>
       </div>
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
@@ -695,10 +1012,11 @@ function OptionsGeneralPanel() {
           <h2>Site controls</h2>
           <p>Decide where ImmersionKit is active.</p>
           <div className="ik-ui-inline-summary">
-            <MetricStat label="saved choices" value="2" icon="link" />
-            <MetricStat label="paused site" value="1" icon="pause" />
+            <MetricStat label="saved choices" value={savedSiteCount} icon="link" />
+            <MetricStat label="paused site" value={pausedSiteCount} icon="pause" />
             <Button variant="secondary">Manage saved sites</Button>
           </div>
+          {siteSummary ? <p>{siteSummary}</p> : null}
         </Card>
         <div className="ik-ui-soft-callout">
           <Icon name="band" />
@@ -712,13 +1030,40 @@ function OptionsGeneralPanel() {
   );
 }
 
-function OptionsTranslationPanel() {
+function OptionsTranslationPanel({
+  sentenceHelpEnabled = false,
+  provider = "none",
+  apiKey = "",
+  apiKeyValid = false,
+  showApiKey = false,
+  translationSummary,
+  onSentenceHelpChange,
+  onProviderChange,
+  onApiKeyChange,
+  onToggleApiKeyVisibility,
+  onClearApiKey
+}: Pick<
+  ExtensionOptionsProps,
+  | "sentenceHelpEnabled"
+  | "provider"
+  | "apiKey"
+  | "apiKeyValid"
+  | "showApiKey"
+  | "translationSummary"
+  | "onSentenceHelpChange"
+  | "onProviderChange"
+  | "onApiKeyChange"
+  | "onToggleApiKeyVisibility"
+  | "onClearApiKey"
+>) {
   return (
     <div className="ik-ui-options-panel ik-ui-options-panel--translation">
-      <div className="ik-ui-warning-banner">
-        <Icon name="shield" />
-        Add a valid OpenAI API key before turning sentence help on.
-      </div>
+      {!apiKeyValid && provider === "openai" ? (
+        <div className="ik-ui-warning-banner">
+          <Icon name="shield" />
+          Add a valid OpenAI API key before turning sentence help on.
+        </div>
+      ) : null}
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <div className="ik-ui-settings-stack">
           <Card className="ik-ui-switch-row">
@@ -726,8 +1071,12 @@ function OptionsTranslationPanel() {
               <h2>Sentence help</h2>
               <p>Show selected sentence translations and short grammar notes after provider setup.</p>
             </div>
-            <Toggle checked={false} label="Enable sentence help" />
-            <span>Off</span>
+            <Toggle
+              checked={sentenceHelpEnabled}
+              label="Enable sentence help"
+              onChange={onSentenceHelpChange}
+            />
+            <span>{sentenceHelpEnabled ? "On" : "Off"}</span>
           </Card>
           <Card className="ik-ui-note-card ik-ui-note-card--blue">
             <Icon name="lock" />
@@ -740,24 +1089,52 @@ function OptionsTranslationPanel() {
             <h2>Provider</h2>
             <p>Choose a provider for sentence help.</p>
             <label className="ik-ui-field">
-              <select defaultValue="none">
+              <select
+                className="select-input"
+                value={provider}
+                onChange={(event) => {
+                  const nextProvider = event.target.value === "openai" ? "openai" : "none";
+                  onProviderChange?.(nextProvider);
+                }}
+              >
                 <option value="none">None</option>
                 <option value="openai">OpenAI</option>
               </select>
             </label>
+            {translationSummary ? <p>{translationSummary}</p> : null}
           </Card>
           <Card>
             <div className="ik-ui-card-row">
               <h2>OpenAI API key</h2>
-              <Badge tone="danger">Needs key</Badge>
+              <Badge tone={apiKeyValid ? "accent" : "danger"}>
+                {apiKeyValid ? "Looks valid" : "Needs key"}
+              </Badge>
             </div>
             <p>Enter your OpenAI API key.</p>
             <label className="ik-ui-field">
-              <input placeholder="sk-..." type="password" />
+              <input
+                placeholder="sk-..."
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => {
+                  onApiKeyChange?.(event.target.value);
+                }}
+              />
             </label>
             <div className="ik-ui-quiet-actions">
-              <Button variant="secondary" size="sm">Show</Button>
-              <Button variant="secondary" size="sm">Clear</Button>
+              <Button variant="secondary" size="sm" onClick={onToggleApiKeyVisibility}>
+                {showApiKey ? "Hide" : "Show"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!apiKey}
+                onClick={onClearApiKey}
+              >
+                Clear
+              </Button>
             </div>
           </Card>
         </div>
@@ -901,6 +1278,7 @@ function Choice({
       className={`ik-ui-choice${selected ? " is-selected" : ""}`}
       role="radio"
       aria-checked={selected}
+      aria-label={title}
       onClick={onSelect}
     >
       <span className="ik-ui-radio" />
@@ -936,17 +1314,19 @@ function SavedRow({
 function LocalFooter({
   text,
   action,
-  compact = false
+  compact = false,
+  onAction
 }: {
   text: string;
   action?: string;
   compact?: boolean;
+  onAction?: () => void;
 }) {
   return (
     <footer className={`ik-ui-local-footer${compact ? " ik-ui-local-footer--compact" : ""}`}>
       <Icon name="lock" />
       <span>{text}</span>
-      {action ? <button type="button">{action}</button> : null}
+      {action ? <button type="button" onClick={onAction}>{action}</button> : null}
     </footer>
   );
 }

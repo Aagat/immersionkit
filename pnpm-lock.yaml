@@ -20,6 +20,9 @@ importers:
       '@immersionkit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@immersionkit/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       compromise:
         specifier: ^14.14.4
         version: 14.15.0
