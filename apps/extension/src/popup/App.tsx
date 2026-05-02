@@ -4,9 +4,11 @@ import {
   getSiteEnabledForHost,
   loadActiveTabContext,
   loadCheckpointEligibilityPreview,
+  loadFirstRunIntroVisible,
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
+  markFirstRunIntroSeen,
   notifySettingsRefresh,
   upsertSiteEnabledState,
   type ActiveTabContext,
@@ -49,6 +51,7 @@ export function PopupApp() {
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
   const [checkpointPreview, setCheckpointPreview] =
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
+  const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,12 +62,14 @@ export function PopupApp() {
       loadedSettingsState,
       loadedSiteSettings,
       loadedVocabStats,
-      loadedCheckpointPreview
+      loadedCheckpointPreview,
+      loadedFirstRunIntroVisible
     ] = await Promise.all([
       loadSettingsState(),
       loadSiteSettingsMap(),
       loadVocabStats(),
-      loadCheckpointEligibilityPreview()
+      loadCheckpointEligibilityPreview(),
+      loadFirstRunIntroVisible()
     ]);
 
     return {
@@ -72,7 +77,8 @@ export function PopupApp() {
       loadedSettingsState,
       loadedSiteSettings,
       loadedVocabStats,
-      loadedCheckpointPreview
+      loadedCheckpointPreview,
+      loadedFirstRunIntroVisible
     };
   }, []);
 
@@ -87,6 +93,7 @@ export function PopupApp() {
       setSiteSettings(snapshot.loadedSiteSettings);
       setVocabStats(snapshot.loadedVocabStats);
       setCheckpointPreview(snapshot.loadedCheckpointPreview);
+      setShowFirstRunIntro(snapshot.loadedFirstRunIntroVisible);
     } catch {
       setErrorMessage("Unable to load your reading controls right now.");
     } finally {
@@ -131,6 +138,11 @@ export function PopupApp() {
     chrome.runtime.openOptionsPage();
   }, []);
 
+  const handleDismissFirstRunIntro = useCallback(async () => {
+    setShowFirstRunIntro(false);
+    await markFirstRunIntroSeen();
+  }, []);
+
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
@@ -156,6 +168,34 @@ export function PopupApp() {
           <SettingsIcon />
         </button>
       </div>
+
+      {showFirstRunIntro ? (
+        <section className="panel-card intro-card" aria-live="polite">
+          <div>
+            <p className="eyebrow">Public preview</p>
+            <h2>Read normally. We add a little Spanish.</h2>
+          </div>
+          <p className="helper-line muted">
+            A few Spanish words and phrases can appear on supported pages. Your
+            reading progress stays on this device, and sentence help is optional
+            and off until you set it up.
+          </p>
+          <div className="toolbar-actions">
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => {
+                void handleDismissFirstRunIntro();
+              }}
+            >
+              Got it
+            </button>
+            <button type="button" className="button-primary" onClick={handleOpenOptions}>
+              Adjust setup
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="panel-card hero-card" aria-live="polite">
         <div className="hero-copy">
@@ -321,8 +361,8 @@ function getPageStatus(input: {
     return {
       badgeClass: "status-badge status-badge--on",
       badgeLabel: "Active",
-      title: "Spanish hints are live while you read.",
-      description: "Use the power button any time a page feels too busy."
+      title: "A few Spanish words will appear while you read.",
+      description: "Use the power button any time this site feels too busy."
     };
   }
 

@@ -59,6 +59,7 @@ export const LEARNING_PROFILE_STORAGE_KEYS = [
 export const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
   "immersionkit.curriculum.lastProgressionDecision"
 ] as const;
+export const FIRST_RUN_INTRO_STORAGE_KEY = "immersionkit.firstRun.showIntro";
 
 export type ProficiencySeed = "beginner" | "intermediate" | "advanced";
 
@@ -357,6 +358,17 @@ export async function loadCheckpointEligibilityPreview(): Promise<CheckpointElig
   return summarizeCheckpointEligibilityPreview({
     profile: curriculumDiagnostics.profile,
     items: Object.values(itemsById)
+  });
+}
+
+export async function loadFirstRunIntroVisible(): Promise<boolean> {
+  const storage = await getStorageValues([FIRST_RUN_INTRO_STORAGE_KEY]);
+  return storage[FIRST_RUN_INTRO_STORAGE_KEY] !== false;
+}
+
+export async function markFirstRunIntroSeen(): Promise<void> {
+  await setStorageValues({
+    [FIRST_RUN_INTRO_STORAGE_KEY]: false
   });
 }
 

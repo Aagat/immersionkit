@@ -6,6 +6,7 @@ import {
   loadActiveTabContext,
   loadCheckpointEligibilityPreview,
   loadCurriculumDiagnostics,
+  loadFirstRunIntroVisible,
   loadGrammarEvidenceStats,
   loadPageDiagnostics,
   loadSentenceStats,
@@ -13,6 +14,7 @@ import {
   loadSiteSettingsMap,
   loadVocabStats,
   graduateCheckpoint,
+  markFirstRunIntroSeen,
   normalizeDiscoveryRate,
   notifySettingsRefresh,
   parseProficiencySeed,
@@ -72,8 +74,6 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   unmetRequirements: []
 };
 
-const SHOW_ADVANCED_TAB = true;
-
 type OptionsTab = "general" | "translation" | "advanced";
 
 export function OptionsApp() {
@@ -91,7 +91,11 @@ export function OptionsApp() {
   const [checkpointPreview, setCheckpointPreview] =
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
   const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
-  const [activeTab, setActiveTab] = useState<OptionsTab>("general");
+  const showAdvancedTab = shouldShowAdvancedTab();
+  const [activeTab, setActiveTab] = useState<OptionsTab>(
+    showAdvancedTab && window.location.hash === "#advanced" ? "advanced" : "general"
+  );
+  const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
@@ -113,7 +117,8 @@ export function OptionsApp() {
         loadedCurriculumDiagnostics,
         loadedGrammarEvidenceStats,
         loadedCheckpointPreview,
-        loadedActiveTabContext
+        loadedActiveTabContext,
+        loadedFirstRunIntroVisible
       ] =
         await Promise.all([
           loadSettingsState(),
@@ -123,7 +128,8 @@ export function OptionsApp() {
           loadCurriculumDiagnostics(),
           loadGrammarEvidenceStats(),
           loadCheckpointEligibilityPreview(),
-          loadActiveTabContext()
+          loadActiveTabContext(),
+          loadFirstRunIntroVisible()
         ]);
 
       const loadedPageDiagnostics = loadedActiveTabContext.isSupportedPage
@@ -139,6 +145,7 @@ export function OptionsApp() {
       setCheckpointPreview(loadedCheckpointPreview);
       setActiveTabContext(loadedActiveTabContext);
       setPageDiagnostics(loadedPageDiagnostics);
+      setShowFirstRunIntro(loadedFirstRunIntroVisible);
     } catch {
       setErrorMessage("Could not load extension settings.");
     } finally {
@@ -330,14 +337,25 @@ export function OptionsApp() {
 
       await loadState();
       setStatusMessage(
-        `Progress checkpoint complete. Advanced to ${result.nextBandId ?? "the next level"}.`
+        `Reading band widened to ${result.nextBandId ?? "the next band"}.`
       );
     } catch {
-      setErrorMessage("Unable to complete checkpoint graduation. Try again.");
+      setErrorMessage("Unable to widen the reading band right now. Try again.");
     } finally {
       setIsGraduatingCheckpoint(false);
     }
   }, [loadState]);
+
+  const handleDismissFirstRunIntro = useCallback(async () => {
+    setShowFirstRunIntro(false);
+    await markFirstRunIntroSeen();
+  }, []);
+
+  useEffect(() => {
+    if (!showAdvancedTab && activeTab === "advanced") {
+      setActiveTab("general");
+    }
+  }, [activeTab, showAdvancedTab]);
 
   const discoveryRatePercent = Math.round(
     (settingsState?.settings.discoveryRate ?? 0) * 100
@@ -366,12 +384,12 @@ export function OptionsApp() {
         <div style={{ display: "grid", gap: 12 }}>
           <div>
             <p className="eyebrow">ImmersionKit</p>
-            <h1>Make reading feel guided, not crowded.</h1>
+            <h1>Reading mode settings</h1>
           </div>
           <p className="muted">
-            Keep the popup focused on a quick on or off decision, and use this page
-            when you want to tune how much Spanish appears, how much help you get,
-            and any advanced behavior behind the scenes.
+            Tune how much Spanish appears, choose your starting point, and set up
+            optional sentence help. The core reading loop works locally without an
+            account or provider key.
           </p>
         </div>
 
@@ -399,6 +417,41 @@ export function OptionsApp() {
         </div>
       </section>
 
+      {showFirstRunIntro ? (
+        <section className="panel-card intro-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">First run</p>
+              <h2>What happens while you read</h2>
+            </div>
+            <span className="badge-soft badge-soft--on">Local first</span>
+          </div>
+          <div className="metric-grid metric-grid--wide">
+            <MetricCard label="Small doses" value="A few words" />
+            <MetricCard label="Control" value="Pause per site" />
+            <MetricCard label="Sentence help" value="Optional" />
+            <MetricCard label="Storage" value="This device" />
+          </div>
+          <p className="support-line muted">
+            ImmersionKit keeps ordinary browsing first. Spanish appears gently on
+            supported pages, progress builds from normal reading, and selected
+            sentence text is sent to OpenAI only if you add a key and enable
+            sentence help.
+          </p>
+          <div className="field-action-row">
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => {
+                void handleDismissFirstRunIntro();
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <nav className="tab-strip" aria-label="Settings sections">
         <TabButton
           label="General"
@@ -414,7 +467,7 @@ export function OptionsApp() {
             setActiveTab("translation");
           }}
         />
-        {SHOW_ADVANCED_TAB ? (
+        {showAdvancedTab ? (
           <TabButton
             label="Advanced"
             isActive={activeTab === "advanced"}
@@ -570,8 +623,8 @@ export function OptionsApp() {
           <section className="panel-card">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Level Progress</p>
-                <h2>Ready for what is next?</h2>
+                <p className="eyebrow">Reading Band</p>
+                <h2>Widen the reading band</h2>
               </div>
               <span className={checkpointStatus.badgeClass}>
                 {checkpointStatus.badgeLabel}
@@ -580,20 +633,20 @@ export function OptionsApp() {
 
             <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
               <MetricCard
-                label="Current step"
+                label="Current band"
                 value={checkpointPreview.activeBandLabel ?? "Starting"}
               />
               <MetricCard
-                label="Next step"
+                label="Next band"
                 value={checkpointPreview.nextBandLabel ?? "None"}
               />
               <MetricCard
                 label="Signals left"
-                value={formatCount(checkpointPreview.unmetRequirements.length)}
+                value={formatCount(countPublicSignalsLeft(checkpointPreview))}
               />
               <MetricCard
-                label="Advance"
-                value={checkpointPreview.checkpointRequired ? "Checkpoint" : "Automatic"}
+                label="Widening"
+                value={checkpointPreview.checkpointRequired ? "Manual" : "Automatic"}
               />
             </div>
 
@@ -615,7 +668,7 @@ export function OptionsApp() {
                   void handleCheckpointGraduation();
                 }}
               >
-                {isGraduatingCheckpoint ? "Advancing..." : "Move to next level"}
+                {isGraduatingCheckpoint ? "Widening..." : "Widen reading band"}
               </button>
             </div>
           </section>
@@ -637,7 +690,8 @@ export function OptionsApp() {
               <div className="switch-copy">
                 <p className="choice-card-title">Enable sentence translation</p>
                 <p className="muted">
-                  Show translated sentences and grammar hints when the provider is ready.
+                  Show translated sentences and grammar hints for selected sentences
+                  when OpenAI is ready.
                 </p>
               </div>
               <ToggleSwitch
@@ -683,7 +737,7 @@ export function OptionsApp() {
               </label>
 
               <p className="support-line muted">
-                Leave this off if you only want vocabulary swaps and no sentence-level help.
+                Leave this off if you only want local vocabulary and phrase support.
               </p>
             </section>
 
@@ -738,15 +792,15 @@ export function OptionsApp() {
                 {settingsState?.settings.provider === "none"
                   ? "Provider is off, so sentence help will stay disabled."
                   : providerKeyValid
-                    ? "Your key format looks ready for OpenAI."
-                    : "Enter a valid OpenAI key to unlock sentence translation."}
+                    ? "Selected sentence text can be sent to OpenAI when sentence help is enabled."
+                    : "Enter a valid OpenAI key to turn on optional sentence help."}
               </p>
             </section>
           </div>
         </div>
       ) : null}
 
-      {SHOW_ADVANCED_TAB && activeTab === "advanced" ? (
+      {showAdvancedTab && activeTab === "advanced" ? (
         <div className="settings-grid">
           <div className="settings-grid settings-grid--two">
             <section className="panel-card">
@@ -1387,6 +1441,12 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
+function countPublicSignalsLeft(preview: CheckpointEligibilityPreview): number {
+  return preview.unmetRequirements.filter(
+    (requirement) => requirement !== "checkpoint"
+  ).length;
+}
+
 function formatUnlockedBands(bandIds: readonly string[] | undefined): string {
   if (!bandIds?.length) {
     return "default";
@@ -1468,7 +1528,7 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
     return {
       badgeClass: "status-badge status-badge--warning",
       badgeLabel: "Ready",
-      description: `You have enough reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next level"}. Move forward when you are ready.`
+      description: `You have enough local reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"}. Widen the reading band when you are ready.`
     };
   }
 
@@ -1505,18 +1565,31 @@ function formatCheckpointGraduationBlock(input: {
   unmetRequirements: readonly string[];
 }): string {
   if (input.unmetRequirements.length > 0) {
-    return `The next level is still waiting on ${input.unmetRequirements.join(", ")}.`;
+    return `The next reading band is still waiting on ${input.unmetRequirements.join(", ")}.`;
   }
 
   if (input.reason === "no-checkpoint-boundary") {
-    return "There is no level checkpoint to complete right now.";
+    return "There is no manual reading-band step right now.";
   }
 
   if (input.reason === "no-next-band") {
     return "There is no next curriculum band available right now.";
   }
 
-  return "Level advancement is not available yet.";
+  return "Reading-band widening is not available yet.";
+}
+
+function shouldShowAdvancedTab(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return (
+    window.location.hash === "#advanced" ||
+    params.get("debug") === "1" ||
+    params.get("advanced") === "1"
+  );
 }
 
 function describeDiscoveryRate(percent: number): string {

@@ -98,7 +98,8 @@ describe("extension E2E harness", () => {
     await page.keyboard.press("Escape").catch(() => undefined);
     await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
     const phrasePopoverText = await page.locator("[data-ik-popover='true']").innerText();
-    expect(phrasePopoverText).toMatch(/learning queue|review due/);
+    expect(phrasePopoverText).toContain("A phrase is shown as one useful chunk");
+    expect(phrasePopoverText).not.toMatch(/learning queue|review due|confidence/);
 
     const diagnostics = await readPageDiagnostics(serviceWorker, fixtureUrl);
     expect(diagnostics.injectedPhrases).toBeGreaterThan(0);

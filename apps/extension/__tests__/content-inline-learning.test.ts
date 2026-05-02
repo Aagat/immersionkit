@@ -578,8 +578,12 @@ describe("content inline learning loop", () => {
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover?.textContent).toContain("used to visit");
           expect(popover?.textContent).toContain("solia visitar");
-          expect(popover?.textContent).toContain("grammar carrier");
-          expect(popover?.textContent).toContain("review due");
+          expect(popover?.textContent).toContain(
+            "A phrase is shown as one useful chunk"
+          );
+          expect(popover?.textContent).not.toContain("grammar carrier");
+          expect(popover?.textContent).not.toContain("review due");
+          expect(popover?.textContent).not.toContain("confidence");
           expect(popover?.textContent).toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
 

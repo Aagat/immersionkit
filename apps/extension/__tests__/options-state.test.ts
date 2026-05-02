@@ -3,7 +3,9 @@ import type { LearningItem } from "@immersionkit/shared";
 
 import {
   graduateCheckpoint,
+  loadFirstRunIntroVisible,
   loadCurriculumDiagnostics,
+  markFirstRunIntroSeen,
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
@@ -246,6 +248,21 @@ describe("options state", () => {
       expect(chromeStub.sentMessages).toEqual([
         { type: "curriculum/graduate-checkpoint" }
       ]);
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("shows first-run guidance until it is dismissed", async () => {
+    const chromeStub = installChromeStub();
+
+    try {
+      await expect(loadFirstRunIntroVisible()).resolves.toBe(true);
+      await markFirstRunIntroSeen();
+      await expect(loadFirstRunIntroVisible()).resolves.toBe(false);
+      expect(chromeStub.getStorageSnapshot()).toMatchObject({
+        "immersionkit.firstRun.showIntro": false
+      });
     } finally {
       chromeStub.restore();
     }

@@ -1540,17 +1540,11 @@ function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
   pair.append(createTokenPill("ik-popover__target", detail.targetText));
   popover.append(pair);
 
-  const meta = document.createElement("p");
-  meta.className = "ik-popover__meta";
-  meta.textContent = [
-    formatPhraseLabel(detail.category),
-    formatPhraseLabel(detail.sourceKind),
-    formatPhraseReviewLabel(detail),
-    detail.confidence === null ? null : `confidence ${detail.confidence.toFixed(2)}`
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  popover.append(meta);
+  const help = document.createElement("p");
+  help.className = "ik-popover__meta";
+  help.textContent =
+    "A phrase is shown as one useful chunk so it is easier to recognize again.";
+  popover.append(help);
 
   const pageSentence = readNonEmptyString(detail.sentence);
   if (pageSentence) {
@@ -1561,22 +1555,6 @@ function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
   }
 
   return popover;
-}
-
-function formatPhraseLabel(value: string): string {
-  return value.replace(/-/g, " ");
-}
-
-function formatPhraseReviewLabel(detail: PhraseActivatedDetail): string | null {
-  if (detail.dueStatus === "due") {
-    return "review due";
-  }
-
-  if (detail.dueStatus === "not-due") {
-    return "learning queue";
-  }
-
-  return null;
 }
 
 function collectSentencePopoverSections(

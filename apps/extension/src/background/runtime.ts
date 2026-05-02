@@ -73,6 +73,7 @@ export type GraduateCheckpointResponse =
   | ErrorResponse;
 
 const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType));
+const FIRST_RUN_INTRO_STORAGE_KEY = "immersionkit.firstRun.showIntro";
 
 export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
@@ -103,8 +104,11 @@ export class BackgroundRuntimeCoordinator {
     void this.backfillLearningItemBands();
     void this.cleanupLegacyPhraseIdentities();
 
-    chrome.runtime.onInstalled.addListener(() => {
+    chrome.runtime.onInstalled.addListener((details) => {
       console.info("ImmersionKit background service worker installed.");
+      if (details.reason === "install") {
+        void showFirstRunGuidance();
+      }
       void this.bootstrapSeedLexicon();
       void this.backfillLearningItemBands();
       void this.cleanupLegacyPhraseIdentities();
@@ -404,6 +408,16 @@ export class BackgroundRuntimeCoordinator {
       console.warn("ImmersionKit learning item band backfill failed.", error);
     }
   }
+}
+
+async function showFirstRunGuidance(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    chrome.storage.local.set({ [FIRST_RUN_INTRO_STORAGE_KEY]: true }, () => {
+      resolve();
+    });
+  });
+
+  chrome.runtime.openOptionsPage?.();
 }
 
 function isRuntimeMessage(message: unknown): message is RuntimeMessage {
