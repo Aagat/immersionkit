@@ -9,13 +9,18 @@ export type IconName =
   | "check"
   | "chevron"
   | "close"
+  | "document"
+  | "eyeOff"
   | "gear"
+  | "info"
   | "link"
   | "lock"
+  | "message"
   | "pause"
   | "power"
   | "shield"
   | "spark"
+  | "translate"
   | "volume";
 
 export function ImmersionLogo({ size = "md" }: { size?: Size }) {
@@ -74,11 +79,37 @@ function renderIcon(name: IconName): ReactNode {
           <path d="m6 6 12 12" />
         </>
       );
+    case "document":
+      return (
+        <>
+          <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z" />
+          <path d="M14 2v5h5" />
+          <path d="M9 13h6" />
+          <path d="M9 17h4" />
+        </>
+      );
+    case "eyeOff":
+      return (
+        <>
+          <path d="m2 2 20 20" />
+          <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+          <path d="M9.88 5.09A10.8 10.8 0 0 1 12 5c5 0 8 4 9 7a11.5 11.5 0 0 1-2.12 3.19" />
+          <path d="M6.61 6.61C3.98 8.08 2.55 10.42 2 12c1 3 4 7 10 7a10.6 10.6 0 0 0 4.39-.91" />
+        </>
+      );
     case "gear":
       return (
         <>
           <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
           <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 0 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.37a1.7 1.7 0 0 0-1 .57V20a2 2 0 0 1-4 0v-.07a1.7 1.7 0 0 0-1-.57 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-.57-1H4a2 2 0 0 1 0-4h.07a1.7 1.7 0 0 0 .57-1 1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1-.57V4a2 2 0 0 1 4 0v.07a1.7 1.7 0 0 0 1 .57 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.37 9c.12.36.32.7.57 1H20a2 2 0 0 1 0 4h-.07c-.25.3-.45.64-.57 1Z" />
+        </>
+      );
+    case "info":
+      return (
+        <>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4" />
+          <path d="M12 8h.01" />
         </>
       );
     case "link":
@@ -93,6 +124,12 @@ function renderIcon(name: IconName): ReactNode {
         <>
           <rect x="4" y="10" width="16" height="10" rx="2" />
           <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </>
+      );
+    case "message":
+      return (
+        <>
+          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
         </>
       );
     case "pause":
@@ -129,6 +166,17 @@ function renderIcon(name: IconName): ReactNode {
           <path d="m15.54 8.46 3.53-3.53" />
         </>
       );
+    case "translate":
+      return (
+        <>
+          <path d="m5 8 6 6" />
+          <path d="m4 14 6-6 2-3" />
+          <path d="M2 5h12" />
+          <path d="M7 2h1" />
+          <path d="m22 22-5-10-5 10" />
+          <path d="M14 18h6" />
+        </>
+      );
     case "volume":
       return (
         <>
@@ -162,19 +210,22 @@ export function Button({
   variant = "secondary",
   size = "md",
   icon,
-  disabled = false
+  disabled = false,
+  onClick
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "ghost" | "chip";
   size?: "sm" | "md";
   icon?: IconName;
   disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       className={`ik-ui-button ik-ui-button--${variant} ik-ui-button--${size}`}
       disabled={disabled}
+      onClick={onClick}
     >
       {icon ? <Icon name={icon} /> : null}
       {children}

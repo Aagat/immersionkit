@@ -1,15 +1,8 @@
 import { createRoot } from "react-dom/client";
 import {
-  InlineWordHelpScreen,
-  OptionsGeneralScreen,
-  OptionsTranslationScreen,
-  PhraseHelpScreen,
-  RecoverabilityScreen,
-  SentenceHelpScreen,
-  SupportedArticleScreen,
-  SupportedSitePopupScreen,
-  UnsupportedPagePopupScreen,
-  publicPreviewScreens
+  ExtensionOptions,
+  ExtensionPopup,
+  ReadingPage
 } from "../index";
 import "../styles.css";
 import "./preview.css";
@@ -27,15 +20,15 @@ const referenceScreens = [
 ] as const;
 
 const liveScreens = [
-  ["popup-supported-site", SupportedSitePopupScreen],
-  ["popup-unsupported-page", UnsupportedPagePopupScreen],
-  ["supported-article", SupportedArticleScreen],
-  ["inline-word-help", InlineWordHelpScreen],
-  ["phrase-help", PhraseHelpScreen],
-  ["sentence-help", SentenceHelpScreen],
-  ["options-general", OptionsGeneralScreen],
-  ["options-translation", OptionsTranslationScreen],
-  ["recoverability", RecoverabilityScreen]
+  ["popup-supported-site", () => <ExtensionPopup state="supported" />],
+  ["popup-unsupported-page", () => <ExtensionPopup state="unsupported" />],
+  ["supported-article", () => <ReadingPage state="supported" />],
+  ["inline-word-help", () => <ReadingPage state="word" />],
+  ["phrase-help", () => <ReadingPage state="phrase" />],
+  ["sentence-help", () => <ReadingPage state="sentence" />],
+  ["options-general", () => <ExtensionOptions initialSection="General" />],
+  ["options-translation", () => <ExtensionOptions initialSection="Translation" />],
+  ["recoverability", () => <ExtensionOptions initialSection="Advanced" />]
 ] as const;
 
 function PreviewApp() {
@@ -44,7 +37,7 @@ function PreviewApp() {
       <header className="ik-preview-header">
         <div>
           <p>ImmersionKit UI</p>
-          <h1>Public Preview Screens</h1>
+          <h1>Preview Screens</h1>
         </div>
         <nav aria-label="Preview sections">
           <a href="#generated">Generated references</a>
@@ -55,7 +48,7 @@ function PreviewApp() {
       <section id="generated" className="ik-preview-section">
         <div className="ik-preview-section-heading">
           <h2>Generated References</h2>
-          <p>These are the image-generation outputs saved in `docs/design/public-preview-screens`.</p>
+          <p>These are the generated design references used to check the component states.</p>
         </div>
         <div className="ik-preview-grid">
           {referenceScreens.map(([id, filename]) => (
@@ -80,7 +73,7 @@ function PreviewApp() {
             These are exported from `@immersionkit/ui` and can be integrated into the
             extension later.
           </p>
-          <p>{publicPreviewScreens.length} screen compositions exported.</p>
+          <p>3 reusable components, 9 state examples.</p>
         </div>
         <div className="ik-preview-live-stack">
           {liveScreens.map(([id, Screen]) => (

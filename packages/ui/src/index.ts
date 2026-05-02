@@ -1,2 +1,2 @@
 export * from "./components/primitives";
-export * from "./screens/publicPreviewScreens";
+export * from "./screens";
