@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Fixture - API Migration Note</title>
+  </head>
+  <body>
+    <main>
+      <article id="api-migration-note">
+        <header>
+          <p>Migration Guide</p>
+          <h1>Turning an API Flag Into a Migration Plan</h1>
+          <p>
+            A product engineering note about removing an old fallback without surprising
+            customers who still depend on it.
+          </p>
+        </header>
+
+        <section>
+          <h2>The Awkward Middle</h2>
+          <p>
+            Well, this draft reads like a checklist because that is what the migration
+            needs. We left the fallback on because support needs a stable path for
+            customers who discover the warning late.
+          </p>
+          <p>
+            This can sound cautious, but it keeps old clients from breaking while the
+            new endpoint gathers evidence. The plan is simple: warn first, measure
+            adoption, then remove the flag.
+          </p>
+        </section>
+
+        <section>
+          <h2>Flag Definition</h2>
+          <p>
+            The flag should stay boring. If a value is missing, the service keeps the
+            old route and reports a compact diagnostic event.
+          </p>
+
+          <pre><code>flags:
+  legacy_export_route:
+    default: on
+    remove_after: 2026-06-30</code></pre>
+        </section>
+
+        <section>
+          <h2>Release Review</h2>
+          <p>
+            The review does not need a large meeting. A short note is enough if the
+            dashboard shows stable adoption and support has no open blocker.
+          </p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

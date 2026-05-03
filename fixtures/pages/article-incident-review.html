@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Fixture - Incident Review</title>
+  </head>
+  <body>
+    <main>
+      <article id="queue-incident-review">
+        <header>
+          <p>Reliability Review</p>
+          <h1>Queue Drift After a Quiet Deploy</h1>
+          <p>
+            A short incident review about a delayed worker rollout, alert timing, and
+            the notes that made the recovery easier to audit.
+          </p>
+        </header>
+
+        <section>
+          <h2>Timeline</h2>
+          <p>
+            During the first hour, the on-call lead can light up the timeline with
+            obvious events, but this does not explain the queue. The useful detail was
+            hidden right after the deploy marker, where a small retry window doubled.
+          </p>
+          <p>
+            Engineers watched the worker count move up slowly while dashboards stayed
+            green. That looked fine until support reported that export jobs were
+            finishing in the wrong order.
+          </p>
+        </section>
+
+        <section>
+          <h2>What Changed</h2>
+          <p>
+            The team decided to plant a manual check beside the automated alert until
+            the next release. This is intentionally boring: a human can watch the first
+            queue drain before the rollout moves on.
+          </p>
+
+          <pre><code>rollback:
+  owner: platform
+  manual_check: first-queue-drain
+  alert_window: 15m</code></pre>
+        </section>
+
+        <section>
+          <h2>Follow-up</h2>
+          <p>
+            The permanent fix is to make the retry counter stable across workers. If
+            the counter jumps, the deploy should pause before the user-facing queue is
+            touched.
+          </p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

@@ -29,12 +29,123 @@ if (serviceWorkerLoader.includes("localhost:")) {
   );
 }
 
-const pageHtml = await readFile(
-  join(repoRoot, "fixtures/pages/article-spec-workflow.html"),
-  "utf8"
+const smokeFixtures = [
+  {
+    route: "/",
+    label: "spec-workflow",
+    fileName: "article-spec-workflow.html",
+    codeBlockNeedle: "account-export",
+    requiredText: [
+      "Like any workflow",
+      "not need to write release maps",
+      "feature boundary or slice is up to you",
+      "create zero friction",
+      "This supports deliberate",
+      "rely on"
+    ],
+    forbiddenText: [
+      "así any workflow",
+      "asi any workflow",
+      "necesidad to write",
+      "arriba to you",
+      "cero friction",
+      "Este supports",
+      "encima stable",
+      "encima estable"
+    ],
+    forbiddenCodeText: ["cuenta"]
+  },
+  {
+    route: "/incident-review",
+    label: "incident-review",
+    fileName: "article-incident-review.html",
+    codeBlockNeedle: "manual_check",
+    requiredText: [
+      "can light up the timeline",
+      "hidden right after the deploy marker",
+      "plant a manual check",
+      "can watch",
+      "queue drain",
+      "move up slowly"
+    ],
+    forbiddenText: [
+      "lata light",
+      "lata watch",
+      "luz up",
+      "planta a manual",
+      "derecho after",
+      "ahorita after",
+      "arriba slowly",
+      "encima-call"
+    ],
+    forbiddenCodeText: ["planta"]
+  },
+  {
+    route: "/metrics-notebook",
+    label: "metrics-notebook",
+    fileName: "article-metrics-notebook.html",
+    codeBlockNeedle: "weekly_rate",
+    requiredText: [
+      "Like a bug report",
+      "This means zero rows can move",
+      "fine for",
+      "left the control chart open"
+    ],
+    forbiddenText: [
+      "así a bug",
+      "asi a bug",
+      "Este means",
+      "cero rows",
+      "lata move",
+      "multa for",
+      "izquierda the control"
+    ],
+    forbiddenCodeText: ["período"]
+  },
+  {
+    route: "/api-migration",
+    label: "api-migration",
+    fileName: "article-api-migration.html",
+    codeBlockNeedle: "legacy_export_route",
+    requiredText: [
+      "Well,",
+      "reads like a checklist",
+      "left the fallback on",
+      "This can sound cautious",
+      "does not need a large meeting"
+    ],
+    forbiddenText: [
+      "Pozo,",
+      "pozo,",
+      "así a checklist",
+      "asi a checklist",
+      "izquierda the fallback",
+      "encima because",
+      "lata sound",
+      "necesidad a large"
+    ],
+    forbiddenCodeText: ["encima"]
+  }
+];
+
+const fixturePages = new Map(
+  await Promise.all(
+    smokeFixtures.map(async (fixture) => [
+      fixture.route,
+      await readFile(join(repoRoot, "fixtures/pages", fixture.fileName), "utf8")
+    ])
+  )
 );
 
-const server = createServer((_, response) => {
+const server = createServer((request, response) => {
+  const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+  const pageHtml = fixturePages.get(path);
+  if (!pageHtml) {
+    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.end("Not found");
+    return;
+  }
+
   response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   response.end(pageHtml);
 });
@@ -87,22 +198,11 @@ try {
     console.log(`[page:${message.type()}] ${message.text()}`);
   });
 
-  await page.goto(`http://127.0.0.1:${address.port}/`, {
-    waitUntil: "domcontentloaded"
-  });
-  await page.waitForSelector("[data-ik-token-id]", { timeout: 10_000 });
-  await page.waitForTimeout(8_000);
-
-  const contentSnapshot = await page.evaluate(() => ({
-    injectedTokens: document.querySelectorAll("[data-ik-token-id]").length,
-    sentenceCandidateWrappers: document.querySelectorAll(
-      "[data-ik-sentence-candidate-hashes]"
-    ).length,
-    phraseHintWrappers: document.querySelectorAll("[data-ik-phrase-hints]").length,
-    rootBooted: document.documentElement.hasAttribute("data-immersionkit-root"),
-    textContent: document.body.textContent ?? "",
-    codeBlockText: document.querySelector("pre code")?.textContent ?? ""
-  }));
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const contentSnapshots = [];
+  for (const fixture of smokeFixtures) {
+    contentSnapshots.push(await runSmokeFixture(page, baseUrl, fixture));
+  }
 
   const storageSnapshot = await serviceWorker.evaluate(async () => {
     const values = await chrome.storage.local.get([
@@ -189,13 +289,14 @@ try {
       : null;
 
   const summary = {
-    contentSnapshot: {
-      injectedTokens: contentSnapshot.injectedTokens,
-      sentenceCandidateWrappers: contentSnapshot.sentenceCandidateWrappers,
-      phraseHintWrappers: contentSnapshot.phraseHintWrappers,
-      rootBooted: contentSnapshot.rootBooted,
-      codeBlockPresent: contentSnapshot.codeBlockText.includes("account-export")
-    },
+    contentSnapshots: contentSnapshots.map((snapshot) => ({
+      label: snapshot.label,
+      injectedTokens: snapshot.injectedTokens,
+      sentenceCandidateWrappers: snapshot.sentenceCandidateWrappers,
+      phraseHintWrappers: snapshot.phraseHintWrappers,
+      rootBooted: snapshot.rootBooted,
+      codeBlockPresent: snapshot.codeBlockPresent
+    })),
     storageSnapshot: {
       analysisCacheEntries: storageSnapshot.analysisCacheEntries,
       translationCacheEntries: storageSnapshot.translationCacheEntries,
@@ -206,16 +307,6 @@ try {
 
   console.log(JSON.stringify(summary, null, 2));
 
-  if (!contentSnapshot.rootBooted) {
-    throw new Error("Content script did not boot.");
-  }
-  if (contentSnapshot.injectedTokens < 1) {
-    throw new Error("No injected tokens rendered.");
-  }
-  if (contentSnapshot.sentenceCandidateWrappers < 1) {
-    throw new Error("No sentence candidates were marked.");
-  }
-  assertSpecWorkflowReplacementQuality(contentSnapshot);
   if (storageSnapshot.analysisCacheEntries < 1) {
     throw new Error("No background sentence analysis cache entries were written.");
   }
@@ -233,45 +324,73 @@ try {
   });
 }
 
-function assertSpecWorkflowReplacementQuality(contentSnapshot) {
+async function runSmokeFixture(page, baseUrl, fixture) {
+  await page.goto(`${baseUrl}${fixture.route}`, {
+    waitUntil: "domcontentloaded"
+  });
+  await page.waitForSelector("[data-ik-token-id]", { timeout: 10_000 });
+  await page.waitForTimeout(5_000);
+
+  const contentSnapshot = await page.evaluate(() => ({
+    injectedTokens: document.querySelectorAll("[data-ik-token-id]").length,
+    sentenceCandidateWrappers: document.querySelectorAll(
+      "[data-ik-sentence-candidate-hashes]"
+    ).length,
+    phraseHintWrappers: document.querySelectorAll("[data-ik-phrase-hints]").length,
+    rootBooted: document.documentElement.hasAttribute("data-immersionkit-root"),
+    textContent: document.body.textContent ?? "",
+    codeBlockText: document.querySelector("pre code")?.textContent ?? ""
+  }));
+
+  if (!contentSnapshot.rootBooted) {
+    throw new Error(`Content script did not boot for ${fixture.label}.`);
+  }
+  if (contentSnapshot.injectedTokens < 1) {
+    throw new Error(`No injected tokens rendered for ${fixture.label}.`);
+  }
+  if (contentSnapshot.sentenceCandidateWrappers < 1) {
+    throw new Error(`No sentence candidates were marked for ${fixture.label}.`);
+  }
+
+  assertFixtureReplacementQuality(fixture, contentSnapshot);
+
+  return {
+    label: fixture.label,
+    injectedTokens: contentSnapshot.injectedTokens,
+    sentenceCandidateWrappers: contentSnapshot.sentenceCandidateWrappers,
+    phraseHintWrappers: contentSnapshot.phraseHintWrappers,
+    rootBooted: contentSnapshot.rootBooted,
+    codeBlockPresent: contentSnapshot.codeBlockText.includes(fixture.codeBlockNeedle)
+  };
+}
+
+function assertFixtureReplacementQuality(fixture, contentSnapshot) {
   const text = contentSnapshot.textContent;
   const codeBlockText = contentSnapshot.codeBlockText;
-  const requiredOriginalSnippets = [
-    "Like any workflow",
-    "not need to write release maps",
-    "feature boundary or slice is up to you",
-    "create zero friction",
-    "This supports deliberate",
-    "rely on"
-  ];
-  const wrongReplacementSnippets = [
-    "así any workflow",
-    "asi any workflow",
-    "necesidad to write",
-    "arriba to you",
-    "cero friction",
-    "Este supports",
-    "encima stable",
-    "encima estable"
-  ];
 
-  for (const snippet of requiredOriginalSnippets) {
+  for (const snippet of fixture.requiredText) {
     if (!text.includes(snippet)) {
-      throw new Error(`Smoke fixture lost expected safe English text: ${snippet}`);
+      throw new Error(
+        `${fixture.label} lost expected safe English text: ${snippet}`
+      );
     }
   }
 
-  for (const snippet of wrongReplacementSnippets) {
+  for (const snippet of fixture.forbiddenText) {
     if (text.includes(snippet)) {
-      throw new Error(`Smoke fixture rendered a wrong-sense replacement: ${snippet}`);
+      throw new Error(
+        `${fixture.label} rendered a wrong-sense replacement: ${snippet}`
+      );
     }
   }
 
-  if (!codeBlockText.includes("account-export")) {
-    throw new Error("Smoke fixture code block was not present.");
+  if (!codeBlockText.includes(fixture.codeBlockNeedle)) {
+    throw new Error(`${fixture.label} code block was not present.`);
   }
 
-  if (codeBlockText.includes("cuenta")) {
-    throw new Error("Smoke fixture translated inside a code block.");
+  for (const snippet of fixture.forbiddenCodeText) {
+    if (codeBlockText.includes(snippet)) {
+      throw new Error(`${fixture.label} translated inside a code block.`);
+    }
   }
 }
