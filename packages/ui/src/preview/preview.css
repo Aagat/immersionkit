@@ -93,6 +93,10 @@ body {
   gap: 18px;
 }
 
+.ik-preview-grid--wide {
+  grid-template-columns: 1fr;
+}
+
 .ik-preview-card,
 .ik-preview-live-card {
   overflow: hidden;
@@ -123,6 +127,11 @@ body {
   height: 420px;
   object-fit: contain;
   background: #f7fafd;
+}
+
+.ik-preview-card--wide img {
+  height: auto;
+  max-height: 820px;
 }
 
 .ik-preview-live-stack {

@@ -218,7 +218,7 @@ function createSentenceNote(
   note.className = "ik-ui-mark ik-ui-mark--sentence ik-sentence-note";
   note.tabIndex = 0;
   note.setAttribute("role", "button");
-  note.setAttribute("title", "Click for details. Double-click to reveal original.");
+  note.setAttribute("title", "Open sentence help.");
   note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-note", "true");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
@@ -235,7 +235,7 @@ function updateSentenceNote(
   result: SentenceTranslationResult,
   sentenceKind: "known" | "unknown"
 ): void {
-  note.setAttribute("title", "Click for details. Double-click to reveal original.");
+  note.setAttribute("title", "Open sentence help.");
   note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
   note.setAttribute(SENTENCE_KIND_ATTRIBUTE, sentenceKind);

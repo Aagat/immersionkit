@@ -142,6 +142,10 @@ describe("content inline learning loop", () => {
           );
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
 
+          window.dispatchEvent(new window.Event("scroll"));
+          await wait(20);
+          expect(document.querySelector("[data-ik-popover='true']")).toBe(popover);
+
           await wait(220);
           expect(
             popover?.querySelector("[data-ik-token-id], [data-ik-sentence-note='true']")
@@ -1814,35 +1818,28 @@ describe("content inline learning loop", () => {
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover).toBeTruthy();
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
-          expect(popover?.textContent).toContain(learningNote.summary);
-          expect(popover?.textContent).toContain("Word-by-word");
-          const glossLines = [
-            ...document.querySelectorAll<HTMLElement>(".ik-ui-sentence-block span")
-          ]
-            .map((node) => node.textContent)
-            .filter((text): text is string => Boolean(text?.includes(" = ")))
-            .slice(0, 3);
-          expect(glossLines).toEqual([
-            "\"la ciudad\" = the city",
-            "\"es importante\" = is important",
-            "\"para cada visitante\" = for each visitor"
-          ]);
-          expect(popover?.textContent).toContain("Phrase");
-          expect(popover?.textContent).toContain(learningNote.keyPhrase);
-          expect(popover?.textContent).toContain("Natural Spanish");
-          expect(popover?.textContent).toContain(learningNote.canonicalUsage);
-          expect(popover?.textContent).toContain("Grammar");
+          expect(popover?.textContent).toContain("Uses OpenAI only when enabled.");
+          expect(popover?.textContent).toContain("Original");
+          expect(popover?.textContent).toContain(sourceSentence);
+          expect(popover?.textContent).toContain("Translation");
+          expect(popover?.textContent).toContain(translatedSentence);
+          expect(popover?.textContent).toContain("Why this helps");
           expect(popover?.textContent).toContain(learningNote.grammarFocus);
-          expect(popover?.textContent).not.toContain(translatedSentence);
-          expect(popover?.textContent).not.toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
           expect(popover?.querySelector("[data-ik-sentence-action]")).toBeTruthy();
+
+          const translationButton = popover?.querySelector<HTMLButtonElement>(
+            "[data-ik-sentence-action='show-translation']"
+          );
+          expect(translationButton).toBeTruthy();
+          expect(translationButton?.textContent).toContain("Translation");
+          expect(translationButton?.getAttribute("aria-pressed")).toBe("true");
 
           const toggleButton = popover?.querySelector<HTMLButtonElement>(
             "[data-ik-sentence-action='toggle-source']"
           );
           expect(toggleButton).toBeTruthy();
-          expect(toggleButton?.textContent).toBe("Show Original");
+          expect(toggleButton?.textContent).toContain("Original");
 
           toggleButton?.dispatchEvent(
             new window.MouseEvent("click", {
@@ -1857,7 +1854,17 @@ describe("content inline learning loop", () => {
           const toggledButton = document.querySelector<HTMLButtonElement>(
             "[data-ik-sentence-action='toggle-source']"
           );
-          expect(toggledButton?.textContent).toBe("Show Translation");
+          expect(toggledButton?.getAttribute("aria-pressed")).toBe("true");
+
+          translationButton?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("false");
 
           note?.dispatchEvent(
             new window.MouseEvent("dblclick", {
@@ -1867,8 +1874,8 @@ describe("content inline learning loop", () => {
           );
           await wait(20);
 
-          expect(note?.getAttribute("data-ik-source-visible")).toBe("false");
-          expect(note?.textContent).toContain(translatedSentence);
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("true");
+          expect(note?.textContent).toContain(sourceSentence);
           expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
         } finally {
           chromeStub.restore();

@@ -94,6 +94,18 @@ describe("extension E2E harness", () => {
 
     await openFirstPopover(page, "[data-ik-unit-kind='word']");
     await expectPopover(page);
+    const popoverLayer = await page.locator("[data-ik-popover='true']").evaluate((node) => ({
+      position: getComputedStyle(node).position,
+      topLayer: node.matches(":popover-open"),
+      zIndex: getComputedStyle(node).zIndex
+    }));
+    expect(popoverLayer.position).toBe("fixed");
+    expect(popoverLayer.topLayer).toBe(true);
+    expect(popoverLayer.zIndex).toBe("2147483647");
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+    await expectPopover(page);
 
     await page.keyboard.press("Escape").catch(() => undefined);
     await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
