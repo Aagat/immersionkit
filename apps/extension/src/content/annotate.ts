@@ -23,7 +23,7 @@ import type {
 } from "./contracts";
 import { findSentenceForOffset, scoreSentenceCandidates, segmentSentences } from "./sentences";
 import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
-import { preserveWordCasing, segmentText } from "./tokenize";
+import { preserveWordCasing, segmentText, type TextSegment } from "./tokenize";
 
 export type ProcessTextNodeContext = {
   discoveryRate: number;
@@ -80,6 +80,83 @@ export type PhraseActivationInput = {
   category: CachedPhraseMatch["category"];
   isDueForReview: boolean;
 };
+
+const ANALYZER_REQUIRED_SINGLE_WORDS = new Set(["like", "on", "up"]);
+const DEMONSTRATIVE_ADJECTIVE_LEMMAS = new Set([
+  "this",
+  "that",
+  "these",
+  "those"
+]);
+const SUBJECT_PRONOUNS = new Set(["i", "you", "he", "she", "it", "we", "they"]);
+const NEGATION_FORMS = new Set(["not", "never"]);
+const NEED_NOUN_PREVIOUS_CUES = new Set([
+  "a",
+  "an",
+  "any",
+  "clear",
+  "every",
+  "great",
+  "her",
+  "his",
+  "its",
+  "my",
+  "no",
+  "our",
+  "real",
+  "that",
+  "the",
+  "their",
+  "this",
+  "urgent",
+  "your"
+]);
+const NEED_NOUN_NEXT_CUES = new Set(["for", "of"]);
+const MODAL_OR_AUXILIARY_FORMS = new Set([
+  "am",
+  "are",
+  "be",
+  "been",
+  "being",
+  "can",
+  "could",
+  "did",
+  "do",
+  "does",
+  "had",
+  "has",
+  "have",
+  "is",
+  "may",
+  "might",
+  "must",
+  "shall",
+  "should",
+  "was",
+  "were",
+  "will",
+  "would"
+]);
+const COMMON_FINITE_VERBS = new Set([
+  ...MODAL_OR_AUXILIARY_FORMS,
+  "becomes",
+  "comes",
+  "creates",
+  "discourages",
+  "does",
+  "feels",
+  "gets",
+  "goes",
+  "looks",
+  "makes",
+  "means",
+  "needs",
+  "requires",
+  "seems",
+  "supports",
+  "takes",
+  "uses"
+]);
 
 export function processTextNode(
   node: Text,
@@ -205,7 +282,8 @@ function renderTextWindow(input: {
   let tokenIndex = 0;
   let cursor = 0;
 
-  for (const segment of segments) {
+  for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex += 1) {
+    const segment = segments[segmentIndex];
     const phraseCandidate = phraseCandidates.acceptedByStart.get(segment.start);
     if (phraseCandidate) {
       if (cursor < phraseCandidate.start) {
@@ -256,6 +334,20 @@ function renderTextWindow(input: {
     const lexiconEntry = context.lexiconLookup.get(segment.normalized);
     if (!lexiconEntry) {
       wrapper.append(segment.value);
+      cursor = segment.end;
+      continue;
+    }
+
+    if (
+      shouldSkipLocalWordReplacement({
+        sourceText,
+        segments,
+        segmentIndex,
+        lexiconEntry
+      })
+    ) {
+      wrapper.append(segment.value);
+      contextSkippedCount += 1;
       cursor = segment.end;
       continue;
     }
@@ -431,6 +523,138 @@ function renderTextWindow(input: {
       unrenderedPhraseRejections: []
     }
   };
+}
+
+function shouldSkipLocalWordReplacement(input: {
+  sourceText: string;
+  segments: readonly TextSegment[];
+  segmentIndex: number;
+  lexiconEntry: SeedLexiconEntry;
+}): boolean {
+  const sourceLemma = normalizeToken(input.lexiconEntry.sourceLemma);
+  const segment = input.segments[input.segmentIndex];
+  if (!sourceLemma || !segment || segment.kind !== "word") {
+    return false;
+  }
+
+  const previous = findNeighborWordSegment(input.segments, input.segmentIndex, -1);
+  const next = findNeighborWordSegment(input.segments, input.segmentIndex, 1);
+
+  if (ANALYZER_REQUIRED_SINGLE_WORDS.has(sourceLemma)) {
+    return true;
+  }
+
+  if (
+    sourceLemma === "need" &&
+    input.lexiconEntry.pos === "noun" &&
+    isLikelyNeedVerbContext(previous?.normalized, next?.normalized)
+  ) {
+    return true;
+  }
+
+  if (
+    DEMONSTRATIVE_ADJECTIVE_LEMMAS.has(sourceLemma) &&
+    isLikelyDemonstrativePronounContext({
+      sourceText: input.sourceText,
+      segment,
+      next
+    })
+  ) {
+    return true;
+  }
+
+  if (
+    sourceLemma === "zero" &&
+    input.lexiconEntry.pos === "noun" &&
+    next &&
+    !hasPunctuationBetween(input.sourceText, segment.end, next.start)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function isLikelyNeedVerbContext(
+  previous: string | undefined,
+  next: string | undefined
+): boolean {
+  if (next === "to") {
+    return true;
+  }
+
+  if (
+    (next && NEED_NOUN_NEXT_CUES.has(next)) ||
+    (previous && NEED_NOUN_PREVIOUS_CUES.has(previous))
+  ) {
+    return false;
+  }
+
+  if (
+    previous &&
+    (SUBJECT_PRONOUNS.has(previous) ||
+      MODAL_OR_AUXILIARY_FORMS.has(previous) ||
+      NEGATION_FORMS.has(previous))
+  ) {
+    return true;
+  }
+
+  return true;
+}
+
+function isLikelyDemonstrativePronounContext(input: {
+  sourceText: string;
+  segment: Extract<TextSegment, { kind: "word" }>;
+  next: Extract<TextSegment, { kind: "word" }> | null;
+}): boolean {
+  if (!input.next) {
+    return true;
+  }
+
+  if (hasPunctuationBetween(input.sourceText, input.segment.end, input.next.start)) {
+    return true;
+  }
+
+  return (
+    COMMON_FINITE_VERBS.has(input.next.normalized) ||
+    looksLikeThirdPersonVerb(input.next.normalized)
+  );
+}
+
+function findNeighborWordSegment(
+  segments: readonly TextSegment[],
+  segmentIndex: number,
+  direction: -1 | 1
+): Extract<TextSegment, { kind: "word" }> | null {
+  for (
+    let index = segmentIndex + direction;
+    index >= 0 && index < segments.length;
+    index += direction
+  ) {
+    const segment = segments[index];
+    if (segment.kind === "word") {
+      return segment;
+    }
+  }
+
+  return null;
+}
+
+function hasPunctuationBetween(
+  sourceText: string,
+  startOffset: number,
+  endOffset: number
+): boolean {
+  return /[^\s]/.test(sourceText.slice(startOffset, endOffset));
+}
+
+function looksLikeThirdPersonVerb(normalized: string): boolean {
+  return (
+    normalized.length > 3 &&
+    (normalized.endsWith("ates") ||
+      normalized.endsWith("ifies") ||
+      normalized.endsWith("izes"))
+  );
 }
 
 export function restoreAnnotatedNodes(root: ParentNode = document): number {

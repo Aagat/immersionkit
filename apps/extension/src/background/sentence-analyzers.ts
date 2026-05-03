@@ -14,6 +14,7 @@ import winkModel from "wink-eng-lite-web-model";
 
 type WinkNlpEngine = {
   its: {
+    lemma: unknown;
     normal: unknown;
     pos: unknown;
   };
@@ -55,8 +56,15 @@ export async function createWinkNlpSentenceAnalyzer(): Promise<SentenceAnalyzer>
       const tokenCursor = doc.tokens();
       const tokenTexts = readStringArray(tokenCursor.out());
       const tokenNormals = readStringArray(tokenCursor.out(winkNlp.its.normal));
+      const tokenLemmas = readStringArray(tokenCursor.out(winkNlp.its.lemma));
       const tokenPos = readStringArray(tokenCursor.out(winkNlp.its.pos));
-      const tokens = materializeWinkTokens(sentence, tokenTexts, tokenNormals, tokenPos);
+      const tokens = materializeWinkTokens(
+        sentence,
+        tokenTexts,
+        tokenNormals,
+        tokenLemmas,
+        tokenPos
+      );
       const chunks = detectNounPhraseChunks(sentence, tokens);
 
       return {
@@ -76,6 +84,7 @@ function materializeWinkTokens(
   sentence: string,
   tokenTexts: readonly string[],
   tokenNormals: readonly string[],
+  tokenLemmas: readonly string[],
   tokenPos: readonly string[]
 ): AnalyzerToken[] {
   if (tokenTexts.length === 0) {
@@ -99,12 +108,13 @@ function materializeWinkTokens(
     searchStart = endOffset;
     const rawPos = tokenPos[index] ?? "";
     const normalized = normalizeToken(tokenNormals[index] ?? text);
-    const coarsePos = normalizePennTag(rawPos);
+    const lemma = normalizeToken(tokenLemmas[index] ?? normalized) || normalized;
+    const coarsePos = normalizeAnalyzerPos(rawPos, normalized);
 
     return normalizeAnalyzerToken({
       text,
       normalized,
-      lemma: normalized,
+      lemma,
       pos: coarsePos,
       tags: rawPos ? [rawPos, coarsePos] : [coarsePos],
       startOffset,
@@ -383,39 +393,65 @@ function readStringArray(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string");
 }
 
-function normalizePennTag(value: string): string {
+function normalizeAnalyzerPos(value: string, normalized: string): string {
   const tag = value.toLowerCase();
 
-  if (tag === "md") {
+  if (tag === "md" || (tag === "aux" && MODAL_FORMS.has(normalized))) {
     return "modal";
   }
 
-  if (tag.startsWith("nn")) {
+  if (tag === "aux") {
+    return "auxiliary";
+  }
+
+  if (tag === "noun" || tag === "propn" || tag.startsWith("nn")) {
     return "noun";
   }
 
-  if (tag.startsWith("vb")) {
+  if (tag === "verb" || tag.startsWith("vb")) {
     return "verb";
   }
 
-  if (tag.startsWith("jj")) {
+  if (tag === "adj" || tag.startsWith("jj")) {
     return "adjective";
   }
 
-  if (tag.startsWith("rb")) {
+  if (tag === "adv" || tag.startsWith("rb")) {
     return "adverb";
   }
 
-  if (tag === "dt" || tag === "pdt" || tag === "wdt") {
+  if (tag === "det" || tag === "dt" || tag === "pdt" || tag === "wdt") {
     return "determiner";
   }
 
-  if (tag === "in" || tag === "to") {
+  if (tag === "adp" || tag === "in" || tag === "to") {
     return "preposition";
   }
 
-  if (tag === "prp" || tag === "prp$" || tag === "wp" || tag === "wp$") {
+  if (
+    tag === "pron" ||
+    tag === "prp" ||
+    tag === "prp$" ||
+    tag === "wp" ||
+    tag === "wp$"
+  ) {
     return "pronoun";
+  }
+
+  if (tag === "num" || tag === "cd") {
+    return "number";
+  }
+
+  if (tag === "part" || tag === "rp") {
+    return "particle";
+  }
+
+  if (tag === "cconj" || tag === "sconj" || tag === "cc") {
+    return "conjunction";
+  }
+
+  if (tag === "punct" || tag === "sym" || tag === "x") {
+    return "other";
   }
 
   return tag || "other";
@@ -444,3 +480,14 @@ function isNounToken(token: AnalyzerToken): boolean {
 
 const BE_FORMS = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
 const HAVE_FORMS = new Set(["have", "has", "had"]);
+const MODAL_FORMS = new Set([
+  "can",
+  "could",
+  "may",
+  "might",
+  "must",
+  "shall",
+  "should",
+  "will",
+  "would"
+]);

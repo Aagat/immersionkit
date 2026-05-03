@@ -541,20 +541,17 @@ function deriveSuitabilitySignals(
 function evaluateUnambiguousCandidate(
   candidate: ContextualWordCandidate
 ): { decision: "inject" | "skip"; rationale: string } {
+  if (candidate.observedPos !== candidate.candidatePos) {
+    return {
+      decision: "skip",
+      rationale: `Observed POS ${candidate.observedPos} does not match lexicon POS ${candidate.candidatePos}.`
+    };
+  }
+
   if (candidate.confidence < 0.58) {
     return {
       decision: "skip",
       rationale: "Analyzer evidence is too weak for a contextual word decision."
-    };
-  }
-
-  if (
-    candidate.observedPos !== candidate.candidatePos &&
-    candidate.observedPos !== "other"
-  ) {
-    return {
-      decision: "skip",
-      rationale: `Observed POS ${candidate.observedPos} does not match lexicon POS ${candidate.candidatePos}.`
     };
   }
 
@@ -579,7 +576,10 @@ function resolveTokenVocabStatus(
   lookup: LexiconLookup,
   vocab: ReadonlyMap<string, UserVocabEntry>
 ): VocabStatus {
-  const lexiconEntry = findLexiconEntriesForToken(token, lookup)[0];
+  const observedPos = toObservedContextPos(token);
+  const lexiconEntry = findLexiconEntriesForToken(token, lookup).find(
+    (entry) => observedPos === entry.pos
+  );
   if (!lexiconEntry) {
     return "new";
   }
@@ -816,6 +816,12 @@ function toObservedContextPos(token: AnalyzerToken): ObservedContextPos {
     token.pos === "adverb" ||
     token.pos === "modal" ||
     token.pos === "auxiliary" ||
+    token.pos === "preposition" ||
+    token.pos === "pronoun" ||
+    token.pos === "determiner" ||
+    token.pos === "number" ||
+    token.pos === "particle" ||
+    token.pos === "conjunction" ||
     token.pos === "interjection"
   ) {
     return token.pos;

@@ -65,6 +65,116 @@ describe("content lexicon lookup", () => {
     });
   });
 
+  it("keeps context-sensitive surface forms in English before analyzer confirmation", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode(
+        "You might not need to write specs. This creates zero friction. ACIDs rely on stable numbering. The feature boundary is up to you."
+      );
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "context-sensitive-word-test",
+        createNodeId: () => "ikn-context-sensitive-word-test",
+        lexiconLookup: buildLexiconLookup([
+          {
+            lemmaId: "en:need:noun",
+            sourceLemma: "need",
+            targetLemma: "necesidad",
+            pos: "noun",
+            frequencyRank: 594,
+            confidence: 0.97
+          },
+          {
+            lemmaId: "en:this:adjective",
+            sourceLemma: "this",
+            targetLemma: "este",
+            pos: "adjective",
+            frequencyRank: 29,
+            confidence: 0.97
+          },
+          {
+            lemmaId: "en:zero:noun",
+            sourceLemma: "zero",
+            targetLemma: "cero",
+            pos: "noun",
+            frequencyRank: 1452,
+            confidence: 0.97
+          },
+          {
+            lemmaId: "en:on:adverb",
+            sourceLemma: "on",
+            targetLemma: "encima",
+            pos: "adverb",
+            frequencyRank: 488,
+            confidence: 0.78
+          },
+          {
+            lemmaId: "en:up:adverb",
+            sourceLemma: "up",
+            targetLemma: "arriba",
+            pos: "adverb",
+            frequencyRank: 527,
+            confidence: 0.78
+          },
+          {
+            lemmaId: "en:stable:adjective",
+            sourceLemma: "stable",
+            targetLemma: "estable",
+            pos: "adjective",
+            frequencyRank: 2632,
+            confidence: 0.97
+          }
+        ]),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(result.contextSkippedCount).toBe(5);
+      expect(document.body.textContent).toContain("not need to write");
+      expect(document.body.textContent).toContain("This creates zero friction");
+      expect(document.body.textContent).toContain("rely on estable numbering");
+      expect(document.body.textContent).toContain("up to you");
+      expect(document.body.textContent).not.toContain("necesidad");
+      expect(document.body.textContent).not.toContain("Este creates");
+      expect(document.body.textContent).not.toContain("cero friction");
+      expect(document.body.textContent).not.toContain("encima estable");
+      expect(document.body.textContent).not.toContain("arriba to you");
+    });
+  });
+
+  it("still injects need when the local context supports the noun sense", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode(
+        "There is a great need for clean water."
+      );
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "noun-need-word-test",
+        createNodeId: () => "ikn-noun-need-word-test",
+        lexiconLookup: buildLexiconLookup([
+          {
+            lemmaId: "en:need:noun",
+            sourceLemma: "need",
+            targetLemma: "necesidad",
+            pos: "noun",
+            frequencyRank: 594,
+            confidence: 0.97
+          }
+        ]),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(result.contextSkippedCount).toBe(0);
+      expect(document.body.textContent).toContain("great necesidad for");
+    });
+  });
+
   it("skips new discovery words when the active curriculum gate rejects them", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const textNode = document.createTextNode("The telescope watched the comet.");

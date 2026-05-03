@@ -43,6 +43,12 @@ export const OBSERVED_CONTEXT_POS_VALUES = [
   "adverb",
   "modal",
   "auxiliary",
+  "preposition",
+  "pronoun",
+  "determiner",
+  "number",
+  "particle",
+  "conjunction",
   "interjection",
   "other"
 ] as const;

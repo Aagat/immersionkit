@@ -29,18 +29,10 @@ if (serviceWorkerLoader.includes("localhost:")) {
   );
 }
 
-const pageHtml = `<!doctype html>
-<html>
-  <head><title>ImmersionKit smoke</title></head>
-  <body>
-    <main>
-      <article>
-        <p>The important new city has at least one small family house near the water.</p>
-        <p>As soon as we arrive at the old city, we take care of the important book.</p>
-      </article>
-    </main>
-  </body>
-</html>`;
+const pageHtml = await readFile(
+  join(repoRoot, "fixtures/pages/article-spec-workflow.html"),
+  "utf8"
+);
 
 const server = createServer((_, response) => {
   response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -107,7 +99,9 @@ try {
       "[data-ik-sentence-candidate-hashes]"
     ).length,
     phraseHintWrappers: document.querySelectorAll("[data-ik-phrase-hints]").length,
-    rootBooted: document.documentElement.hasAttribute("data-immersionkit-root")
+    rootBooted: document.documentElement.hasAttribute("data-immersionkit-root"),
+    textContent: document.body.textContent ?? "",
+    codeBlockText: document.querySelector("pre code")?.textContent ?? ""
   }));
 
   const storageSnapshot = await serviceWorker.evaluate(async () => {
@@ -195,7 +189,13 @@ try {
       : null;
 
   const summary = {
-    contentSnapshot,
+    contentSnapshot: {
+      injectedTokens: contentSnapshot.injectedTokens,
+      sentenceCandidateWrappers: contentSnapshot.sentenceCandidateWrappers,
+      phraseHintWrappers: contentSnapshot.phraseHintWrappers,
+      rootBooted: contentSnapshot.rootBooted,
+      codeBlockPresent: contentSnapshot.codeBlockText.includes("account-export")
+    },
     storageSnapshot: {
       analysisCacheEntries: storageSnapshot.analysisCacheEntries,
       translationCacheEntries: storageSnapshot.translationCacheEntries,
@@ -215,6 +215,7 @@ try {
   if (contentSnapshot.sentenceCandidateWrappers < 1) {
     throw new Error("No sentence candidates were marked.");
   }
+  assertSpecWorkflowReplacementQuality(contentSnapshot);
   if (storageSnapshot.analysisCacheEntries < 1) {
     throw new Error("No background sentence analysis cache entries were written.");
   }
@@ -230,4 +231,47 @@ try {
     maxRetries: 3,
     retryDelay: 100
   });
+}
+
+function assertSpecWorkflowReplacementQuality(contentSnapshot) {
+  const text = contentSnapshot.textContent;
+  const codeBlockText = contentSnapshot.codeBlockText;
+  const requiredOriginalSnippets = [
+    "Like any workflow",
+    "not need to write release maps",
+    "feature boundary or slice is up to you",
+    "create zero friction",
+    "This supports deliberate",
+    "rely on"
+  ];
+  const wrongReplacementSnippets = [
+    "así any workflow",
+    "asi any workflow",
+    "necesidad to write",
+    "arriba to you",
+    "cero friction",
+    "Este supports",
+    "encima stable",
+    "encima estable"
+  ];
+
+  for (const snippet of requiredOriginalSnippets) {
+    if (!text.includes(snippet)) {
+      throw new Error(`Smoke fixture lost expected safe English text: ${snippet}`);
+    }
+  }
+
+  for (const snippet of wrongReplacementSnippets) {
+    if (text.includes(snippet)) {
+      throw new Error(`Smoke fixture rendered a wrong-sense replacement: ${snippet}`);
+    }
+  }
+
+  if (!codeBlockText.includes("account-export")) {
+    throw new Error("Smoke fixture code block was not present.");
+  }
+
+  if (codeBlockText.includes("cuenta")) {
+    throw new Error("Smoke fixture translated inside a code block.");
+  }
 }

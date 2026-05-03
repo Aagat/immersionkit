@@ -106,6 +106,85 @@ describe("background sentence analysis service", () => {
     expect(plantCandidate?.decision).toBe("inject");
   });
 
+  it("rejects wrong-sense screenshot replacements with observed POS evidence", async () => {
+    const sourceText =
+      "You might not need to write specs. This creates zero friction. ACIDs rely on stable numbering. The boundary is up to you.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["You", "you", "pronoun", ["PRON", "pronoun"]],
+        ["might", "might", "modal", ["AUX", "modal"]],
+        ["not", "not", "particle", ["PART", "particle"]],
+        ["need", "need", "verb", ["VERB", "verb"]],
+        ["to", "to", "particle", ["PART", "particle"]],
+        ["write", "write", "verb", ["VERB", "verb"]],
+        ["specs", "spec", "noun", ["NOUN", "noun"]],
+        [".", ".", "other", ["PUNCT", "other"]],
+        ["This", "this", "pronoun", ["PRON", "pronoun"]],
+        ["creates", "create", "verb", ["VERB", "verb"]],
+        ["zero", "zero", "number", ["NUM", "number"]],
+        ["friction", "friction", "noun", ["NOUN", "noun"]],
+        [".", ".", "other", ["PUNCT", "other"]],
+        ["ACIDs", "acids", "noun", ["PROPN", "noun"]],
+        ["rely", "rely", "verb", ["VERB", "verb"]],
+        ["on", "on", "preposition", ["ADP", "preposition"]],
+        ["stable", "stable", "adjective", ["ADJ", "adjective"]],
+        ["numbering", "numbering", "noun", ["NOUN", "noun"]],
+        [".", ".", "other", ["PUNCT", "other"]],
+        ["The", "the", "determiner", ["DET", "determiner"]],
+        ["boundary", "boundary", "noun", ["NOUN", "noun"]],
+        ["is", "be", "auxiliary", ["AUX", "auxiliary"]],
+        ["up", "up", "preposition", ["ADP", "preposition"]],
+        ["to", "to", "preposition", ["ADP", "preposition"]],
+        ["you", "you", "pronoun", ["PRON", "pronoun"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [
+        {
+          text: "stable numbering",
+          normalized: "stable numbering",
+          type: "noun-phrase",
+          tokenStart: 16,
+          tokenEnd: 18,
+          confidence: 0.86
+        }
+      ],
+      grammarFeatures: []
+    }));
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadLexicon: () =>
+        Promise.resolve([
+          lexiconEntry("lemma-need", "need", "necesidad", "noun"),
+          lexiconEntry("lemma-this", "this", "este", "adjective"),
+          lexiconEntry("lemma-zero", "zero", "cero", "noun"),
+          lexiconEntry("lemma-on", "on", "encima", "adverb"),
+          lexiconEntry("lemma-up", "up", "arriba", "adverb"),
+          lexiconEntry("lemma-stable", "stable", "estable", "adjective")
+        ]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const decisions = new Map(
+      analysis?.entry.contextualWordCandidates.map(
+        (candidate) => [candidate.candidateLemma, candidate.decision] as const
+      )
+    );
+
+    expect(decisions.get("need")).toBe("skip");
+    expect(decisions.get("this")).toBe("skip");
+    expect(decisions.get("zero")).toBe("skip");
+    expect(decisions.get("on")).toBe("skip");
+    expect(decisions.get("up")).toBe("skip");
+    expect(decisions.get("stable")).toBe("inject");
+  });
+
   it("produces phrase matches, grammar features, and suitability output", async () => {
     const sourceText = "The captain of the football team has been patient.";
     const sentenceHash = hashSentence(sourceText);
@@ -771,6 +850,24 @@ function token(
     tags,
     startOffset,
     endOffset
+  });
+}
+
+function tokensFromSpecs(
+  sourceText: string,
+  specs: readonly (readonly [string, string, string, readonly string[]])[]
+) {
+  let searchStart = 0;
+
+  return specs.map(([text, normalized, pos, tags]) => {
+    const startOffset = sourceText.indexOf(text, searchStart);
+    if (startOffset < 0) {
+      throw new Error(`Token ${text} was not found in fixture sentence.`);
+    }
+
+    const endOffset = startOffset + text.length;
+    searchStart = endOffset;
+    return token(text, normalized, pos, startOffset, endOffset, [...tags]);
   });
 }
 
