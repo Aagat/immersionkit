@@ -900,6 +900,9 @@ async function refreshFreshPhraseMatches(
         {
           occurrenceId: match.occurrenceId,
           phraseId: match.phraseId,
+          renderUnitId: match.renderUnitId,
+          renderUnitMinBand: match.renderUnitMinBand,
+          renderPolicy: match.renderPolicy,
           sentenceHash: match.sentenceHash || entry.sentenceHash,
           sourceText: match.sourceText,
           normalizedSourceText: match.normalizedSourceText,
@@ -1146,6 +1149,20 @@ function shouldActivateWordByCurriculum(
   state: ProcessingState,
   input: WordActivationInput
 ) {
+  if (input.lexiconEntry.renderUnitMinBand) {
+    const renderUnitBandDecision = evaluateWordCurriculumContentInventory({
+      lexiconEntry: input.lexiconEntry,
+      activeContent: state.activeWordCurriculumContent
+    });
+    if (!renderUnitBandDecision.eligible) {
+      return {
+        eligible: false,
+        activeBandId: renderUnitBandDecision.activeBandId,
+        skipReason: renderUnitBandDecision.skipReason
+      };
+    }
+  }
+
   if (input.isDueForReview || input.status !== "new") {
     return { eligible: true };
   }
@@ -1197,6 +1214,23 @@ function shouldActivatePhraseByCurriculum(
   state: ProcessingState,
   input: PhraseActivationInput
 ) {
+  if (input.renderUnitMinBand) {
+    const renderUnitBandDecision = evaluatePhraseCurriculumContentInventory({
+      sourceText: input.sourceText,
+      sourceKind: input.sourceKind,
+      category: input.category,
+      renderUnitMinBand: input.renderUnitMinBand,
+      activeContent: state.activePhraseCurriculumContent
+    });
+    if (!renderUnitBandDecision.eligible) {
+      return {
+        eligible: false,
+        activeBandId: renderUnitBandDecision.activeBandId,
+        skipReason: renderUnitBandDecision.skipReason
+      };
+    }
+  }
+
   if (input.isDueForReview) {
     return { eligible: true };
   }
@@ -1218,6 +1252,7 @@ function shouldActivatePhraseByCurriculum(
     sourceText: input.sourceText,
     sourceKind: input.sourceKind,
     category: input.category,
+    renderUnitMinBand: input.renderUnitMinBand,
     activeContent: state.activePhraseCurriculumContent
   });
   if (!inventoryDecision.eligible) {

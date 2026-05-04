@@ -1,8 +1,8 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-04-30T22:25:01.747Z",
+  "generatedAt": "2026-05-04T21:58:02.914Z",
   "runtime": {
-    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
     "locationHref": "http://127.0.0.1:4173/validation.html?task=nlp-performance&autorun=1&inputProfile=baseline",
     "timezone": "Europe/Madrid"
@@ -33,17 +33,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 13.799999713897705,
-      "hotPerSentenceLatencyMs": 0.3364285707473755,
+      "coldStartLatencyMs": 50.5,
+      "hotPerSentenceLatencyMs": 1.3978571427719935,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 2.3000001907348633,
-        "perSentenceLatencyMs": 0.23000001907348633
+        "totalLatencyMs": 9.900000005960464,
+        "perSentenceLatencyMs": 0.9900000005960464
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 11.900000095367432,
-        "perSentenceLatencyMs": 0.24791666865348816
+        "totalLatencyMs": 49.30000001192093,
+        "perSentenceLatencyMs": 1.027083333581686
       },
       "payload": {
         "averageBytesPerSentence": 1006.25,
@@ -63,9 +63,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 19.699999809265137,
-        "withCacheLatencyMs": 4.599999904632568,
-        "savedLatencyMs": 15.099999904632568
+        "noCacheLatencyMs": 82.90000000596046,
+        "withCacheLatencyMs": 18.19999998807907,
+        "savedLatencyMs": 64.7000000178814
       },
       "quality": {
         "corpusVersion": "2026-04-21",
@@ -1058,17 +1058,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.5,
-      "hotPerSentenceLatencyMs": 0.4799999986376081,
+      "coldStartLatencyMs": 5.9000000059604645,
+      "hotPerSentenceLatencyMs": 2.067142857185432,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 4.600000381469727,
-        "perSentenceLatencyMs": 0.46000003814697266
+        "totalLatencyMs": 18.400000005960464,
+        "perSentenceLatencyMs": 1.8400000005960464
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 22,
-        "perSentenceLatencyMs": 0.4583333333333333
+        "totalLatencyMs": 93.30000001192093,
+        "perSentenceLatencyMs": 1.9437500002483528
       },
       "payload": {
         "averageBytesPerSentence": 1075.4583333333333,
@@ -1088,9 +1088,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 37.89999961853027,
-        "withCacheLatencyMs": 7.100000381469727,
-        "savedLatencyMs": 30.799999237060547
+        "noCacheLatencyMs": 158.5,
+        "withCacheLatencyMs": 30,
+        "savedLatencyMs": 128.5
       },
       "quality": {
         "corpusVersion": "2026-04-21",
@@ -2121,17 +2121,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 0.8000001907348633,
-      "hotPerSentenceLatencyMs": 0.05714285714285714,
+      "coldStartLatencyMs": 3.199999988079071,
+      "hotPerSentenceLatencyMs": 0.20357142857142857,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 0.19999980926513672,
-        "perSentenceLatencyMs": 0.019999980926513672
+        "totalLatencyMs": 0.800000011920929,
+        "perSentenceLatencyMs": 0.0800000011920929
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 1,
-        "perSentenceLatencyMs": 0.020833333333333332
+        "totalLatencyMs": 4.299999982118607,
+        "perSentenceLatencyMs": 0.0895833329608043
       },
       "payload": {
         "averageBytesPerSentence": 918.2708333333334,
@@ -2151,9 +2151,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 1.4000000953674316,
-        "withCacheLatencyMs": 0.5,
-        "savedLatencyMs": 0.9000000953674316
+        "noCacheLatencyMs": 5,
+        "withCacheLatencyMs": 2,
+        "savedLatencyMs": 3
       },
       "quality": {
         "corpusVersion": "2026-04-21",

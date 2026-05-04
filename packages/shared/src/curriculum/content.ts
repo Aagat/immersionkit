@@ -48,11 +48,17 @@ export type ActiveCurriculumContent = {
 export type CurriculumContentInventoryDecision = {
   eligible: boolean;
   activeBandId: string | null;
-  matchReason: "frequency-rank" | "beginner-cognate" | "phrase-inventory" | null;
+  matchReason:
+    | "frequency-rank"
+    | "beginner-cognate"
+    | "phrase-inventory"
+    | "render-unit-band"
+    | null;
   skipReason:
     | "unknown-active-content"
     | "word-rank-outside-content"
     | "phrase-outside-content"
+    | "render-unit-band-locked"
     | null;
 };
 
@@ -410,6 +416,26 @@ export function evaluateWordCurriculumContentInventory(input: {
     };
   }
 
+  if (input.lexiconEntry.renderUnitMinBand) {
+    if (
+      isRenderUnitBandEligible(input.lexiconEntry.renderUnitMinBand, input.activeContent)
+    ) {
+      return {
+        eligible: true,
+        activeBandId,
+        matchReason: "render-unit-band",
+        skipReason: null
+      };
+    }
+
+    return {
+      eligible: false,
+      activeBandId,
+      matchReason: null,
+      skipReason: "render-unit-band-locked"
+    };
+  }
+
   const frequencyRank = input.lexiconEntry.frequencyRank;
   const rankIsInBand =
     typeof frequencyRank === "number" &&
@@ -449,6 +475,7 @@ export function evaluatePhraseCurriculumContentInventory(input: {
   sourceText: string;
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
+  renderUnitMinBand?: string;
   activeContent: ActiveCurriculumContent;
 }): CurriculumContentInventoryDecision {
   const activeBandId = input.activeContent.band?.bandId ?? null;
@@ -459,6 +486,24 @@ export function evaluatePhraseCurriculumContentInventory(input: {
       activeBandId,
       matchReason: null,
       skipReason: "unknown-active-content"
+    };
+  }
+
+  if (input.renderUnitMinBand) {
+    if (isRenderUnitBandEligible(input.renderUnitMinBand, input.activeContent)) {
+      return {
+        eligible: true,
+        activeBandId,
+        matchReason: "render-unit-band",
+        skipReason: null
+      };
+    }
+
+    return {
+      eligible: false,
+      activeBandId,
+      matchReason: null,
+      skipReason: "render-unit-band-locked"
     };
   }
 
@@ -486,6 +531,22 @@ export function evaluatePhraseCurriculumContentInventory(input: {
     matchReason: "phrase-inventory",
     skipReason: null
   };
+}
+
+function isRenderUnitBandEligible(
+  minBandId: string,
+  activeContent: ActiveCurriculumContent
+): boolean {
+  const activeOrder = activeContent.band?.order;
+  const minOrder = DEFAULT_CURRICULUM_CONFIG.bands.find(
+    (band) => band.bandId === minBandId
+  )?.order;
+
+  return (
+    typeof activeOrder === "number" &&
+    typeof minOrder === "number" &&
+    activeOrder >= minOrder
+  );
 }
 
 function phraseInventory(

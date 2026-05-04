@@ -14,13 +14,19 @@ import type {
 } from "@immersionkit/shared";
 import { resolveCurriculumConfig } from "@immersionkit/shared";
 
-import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
+import bundledLexemeAsset from "../assets/en-es.lexemes.v1.json";
+import bundledRenderUnitAsset from "../assets/en-es.render-units.v1.json";
 import {
   DEFAULT_DISCOVERY_RATE,
   DEFAULT_SETTINGS,
   FALLBACK_SEED_LEXICON,
   STORAGE_KEYS
 } from "./constants";
+import {
+  parseLexemeAsset,
+  parseRenderUnitAsset,
+  renderUnitsToSeedLexiconEntries
+} from "../render-units/render-units";
 import {
   isLikelyFallbackSeedLexicon,
   parseSeedLexiconInput
@@ -83,6 +89,9 @@ export type CachedPhraseMatch = Pick<
   PhraseOccurrence,
   | "occurrenceId"
   | "phraseId"
+  | "renderUnitId"
+  | "renderUnitMinBand"
+  | "renderPolicy"
   | "sentenceHash"
   | "sourceText"
   | "normalizedSourceText"
@@ -114,6 +123,8 @@ export async function loadProcessingContext(
     ...STORAGE_KEYS.settings,
     ...STORAGE_KEYS.siteSettings,
     ...STORAGE_KEYS.vocab,
+    ...STORAGE_KEYS.lexemes,
+    ...STORAGE_KEYS.renderUnits,
     ...STORAGE_KEYS.seedLexicon,
     ...STORAGE_KEYS.curriculumConfig,
     ...STORAGE_KEYS.learningProfile
@@ -132,7 +143,9 @@ export async function loadProcessingContext(
   );
 
   const lexiconInfo = resolveLexicon(
-    pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon)
+    pickFirstDefinedValue(storage, STORAGE_KEYS.renderUnits) ??
+      pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon),
+    pickFirstDefinedValue(storage, STORAGE_KEYS.lexemes)
   );
 
   const sentenceAnalysisContext = await loadCachedSentenceAnalysisContext(sentenceHashes);
@@ -380,7 +393,18 @@ function parseSiteSetting(input: unknown, hostname: string): SiteSetting | null 
   return null;
 }
 
-const BUNDLED_SEED_LEXICON = parseSeedLexiconInput(bundledSeedLexiconAsset);
+const BUNDLED_RENDER_UNITS = parseRenderUnitAsset(bundledRenderUnitAsset);
+const BUNDLED_LEXEMES = parseLexemeAsset(bundledLexemeAsset);
+const BUNDLED_SEED_LEXICON = BUNDLED_RENDER_UNITS
+  ? {
+      entries: renderUnitsToSeedLexiconEntries(
+        BUNDLED_RENDER_UNITS.entries,
+        BUNDLED_LEXEMES?.entries ?? []
+      ),
+      assetVersion: BUNDLED_RENDER_UNITS.assetVersion,
+      schemaVersion: BUNDLED_RENDER_UNITS.schemaVersion
+    }
+  : null;
 
 function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
   const entries: UserVocabEntry[] = [];
@@ -654,6 +678,15 @@ function normalizeCachedPhraseMatch(
   return {
     occurrenceId,
     phraseId,
+    renderUnitId: readString(input.renderUnitId) ?? undefined,
+    renderUnitMinBand: readString(input.renderUnitMinBand) ?? undefined,
+    renderPolicy:
+      input.renderPolicy === "inline" ||
+      input.renderPolicy === "phrase-only" ||
+      input.renderPolicy === "sentence-help-only" ||
+      input.renderPolicy === "suppress"
+        ? input.renderPolicy
+        : undefined,
     sentenceHash: readString(input.sentenceHash) ?? fallbackSentenceHash,
     sourceText,
     normalizedSourceText,
@@ -694,12 +727,30 @@ function normalizeCachedSkipDecision(
   };
 }
 
-function resolveLexicon(input: unknown): {
+function resolveLexicon(input: unknown, lexemeInput?: unknown): {
   entries: SeedLexiconEntry[];
   source: LexiconLoadSource;
   assetVersion: string | null;
   isFallback: boolean;
 } {
+  const parsedLexemes =
+    parseLexemeAsset(lexemeInput) ?? BUNDLED_LEXEMES;
+  const parsedRenderUnits = parseRenderUnitAsset(input);
+  if (parsedRenderUnits && parsedRenderUnits.entries.length > 0) {
+    const entries = renderUnitsToSeedLexiconEntries(
+      parsedRenderUnits.entries,
+      parsedLexemes?.entries ?? []
+    );
+    if (entries.length > 0) {
+      return {
+        entries,
+        source: "storage-wrapped-asset",
+        assetVersion: parsedRenderUnits.assetVersion,
+        isFallback: false
+      };
+    }
+  }
+
   const parsedStorageLexicon = parseSeedLexiconInput(input);
   if (
     parsedStorageLexicon &&

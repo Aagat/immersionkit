@@ -32,7 +32,7 @@ export type SentenceAnalyzer = {
 };
 
 export const WINK_NLP_ANALYZER_VERSION =
-  "wink-nlp@2.4.0+immersionkit-background-v1";
+  "wink-nlp@2.4.0+immersionkit-background-v2-render-units";
 
 let winkAnalyzerPromise: Promise<SentenceAnalyzer> | null = null;
 

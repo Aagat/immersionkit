@@ -1,15 +1,15 @@
 {
   "metadata": {
     "schemaVersion": "1.1.0",
-    "generatedAt": "2026-04-30T22:25:19.250Z",
+    "generatedAt": "2026-05-04T21:58:28.377Z",
     "taskId": "task-04-sentence-shortlisting",
     "canonicalCommand": "pnpm benchmark",
     "inputProfile": "baseline",
     "sourceOfTruth": "browser-run-validation",
     "browserContext": {
-      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
       "language": "en-US",
-      "platform": "MacIntel"
+      "platform": "Linux x86_64"
     },
     "scenarioCount": 8,
     "phraseHints": [

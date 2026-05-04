@@ -1,4 +1,5 @@
-import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
+import bundledLexemeAsset from "../assets/en-es.lexemes.v1.json";
+import bundledRenderUnitAsset from "../assets/en-es.render-units.v1.json";
 import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
@@ -19,6 +20,7 @@ import {
   type CuratedPhraseTargetEntry,
   type ObservedContextPos,
   type PhraseOccurrence,
+  type RenderUnitEntry,
   type SafeInjectionPos,
   type SeedLexiconEntry,
   type SentenceAnalysisEntry,
@@ -26,6 +28,12 @@ import {
   type VocabStatus
 } from "@immersionkit/shared";
 
+import {
+  parseLexemeAsset,
+  parseRenderUnitAsset,
+  renderUnitsToSeedLexiconEntries,
+  resolveRenderUnitPhraseTarget
+} from "../render-units/render-units";
 import { parseSeedLexiconInput } from "../seed/seed-lexicon";
 import {
   IndexedDbPhraseRegistryRepository,
@@ -48,7 +56,11 @@ const SEED_LEXICON_STORAGE_KEYS = [
   "seedLexicon",
   "lexicon"
 ] as const;
+const RENDER_UNIT_STORAGE_KEYS = ["immersionkit.renderUnits", "renderUnits"] as const;
+const LEXEME_STORAGE_KEYS = ["immersionkit.lexemes", "lexemes"] as const;
 const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
+const RUNTIME_RENDER_UNITS = parseRenderUnitAsset(bundledRenderUnitAsset);
+const RUNTIME_LEXEMES = parseLexemeAsset(bundledLexemeAsset);
 
 export type SentenceAnalysisCandidate = {
   sentenceHash?: string;
@@ -332,7 +344,7 @@ function buildPhraseOccurrences(
     minimumChunkConfidence: 0.76
   });
 
-  return detection.selectedCandidates.map((candidate) => {
+  const detectedOccurrences = detection.selectedCandidates.map((candidate) => {
     const resolvedTarget =
       candidate.targetText && candidate.normalizedTargetText
         ? {
@@ -372,6 +384,278 @@ function buildPhraseOccurrences(
       confidence: candidate.confidence
     };
   });
+
+  return [
+    ...detectedOccurrences,
+    ...buildRenderUnitPhraseOccurrences(
+      analyzerOutput,
+      RUNTIME_RENDER_UNITS?.entries ?? []
+    )
+  ];
+}
+
+function buildRenderUnitPhraseOccurrences(
+  analyzerOutput: AnalyzerOutput,
+  renderUnits: readonly RenderUnitEntry[]
+): PhraseOccurrence[] {
+  const occurrences: PhraseOccurrence[] = [];
+
+  for (const renderUnit of renderUnits) {
+    if (
+      renderUnit.kind === "single-token" ||
+      !shouldEmitRenderUnitOccurrence(renderUnit)
+    ) {
+      continue;
+    }
+
+    for (const span of findRenderUnitTokenSpans(analyzerOutput.tokens, renderUnit)) {
+      const replacementStart =
+        span.startToken + (renderUnit.replacement?.startToken ?? 0);
+      const replacementEnd =
+        span.startToken + (renderUnit.replacement?.endToken ?? span.endToken - span.startToken);
+      const firstToken = analyzerOutput.tokens[replacementStart];
+      const lastToken = analyzerOutput.tokens[replacementEnd - 1];
+      if (!firstToken || !lastToken) {
+        continue;
+      }
+
+      const sourceText = analyzerOutput.sourceText.slice(
+        firstToken.startOffset,
+        lastToken.endOffset
+      );
+      const sourceMetadata = mapRenderUnitPhraseMetadata(renderUnit.kind);
+      occurrences.push({
+        occurrenceId: `${analyzerOutput.sentenceHash}:${analyzerOutput.analyzerVersion}:${span.startToken}-${span.endToken}:${renderUnit.renderUnitId}`,
+        phraseId: renderUnit.renderUnitId,
+        renderUnitId: renderUnit.renderUnitId,
+        renderUnitMinBand: renderUnit.minBand,
+        renderPolicy: renderUnit.renderPolicy,
+        sentenceHash: analyzerOutput.sentenceHash,
+        analyzerVersion: analyzerOutput.analyzerVersion,
+        sourceText,
+        normalizedSourceText: renderUnit.normalizedSourceText,
+        targetText:
+          renderUnit.renderPolicy === "inline" || renderUnit.renderPolicy === "phrase-only"
+            ? renderUnit.replacement?.targetText ?? renderUnit.targetText
+            : undefined,
+        normalizedTargetText:
+          renderUnit.renderPolicy === "inline" || renderUnit.renderPolicy === "phrase-only"
+            ? normalizeToken(renderUnit.replacement?.targetText ?? renderUnit.targetText ?? "")
+            : undefined,
+        sourceKind: sourceMetadata.sourceKind,
+        category: sourceMetadata.category,
+        ruleId: `render-unit:${renderUnit.renderUnitId}`,
+        span: {
+          startToken: replacementStart,
+          endToken: replacementEnd,
+          startChar: firstToken.startOffset,
+          endChar: lastToken.endOffset
+        },
+        confidence: renderUnit.confidence
+      });
+    }
+  }
+
+  return occurrences;
+}
+
+function shouldEmitRenderUnitOccurrence(renderUnit: RenderUnitEntry): boolean {
+  if (renderUnit.renderPolicy === "sentence-help-only") {
+    return true;
+  }
+
+  return (
+    (renderUnit.renderPolicy === "inline" || renderUnit.renderPolicy === "phrase-only") &&
+    Boolean(renderUnit.targetText && renderUnit.normalizedTargetText)
+  );
+}
+
+function findRenderUnitTokenSpans(
+  tokens: readonly AnalyzerToken[],
+  renderUnit: RenderUnitEntry
+): { startToken: number; endToken: number }[] {
+  const spans: { startToken: number; endToken: number }[] = [];
+  const patternTokens = renderUnit.sourcePattern.tokens;
+  if (patternTokens.length === 0) {
+    return spans;
+  }
+
+  for (let startToken = 0; startToken < tokens.length; startToken += 1) {
+    let tokenIndex = startToken;
+    let matched = true;
+
+    for (const patternToken of patternTokens) {
+      const token = tokens[tokenIndex];
+      if (!token) {
+        if (patternToken.optional) {
+          continue;
+        }
+        matched = false;
+        break;
+      }
+
+      if (matchesRenderUnitPatternToken(tokens, tokenIndex, patternToken)) {
+        tokenIndex += 1;
+        continue;
+      }
+
+      if (!patternToken.optional) {
+        matched = false;
+        break;
+      }
+    }
+
+    if (matched && tokenIndex > startToken) {
+      spans.push({ startToken, endToken: tokenIndex });
+    }
+  }
+
+  return spans;
+}
+
+function matchesRenderUnitPatternToken(
+  tokens: readonly AnalyzerToken[],
+  tokenIndex: number,
+  pattern: RenderUnitEntry["sourcePattern"]["tokens"][number]
+): boolean {
+  const token = tokens[tokenIndex];
+  if (!token) {
+    return false;
+  }
+
+  if (pattern.normal && token.normalized !== pattern.normal) {
+    return false;
+  }
+
+  if (pattern.lemma && (token.lemma ?? token.normalized) !== pattern.lemma) {
+    return false;
+  }
+
+  if (pattern.surface && normalizeToken(token.text) !== normalizeToken(pattern.surface)) {
+    return false;
+  }
+
+  if (pattern.pos && token.pos !== pattern.pos) {
+    return false;
+  }
+
+  if (pattern.role && !matchesShallowRole(token, pattern.role)) {
+    return false;
+  }
+
+  return matchesRenderUnitFeatures(tokens, tokenIndex, pattern.features);
+}
+
+function matchesShallowRole(
+  token: AnalyzerToken,
+  role: NonNullable<RenderUnitEntry["sourcePattern"]["tokens"][number]["role"]>
+): boolean {
+  if (role === "subject") {
+    return token.pos === "pronoun" || token.pos === "noun" || token.pos === "proper-noun";
+  }
+
+  if (role === "verb") {
+    return token.pos === "verb" || token.pos === "auxiliary" || token.pos === "modal";
+  }
+
+  if (role === "object") {
+    return token.pos === "noun" || token.pos === "pronoun" || token.pos === "proper-noun";
+  }
+
+  return token.pos !== "other";
+}
+
+function matchesRenderUnitFeatures(
+  tokens: readonly AnalyzerToken[],
+  tokenIndex: number,
+  features: RenderUnitEntry["sourcePattern"]["tokens"][number]["features"]
+): boolean {
+  if (!features) {
+    return true;
+  }
+
+  const token = tokens[tokenIndex];
+  if (!token) {
+    return false;
+  }
+
+  for (const [key, value] of Object.entries(features)) {
+    if (key === "wildcard" && value === true) {
+      continue;
+    }
+
+    if (key === "normalIn" && !matchesStringOrList(token.normalized, value)) {
+      return false;
+    }
+
+    if (key === "lemmaIn" && !matchesStringOrList(token.lemma ?? token.normalized, value)) {
+      return false;
+    }
+
+    if (key === "posIn" && !matchesStringOrList(token.pos ?? "other", value)) {
+      return false;
+    }
+
+    if (key === "precededByNormal") {
+      const previous = tokens[tokenIndex - 1]?.normalized ?? "";
+      if (!matchesStringOrList(previous, value)) {
+        return false;
+      }
+    }
+
+    if (key === "followedByNormal") {
+      const next = tokens[tokenIndex + 1]?.normalized ?? "";
+      if (!matchesStringOrList(next, value)) {
+        return false;
+      }
+    }
+
+    if (key === "negated") {
+      const negated = hasNearbyNegation(tokens, tokenIndex);
+      if (typeof value === "boolean" && negated !== value) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function matchesStringOrList(
+  input: string,
+  expected: string | string[] | boolean
+): boolean {
+  if (typeof expected === "string") {
+    return input === expected;
+  }
+
+  return Array.isArray(expected) ? expected.includes(input) : false;
+}
+
+function hasNearbyNegation(tokens: readonly AnalyzerToken[], tokenIndex: number): boolean {
+  return tokens
+    .slice(Math.max(0, tokenIndex - 3), Math.min(tokens.length, tokenIndex + 4))
+    .some((token) =>
+      token.normalized === "not" ||
+      token.normalized === "never" ||
+      token.normalized === "no" ||
+      token.normalized.endsWith("n't")
+    );
+}
+
+function mapRenderUnitPhraseMetadata(kind: RenderUnitEntry["kind"]): Pick<
+  PhraseOccurrence,
+  "sourceKind" | "category"
+> {
+  if (kind === "fixed-phrase") {
+    return { sourceKind: "fixed-phrase", category: "fixed-idiom" };
+  }
+
+  if (kind === "noun-phrase") {
+    return { sourceKind: "chunk", category: "noun-chunk" };
+  }
+
+  return { sourceKind: "pattern-match", category: "grammar-carrier" };
 }
 
 function buildSeedLexiconPhraseTargetResolver(
@@ -380,6 +664,14 @@ function buildSeedLexiconPhraseTargetResolver(
   return (input) => {
     if (input.sourceKind === "fixed-phrase") {
       return null;
+    }
+
+    const renderUnitTarget = resolveRenderUnitPhraseTarget(
+      RUNTIME_RENDER_UNITS?.entries ?? [],
+      input.normalizedSourceText
+    );
+    if (renderUnitTarget) {
+      return renderUnitTarget;
     }
 
     const curatedTarget = RUNTIME_PHRASE_TARGET_LEXICON.find(
@@ -859,7 +1151,24 @@ function normalizeAnalysisCandidates(
 }
 
 async function loadBackgroundLexicon(): Promise<SeedLexiconEntry[]> {
-  const storage = await readStorageValues(SEED_LEXICON_STORAGE_KEYS);
+  const storage = await readStorageValues([
+    ...SEED_LEXICON_STORAGE_KEYS,
+    ...RENDER_UNIT_STORAGE_KEYS,
+    ...LEXEME_STORAGE_KEYS
+  ]);
+  const lexemes =
+    parseLexemeAsset(pickFirstDefinedValue(storage, LEXEME_STORAGE_KEYS)) ??
+    RUNTIME_LEXEMES;
+  const storedRenderUnits = parseRenderUnitAsset(
+    pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS)
+  );
+  if (storedRenderUnits && storedRenderUnits.entries.length > 0) {
+    return renderUnitsToSeedLexiconEntries(
+      storedRenderUnits.entries,
+      lexemes?.entries ?? []
+    );
+  }
+
   const stored = parseSeedLexiconInput(
     pickFirstDefinedValue(storage, SEED_LEXICON_STORAGE_KEYS)
   );
@@ -867,7 +1176,10 @@ async function loadBackgroundLexicon(): Promise<SeedLexiconEntry[]> {
     return stored.entries;
   }
 
-  return parseSeedLexiconInput(bundledSeedLexiconAsset)?.entries ?? [];
+  return renderUnitsToSeedLexiconEntries(
+    RUNTIME_RENDER_UNITS?.entries ?? [],
+    RUNTIME_LEXEMES?.entries ?? []
+  );
 }
 
 async function loadBackgroundVocab(): Promise<Map<string, UserVocabEntry>> {

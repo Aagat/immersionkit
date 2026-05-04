@@ -2,8 +2,19 @@ export const SUPPORTED_SOURCE_LANGUAGES = ["en"] as const;
 export const SUPPORTED_TARGET_LANGUAGES = ["es"] as const;
 export const SUPPORTED_POS_VALUES = [
   "noun",
+  "verb",
   "adjective",
   "adverb",
+  "modal",
+  "auxiliary",
+  "pronoun",
+  "determiner",
+  "preposition",
+  "particle",
+  "conjunction",
+  "interjection",
+  "proper-noun",
+  "number",
   "other"
 ] as const;
 export const SAFE_INJECTION_POS_VALUES = ["noun", "adjective", "adverb"] as const;
@@ -90,6 +101,29 @@ export const CURRICULUM_BAND_UNIT_TYPES = [
   "grammar-feature",
   "mixed"
 ] as const;
+export const RENDER_UNIT_KINDS = [
+  "single-token",
+  "fixed-phrase",
+  "grammar-phrase",
+  "subject-verb-phrase",
+  "verb-object-phrase",
+  "noun-phrase",
+  "sentence-help-only"
+] as const;
+export const RENDER_UNIT_MATCH_MODES = ["exact", "token-pattern"] as const;
+export const RENDER_UNIT_POLICIES = [
+  "inline",
+  "phrase-only",
+  "sentence-help-only",
+  "suppress"
+] as const;
+export const RENDER_UNIT_PROVENANCE_SOURCES = [
+  "deck-row",
+  "deck-example",
+  "manual",
+  "llm-import",
+  "curated"
+] as const;
 
 export type SupportedSourceLanguage = (typeof SUPPORTED_SOURCE_LANGUAGES)[number];
 export type SupportedTargetLanguage = (typeof SUPPORTED_TARGET_LANGUAGES)[number];
@@ -110,6 +144,11 @@ export type ReviewEventType = (typeof REVIEW_EVENT_TYPES)[number];
 export type ReviewGrade = (typeof REVIEW_GRADES)[number];
 export type AssistEventType = (typeof ASSIST_EVENT_TYPES)[number];
 export type CurriculumBandUnitType = (typeof CURRICULUM_BAND_UNIT_TYPES)[number];
+export type RenderUnitKind = (typeof RENDER_UNIT_KINDS)[number];
+export type RenderUnitMatchMode = (typeof RENDER_UNIT_MATCH_MODES)[number];
+export type RenderUnitPolicy = (typeof RENDER_UNIT_POLICIES)[number];
+export type RenderUnitProvenanceSource =
+  (typeof RENDER_UNIT_PROVENANCE_SOURCES)[number];
 
 export type TokenSpan = {
   startToken: number;
@@ -177,6 +216,90 @@ export type PhraseLexiconEntry = {
   sourceDataset?: string;
 };
 
+export type LexemeEntry = {
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  pos: SupportedPos;
+  frequencyRank: number | null;
+  cefrLevel?: string;
+  confidence: number;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: string[];
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
+  sourceDataset?: string;
+};
+
+export type LexemeAsset = {
+  schemaVersion: string;
+  assetVersion: string;
+  languagePair: "en-es";
+  generatedAt?: IsoTimestamp;
+  entries: LexemeEntry[];
+};
+
+export type RenderUnitTokenPattern = {
+  surface?: string;
+  normal?: string;
+  lemma?: string;
+  pos?: SupportedPos;
+  role?: "subject" | "verb" | "object" | "complement";
+  optional?: boolean;
+  features?: Record<string, string | string[] | boolean>;
+};
+
+export type RenderUnitSourcePattern = {
+  matchMode: RenderUnitMatchMode;
+  tokens: RenderUnitTokenPattern[];
+};
+
+export type RenderUnitReplacement = {
+  startToken: number;
+  endToken: number;
+  targetText: string;
+};
+
+export type RenderUnitProvenance = {
+  source: RenderUnitProvenanceSource;
+  sourceRowHash?: string;
+  promptVersion?: string;
+  model?: string;
+  notes?: string;
+};
+
+export type RenderUnitEntry = {
+  renderUnitId: string;
+  lexemeIds: string[];
+  kind: RenderUnitKind;
+  renderPolicy: RenderUnitPolicy;
+  sourceText: string;
+  normalizedSourceText: string;
+  targetText?: string;
+  normalizedTargetText?: string;
+  sourcePattern: RenderUnitSourcePattern;
+  replacement?: RenderUnitReplacement;
+  pos?: SupportedPos;
+  minBand: string;
+  frequencyRank?: number | null;
+  confidence: number;
+  provenance: RenderUnitProvenance;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: string[];
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
+};
+
+export type RenderUnitAsset = {
+  schemaVersion: string;
+  assetVersion: string;
+  languagePair: "en-es";
+  generatedAt?: IsoTimestamp;
+  entries: RenderUnitEntry[];
+};
+
 export type PhraseRegistryEntry = {
   phraseId: string;
   normalizedSourceText: string;
@@ -195,6 +318,9 @@ export type PhraseRegistryEntry = {
 export type PhraseOccurrence = {
   occurrenceId: string;
   phraseId: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
+  renderPolicy?: RenderUnitPolicy;
   sentenceHash: string;
   analyzerVersion: string;
   sourceText: string;
@@ -360,6 +486,9 @@ export type UserLearningProfile = {
 
 export type SeedLexiconEntry = {
   lemmaId: string;
+  lexemeId?: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
   sourceLemma: string;
   targetLemma: string;
   pos: SupportedPos;

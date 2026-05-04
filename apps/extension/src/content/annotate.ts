@@ -78,6 +78,7 @@ export type PhraseActivationInput = {
   confidence: number;
   sourceKind: CachedPhraseMatch["sourceKind"];
   category: CachedPhraseMatch["category"];
+  renderUnitMinBand?: string;
   isDueForReview: boolean;
 };
 
@@ -1108,6 +1109,7 @@ function selectPhraseRenderCandidates(input: {
           confidence: match.confidence,
           sourceKind: match.sourceKind,
           category: match.category,
+          renderUnitMinBand: match.renderUnitMinBand,
           isDueForReview
         });
         if (!curriculumDecision.eligible) {

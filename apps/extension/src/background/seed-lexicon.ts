@@ -1,4 +1,10 @@
-import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
+import bundledLexemeAsset from "../assets/en-es.lexemes.v1.json";
+import bundledRenderUnitAsset from "../assets/en-es.render-units.v1.json";
+import {
+  parseLexemeAsset,
+  parseRenderUnitAsset,
+  renderUnitsToSeedLexiconAsset
+} from "../render-units/render-units";
 import {
   isLikelyFallbackSeedLexicon,
   parseSeedLexiconInput
@@ -15,7 +21,11 @@ const SEED_LEXICON_STORAGE_KEYS = [
   "seedLexicon",
   "lexicon"
 ] as const;
+const RENDER_UNIT_STORAGE_KEYS = ["immersionkit.renderUnits", "renderUnits"] as const;
+const LEXEME_STORAGE_KEYS = ["immersionkit.lexemes", "lexemes"] as const;
 const PRIMARY_SEED_LEXICON_STORAGE_KEY = SEED_LEXICON_STORAGE_KEYS[0];
+const PRIMARY_RENDER_UNIT_STORAGE_KEY = RENDER_UNIT_STORAGE_KEYS[0];
+const PRIMARY_LEXEME_STORAGE_KEY = LEXEME_STORAGE_KEYS[0];
 
 type SeedLexiconBootstrapResult = {
   source: "existing" | "seeded" | "seeded-fallback";
@@ -23,12 +33,31 @@ type SeedLexiconBootstrapResult = {
   assetVersion: string | null;
 };
 
-const BUNDLED_SEED_LEXICON = parseSeedLexiconInput(bundledSeedLexiconAsset);
+const BUNDLED_RENDER_UNITS = parseRenderUnitAsset(bundledRenderUnitAsset);
+const BUNDLED_LEXEMES = parseLexemeAsset(bundledLexemeAsset);
+const BUNDLED_RENDER_LEXICON_ASSET = BUNDLED_RENDER_UNITS
+  ? renderUnitsToSeedLexiconAsset(BUNDLED_RENDER_UNITS, BUNDLED_LEXEMES?.entries ?? [])
+  : null;
+const BUNDLED_SEED_LEXICON = parseSeedLexiconInput(BUNDLED_RENDER_LEXICON_ASSET);
 
 export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResult> {
-  const storage = await readStorageValues(SEED_LEXICON_STORAGE_KEYS);
+  const storage = await readStorageValues([
+    ...SEED_LEXICON_STORAGE_KEYS,
+    ...RENDER_UNIT_STORAGE_KEYS,
+    ...LEXEME_STORAGE_KEYS
+  ]);
+  const storedRenderUnits = parseRenderUnitAsset(
+    pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS)
+  );
+  const storedLexemes =
+    parseLexemeAsset(pickFirstDefinedValue(storage, LEXEME_STORAGE_KEYS)) ??
+    BUNDLED_LEXEMES;
   const storedValue = pickFirstDefinedValue(storage, SEED_LEXICON_STORAGE_KEYS);
-  const parsedStoredLexicon = parseSeedLexiconInput(storedValue);
+  const parsedStoredLexicon = storedRenderUnits
+    ? parseSeedLexiconInput(
+        renderUnitsToSeedLexiconAsset(storedRenderUnits, storedLexemes?.entries ?? [])
+      )
+    : parseSeedLexiconInput(storedValue);
 
   if (
     parsedStoredLexicon &&
@@ -45,10 +74,16 @@ export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResu
 
   if (BUNDLED_SEED_LEXICON && BUNDLED_SEED_LEXICON.entries.length > 0) {
     await writeStorageValues({
-      [PRIMARY_SEED_LEXICON_STORAGE_KEY]: bundledSeedLexiconAsset
+      [PRIMARY_LEXEME_STORAGE_KEY]: bundledLexemeAsset,
+      [PRIMARY_RENDER_UNIT_STORAGE_KEY]: bundledRenderUnitAsset,
+      [PRIMARY_SEED_LEXICON_STORAGE_KEY]: BUNDLED_RENDER_LEXICON_ASSET
     });
 
-    const legacyStorageKeys = SEED_LEXICON_STORAGE_KEYS.slice(1);
+    const legacyStorageKeys = [
+      ...SEED_LEXICON_STORAGE_KEYS.slice(1),
+      ...RENDER_UNIT_STORAGE_KEYS.slice(1),
+      ...LEXEME_STORAGE_KEYS.slice(1)
+    ];
     if (legacyStorageKeys.length > 0) {
       await removeStorageValues(legacyStorageKeys);
     }
@@ -88,8 +123,7 @@ function shouldRefreshStoredLexicon(
   if (
     currentAssetVersion &&
     BUNDLED_SEED_LEXICON.assetVersion &&
-    currentAssetVersion !== BUNDLED_SEED_LEXICON.assetVersion &&
-    currentEntryCount <= bundledEntryCount
+    currentAssetVersion !== BUNDLED_SEED_LEXICON.assetVersion
   ) {
     return true;
   }
