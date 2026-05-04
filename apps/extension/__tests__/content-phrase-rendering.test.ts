@@ -191,6 +191,67 @@ describe("content phrase-unit rendering", () => {
     });
   });
 
+  it("does not let due-review render units bypass the active curriculum gate", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sentence = "We take care of the old city.";
+      const textNode = document.createTextNode(sentence);
+      document.body.append(textNode);
+      const gateInputs: Array<{ renderUnitMinBand?: string; isDueForReview: boolean }> = [];
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "phrase-render-unit-due-gate-test",
+        createNodeId: () => "ikn-phrase-render-unit-due-gate-test",
+        lexiconLookup: new Map(),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false,
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
+          createPhraseMatch(sentence, {
+            phraseId: "ru:test-take-care-of",
+            sourceText: "take care of",
+            startChar: 3,
+            endChar: 15,
+            sourceKind: "fixed-phrase",
+            category: "fixed-idiom",
+            renderUnitMinBand: "level-2a"
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "ru:test-take-care-of",
+            createPhraseLearningItem({
+              phraseId: "ru:test-take-care-of",
+              sourceText: "take care of",
+              targetText: "cuidar de",
+              nextReviewAt: "2000-01-01T00:00:00.000Z"
+            })
+          ]
+        ]),
+        shouldActivatePhrase: (input) => {
+          gateInputs.push({
+            renderUnitMinBand: input.renderUnitMinBand,
+            isDueForReview: input.isDueForReview
+          });
+          return {
+            eligible: false,
+            configId: "test-curriculum",
+            activeBandId: "level-1a",
+            skipReason: "render-unit-outside-active-band"
+          };
+        }
+      });
+
+      expect(gateInputs).toEqual([
+        { renderUnitMinBand: "level-2a", isDueForReview: true }
+      ]);
+      expect(result.phraseInjectedCount).toBe(0);
+      expect(result.curriculumSkippedPhraseCount).toBe(1);
+      expect(result.phraseRejectedCount).toBe(1);
+      expect(document.querySelector("[data-ik-unit-kind='phrase']")).toBeNull();
+      expect(document.body.textContent).toContain(sentence);
+    });
+  });
+
   it("passes phrase source text into the active curriculum inventory gate", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const sentence = "The public health care system needs support.";
@@ -308,6 +369,7 @@ function createPhraseMatch(
     endChar: number;
     sourceKind?: CachedPhraseMatch["sourceKind"];
     category?: CachedPhraseMatch["category"];
+    renderUnitMinBand?: CachedPhraseMatch["renderUnitMinBand"];
   }
 ): CachedPhraseMatch {
   return {
@@ -318,6 +380,8 @@ function createPhraseMatch(
     normalizedSourceText: input.sourceText.toLowerCase(),
     sourceKind: input.sourceKind ?? "pattern-match",
     category: input.category ?? "grammar-carrier",
+    renderUnitId: input.phraseId.startsWith("ru:") ? input.phraseId : undefined,
+    renderUnitMinBand: input.renderUnitMinBand,
     ruleId: "used-to",
     span: {
       startToken: 1,

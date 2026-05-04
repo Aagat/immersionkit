@@ -20,6 +20,8 @@ import {
 } from "../src/background/phrase-registry";
 import type { SentenceAnalysisCacheRepository } from "../src/background/sentence-analysis-cache";
 import type { SentenceAnalyzer } from "../src/background/sentence-analyzers";
+import { parseRenderUnitAsset } from "../src/render-units/render-units";
+import renderUnitAsset from "../src/assets/en-es.render-units.v1.json";
 
 describe("background sentence analysis service", () => {
   it("caches SentenceAnalysisEntry records by sentence hash and analyzer version", async () => {
@@ -423,6 +425,76 @@ describe("background sentence analysis service", () => {
     expect(analysis?.suitabilitySignals.chunkUsefulness).toBeGreaterThan(0);
   });
 
+  it("does not emit renderable matches for unsafe bare conjugated grammar frames", async () => {
+    const sourceText = "She is going to write. They used to trade.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () =>
+      createAuxiliaryFrameAnalyzerOutput(sourceText, sentenceHash)
+    );
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadLexicon: () => Promise.resolve([]),
+      loadRenderUnits: () => Promise.resolve(renderUnits),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const unsafeRenderableFrames = analysis?.entry.phraseMatches.filter(
+      (match) =>
+        ["ru:going-to:grammar-phrase", "ru:used-to:grammar-phrase"].includes(
+          match.renderUnitId ?? ""
+        ) &&
+        (match.renderPolicy === "inline" || match.renderPolicy === "phrase-only")
+    );
+
+    expect(unsafeRenderableFrames).toEqual([]);
+  });
+
+  it("invalidates cached analysis when render-unit pattern or replacement details change", async () => {
+    const sourceText = "I need help today.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyze = vi.fn((sentence: string, suppliedHash?: string) =>
+      createNeedHelpAnalyzerOutput(sentence, suppliedHash ?? hashSentence(sentence))
+    );
+    const analyzer = createAnalyzer("fixture-v1", analyze);
+    const cache = new InMemorySentenceAnalysisCache();
+    let renderUnits = [
+      createNeedHelpRenderUnit({
+        replacementEndToken: 2,
+        verbFeatures: undefined
+      })
+    ];
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache,
+      loadLexicon: () => Promise.resolve([]),
+      loadRenderUnits: () => Promise.resolve(renderUnits),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [first] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    renderUnits = [
+      createNeedHelpRenderUnit({
+        replacementEndToken: 1,
+        verbFeatures: { negated: false }
+      })
+    ];
+    const [second] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+
+    expect(first?.entry.phraseMatches[0]).toMatchObject({
+      renderUnitId: "ru:test-need-help",
+      sourceText: "need help"
+    });
+    expect(second?.cacheHit).toBe(false);
+    expect(analyze).toHaveBeenCalledTimes(2);
+    expect(second?.entry.phraseMatches[0]).toMatchObject({
+      renderUnitId: "ru:test-need-help",
+      sourceText: "need"
+    });
+  });
+
   it("resolves runtime phrase targets from exact multiword seed entries", async () => {
     const sourceText = "The old city center walls hold quiet memory.";
     const sentenceHash = hashSentence(sourceText);
@@ -804,6 +876,103 @@ function createFixedPhraseAnalyzerOutput(
     ],
     chunks: [],
     grammarFeatures: []
+  };
+}
+
+function createAuxiliaryFrameAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: tokensFromSpecs(sourceText, [
+      ["She", "she", "pronoun", ["PRON", "pronoun"]],
+      ["is", "be", "auxiliary", ["AUX", "auxiliary"]],
+      ["going", "going", "verb", ["VERB", "verb"]],
+      ["to", "to", "particle", ["PART", "particle"]],
+      ["write", "write", "verb", ["VERB", "verb"]],
+      [".", ".", "other", ["PUNCT", "other"]],
+      ["They", "they", "pronoun", ["PRON", "pronoun"]],
+      ["used", "used", "verb", ["VERB", "verb"]],
+      ["to", "to", "particle", ["PART", "particle"]],
+      ["trade", "trade", "verb", ["VERB", "verb"]],
+      [".", ".", "other", ["PUNCT", "other"]]
+    ]),
+    chunks: [],
+    grammarFeatures: []
+  };
+}
+
+function createNeedHelpAnalyzerOutput(
+  sourceText: string,
+  sentenceHash: string
+): AnalyzerOutput {
+  return {
+    analyzerId: "fixture-annotated",
+    analyzerVersion: "fixture-v1",
+    sentenceHash,
+    sourceText,
+    tokens: tokensFromSpecs(sourceText, [
+      ["I", "i", "pronoun", ["PRON", "pronoun"]],
+      ["need", "need", "verb", ["VERB", "verb"]],
+      ["help", "help", "noun", ["NOUN", "noun"]],
+      ["today", "today", "adverb", ["ADV", "adverb"]],
+      [".", ".", "other", ["PUNCT", "other"]]
+    ]),
+    chunks: [],
+    grammarFeatures: []
+  };
+}
+
+function createNeedHelpRenderUnit(input: {
+  replacementEndToken: number;
+  verbFeatures:
+    | RenderUnitEntry["sourcePattern"]["tokens"][number]["features"]
+    | undefined;
+}): RenderUnitEntry {
+  return {
+    renderUnitId: "ru:test-need-help",
+    lexemeIds: ["lx:need:verb", "lx:help:noun"],
+    kind: "verb-object-phrase",
+    renderPolicy: "phrase-only",
+    sourceText: "need help",
+    normalizedSourceText: "need help",
+    targetText: "necesito ayuda",
+    normalizedTargetText: "necesito ayuda",
+    sourcePattern: {
+      matchMode: "analyzer-pattern",
+      tokens: [
+        {
+          normal: "need",
+          lemma: "need",
+          pos: "verb",
+          role: "verb",
+          ...(input.verbFeatures ? { features: input.verbFeatures } : {})
+        },
+        {
+          normal: "help",
+          lemma: "help",
+          pos: "noun",
+          role: "object"
+        }
+      ]
+    },
+    replacement: {
+      startToken: 0,
+      endToken: input.replacementEndToken,
+      targetText: "necesito ayuda"
+    },
+    minBand: "level-1b",
+    frequencyRank: null,
+    confidence: 0.91,
+    provenance: {
+      source: "manual"
+    },
+    sourceLanguage: "en",
+    targetLanguage: "es"
   };
 }
 

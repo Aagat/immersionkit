@@ -416,19 +416,44 @@ function buildRenderUnitAnalysisVersion(
 
   const signature = renderUnits
     .map((unit) =>
-      [
-        unit.renderUnitId,
-        unit.renderPolicy,
-        unit.minBand,
-        unit.normalizedSourceText,
-        unit.normalizedTargetText ?? "",
-        unit.sourcePattern.matchMode
-      ].join(":")
+      stableSerializeRenderUnitSignature({
+        renderUnitId: unit.renderUnitId,
+        kind: unit.kind,
+        renderPolicy: unit.renderPolicy,
+        minBand: unit.minBand,
+        sourceText: unit.sourceText,
+        normalizedSourceText: unit.normalizedSourceText,
+        targetText: unit.targetText ?? null,
+        normalizedTargetText: unit.normalizedTargetText ?? null,
+        sourcePattern: unit.sourcePattern,
+        replacement: unit.replacement ?? null,
+        confidence: unit.confidence
+      })
     )
     .sort()
     .join("|");
 
   return `${analyzerVersion}+render-units:${hashSentence(signature).slice(0, 12)}`;
+}
+
+function stableSerializeRenderUnitSignature(input: unknown): string {
+  if (input === null || typeof input !== "object") {
+    return JSON.stringify(input);
+  }
+
+  if (Array.isArray(input)) {
+    return `[${input.map((item) => stableSerializeRenderUnitSignature(item)).join(",")}]`;
+  }
+
+  const entries = Object.entries(input)
+    .filter(([, value]) => value !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right));
+  return `{${entries
+    .map(
+      ([key, value]) =>
+        `${JSON.stringify(key)}:${stableSerializeRenderUnitSignature(value)}`
+    )
+    .join(",")}}`;
 }
 
 function overlapsRenderUnitOccurrence(

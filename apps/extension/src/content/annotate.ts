@@ -1102,7 +1102,7 @@ function selectPhraseRenderCandidates(input: {
       const isDueForReview =
         Boolean(learningItem.nextReviewAt) &&
         Date.parse(learningItem.nextReviewAt ?? "") <= Date.now();
-      if (!isDueForReview && input.shouldActivatePhrase) {
+      if (input.shouldActivatePhrase) {
         const curriculumDecision = input.shouldActivatePhrase({
           phraseId: match.phraseId,
           sourceText: match.sourceText,
