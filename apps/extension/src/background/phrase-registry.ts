@@ -181,7 +181,7 @@ export function mergePhraseOccurrence(
   now: string
 ): PhraseRegistryEntry {
   if (!existing) {
-    return createRuntimePhraseRegistryEntry({
+    const created = createRuntimePhraseRegistryEntry({
       sourceText: occurrence.sourceText,
       targetText: occurrence.targetText ?? "",
       sourceKind: occurrence.sourceKind,
@@ -191,6 +191,10 @@ export function mergePhraseOccurrence(
       lastSeenAt: now,
       exposureCount: 1
     });
+    return {
+      ...created,
+      phraseId: occurrence.phraseId
+    };
   }
 
   return {

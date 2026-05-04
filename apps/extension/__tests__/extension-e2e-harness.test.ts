@@ -25,7 +25,7 @@ const fixtureHtml = `<!doctype html>
       <article>
         <h1>City services update</h1>
         <p>The important new city has at least one small family house near the water.</p>
-        <p>As soon as we arrive at the old city, we take care of the important book.</p>
+        <p>As soon as we arrive at the old city, we read the important book right now.</p>
         <p>The public safety update includes school board schedules and weather forecasts.</p>
       </article>
     </main>

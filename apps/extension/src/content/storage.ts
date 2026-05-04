@@ -23,6 +23,7 @@ import {
   STORAGE_KEYS
 } from "./constants";
 import {
+  getRenderUnitSentenceHints,
   parseLexemeAsset,
   parseRenderUnitAsset,
   renderUnitsToSeedLexiconEntries
@@ -66,6 +67,7 @@ export type ProcessingContext = {
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  sentenceHintPhrases: string[];
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
   curriculumConfig: CurriculumConfig;
   learningProfile: CurriculumRuntimeProfileInput;
@@ -168,6 +170,7 @@ export async function loadProcessingContext(
       assetVersion: lexiconInfo.assetVersion,
       isFallback: lexiconInfo.isFallback
     },
+    sentenceHintPhrases: lexiconInfo.sentenceHintPhrases,
     vocabByLemmaId: parseVocabEntries(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
     ),
@@ -729,6 +732,7 @@ function normalizeCachedSkipDecision(
 
 function resolveLexicon(input: unknown, lexemeInput?: unknown): {
   entries: SeedLexiconEntry[];
+  sentenceHintPhrases: string[];
   source: LexiconLoadSource;
   assetVersion: string | null;
   isFallback: boolean;
@@ -744,6 +748,7 @@ function resolveLexicon(input: unknown, lexemeInput?: unknown): {
     if (entries.length > 0) {
       return {
         entries,
+        sentenceHintPhrases: getRenderUnitSentenceHints(parsedRenderUnits.entries),
         source: "storage-wrapped-asset",
         assetVersion: parsedRenderUnits.assetVersion,
         isFallback: false
@@ -759,6 +764,7 @@ function resolveLexicon(input: unknown, lexemeInput?: unknown): {
   ) {
     return {
       entries: parsedStorageLexicon.entries,
+      sentenceHintPhrases: [],
       source:
         parsedStorageLexicon.format === "legacy-object-array"
           ? "storage-legacy-array"
@@ -771,6 +777,7 @@ function resolveLexicon(input: unknown, lexemeInput?: unknown): {
   if (BUNDLED_SEED_LEXICON && BUNDLED_SEED_LEXICON.entries.length > 0) {
     return {
       entries: BUNDLED_SEED_LEXICON.entries,
+      sentenceHintPhrases: getRenderUnitSentenceHints(BUNDLED_RENDER_UNITS?.entries ?? []),
       source: "bundled-asset",
       assetVersion: BUNDLED_SEED_LEXICON.assetVersion,
       isFallback: false
@@ -779,6 +786,7 @@ function resolveLexicon(input: unknown, lexemeInput?: unknown): {
 
   return {
     entries: FALLBACK_SEED_LEXICON,
+    sentenceHintPhrases: [],
     source: "fallback",
     assetVersion: null,
     isFallback: true

@@ -112,4 +112,92 @@ describe("extension test scaffolding", () => {
       chromeStub.restore();
     }
   });
+
+  it("adapts stored render units into lexeme-backed words and sentence-help hints", async () => {
+    const chromeStub = installChromeStub({
+      "immersionkit.lexemes": {
+        schemaVersion: "1.0.0",
+        assetVersion: "test-lexemes",
+        languagePair: "en-es",
+        entries: [
+          {
+            lexemeId: "lx:city:noun",
+            sourceLemma: "city",
+            targetLemma: "ciudad",
+            pos: "noun",
+            frequencyRank: 12,
+            confidence: 0.98
+          }
+        ]
+      },
+      "immersionkit.renderUnits": {
+        schemaVersion: "1.0.0",
+        assetVersion: "test-render-units",
+        languagePair: "en-es",
+        entries: [
+          {
+            renderUnitId: "ru:test-city",
+            lexemeIds: ["lx:city:noun"],
+            kind: "single-token",
+            renderPolicy: "inline",
+            sourceText: "city",
+            normalizedSourceText: "city",
+            targetText: "ciudad",
+            normalizedTargetText: "ciudad",
+            sourcePattern: {
+              matchMode: "exact",
+              tokens: [{ normal: "city", lemma: "city", pos: "noun" }]
+            },
+            replacement: {
+              startToken: 0,
+              endToken: 1,
+              targetText: "ciudad"
+            },
+            pos: "noun",
+            minBand: "level-1a",
+            frequencyRank: 12,
+            confidence: 0.98,
+            provenance: { source: "manual" }
+          },
+          {
+            renderUnitId: "ru:test-need-help-only",
+            lexemeIds: ["lx:need:verb"],
+            kind: "sentence-help-only",
+            renderPolicy: "sentence-help-only",
+            sourceText: "might need to",
+            normalizedSourceText: "might need to",
+            sourcePattern: {
+              matchMode: "analyzer-pattern",
+              tokens: [
+                { normal: "might" },
+                { lemma: "need", pos: "verb" },
+                { normal: "to" }
+              ]
+            },
+            minBand: "level-1a",
+            confidence: 0.99,
+            provenance: { source: "manual" }
+          }
+        ]
+      }
+    });
+
+    try {
+      const context = await loadProcessingContext("fixtures.immersionkit.test");
+
+      expect(context.lexiconInfo.source).toBe("storage-wrapped-asset");
+      expect(context.lexiconInfo.assetVersion).toBe("test-render-units");
+      expect(context.lexicon).toEqual([
+        expect.objectContaining({
+          lemmaId: "lx:city:noun",
+          lexemeId: "lx:city:noun",
+          renderUnitId: "ru:test-city",
+          renderUnitMinBand: "level-1a"
+        })
+      ]);
+      expect(context.sentenceHintPhrases).toContain("might need to");
+    } finally {
+      chromeStub.restore();
+    }
+  });
 });

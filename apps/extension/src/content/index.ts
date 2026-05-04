@@ -99,6 +99,7 @@ type ProcessingState = {
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  sentenceHintPhrases: string[];
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
   seenSentenceHashes: Set<string>;
   processedTextNodes: number;
@@ -448,6 +449,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       cachedContextSkipDecisions: processingContext.cachedContextSkipDecisions,
       cachedPhraseMatchesBySentenceHash:
         processingContext.cachedPhraseMatchesBySentenceHash,
+      sentenceHintPhrases: processingContext.sentenceHintPhrases,
       cachedGrammarFeaturesBySentenceHash:
         processingContext.cachedGrammarFeaturesBySentenceHash,
       seenSentenceHashes: new Set<string>(),
@@ -690,6 +692,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         vocabByLemmaId: state.vocabByLemmaId,
         cachedContextSkipDecisions: state.cachedContextSkipDecisions,
         cachedPhraseMatchesBySentenceHash: state.cachedPhraseMatchesBySentenceHash,
+        sentenceHintPhrases: state.sentenceHintPhrases,
         learningItemsByUnitRefId: state.learningItemsByUnitRefId,
         shouldActivateWord: (input) => shouldActivateWordByCurriculum(state, input),
         shouldActivatePhrase: (input) => shouldActivatePhraseByCurriculum(state, input),

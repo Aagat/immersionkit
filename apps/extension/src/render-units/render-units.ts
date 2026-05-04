@@ -209,6 +209,29 @@ export function resolveRenderUnitPhraseTarget(
   };
 }
 
+export function getRenderUnitSentenceHints(
+  entries: readonly RenderUnitEntry[]
+): string[] {
+  const hints = new Set<string>();
+  for (const entry of entries) {
+    if (
+      entry.kind === "single-token" ||
+      (entry.renderPolicy !== "sentence-help-only" &&
+        entry.renderPolicy !== "phrase-only" &&
+        entry.renderPolicy !== "inline")
+    ) {
+      continue;
+    }
+
+    const hint = renderUnitHintText(entry);
+    if (hint) {
+      hints.add(hint);
+    }
+  }
+
+  return [...hints];
+}
+
 function normalizeRenderUnitEntry(input: unknown): RenderUnitEntry | null {
   if (!isRecord(input)) {
     return null;
@@ -423,9 +446,14 @@ function readRenderUnitKind(value: unknown): RenderUnitKind | null {
 }
 
 function readRenderUnitMatchMode(value: unknown): RenderUnitMatchMode | null {
-  return readStringSetValue(value, RENDER_UNIT_MATCH_MODE_SET) as
-    | RenderUnitMatchMode
-    | null;
+  const text = readString(value);
+  if (text === "token-pattern") {
+    return "analyzer-pattern";
+  }
+
+  return text && RENDER_UNIT_MATCH_MODE_SET.has(text)
+    ? (text as RenderUnitMatchMode)
+    : null;
 }
 
 function readRenderUnitPolicy(value: unknown): RenderUnitPolicy | null {
@@ -458,6 +486,21 @@ function readRenderUnitRole(
 function readStringSetValue(value: unknown, allowed: ReadonlySet<string>): string | null {
   const text = readString(value);
   return text && allowed.has(text) ? text : null;
+}
+
+function renderUnitHintText(entry: RenderUnitEntry): string | null {
+  const literalSource = entry.sourceText.replace(/\{[^}]+}/g, " ");
+  const sourceHint = normalizeToken(literalSource);
+  if (sourceHint && sourceHint.includes(" ")) {
+    return sourceHint;
+  }
+
+  const patternHint = entry.sourcePattern.tokens
+    .map((token) => token.normal ?? token.lemma ?? token.surface ?? "")
+    .filter(Boolean)
+    .join(" ");
+
+  return patternHint.includes(" ") ? normalizeToken(patternHint) : null;
 }
 
 function readString(value: unknown): string | null {

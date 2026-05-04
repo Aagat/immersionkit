@@ -17,7 +17,10 @@ export type SentenceSegment = {
   phraseHints: string[];
 };
 
-export function segmentSentences(text: string): SentenceSegment[] {
+export function segmentSentences(
+  text: string,
+  extraPhraseHints: readonly string[] = []
+): SentenceSegment[] {
   const segments: SentenceSegment[] = [];
 
   for (const match of text.matchAll(SENTENCE_PATTERN)) {
@@ -41,7 +44,7 @@ export function segmentSentences(text: string): SentenceSegment[] {
       end,
       hash: hashSentence(normalizedText),
       words,
-      phraseHints: findFixedPhraseHints(normalizedText)
+      phraseHints: findFixedPhraseHints(normalizedText, extraPhraseHints)
     });
   }
 
@@ -118,9 +121,12 @@ function createCandidateMetadata(
   };
 }
 
-function findFixedPhraseHints(sentence: string): string[] {
+function findFixedPhraseHints(
+  sentence: string,
+  extraPhraseHints: readonly string[] = []
+): string[] {
   const normalized = ` ${sentence.toLowerCase().replace(/\s+/g, " ")} `;
-  return SENTENCE_FIXED_PHRASE_HINTS.filter((phrase) => {
+  return [...new Set([...SENTENCE_FIXED_PHRASE_HINTS, ...extraPhraseHints])].filter((phrase) => {
     const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return new RegExp(`(^|[^a-z])${escaped}([^a-z]|$)`, "i").test(normalized);
   });

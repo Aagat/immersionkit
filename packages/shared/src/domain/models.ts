@@ -110,7 +110,7 @@ export const RENDER_UNIT_KINDS = [
   "noun-phrase",
   "sentence-help-only"
 ] as const;
-export const RENDER_UNIT_MATCH_MODES = ["exact", "token-pattern"] as const;
+export const RENDER_UNIT_MATCH_MODES = ["exact", "analyzer-pattern"] as const;
 export const RENDER_UNIT_POLICIES = [
   "inline",
   "phrase-only",

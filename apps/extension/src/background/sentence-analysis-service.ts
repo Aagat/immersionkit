@@ -92,6 +92,7 @@ type SentenceAnalysisServiceOptions = {
   learningItems?: Pick<BackgroundLearningItemService, "upsertGrammarFeatureItems">;
   analyzer?: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>);
   loadLexicon?: () => Promise<SeedLexiconEntry[]>;
+  loadRenderUnits?: () => Promise<RenderUnitEntry[]>;
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
 };
 
@@ -120,6 +121,7 @@ export class SentenceAnalysisService {
   >;
   private readonly analyzerLoader: () => Promise<SentenceAnalyzer>;
   private readonly loadLexicon: () => Promise<SeedLexiconEntry[]>;
+  private readonly loadRenderUnits: () => Promise<RenderUnitEntry[]>;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
 
   constructor(options: SentenceAnalysisServiceOptions = {}) {
@@ -136,6 +138,7 @@ export class SentenceAnalysisService {
       this.analyzerLoader = options.analyzer;
     }
     this.loadLexicon = options.loadLexicon ?? loadBackgroundLexicon;
+    this.loadRenderUnits = options.loadRenderUnits ?? loadBackgroundRenderUnits;
     this.loadVocab = options.loadVocab ?? loadBackgroundVocab;
   }
 
@@ -147,16 +150,23 @@ export class SentenceAnalysisService {
     }
 
     const analyzer = await this.analyzerLoader();
+    const renderUnits = await this.loadRenderUnits();
+    const analysisVersion = buildRenderUnitAnalysisVersion(
+      analyzer.analyzerVersion,
+      renderUnits
+    );
     const normalizedCandidates = normalizeAnalysisCandidates(candidates);
     const cachedEntries = await this.cache.getMany(
       normalizedCandidates.map((candidate) => candidate.sentenceHash),
-      analyzer.analyzerVersion
+      analysisVersion
     );
     const cachedByHash = new Map(
       cachedEntries.map((entry) => [entry.sentenceHash, entry] as const)
     );
-    const lexicon = await this.loadLexicon();
-    const vocab = await this.loadVocab();
+    const [lexicon, vocab] = await Promise.all([
+      this.loadLexicon(),
+      this.loadVocab()
+    ]);
     const lookup = buildLexiconLookup(lexicon);
     const now = new Date().toISOString();
     const results: AnalyzedSentenceCandidate[] = [];
@@ -178,11 +188,15 @@ export class SentenceAnalysisService {
         continue;
       }
 
-      const analyzerOutput = await analyzer.analyze(
+      const rawAnalyzerOutput = await analyzer.analyze(
         candidate.sourceText,
         candidate.sentenceHash
       );
-      const entry = buildAnalysisEntry(analyzerOutput, lookup, vocab, now);
+      const analyzerOutput = {
+        ...rawAnalyzerOutput,
+        analyzerVersion: analysisVersion
+      };
+      const entry = buildAnalysisEntry(analyzerOutput, lookup, vocab, now, renderUnits);
       entriesToPersist.push(entry);
       results.push({
         entry,
@@ -208,7 +222,8 @@ function buildAnalysisEntry(
   analyzerOutput: AnalyzerOutput,
   lookup: LexiconLookup,
   vocab: ReadonlyMap<string, UserVocabEntry>,
-  now: string
+  now: string,
+  renderUnits: readonly RenderUnitEntry[]
 ): SentenceAnalysisEntry {
   const contextualWordCandidates = buildContextualWordCandidates(
     analyzerOutput,
@@ -216,7 +231,8 @@ function buildAnalysisEntry(
   );
   const phraseMatches = buildPhraseOccurrences(
     analyzerOutput,
-    buildSeedLexiconPhraseTargetResolver(lookup)
+    buildSeedLexiconPhraseTargetResolver(lookup, renderUnits),
+    renderUnits
   );
   const vocabStats = scoreSentenceByVocabStatuses(
     analyzerOutput.tokens.map((token) =>
@@ -338,25 +354,24 @@ function isSafeInjectionPos(value: SeedLexiconEntry["pos"]): value is SafeInject
 
 function buildPhraseOccurrences(
   analyzerOutput: AnalyzerOutput,
-  resolvePhraseTarget: PhraseTargetResolver
+  resolvePhraseTarget: PhraseTargetResolver,
+  renderUnits: readonly RenderUnitEntry[]
 ): PhraseOccurrence[] {
   const detection = detectPhraseCandidatesFromAnalyzerOutput(analyzerOutput, undefined, {
     minimumChunkConfidence: 0.76
   });
+  const renderUnitOccurrences = buildRenderUnitPhraseOccurrences(
+    analyzerOutput,
+    renderUnits
+  );
 
   const detectedOccurrences = detection.selectedCandidates.map((candidate) => {
-    const resolvedTarget =
-      candidate.targetText && candidate.normalizedTargetText
-        ? {
-            targetText: candidate.targetText,
-            normalizedTargetText: candidate.normalizedTargetText
-          }
-        : resolvePhraseTarget({
-            sourceText: candidate.sourceText,
-            normalizedSourceText: candidate.normalizedSourceText,
-            sourceKind: candidate.sourceKind,
-            category: candidate.category
-          });
+    const resolvedTarget = resolvePhraseTarget({
+      sourceText: candidate.sourceText,
+      normalizedSourceText: candidate.normalizedSourceText,
+      sourceKind: candidate.sourceKind,
+      category: candidate.category
+    });
     const normalizedTargetText = resolvedTarget?.normalizedTargetText ?? "";
 
     return {
@@ -383,15 +398,49 @@ function buildPhraseOccurrences(
       },
       confidence: candidate.confidence
     };
-  });
+  }).filter((occurrence) => !overlapsRenderUnitOccurrence(occurrence, renderUnitOccurrences));
 
   return [
-    ...detectedOccurrences,
-    ...buildRenderUnitPhraseOccurrences(
-      analyzerOutput,
-      RUNTIME_RENDER_UNITS?.entries ?? []
-    )
+    ...renderUnitOccurrences,
+    ...detectedOccurrences
   ];
+}
+
+function buildRenderUnitAnalysisVersion(
+  analyzerVersion: string,
+  renderUnits: readonly RenderUnitEntry[]
+): string {
+  if (renderUnits.length === 0) {
+    return analyzerVersion;
+  }
+
+  const signature = renderUnits
+    .map((unit) =>
+      [
+        unit.renderUnitId,
+        unit.renderPolicy,
+        unit.minBand,
+        unit.normalizedSourceText,
+        unit.normalizedTargetText ?? "",
+        unit.sourcePattern.matchMode
+      ].join(":")
+    )
+    .sort()
+    .join("|");
+
+  return `${analyzerVersion}+render-units:${hashSentence(signature).slice(0, 12)}`;
+}
+
+function overlapsRenderUnitOccurrence(
+  occurrence: PhraseOccurrence,
+  renderUnitOccurrences: readonly PhraseOccurrence[]
+): boolean {
+  return renderUnitOccurrences.some(
+    (renderUnitOccurrence) =>
+      renderUnitOccurrence.sentenceHash === occurrence.sentenceHash &&
+      occurrence.span.startToken < renderUnitOccurrence.span.endToken &&
+      renderUnitOccurrence.span.startToken < occurrence.span.endToken
+  );
 }
 
 function buildRenderUnitPhraseOccurrences(
@@ -659,19 +708,20 @@ function mapRenderUnitPhraseMetadata(kind: RenderUnitEntry["kind"]): Pick<
 }
 
 function buildSeedLexiconPhraseTargetResolver(
-  lookup: LexiconLookup
+  lookup: LexiconLookup,
+  renderUnits: readonly RenderUnitEntry[]
 ): PhraseTargetResolver {
   return (input) => {
-    if (input.sourceKind === "fixed-phrase") {
-      return null;
-    }
-
     const renderUnitTarget = resolveRenderUnitPhraseTarget(
-      RUNTIME_RENDER_UNITS?.entries ?? [],
+      renderUnits,
       input.normalizedSourceText
     );
     if (renderUnitTarget) {
       return renderUnitTarget;
+    }
+
+    if (input.sourceKind === "fixed-phrase") {
+      return null;
     }
 
     const curatedTarget = RUNTIME_PHRASE_TARGET_LEXICON.find(
@@ -1180,6 +1230,18 @@ async function loadBackgroundLexicon(): Promise<SeedLexiconEntry[]> {
     RUNTIME_RENDER_UNITS?.entries ?? [],
     RUNTIME_LEXEMES?.entries ?? []
   );
+}
+
+async function loadBackgroundRenderUnits(): Promise<RenderUnitEntry[]> {
+  const storage = await readStorageValues(RENDER_UNIT_STORAGE_KEYS);
+  const storedRenderUnits = parseRenderUnitAsset(
+    pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS)
+  );
+  if (storedRenderUnits && storedRenderUnits.entries.length > 0) {
+    return storedRenderUnits.entries;
+  }
+
+  return RUNTIME_RENDER_UNITS?.entries ?? [];
 }
 
 async function loadBackgroundVocab(): Promise<Map<string, UserVocabEntry>> {

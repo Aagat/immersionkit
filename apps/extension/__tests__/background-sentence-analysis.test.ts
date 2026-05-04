@@ -4,6 +4,7 @@ import {
   type AnalyzerOutput,
   type PhraseOccurrence,
   type PhraseRegistryEntry,
+  type RenderUnitEntry,
   type SentenceAnalysisEntry,
   type SeedLexiconEntry
 } from "@immersionkit/shared";
@@ -33,6 +34,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache,
       loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve([]),
       loadVocab: () => Promise.resolve(new Map())
     });
     const candidate: SentenceAnalysisCandidate = {
@@ -225,18 +227,43 @@ describe("background sentence analysis service", () => {
     );
   });
 
-  it("resolves fixed phrase targets before registry persistence", async () => {
+  it("resolves approved render-unit fixed phrase targets before registry persistence", async () => {
     const sourceText = "We take care of the old city.";
     const sentenceHash = hashSentence(sourceText);
     const analyzer = createAnalyzer("fixture-v1", () =>
       createFixedPhraseAnalyzerOutput(sourceText, sentenceHash)
     );
+    const renderUnits: RenderUnitEntry[] = [
+      {
+        renderUnitId: "ru:test-take-care-of",
+        lexemeIds: [],
+        kind: "fixed-phrase",
+        renderPolicy: "inline",
+        sourceText: "take care of",
+        normalizedSourceText: "take care of",
+        targetText: "cuidar de",
+        normalizedTargetText: "cuidar de",
+        sourcePattern: {
+          matchMode: "exact",
+          tokens: [{ normal: "take" }, { normal: "care" }, { normal: "of" }]
+        },
+        replacement: {
+          startToken: 0,
+          endToken: 3,
+          targetText: "cuidar de"
+        },
+        minBand: "level-1a",
+        confidence: 0.98,
+        provenance: { source: "manual" }
+      }
+    ];
     const phraseRegistry = new InMemoryPhraseRegistry();
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
       loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(renderUnits),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -247,14 +274,153 @@ describe("background sentence analysis service", () => {
 
     expect(fixedPhrase).toMatchObject({
       sourceText: "take care of",
+      phraseId: "ru:test-take-care-of",
+      renderUnitId: "ru:test-take-care-of",
       targetText: "cuidar de",
-      normalizedTargetText: "cuidar de",
-      phraseId: "phrase:fixed-phrase:take-care-of:cuidar-de"
+      normalizedTargetText: "cuidar de"
     });
     await expect(phraseRegistry.get(fixedPhrase?.phraseId ?? "")).resolves.toMatchObject({
       canonicalTargetText: "cuidar de",
       normalizedTargetText: "cuidar de"
     });
+  });
+
+  it("lets approved custom render units own fixed phrase identity over legacy detections", async () => {
+    const sourceText = "By the way, we read today.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["By", "by", "preposition", ["ADP", "preposition"]],
+        ["the", "the", "determiner", ["DET", "determiner"]],
+        ["way", "way", "noun", ["NOUN", "noun"]],
+        [",", ",", "other", ["PUNCT", "other"]],
+        ["we", "we", "pronoun", ["PRON", "pronoun"]],
+        ["read", "read", "verb", ["VERB", "verb"]],
+        ["today", "today", "adverb", ["ADV", "adverb"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [],
+      grammarFeatures: []
+    }));
+    const renderUnits: RenderUnitEntry[] = [
+      {
+        renderUnitId: "ru:test-by-the-way",
+        lexemeIds: [],
+        kind: "fixed-phrase",
+        renderPolicy: "phrase-only",
+        sourceText: "by the way",
+        normalizedSourceText: "by the way",
+        targetText: "por cierto",
+        normalizedTargetText: "por cierto",
+        sourcePattern: {
+          matchMode: "exact",
+          tokens: [{ normal: "by" }, { normal: "the" }, { normal: "way" }]
+        },
+        replacement: {
+          startToken: 0,
+          endToken: 3,
+          targetText: "por cierto"
+        },
+        minBand: "level-1a",
+        confidence: 0.99,
+        provenance: { source: "manual" }
+      }
+    ];
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(renderUnits),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const phraseMatches = analysis?.entry.phraseMatches.filter(
+      (match) => match.normalizedSourceText === "by the way"
+    );
+
+    expect(phraseMatches).toHaveLength(1);
+    expect(phraseMatches?.[0]).toMatchObject({
+      phraseId: "ru:test-by-the-way",
+      renderUnitId: "ru:test-by-the-way",
+      renderUnitMinBand: "level-1a",
+      renderPolicy: "phrase-only",
+      targetText: "por cierto",
+      ruleId: "render-unit:ru:test-by-the-way"
+    });
+  });
+
+  it("emits sentence-help-only render units as non-rendering analyzer signals", async () => {
+    const sourceText = "You might not need to write specs.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["You", "you", "pronoun", ["PRON", "pronoun"]],
+        ["might", "might", "modal", ["AUX", "modal"]],
+        ["not", "not", "particle", ["PART", "particle"]],
+        ["need", "need", "verb", ["VERB", "verb"]],
+        ["to", "to", "particle", ["PART", "particle"]],
+        ["write", "write", "verb", ["VERB", "verb"]],
+        ["specs", "spec", "noun", ["NOUN", "noun"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [],
+      grammarFeatures: []
+    }));
+    const renderUnits: RenderUnitEntry[] = [
+      {
+        renderUnitId: "ru:test-need-help-only",
+        lexemeIds: ["lx:need:verb"],
+        kind: "sentence-help-only",
+        renderPolicy: "sentence-help-only",
+        sourceText: "need",
+        normalizedSourceText: "need",
+        sourcePattern: {
+          matchMode: "analyzer-pattern",
+          tokens: [
+            {
+              lemma: "need",
+              pos: "verb",
+              role: "verb",
+              features: { negated: true }
+            }
+          ]
+        },
+        minBand: "level-1a",
+        confidence: 0.99,
+        provenance: { source: "manual" }
+      }
+    ];
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadLexicon: () => Promise.resolve([]),
+      loadRenderUnits: () => Promise.resolve(renderUnits),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const helpOnlyMatch = analysis?.entry.phraseMatches.find(
+      (match) => match.renderUnitId === "ru:test-need-help-only"
+    );
+
+    expect(helpOnlyMatch).toMatchObject({
+      sourceText: "need",
+      targetText: undefined,
+      normalizedTargetText: undefined,
+      renderPolicy: "sentence-help-only",
+      sourceKind: "pattern-match",
+      category: "grammar-carrier"
+    });
+    expect(analysis?.suitabilitySignals.chunkUsefulness).toBeGreaterThan(0);
   });
 
   it("resolves runtime phrase targets from exact multiword seed entries", async () => {

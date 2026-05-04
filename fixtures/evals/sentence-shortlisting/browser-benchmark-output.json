@@ -1,7 +1,7 @@
 {
   "metadata": {
     "schemaVersion": "1.1.0",
-    "generatedAt": "2026-05-04T21:58:28.377Z",
+    "generatedAt": "2026-05-04T22:36:01.321Z",
     "taskId": "task-04-sentence-shortlisting",
     "canonicalCommand": "pnpm benchmark",
     "inputProfile": "baseline",

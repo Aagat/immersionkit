@@ -35,6 +35,7 @@ export type ProcessTextNodeContext = {
   isDueForReview?: (lemmaId: string) => boolean;
   cachedContextSkipDecisions?: Map<string, CachedContextSkipDecision[]>;
   cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
+  sentenceHintPhrases?: readonly string[];
   learningItemsByUnitRefId?: Map<string, LearningItem>;
   shouldActivateWord?: (input: WordActivationInput) => ActivationDecision;
   shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
@@ -257,7 +258,7 @@ function renderTextWindow(input: {
     };
   }
 
-  const sentences = segmentSentences(sourceText);
+  const sentences = segmentSentences(sourceText, context.sentenceHintPhrases);
   const phraseCandidates = selectPhraseRenderCandidates({
     sourceText,
     sentences,
