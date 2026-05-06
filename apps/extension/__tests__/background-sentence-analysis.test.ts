@@ -495,6 +495,40 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("matches a lexically pinned object role when wink tags the object as a verb", async () => {
+    const sourceText = "I need help today.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", (sentence: string, suppliedHash?: string) =>
+      createNeedHelpAnalyzerOutput(sentence, suppliedHash ?? hashSentence(sentence), "verb")
+    );
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadLexicon: () => Promise.resolve([]),
+      loadRenderUnits: () =>
+        Promise.resolve([
+          createNeedHelpRenderUnit({
+            replacementEndToken: 2,
+            verbFeatures: { negated: false },
+            objectPos: "verb"
+          })
+        ]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+
+    expect(analysis?.entry.phraseMatches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          renderUnitId: "ru:test-need-help",
+          sourceText: "need help",
+          targetText: "necesito ayuda"
+        })
+      ])
+    );
+  });
+
   it("resolves runtime phrase targets from exact multiword seed entries", async () => {
     const sourceText = "The old city center walls hold quiet memory.";
     const sentenceHash = hashSentence(sourceText);
@@ -909,7 +943,8 @@ function createAuxiliaryFrameAnalyzerOutput(
 
 function createNeedHelpAnalyzerOutput(
   sourceText: string,
-  sentenceHash: string
+  sentenceHash: string,
+  helpPos: "noun" | "verb" = "noun"
 ): AnalyzerOutput {
   return {
     analyzerId: "fixture-annotated",
@@ -919,7 +954,7 @@ function createNeedHelpAnalyzerOutput(
     tokens: tokensFromSpecs(sourceText, [
       ["I", "i", "pronoun", ["PRON", "pronoun"]],
       ["need", "need", "verb", ["VERB", "verb"]],
-      ["help", "help", "noun", ["NOUN", "noun"]],
+      ["help", "help", helpPos, [helpPos === "verb" ? "VERB" : "NOUN", helpPos]],
       ["today", "today", "adverb", ["ADV", "adverb"]],
       [".", ".", "other", ["PUNCT", "other"]]
     ]),
@@ -933,6 +968,7 @@ function createNeedHelpRenderUnit(input: {
   verbFeatures:
     | RenderUnitEntry["sourcePattern"]["tokens"][number]["features"]
     | undefined;
+  objectPos?: "noun" | "verb";
 }): RenderUnitEntry {
   return {
     renderUnitId: "ru:test-need-help",
@@ -956,7 +992,7 @@ function createNeedHelpRenderUnit(input: {
         {
           normal: "help",
           lemma: "help",
-          pos: "noun",
+          pos: input.objectPos ?? "noun",
           role: "object"
         }
       ]

@@ -613,7 +613,7 @@ function matchesRenderUnitPatternToken(
     return false;
   }
 
-  if (pattern.role && !matchesShallowRole(token, pattern.role)) {
+  if (pattern.role && !matchesShallowRole(token, pattern.role, pattern)) {
     return false;
   }
 
@@ -622,7 +622,8 @@ function matchesRenderUnitPatternToken(
 
 function matchesShallowRole(
   token: AnalyzerToken,
-  role: NonNullable<RenderUnitEntry["sourcePattern"]["tokens"][number]["role"]>
+  role: NonNullable<RenderUnitEntry["sourcePattern"]["tokens"][number]["role"]>,
+  pattern: RenderUnitEntry["sourcePattern"]["tokens"][number]
 ): boolean {
   if (role === "subject") {
     return token.pos === "pronoun" || token.pos === "noun" || token.pos === "proper-noun";
@@ -633,10 +634,20 @@ function matchesShallowRole(
   }
 
   if (role === "object") {
-    return token.pos === "noun" || token.pos === "pronoun" || token.pos === "proper-noun";
+    if (token.pos === "noun" || token.pos === "pronoun" || token.pos === "proper-noun") {
+      return true;
+    }
+
+    return token.pos === "verb" && hasLexicallyPinnedPattern(pattern);
   }
 
   return token.pos !== "other";
+}
+
+function hasLexicallyPinnedPattern(
+  pattern: RenderUnitEntry["sourcePattern"]["tokens"][number]
+): boolean {
+  return Boolean(pattern.normal || pattern.lemma || pattern.surface);
 }
 
 function matchesRenderUnitFeatures(

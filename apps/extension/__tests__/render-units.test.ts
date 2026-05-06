@@ -100,7 +100,7 @@ describe("render unit assets", () => {
       renderUnitsToSeedLexiconEntries(renderUnits?.entries ?? [], lexemes?.entries ?? [])
         .find((entry) => entry.renderUnitId === "ru:no:adverb:exact")
         ?.lemmaId
-    ).toBe("lx:no-not:adverb");
+    ).toBe("lx:no:adverb");
   });
 
   it("does not keep unsafe bare conjugated grammar frames renderable", () => {
