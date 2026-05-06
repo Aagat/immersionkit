@@ -32,7 +32,7 @@ export type SentenceAnalyzer = {
 };
 
 export const WINK_NLP_ANALYZER_VERSION =
-  "wink-nlp@2.4.0+immersionkit-background-v3-unified-render-units";
+  "wink-nlp@2.4.0+immersionkit-background-v4-unified-render-units";
 
 let winkAnalyzerPromise: Promise<SentenceAnalyzer> | null = null;
 
@@ -448,6 +448,10 @@ function normalizeAnalyzerPos(value: string, normalized: string): string {
 
   if (tag === "cconj" || tag === "sconj" || tag === "cc") {
     return "conjunction";
+  }
+
+  if (tag === "intj") {
+    return "interjection";
   }
 
   if (tag === "punct" || tag === "sym" || tag === "x") {
