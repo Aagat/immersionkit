@@ -84,6 +84,7 @@ export type PhraseActivationInput = {
 };
 
 const ANALYZER_REQUIRED_SINGLE_WORDS = new Set(["like", "on", "up"]);
+const SENTENCE_INITIAL_DISCOURSE_ADVERBS = new Set(["well"]);
 const DEMONSTRATIVE_ADJECTIVE_LEMMAS = new Set([
   "this",
   "that",
@@ -547,6 +548,19 @@ function shouldSkipLocalWordReplacement(input: {
   }
 
   if (
+    SENTENCE_INITIAL_DISCOURSE_ADVERBS.has(sourceLemma) &&
+    input.lexiconEntry.pos === "adverb" &&
+    isLikelySentenceInitialDiscourseMarker({
+      sourceText: input.sourceText,
+      segment,
+      previous,
+      next
+    })
+  ) {
+    return true;
+  }
+
+  if (
     sourceLemma === "need" &&
     input.lexiconEntry.pos === "noun" &&
     isLikelyNeedVerbContext(previous?.normalized, next?.normalized)
@@ -575,6 +589,29 @@ function shouldSkipLocalWordReplacement(input: {
   }
 
   return false;
+}
+
+function isLikelySentenceInitialDiscourseMarker(input: {
+  sourceText: string;
+  segment: Extract<TextSegment, { kind: "word" }>;
+  previous: Extract<TextSegment, { kind: "word" }> | null;
+  next: Extract<TextSegment, { kind: "word" }> | null;
+}): boolean {
+  if (!input.next) {
+    return false;
+  }
+
+  const beforeNext = input.sourceText.slice(input.segment.end, input.next.start);
+  if (!/^\s*,/.test(beforeNext)) {
+    return false;
+  }
+
+  if (!input.previous) {
+    return true;
+  }
+
+  const beforeSegment = input.sourceText.slice(input.previous.end, input.segment.start);
+  return /[.!?;:]\s*$/.test(beforeSegment);
 }
 
 function isLikelyNeedVerbContext(

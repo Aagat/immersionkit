@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import bundledLexemeAsset from "../src/assets/en-es.lexemes.v1.json";
+import bundledRenderUnitAsset from "../src/assets/en-es.render-units.v1.json";
 import { ensureSeedLexiconReady } from "../src/background/seed-lexicon";
 import { parseSeedLexiconInput } from "../src/seed/seed-lexicon";
 import { installChromeStub } from "./helpers/chrome-stub";
@@ -60,6 +62,31 @@ describe("background seed lexicon bootstrap", () => {
 
       const storageSnapshot = chromeStub.getStorageSnapshot();
       expect(storageSnapshot["immersionkit.seedLexicon"]).not.toEqual(existingAsset);
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("refreshes canonical storage when the stored lexeme asset is stale", async () => {
+    const staleLexemeAsset = {
+      ...bundledLexemeAsset,
+      assetVersion: "2026.05.04-lexemes1",
+      entries: bundledLexemeAsset.entries.slice(0, 5000)
+    };
+    const chromeStub = installChromeStub({
+      "immersionkit.renderUnits": bundledRenderUnitAsset,
+      "immersionkit.lexemes": staleLexemeAsset
+    });
+
+    try {
+      const result = await ensureSeedLexiconReady();
+      expect(result.source).toBe("seeded");
+
+      const storageSnapshot = chromeStub.getStorageSnapshot();
+      expect(storageSnapshot["immersionkit.lexemes"]).toEqual(bundledLexemeAsset);
+      expect(storageSnapshot["immersionkit.renderUnits"]).toEqual(
+        bundledRenderUnitAsset
+      );
     } finally {
       chromeStub.restore();
     }

@@ -3,7 +3,9 @@ import bundledRenderUnitAsset from "../assets/en-es.render-units.v1.json";
 import {
   parseLexemeAsset,
   parseRenderUnitAsset,
-  renderUnitsToSeedLexiconAsset
+  renderUnitsToSeedLexiconAsset,
+  type ParsedLexemeAsset,
+  type ParsedRenderUnitAsset
 } from "../render-units/render-units";
 import {
   isLikelyFallbackSeedLexicon,
@@ -46,16 +48,18 @@ export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResu
     ...RENDER_UNIT_STORAGE_KEYS,
     ...LEXEME_STORAGE_KEYS
   ]);
-  const storedRenderUnits = parseRenderUnitAsset(
-    pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS)
-  );
-  const storedLexemes =
-    parseLexemeAsset(pickFirstDefinedValue(storage, LEXEME_STORAGE_KEYS)) ??
-    BUNDLED_LEXEMES;
+  const storedRenderUnitInput = pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS);
+  const storedLexemeInput = pickFirstDefinedValue(storage, LEXEME_STORAGE_KEYS);
+  const storedRenderUnits = parseRenderUnitAsset(storedRenderUnitInput);
+  const storedLexemes = parseLexemeAsset(storedLexemeInput);
+  const lexemesForStoredRenderUnits = storedLexemes ?? BUNDLED_LEXEMES;
   const storedValue = pickFirstDefinedValue(storage, SEED_LEXICON_STORAGE_KEYS);
   const parsedStoredLexicon = storedRenderUnits
     ? parseSeedLexiconInput(
-        renderUnitsToSeedLexiconAsset(storedRenderUnits, storedLexemes?.entries ?? [])
+        renderUnitsToSeedLexiconAsset(
+          storedRenderUnits,
+          lexemesForStoredRenderUnits?.entries ?? []
+        )
       )
     : parseSeedLexiconInput(storedValue);
 
@@ -63,7 +67,12 @@ export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResu
     parsedStoredLexicon &&
     parsedStoredLexicon.entries.length > 0 &&
     !isLikelyFallbackSeedLexicon(parsedStoredLexicon.entries) &&
-    !shouldRefreshStoredLexicon(parsedStoredLexicon.entries.length, parsedStoredLexicon.assetVersion)
+    !shouldRefreshStoredAssets({
+      currentEntryCount: parsedStoredLexicon.entries.length,
+      currentAssetVersion: parsedStoredLexicon.assetVersion,
+      storedRenderUnits,
+      storedLexemes
+    })
   ) {
     return {
       source: "existing",
@@ -100,6 +109,47 @@ export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResu
     entryCount: parsedStoredLexicon?.entries.length ?? 0,
     assetVersion: parsedStoredLexicon?.assetVersion ?? null
   };
+}
+
+function shouldRefreshStoredAssets(input: {
+  currentEntryCount: number;
+  currentAssetVersion: string | null;
+  storedRenderUnits: ParsedRenderUnitAsset | null;
+  storedLexemes: ParsedLexemeAsset | null;
+}): boolean {
+  if (
+    shouldRefreshStoredLexicon(input.currentEntryCount, input.currentAssetVersion)
+  ) {
+    return true;
+  }
+
+  if (!input.storedRenderUnits) {
+    return false;
+  }
+
+  if (
+    BUNDLED_RENDER_UNITS?.assetVersion &&
+    input.storedRenderUnits.assetVersion !== BUNDLED_RENDER_UNITS.assetVersion
+  ) {
+    return true;
+  }
+
+  if (!BUNDLED_LEXEMES) {
+    return false;
+  }
+
+  if (!input.storedLexemes) {
+    return true;
+  }
+
+  if (
+    BUNDLED_LEXEMES.assetVersion &&
+    input.storedLexemes.assetVersion !== BUNDLED_LEXEMES.assetVersion
+  ) {
+    return true;
+  }
+
+  return input.storedLexemes.entries.length < BUNDLED_LEXEMES.entries.length;
 }
 
 function shouldRefreshStoredLexicon(

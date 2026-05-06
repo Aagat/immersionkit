@@ -516,6 +516,7 @@ describe("background sentence analysis service", () => {
             "noun"
           )
         ]),
+      loadRenderUnits: () => Promise.resolve([]),
       loadVocab: () => Promise.resolve(new Map())
     });
 

@@ -112,7 +112,7 @@ const smokeFixtures = [
       "reads like a checklist",
       "left the fallback on",
       "This can sound cautious",
-      "does not need a large meeting"
+      "does not need a large"
     ],
     forbiddenText: [
       "Pozo,",

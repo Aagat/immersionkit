@@ -65,6 +65,35 @@ describe("content lexicon lookup", () => {
     });
   });
 
+  it("keeps sentence-initial discourse markers in English", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode("Well, the team worked well.");
+      document.body.append(textNode);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "discourse-well-test",
+        createNodeId: () => "ikn-discourse-well-test",
+        lexiconLookup: buildLexiconLookup([
+          {
+            lemmaId: "en:well:adverb",
+            sourceLemma: "well",
+            targetLemma: "bien",
+            pos: "adverb",
+            frequencyRank: 48,
+            confidence: 0.94
+          }
+        ]),
+        vocabByLemmaId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.contextSkippedCount).toBe(1);
+      expect(document.body.textContent).toContain("Well, the team worked bien.");
+      expect(document.body.textContent).not.toContain("Bien,");
+    });
+  });
+
   it("keeps context-sensitive surface forms in English before analyzer confirmation", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const textNode = document.createTextNode(

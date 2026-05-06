@@ -10,6 +10,13 @@ import lexemeAsset from "../src/assets/en-es.lexemes.v1.json";
 import renderUnitAsset from "../src/assets/en-es.render-units.v1.json";
 
 describe("render unit assets", () => {
+  it("carries the full deck lexeme inventory without making lexemes renderable", () => {
+    const lexemes = parseLexemeAsset(lexemeAsset);
+
+    expect(lexemes?.entries.length).toBeGreaterThanOrEqual(13_000);
+    expect(renderUnitsToSeedLexiconEntries([], lexemes?.entries ?? [])).toEqual([]);
+  });
+
   it("accepts canonical analyzer-pattern rows and derives sentence-help hints", () => {
     const parsed = parseRenderUnitAsset({
       schemaVersion: "1.0.0",
