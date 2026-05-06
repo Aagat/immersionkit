@@ -8,6 +8,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chromium, type BrowserContext, type Page, type Worker } from "playwright";
+import { ensureLinuxHeadedBrowserDisplay } from "../../../tools/headed-browser-display.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -208,6 +209,8 @@ async function launchBuiltExtension(): Promise<{
   extensionId: string;
   serviceWorker: Worker;
 }> {
+  ensureLinuxHeadedBrowserDisplay();
+
   const userDataDir = await mkdtemp(join(tmpdir(), "ik-extension-e2e-"));
   userDataDirs.push(userDataDir);
 

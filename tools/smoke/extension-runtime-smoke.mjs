@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { ensureLinuxHeadedBrowserDisplay } from "../headed-browser-display.mjs";
+
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
 const extensionPath = join(repoRoot, "apps/extension/dist");
@@ -162,6 +164,8 @@ const address = server.address();
 if (!address || typeof address === "string") {
   throw new Error("Failed to start local smoke server.");
 }
+
+ensureLinuxHeadedBrowserDisplay();
 
 const context = await chromium.launchPersistentContext(userDataDir, {
   headless: false,
