@@ -39,6 +39,7 @@ import {
 
 const LANGUAGE_PAIR = "en-es";
 const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
+const FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS = 2500;
 const GENERATED_STORAGE_KEYS = [
   "immersionkit.lexemes",
   "immersionkit.renderUnits",
@@ -128,6 +129,7 @@ type AssetPackServiceOptions = {
   fetchJson?: FetchJson;
   repository?: AssetPackRepository;
   loadRuntimeConfig?: () => Promise<BackgroundRuntimeConfig>;
+  remoteLoadTimeoutMs?: number;
 };
 
 type RemotePackLoadResult =
@@ -154,6 +156,11 @@ export class BackgroundAssetPackService {
   private readonly fetchJson: FetchJson;
   private readonly repository: AssetPackRepository;
   private readonly loadRuntimeConfig: () => Promise<BackgroundRuntimeConfig>;
+  private readonly remoteLoadTimeoutMs: number;
+  private readonly remoteRefreshesByBandWindow = new Map<
+    string,
+    Promise<ActiveAssetContext | null>
+  >();
 
   constructor(options: AssetPackServiceOptions = {}) {
     this.assetBaseUrl =
@@ -163,6 +170,8 @@ export class BackgroundAssetPackService {
     this.fetchJson = options.fetchJson ?? fetchJson;
     this.repository = options.repository ?? new IndexedDbAssetPackRepository();
     this.loadRuntimeConfig = options.loadRuntimeConfig ?? loadBackgroundRuntimeConfig;
+    this.remoteLoadTimeoutMs =
+      options.remoteLoadTimeoutMs ?? FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS;
   }
 
   async loadActiveContext(): Promise<ActiveAssetContext> {
@@ -172,48 +181,13 @@ export class BackgroundAssetPackService {
       runtimeConfig.curriculum.profile
     );
 
-    const remoteResult = this.assetBaseUrl
-      ? await this.loadRemotePacks(bandIds)
-      : { status: "failure" as const };
-    if (remoteResult.status === "success") {
-      const cachedMissingPacks =
-        remoteResult.missingBandIds.length > 0
-          ? await this.repository.getLatestPacksForBands(
-              LANGUAGE_PAIR,
-              remoteResult.missingBandIds
-            )
-          : [];
-      const packsForContext = [...remoteResult.packs, ...cachedMissingPacks];
-      const loadedBandIds = new Set(packsForContext.map((pack) => pack.bandId));
-      const cachedAt = new Date().toISOString();
-      const stored = await this.repository.putPacks(remoteResult.packs, {
-        cachedAt,
-        sourceUrlByBandId: remoteResult.sourceUrlByBandId
-      });
-      if (stored) {
-        await this.repository.retainOnly(
-          packsForContext.map((pack) => buildAssetPackIdentity(pack))
-        );
-        await cleanupGeneratedStorageAssets({ removeAssetCopies: true });
-      }
-
-      return createActiveAssetContext({
-        packs: packsForContext,
-        source: "remote-pack",
-        bandIds,
-        missingBandIds: bandIds.filter((bandId) => !loadedBandIds.has(bandId)),
-        assetVersion:
-          cachedMissingPacks.length === 0 ? remoteResult.assetVersion : undefined
-      });
-    }
-
-    await cleanupGeneratedStorageAssets({ removeAssetCopies: true });
-
     const cachedPacks = await this.repository.getLatestPacksForBands(
       LANGUAGE_PAIR,
       bandIds
     );
     if (cachedPacks.length > 0) {
+      void cleanupGeneratedStorageAssets({ removeAssetCopies: true });
+      void this.refreshRemotePacks(bandIds);
       return createActiveAssetContext({
         packs: cachedPacks,
         source: "cached-pack",
@@ -221,10 +195,84 @@ export class BackgroundAssetPackService {
       });
     }
 
+    void cleanupGeneratedStorageAssets({ removeAssetCopies: true });
+
+    const remoteContext = await withTimeout(
+      this.refreshRemotePacks(bandIds),
+      this.remoteLoadTimeoutMs
+    );
+    if (remoteContext) {
+      return remoteContext;
+    }
+
     return createActiveAssetContext({
       packs: [],
       source: "empty",
       bandIds
+    });
+  }
+
+  private refreshRemotePacks(
+    bandIds: readonly string[]
+  ): Promise<ActiveAssetContext | null> {
+    if (!this.assetBaseUrl || bandIds.length === 0) {
+      return Promise.resolve(null);
+    }
+
+    const bandWindowKey = buildBandWindowKey(bandIds);
+    const existingRefresh = this.remoteRefreshesByBandWindow.get(bandWindowKey);
+    if (existingRefresh) {
+      return existingRefresh;
+    }
+
+    const refresh = this.refreshRemotePacksNow(bandIds)
+      .catch((error) => {
+        console.info("ImmersionKit asset pack refresh skipped.", error);
+        return null;
+      })
+      .finally(() => {
+        this.remoteRefreshesByBandWindow.delete(bandWindowKey);
+      });
+    this.remoteRefreshesByBandWindow.set(bandWindowKey, refresh);
+    return refresh;
+  }
+
+  private async refreshRemotePacksNow(
+    bandIds: readonly string[]
+  ): Promise<ActiveAssetContext | null> {
+    const remoteResult = await this.loadRemotePacks(bandIds);
+    if (remoteResult.status !== "success") {
+      return null;
+    }
+
+    const cachedMissingPacks =
+      remoteResult.missingBandIds.length > 0
+        ? await this.repository.getLatestPacksForBands(
+            LANGUAGE_PAIR,
+            remoteResult.missingBandIds
+          )
+        : [];
+    const packsForContext = [...remoteResult.packs, ...cachedMissingPacks];
+    const loadedBandIds = new Set(packsForContext.map((pack) => pack.bandId));
+    const cachedAt = new Date().toISOString();
+    const stored = await this.repository.putPacks(remoteResult.packs, {
+      cachedAt,
+      sourceUrlByBandId: remoteResult.sourceUrlByBandId
+    });
+    if (stored) {
+      await this.repository.retainOnly(
+        packsForContext.map((pack) => buildAssetPackIdentity(pack))
+      );
+      await cleanupGeneratedStorageAssets({ removeAssetCopies: true });
+    }
+
+    return createActiveAssetContext({
+      packs: packsForContext,
+      source: "remote-pack",
+      bandIds,
+      missingBandIds: bandIds.filter((bandId) => !loadedBandIds.has(bandId)),
+      assetVersion:
+        cachedMissingPacks.length === 0 ? remoteResult.assetVersion : undefined
     });
   }
 
@@ -674,6 +722,10 @@ export function buildAssetPackIdentity(pack: Pick<
   return `${pack.languagePair}:${pack.assetVersion}:${pack.bandId}`;
 }
 
+function buildBandWindowKey(bandIds: readonly string[]): string {
+  return bandIds.join("\u0000");
+}
+
 async function fetchJson(url: string): Promise<unknown> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
@@ -681,6 +733,35 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 
   return response.json();
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<T | null> {
+  if (timeoutMs <= 0) {
+    return Promise.resolve(null);
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  return new Promise((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve(null);
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        resolve(value);
+      })
+      .catch(() => {
+        resolve(null);
+      })
+      .finally(() => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      });
+  });
 }
 
 function createActiveAssetContext(input: {

@@ -108,6 +108,69 @@ describe("background asset packs", () => {
     expect(repository.packs.map((pack) => pack.assetVersion)).toEqual(["asset-old"]);
   });
 
+  it("returns cached packs without waiting for a slow remote refresh", async () => {
+    const cachedPack = createPack("level-1a", "asset-old", "city", "ciudad");
+    const remotePack = createPack("level-1a", "asset-new", "garden", "jardin");
+    const repository = new InMemoryAssetPackRepository([cachedPack]);
+    let manifestRequested = false;
+    let resolveManifest: ((value: unknown) => void) | null = null;
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      fetchJson: async (url) => {
+        if (url.endsWith("/manifest.json")) {
+          manifestRequested = true;
+          return new Promise((resolve) => {
+            resolveManifest = resolve;
+          });
+        }
+
+        return remotePack;
+      }
+    });
+
+    const context = await Promise.race([
+      service.loadActiveContext(),
+      delay(25).then(() => {
+        throw new Error("Expected cached asset context before remote refresh.");
+      })
+    ]);
+
+    expect(context.source).toBe("cached-pack");
+    expect(context.lexicon[0]).toMatchObject({
+      sourceLemma: "city",
+      targetLemma: "ciudad"
+    });
+    expect(manifestRequested).toBe(true);
+    expect(repository.packs.map((pack) => pack.assetVersion)).toEqual(["asset-old"]);
+
+    resolveManifest?.({
+      schemaVersion: "1.0.0",
+      assetVersion: "asset-new",
+      languagePair: "en-es",
+      packs: [{ bandId: "level-1a", url: "packs/asset-new/level-1a.json" }]
+    });
+    await waitFor(() =>
+      repository.packs.some((pack) => pack.assetVersion === "asset-new")
+    );
+  });
+
+  it("bounds first-run remote loading when no cached packs exist", async () => {
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository: new InMemoryAssetPackRepository(),
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      remoteLoadTimeoutMs: 5,
+      fetchJson: async () => new Promise(() => undefined)
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.source).toBe("empty");
+    expect(context.lexicon).toEqual([]);
+  });
+
   it("writes valid remote packs before pruning stale cached packs", async () => {
     const repository = new InMemoryAssetPackRepository([
       createPack("level-5b", "asset-old", "world", "mundo")
@@ -178,12 +241,12 @@ describe("background asset packs", () => {
 
     const context = await service.loadActiveContext();
 
-    expect(context.source).toBe("remote-pack");
-    expect(context.missingBandIds).toEqual([]);
-    expect(context.lexicon.map((entry) => entry.sourceLemma).sort()).toEqual([
-      "bridge",
-      "city"
-    ]);
+    expect(context.source).toBe("cached-pack");
+    expect(context.missingBandIds).toEqual(["level-1a"]);
+    expect(context.lexicon.map((entry) => entry.sourceLemma)).toEqual(["bridge"]);
+    await waitFor(() =>
+      repository.packs.some((pack) => pack.identity === buildAssetPackIdentity(remotePack))
+    );
     expect(repository.packs.map((pack) => pack.identity).sort()).toEqual(
       [remotePack, staleActivePack].map((pack) => buildAssetPackIdentity(pack)).sort()
     );
@@ -377,4 +440,27 @@ function createLexeme(
     sourceLanguage: "en",
     targetLanguage: "es"
   };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function waitFor(
+  predicate: () => boolean,
+  options: { timeoutMs?: number; intervalMs?: number } = {}
+): Promise<void> {
+  const timeoutMs = options.timeoutMs ?? 250;
+  const intervalMs = options.intervalMs ?? 5;
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+    await delay(intervalMs);
+  }
+
+  throw new Error("Timed out waiting for condition.");
 }
