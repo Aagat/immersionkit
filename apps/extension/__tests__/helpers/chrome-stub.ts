@@ -13,6 +13,7 @@ type RuntimeListener = (
 ) => boolean | void;
 
 type StorageValues = Record<string, unknown>;
+const USER_VOCAB_STORE_KEY = "user-vocab";
 
 export type ChromeTestStub = {
   sentMessages: unknown[];
@@ -69,30 +70,6 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
               : response
           );
         });
-      }
-    },
-    storage: {
-      local: {
-        get(keys: unknown, callback: (items: StorageValues) => void) {
-          callback(resolveStorageRead(keys, storageValues));
-        },
-        set(items: StorageValues, callback?: () => void) {
-          Object.assign(storageValues, items);
-          callback?.();
-        },
-        remove(keys: unknown, callback?: () => void) {
-          const normalizedKeys = Array.isArray(keys)
-            ? keys.filter((key): key is string => typeof key === "string")
-            : typeof keys === "string"
-              ? [keys]
-              : [];
-
-          for (const key of normalizedKeys) {
-            delete storageValues[key];
-          }
-
-          callback?.();
-        }
       }
     },
     tabs: {
@@ -197,11 +174,11 @@ function createDefaultRuntimeResponse(
   const includeRenderUnits =
     (message as { includeRenderUnits?: unknown }).includeRenderUnits === true;
   const renderUnitAsset = parseRenderUnitAsset(
-    pickFirstDefinedValue(storageValues, ["immersionkit.renderUnits", "renderUnits"])
+    pickFirstDefinedValue(storageValues, ["asset-render-units", "renderUnits"])
   );
   if (renderUnitAsset) {
     const lexemeAsset = parseLexemeAsset(
-      pickFirstDefinedValue(storageValues, ["immersionkit.lexemes", "lexemes"])
+      pickFirstDefinedValue(storageValues, ["asset-lexemes", "lexemes"])
     );
     return {
       ok: true,
@@ -222,7 +199,7 @@ function createDefaultRuntimeResponse(
 
   const seedLexicon = parseSeedLexiconInput(
     pickFirstDefinedValue(storageValues, [
-      "immersionkit.seedLexicon",
+      "asset-seed-lexicon",
       "seedLexicon",
       "lexicon"
     ])
@@ -242,7 +219,7 @@ function createDefaultRuntimeResponse(
 }
 
 function readRuntimeVocabEntries(storageValues: StorageValues): RuntimeVocabEntry[] {
-  const rawVocab = storageValues["immersionkit.vocab"];
+  const rawVocab = storageValues[USER_VOCAB_STORE_KEY];
   const values = Array.isArray(rawVocab)
     ? rawVocab
     : rawVocab && typeof rawVocab === "object"
@@ -327,7 +304,7 @@ function setRuntimeVocabStatus(
     updatedAt: now
   };
   entries.set(lemmaId, entry);
-  storageValues["immersionkit.vocab"] = Object.fromEntries(entries);
+  storageValues[USER_VOCAB_STORE_KEY] = Object.fromEntries(entries);
 
   return {
     ok: true,

@@ -49,9 +49,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: false,
@@ -67,7 +67,7 @@ describe("content inline learning loop", () => {
           expect(getInjectedTokens(document).length).toBe(0);
 
           chromeStub.setStorageValues({
-            "immersionkit.siteSettings": {
+            "site-settings": {
               [HOSTNAME]: {
                 hostname: HOSTNAME,
                 enabled: true,
@@ -98,9 +98,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -165,9 +165,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -213,7 +213,7 @@ describe("content inline learning loop", () => {
           expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
 
           const storageSnapshot = chromeStub.getStorageSnapshot();
-          const vocabEntries = storageSnapshot["immersionkit.vocab"] as Record<
+          const vocabEntries = storageSnapshot["user-vocab"] as Record<
             string,
             {
               status: string;
@@ -238,9 +238,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -290,9 +290,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -355,9 +355,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${lead} ${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -393,9 +393,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -459,9 +459,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -627,8 +627,8 @@ describe("content inline learning loop", () => {
         const sentenceHash = hashSentence(sourceSentence);
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": [
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": [
             ...SEED_LEXICON,
             {
               lemmaId: "lemma-can",
@@ -639,7 +639,7 @@ describe("content inline learning loop", () => {
               confidence: 0.95
             }
           ],
-          "immersionkit.siteSettings": {
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -733,9 +733,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -907,9 +907,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1066,9 +1066,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1208,12 +1208,12 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1329,8 +1329,8 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": [
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": [
             ...SEED_LEXICON,
             {
               lemmaId: "lemma-can",
@@ -1341,7 +1341,7 @@ describe("content inline learning loop", () => {
               confidence: 0.95
             }
           ],
-          "immersionkit.siteSettings": {
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1425,8 +1425,8 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<main id='feed'></main>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": [
+          "settings": BASE_SETTINGS,
+          "asset-seed-lexicon": [
             ...SEED_LEXICON,
             {
               lemmaId: "lemma-can",
@@ -1437,7 +1437,7 @@ describe("content inline learning loop", () => {
               confidence: 0.95
             }
           ],
-          "immersionkit.siteSettings": {
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1547,12 +1547,12 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1626,13 +1626,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1665,7 +1665,7 @@ describe("content inline learning loop", () => {
           expect(document.querySelector("[data-ik-sentence-note='true']")).toBeTruthy();
 
           chromeStub.setStorageValues({
-            "immersionkit.siteSettings": {
+            "site-settings": {
               [HOSTNAME]: {
                 hostname: HOSTNAME,
                 enabled: false,
@@ -1698,13 +1698,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1765,13 +1765,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1894,13 +1894,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-seed-lexicon": SEED_LEXICON,
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,

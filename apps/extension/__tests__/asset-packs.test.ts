@@ -19,7 +19,6 @@ import {
   type StoredAssetPack
 } from "../src/background/asset-packs";
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
-import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("background asset packs", () => {
   it("resolves previous/current/next band windows and unions diverged word and phrase bands", () => {
@@ -252,36 +251,6 @@ describe("background asset packs", () => {
     );
   });
 
-  it("removes generated storage asset copies without using them as a fallback", async () => {
-    const customSeed = createSeedAsset(2, "custom-small");
-    const chromeStub = installChromeStub({
-      "immersionkit.renderUnits": createRenderUnitAsset(100, "legacy-generated"),
-      "immersionkit.lexemes": createLexemeAsset(100, "legacy-generated"),
-      "immersionkit.seedLexicon": createSeedAsset(100, "legacy-generated"),
-      seedLexicon: customSeed
-    });
-    const repository = new InMemoryAssetPackRepository();
-    const service = new BackgroundAssetPackService({
-      assetBaseUrl: null,
-      repository,
-      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig())
-    });
-
-    try {
-      const context = await service.loadActiveContext();
-      const snapshot = chromeStub.getStorageSnapshot();
-
-      expect(context.source).toBe("empty");
-      expect(context.lexicon).toHaveLength(0);
-      expect(snapshot["immersionkit.renderUnits"]).toBeUndefined();
-      expect(snapshot["immersionkit.lexemes"]).toBeUndefined();
-      expect(snapshot["immersionkit.seedLexicon"]).toBeUndefined();
-      expect(snapshot.seedLexicon).toEqual(customSeed);
-      expect(repository.packs).toEqual([]);
-    } finally {
-      chromeStub.restore();
-    }
-  });
 });
 
 class InMemoryAssetPackRepository implements AssetPackRepository {
@@ -351,43 +320,6 @@ function createPack(
     bandId,
     renderUnits: [createRenderUnit(0, bandId, sourceLemma, targetLemma)],
     lexemes: [createLexeme(0, sourceLemma, targetLemma)]
-  };
-}
-
-function createRenderUnitAsset(count: number, assetVersion: string) {
-  return {
-    schemaVersion: "1.0.0",
-    assetVersion,
-    languagePair: "en-es",
-    entries: Array.from({ length: count }, (_, index) =>
-      createRenderUnit(index, "level-1a", `word-${index}`, `palabra-${index}`)
-    )
-  };
-}
-
-function createLexemeAsset(count: number, assetVersion: string) {
-  return {
-    schemaVersion: "1.0.0",
-    assetVersion,
-    languagePair: "en-es",
-    entries: Array.from({ length: count }, (_, index) =>
-      createLexeme(index, `word-${index}`, `palabra-${index}`)
-    )
-  };
-}
-
-function createSeedAsset(count: number, assetVersion: string) {
-  return {
-    schemaVersion: "1.0.0",
-    assetVersion,
-    entries: Array.from({ length: count }, (_, index) => ({
-      lemmaId: `lx:word-${index}:noun`,
-      sourceLemma: `word-${index}`,
-      targetLemma: `palabra-${index}`,
-      pos: "noun",
-      frequencyRank: index + 1,
-      confidence: 0.9
-    }))
   };
 }
 

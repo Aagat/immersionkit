@@ -8,6 +8,9 @@ import {
   transactionDone
 } from "./indexeddb";
 import { isRecord } from "./storage";
+import { USER_DATA_KEYS } from "../shared/user-data-keys";
+
+export { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 const USER_DATA_SCHEMA_VERSION = 1;
 const USER_VOCAB_SCHEMA_VERSION = 1;
@@ -17,17 +20,6 @@ type StorageRecord = Record<string, unknown>;
 export type UserDataKeyDefinition = {
   key: string;
 };
-
-export const USER_DATA_KEYS = {
-  settings: "immersionkit.settings",
-  siteSettings: "immersionkit.siteSettings",
-  providerOpenAiApiKey: "immersionkit.provider.openai.apiKey",
-  curriculumConfig: "immersionkit.curriculum.config",
-  learningProfile: "immersionkit.learningProfile",
-  curriculumProgressionDiagnostics:
-    "immersionkit.curriculum.lastProgressionDecision",
-  firstRunIntro: "immersionkit.firstRun.showIntro"
-} as const;
 
 export const USER_DATA_KEY_DEFINITIONS = [
   {

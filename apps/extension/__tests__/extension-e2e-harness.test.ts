@@ -259,7 +259,7 @@ async function launchBuiltExtension(): Promise<{
 }
 
 async function seedSettings(serviceWorker: Worker): Promise<void> {
-  await writeUserData(serviceWorker, "immersionkit.settings", {
+  await writeUserData(serviceWorker, "settings", {
     enabled: true,
     discoveryRate: 1,
     targetLanguage: "es",
@@ -304,7 +304,7 @@ async function setFixtureSiteEnabled(
   serviceWorker: Worker,
   enabled: boolean
 ): Promise<void> {
-  await writeUserData(serviceWorker, "immersionkit.siteSettings", {
+  await writeUserData(serviceWorker, "site-settings", {
     "127.0.0.1": {
       hostname: "127.0.0.1",
       enabled,
@@ -318,7 +318,7 @@ async function setFixtureSiteEnabled(
 async function readSettings(serviceWorker: Worker): Promise<Record<string, unknown>> {
   return (await readUserData(
     serviceWorker,
-    "immersionkit.settings"
+    "settings"
   )) as Record<string, unknown>;
 }
 
@@ -331,7 +331,7 @@ async function readSettingsFromExtensionPage(
         chrome.runtime.sendMessage(
           {
             type: "user-data/get",
-            keys: ["immersionkit.settings"]
+            keys: ["settings"]
           },
           (response?: unknown) => {
             if (chrome.runtime.lastError) {
@@ -344,7 +344,7 @@ async function readSettingsFromExtensionPage(
                 ? (response as { values?: Record<string, unknown> }).values
                 : null;
             resolveRead(
-              (values?.["immersionkit.settings"] as Record<string, unknown>) ?? {}
+              (values?.["settings"] as Record<string, unknown>) ?? {}
             );
           }
         );

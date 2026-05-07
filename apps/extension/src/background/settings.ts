@@ -9,17 +9,12 @@ import {
 
 import { isRecord, pickFirstDefinedValue, readString } from "./storage";
 import { loadUserDataValues } from "./user-data-repository";
+import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
-const SETTINGS_STORAGE_KEYS = ["immersionkit.settings"] as const;
-const CURRICULUM_CONFIG_STORAGE_KEYS = [
-  "immersionkit.curriculum.config"
-] as const;
-const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile"
-] as const;
-const OPENAI_API_KEY_STORAGE_KEYS = [
-  "immersionkit.provider.openai.apiKey"
-] as const;
+const SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.settings] as const;
+const CURRICULUM_CONFIG_STORAGE_KEYS = [USER_DATA_KEYS.curriculumConfig] as const;
+const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
+const OPENAI_API_KEY_STORAGE_KEYS = [USER_DATA_KEYS.providerOpenAiApiKey] as const;
 
 export type ProviderCredentials = {
   openAiApiKey: string | null;

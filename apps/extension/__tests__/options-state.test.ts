@@ -18,13 +18,13 @@ describe("options state", () => {
   it("parses curriculum profile and last progression diagnostics", async () => {
     const indexedDbStub = installIndexedDbStub();
     await setUserDataValues({
-      "immersionkit.learningProfile": {
+      "learning-profile": {
         activeVocabularyBandId: "level-1b",
         activePhraseBandId: "level-1b",
         activeGrammarBandId: "level-1a",
         unlockedBandIds: ["level-1a", "level-1b", ""]
       },
-      "immersionkit.curriculum.lastProgressionDecision": {
+      "curriculum-progression-diagnostics": {
         decidedAt: "2026-04-28T12:00:00.000Z",
         configId: "en-es-default-v1",
         previousBandId: "level-1a",

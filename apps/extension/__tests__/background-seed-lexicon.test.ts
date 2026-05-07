@@ -4,7 +4,7 @@ import { ensureSeedLexiconReady } from "../src/background/seed-lexicon";
 import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("background seed lexicon compatibility wrapper", () => {
-  it("delegates readiness to asset packs without writing generated assets to chrome storage", async () => {
+  it("delegates readiness to asset packs without writing generated asset copies", async () => {
     const chromeStub = installChromeStub();
 
     try {
@@ -13,9 +13,9 @@ describe("background seed lexicon compatibility wrapper", () => {
 
       expect(["empty", "remote-pack", "cached-pack"]).toContain(result.source);
       expect(result.entryCount).toBeGreaterThanOrEqual(0);
-      expect(storageSnapshot["immersionkit.seedLexicon"]).toBeUndefined();
-      expect(storageSnapshot["immersionkit.renderUnits"]).toBeUndefined();
-      expect(storageSnapshot["immersionkit.lexemes"]).toBeUndefined();
+      expect(storageSnapshot["asset-seed-lexicon"]).toBeUndefined();
+      expect(storageSnapshot["asset-render-units"]).toBeUndefined();
+      expect(storageSnapshot["asset-lexemes"]).toBeUndefined();
     } finally {
       chromeStub.restore();
     }

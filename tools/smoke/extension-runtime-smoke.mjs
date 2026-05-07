@@ -195,7 +195,7 @@ try {
     try {
       const transaction = database.transaction("user-data", "readwrite");
       transaction.objectStore("user-data").put({
-        key: "immersionkit.settings",
+        key: "settings",
         value: {
           enabled: true,
           discoveryRate: 1,
@@ -353,7 +353,7 @@ try {
         const readRequest = database
           .transaction("user-data", "readonly")
           .objectStore("user-data")
-          .get("immersionkit.settings");
+          .get("settings");
         readRequest.onsuccess = () => {
           database.close();
           resolveSettings(readRequest.result?.value ?? null);

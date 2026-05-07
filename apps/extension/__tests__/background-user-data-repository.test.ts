@@ -14,19 +14,19 @@ import { installChromeStub } from "./helpers/chrome-stub";
 import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 
 describe("background user data repositories", () => {
-  it("stores settings and vocab state in IndexedDB without chrome storage writes", async () => {
+  it("stores settings and vocab state in IndexedDB without extension storage writes", async () => {
     const indexedDbStub = installIndexedDbStub();
     const chromeStub = installChromeStub();
 
     try {
       await setUserDataValues({
-        "immersionkit.settings": {
+        "settings": {
           discoveryRate: 0.25,
           targetLanguage: "es",
           sentenceTranslationEnabled: false,
           provider: "none"
         },
-        settings: {
+        "unknown-settings": {
           discoveryRate: 0.75
         }
       });
@@ -37,9 +37,9 @@ describe("background user data repositories", () => {
       });
 
       await expect(
-        loadUserDataValues(["immersionkit.settings", "settings"])
+        loadUserDataValues(["settings", "unknown-settings"])
       ).resolves.toEqual({
-        "immersionkit.settings": {
+        "settings": {
           discoveryRate: 0.25,
           targetLanguage: "es",
           sentenceTranslationEnabled: false,

@@ -4,6 +4,7 @@ import {
   type SeedLexiconEntry,
   type SupportedPos
 } from "@immersionkit/shared";
+import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 export const IMMERSIONKIT_ROOT_ATTRIBUTE = "data-immersionkit-root";
 export const IMMERSIONKIT_NODE_ATTRIBUTE = "data-ik-node-id";
@@ -54,13 +55,10 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
 };
 
 export const STORAGE_KEYS = {
-  settings: ["immersionkit.settings"] as const,
-  siteSettings: ["immersionkit.siteSettings"] as const,
-  lexemes: ["immersionkit.lexemes", "lexemes"] as const,
-  renderUnits: ["immersionkit.renderUnits", "renderUnits"] as const,
-  seedLexicon: ["immersionkit.seedLexicon", "seedLexicon", "lexicon"] as const,
-  curriculumConfig: ["immersionkit.curriculum.config"] as const,
-  learningProfile: ["immersionkit.learningProfile"] as const
+  settings: [USER_DATA_KEYS.settings] as const,
+  siteSettings: [USER_DATA_KEYS.siteSettings] as const,
+  curriculumConfig: [USER_DATA_KEYS.curriculumConfig] as const,
+  learningProfile: [USER_DATA_KEYS.learningProfile] as const
 };
 
 export const FALLBACK_SEED_LEXICON: SeedLexiconEntry[] = [

@@ -17,7 +17,6 @@ import {
   type ParsedLexemeAsset,
   type ParsedRenderUnitAsset
 } from "../render-units/render-units";
-import { parseSeedLexiconInput } from "../seed/seed-lexicon";
 import {
   INDEXEDDB_STORES,
   getIndexedDbTransaction,
@@ -26,12 +25,7 @@ import {
   requestToPromise,
   transactionDone
 } from "./indexeddb";
-import {
-  isRecord,
-  readStorageValues,
-  readString,
-  removeStorageValues
-} from "./storage";
+import { isRecord, readString } from "./storage";
 import {
   loadBackgroundRuntimeConfig,
   type BackgroundRuntimeConfig
@@ -40,11 +34,6 @@ import {
 const LANGUAGE_PAIR = "en-es";
 const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
 const FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS = 2500;
-const GENERATED_STORAGE_KEYS = [
-  "immersionkit.lexemes",
-  "immersionkit.renderUnits",
-  "immersionkit.seedLexicon"
-] as const;
 
 type StorageRecord = Record<string, unknown>;
 
@@ -186,7 +175,6 @@ export class BackgroundAssetPackService {
       bandIds
     );
     if (cachedPacks.length > 0) {
-      void cleanupGeneratedStorageAssets({ removeAssetCopies: true });
       void this.refreshRemotePacks(bandIds);
       return createActiveAssetContext({
         packs: cachedPacks,
@@ -194,8 +182,6 @@ export class BackgroundAssetPackService {
         bandIds
       });
     }
-
-    void cleanupGeneratedStorageAssets({ removeAssetCopies: true });
 
     const remoteContext = await withTimeout(
       this.refreshRemotePacks(bandIds),
@@ -263,7 +249,6 @@ export class BackgroundAssetPackService {
       await this.repository.retainOnly(
         packsForContext.map((pack) => buildAssetPackIdentity(pack))
       );
-      await cleanupGeneratedStorageAssets({ removeAssetCopies: true });
     }
 
     return createActiveAssetContext({
@@ -1085,50 +1070,4 @@ function normalizeBaseUrl(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim().replace(/\/+$/, "")
     : null;
-}
-
-async function cleanupGeneratedStorageAssets(input: {
-  removeAssetCopies: boolean;
-}): Promise<void> {
-  const storage = await readStorageValues(GENERATED_STORAGE_KEYS);
-  const keysToRemove: string[] = [];
-
-  if (
-    input.removeAssetCopies &&
-    isGeneratedLexemeAsset(parseLexemeAsset(storage["immersionkit.lexemes"]))
-  ) {
-    keysToRemove.push("immersionkit.lexemes");
-  }
-
-  if (
-    input.removeAssetCopies &&
-    isGeneratedRenderUnitAsset(parseRenderUnitAsset(storage["immersionkit.renderUnits"]))
-  ) {
-    keysToRemove.push("immersionkit.renderUnits");
-  }
-
-  if (isGeneratedSeedLexicon(storage["immersionkit.seedLexicon"])) {
-    keysToRemove.push("immersionkit.seedLexicon");
-  }
-
-  if (keysToRemove.length > 0) {
-    await removeStorageValues(keysToRemove);
-  }
-}
-
-function isGeneratedRenderUnitAsset(
-  asset: ParsedRenderUnitAsset | null
-): asset is ParsedRenderUnitAsset {
-  return Boolean(asset && asset.assetVersion && asset.entries.length >= 100);
-}
-
-function isGeneratedLexemeAsset(
-  asset: ParsedLexemeAsset | null
-): asset is ParsedLexemeAsset {
-  return Boolean(asset && asset.assetVersion && asset.entries.length >= 100);
-}
-
-function isGeneratedSeedLexicon(value: unknown): boolean {
-  const seed = parseSeedLexiconInput(value);
-  return Boolean(seed && seed.assetVersion && seed.entries.length >= 100);
 }

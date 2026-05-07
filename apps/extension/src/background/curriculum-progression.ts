@@ -20,9 +20,7 @@ import {
   USER_DATA_KEYS
 } from "./user-data-repository";
 
-const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile"
-] as const;
+const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
 
 export interface LearningProfileStore {
   load(): Promise<CurriculumRuntimeProfileInput>;

@@ -30,23 +30,20 @@ import {
   removeUserDataValues as removeIndexedDbUserDataValues,
   setUserDataValues as setIndexedDbUserDataValues
 } from "../background/user-data-repository";
+import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 type StorageRecord = Record<string, unknown>;
 
-export const SETTINGS_STORAGE_KEYS = ["immersionkit.settings"] as const;
-export const SITE_SETTINGS_STORAGE_KEYS = [
-  "immersionkit.siteSettings"
-] as const;
+export const SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.settings] as const;
+export const SITE_SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.siteSettings] as const;
 export const PROVIDER_API_KEY_STORAGE_KEYS = [
-  "immersionkit.provider.openai.apiKey"
+  USER_DATA_KEYS.providerOpenAiApiKey
 ] as const;
-export const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile"
-] as const;
+export const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
 export const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
-  "immersionkit.curriculum.lastProgressionDecision"
+  USER_DATA_KEYS.curriculumProgressionDiagnostics
 ] as const;
-export const FIRST_RUN_INTRO_STORAGE_KEY = "immersionkit.firstRun.showIntro";
+export const FIRST_RUN_INTRO_STORAGE_KEY = USER_DATA_KEYS.firstRunIntro;
 
 export type ProficiencySeed = "beginner" | "intermediate" | "advanced";
 

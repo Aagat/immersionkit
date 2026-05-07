@@ -4,21 +4,21 @@ import { loadProcessingContext } from "../src/content/storage";
 import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("extension test scaffolding", () => {
-  it("supports loading processing context from stubbed chrome storage", async () => {
+  it("supports loading processing context from stubbed runtime storage", async () => {
     const chromeStub = installChromeStub({
-      "immersionkit.settings": {
+      "settings": {
         discoveryRate: 0.35,
         sentenceTranslationEnabled: true,
         provider: "openai"
       },
-      "immersionkit.siteSettings": [
+      "site-settings": [
         {
           hostname: "fixtures.immersionkit.test",
           enabled: false,
           discoveryRate: 2
         }
       ],
-      "immersionkit.seedLexicon": [
+      "asset-seed-lexicon": [
         {
           lemmaId: "lemma-safe",
           sourceLemma: "garden",
@@ -36,7 +36,7 @@ describe("extension test scaffolding", () => {
           confidence: 0.9
         }
       ],
-      "immersionkit.vocab": [
+      "user-vocab": [
         {
           lemmaId: "lemma-safe",
           status: "known",
@@ -66,7 +66,7 @@ describe("extension test scaffolding", () => {
 
   it("parses wrapped compact seed assets from storage", async () => {
     const chromeStub = installChromeStub({
-      "immersionkit.seedLexicon": {
+      "asset-seed-lexicon": {
         schemaVersion: "1.0.0",
         assetVersion: "2026.04.18-seed2",
         entryEncoding: "array",
@@ -115,7 +115,7 @@ describe("extension test scaffolding", () => {
 
   it("adapts stored render units into lexeme-backed words and sentence-help hints", async () => {
     const chromeStub = installChromeStub({
-      "immersionkit.lexemes": {
+      "asset-lexemes": {
         schemaVersion: "1.0.0",
         assetVersion: "test-lexemes",
         languagePair: "en-es",
@@ -130,7 +130,7 @@ describe("extension test scaffolding", () => {
           }
         ]
       },
-      "immersionkit.renderUnits": {
+      "asset-render-units": {
         schemaVersion: "1.0.0",
         assetVersion: "test-render-units",
         languagePair: "en-es",
