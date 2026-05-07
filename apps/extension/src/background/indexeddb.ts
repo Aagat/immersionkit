@@ -44,21 +44,6 @@ export async function getIndexedDbTransaction(
   return database.transaction([...new Set(storeNames)], mode);
 }
 
-export async function countIndexedDbStore(
-  storeName: IndexedDbStoreName
-): Promise<number | null> {
-  if (!isIndexedDbAvailable()) {
-    return null;
-  }
-
-  try {
-    const store = await getIndexedDbStore(storeName, "readonly");
-    return await requestToPromise(store.count());
-  } catch {
-    return null;
-  }
-}
-
 export function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => {

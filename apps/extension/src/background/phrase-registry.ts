@@ -1,6 +1,5 @@
 import {
   createRuntimePhraseRegistryEntry,
-  type LearningItem,
   type PhraseOccurrence,
   type PhraseRegistryEntry
 } from "@immersionkit/shared";
@@ -138,7 +137,7 @@ export class IndexedDbPhraseRegistryRepository
   }
 }
 
-export class IndexedDbPhraseRegistryStore implements PhraseRegistryStore {
+class IndexedDbPhraseRegistryStore implements PhraseRegistryStore {
   async loadAll(): Promise<PhraseRegistryRecord> {
     if (!isIndexedDbAvailable()) {
       return {};

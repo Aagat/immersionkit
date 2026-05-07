@@ -47,7 +47,7 @@ export type CurriculumProgressionResult = {
   diagnostics: CurriculumProgressionDecisionDiagnostics;
 };
 
-export class ChromeLearningProfileStore implements LearningProfileStore {
+class ChromeLearningProfileStore implements LearningProfileStore {
   async load(): Promise<CurriculumRuntimeProfileInput> {
     const storage = await loadUserDataValues(LEARNING_PROFILE_STORAGE_KEYS);
     const rawProfile = pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS);
@@ -65,7 +65,7 @@ export interface CurriculumProgressionDiagnosticsStore {
   persist(diagnostics: CurriculumProgressionDecisionDiagnostics): Promise<void>;
 }
 
-export class ChromeCurriculumProgressionDiagnosticsStore
+class ChromeCurriculumProgressionDiagnosticsStore
   implements CurriculumProgressionDiagnosticsStore
 {
   async persist(diagnostics: CurriculumProgressionDecisionDiagnostics): Promise<void> {

@@ -15,14 +15,6 @@ import {
   type ResolvedExtensionSettings,
   type SiteSetting
 } from "@immersionkit/shared";
-import {
-  PAGE_DIAGNOSTICS_MESSAGE_TYPE,
-  type PageDiagnosticsSnapshot
-} from "../diagnostics/page-diagnostics";
-import {
-  INDEXEDDB_STORES,
-  countIndexedDbStore
-} from "../background/indexeddb";
 import { IndexedDbLearningItemRepository } from "../background/learning-item-repository";
 import {
   IndexedDbUserVocabRepository,
@@ -34,16 +26,16 @@ import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 type StorageRecord = Record<string, unknown>;
 
-export const SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.settings] as const;
-export const SITE_SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.siteSettings] as const;
-export const PROVIDER_API_KEY_STORAGE_KEYS = [
+const SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.settings] as const;
+const SITE_SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.siteSettings] as const;
+const PROVIDER_API_KEY_STORAGE_KEYS = [
   USER_DATA_KEYS.providerOpenAiApiKey
 ] as const;
-export const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
-export const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
+const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
+const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
   USER_DATA_KEYS.curriculumProgressionDiagnostics
 ] as const;
-export const FIRST_RUN_INTRO_STORAGE_KEY = USER_DATA_KEYS.firstRunIntro;
+const FIRST_RUN_INTRO_STORAGE_KEY = USER_DATA_KEYS.firstRunIntro;
 
 export type ProficiencySeed = "beginner" | "intermediate" | "advanced";
 
@@ -105,13 +97,6 @@ export type VocabStats = {
   known: number;
   ignored: number;
 };
-
-export type SentenceStats = {
-  cacheSize: number;
-  pendingCount: number;
-};
-
-export type PageDiagnostics = PageDiagnosticsSnapshot;
 
 export type CurriculumProgressionDiagnostics = {
   decidedAt: string;
@@ -217,7 +202,7 @@ export async function loadSiteSettingsMap(): Promise<SiteSettingsMap> {
   return normalizeSiteSettingsMap(value);
 }
 
-export async function saveSiteSettingsMap(siteSettings: SiteSettingsMap): Promise<void> {
+async function saveSiteSettingsMap(siteSettings: SiteSettingsMap): Promise<void> {
   await setUserDataRuntimeValues({
     [CANONICAL_SITE_SETTINGS_STORAGE_KEY]: siteSettings
   });
@@ -290,17 +275,6 @@ export async function loadVocabStats(): Promise<VocabStats> {
   return stats;
 }
 
-export async function loadSentenceStats(): Promise<SentenceStats> {
-  const indexedDbCacheSize = await countIndexedDbStore(
-    INDEXEDDB_STORES.sentenceCache
-  );
-
-  return {
-    cacheSize: indexedDbCacheSize ?? 0,
-    pendingCount: 0
-  };
-}
-
 export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics> {
   const storage = await getUserDataValues([
     ...LEARNING_PROFILE_STORAGE_KEYS,
@@ -317,11 +291,6 @@ export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics
       pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
     )
   };
-}
-
-export async function loadGrammarEvidenceStats(): Promise<GrammarEvidenceStats> {
-  const repository = new IndexedDbLearningItemRepository();
-  return summarizeGrammarEvidenceStats(Object.values(await repository.loadAll()));
 }
 
 export async function loadCheckpointEligibilityPreview(): Promise<CheckpointEligibilityPreview> {
@@ -564,28 +533,6 @@ export async function loadActiveTabContext(): Promise<ActiveTabContext> {
     isSupportedPage: true,
     supportMessage: parsedUrl.hostname
   };
-}
-
-export async function loadPageDiagnostics(
-  tabId: number | null | undefined
-): Promise<PageDiagnostics | null> {
-  if (typeof tabId !== "number") {
-    return null;
-  }
-
-  const diagnostics = await sendTabMessage<PageDiagnostics>(tabId, {
-    type: PAGE_DIAGNOSTICS_MESSAGE_TYPE
-  });
-
-  return diagnostics;
-}
-
-export async function pingBackground(): Promise<boolean> {
-  const response = await sendRuntimeMessage<{ ok?: boolean }>({
-    type: RuntimeMessageType.Ping
-  });
-
-  return Boolean(response?.ok);
 }
 
 export async function notifySettingsRefresh(tabId?: number | null): Promise<void> {

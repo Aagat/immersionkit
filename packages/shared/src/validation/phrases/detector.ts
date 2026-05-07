@@ -130,7 +130,6 @@ export function detectPhraseCandidatesFromAnalyzerOutput(
   lexicon: readonly FixedPhraseLexiconEntry[] = FIXED_PHRASE_LEXICON,
   options: AnalyzerPhraseDetectionOptions = {}
 ): PhraseDetectionResult {
-  const tokens = materializePhraseTokensFromAnalyzerOutput(analyzerOutput);
   const fixedLaneCandidates = detectFixedPhrasesFromAnalyzerOutput(
     analyzerOutput,
     lexicon

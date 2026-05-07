@@ -156,7 +156,7 @@ export class IndexedDbLearningHistoryRepository
   }
 }
 
-export function parseReviewEvents(value: unknown): ReviewEvent[] {
+function parseReviewEvents(value: unknown): ReviewEvent[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -166,7 +166,7 @@ export function parseReviewEvents(value: unknown): ReviewEvent[] {
   });
 }
 
-export function parseContextHistory(
+function parseContextHistory(
   value: unknown
 ): LearningItemContextHistoryRecord {
   const values = Array.isArray(value)

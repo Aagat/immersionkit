@@ -1,4 +1,4 @@
-export { readDefaultGoldilocksThreshold, runSentenceShortlistingBenchmark } from "./harness";
+export { runSentenceShortlistingBenchmark } from "./harness";
 export type {
   SentenceShortlistingAssertion,
   SentenceShortlistingBenchmarkInput,

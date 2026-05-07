@@ -5,7 +5,7 @@ import type { PhraseMetadata, TokenMetadata } from "./contracts";
 import type { CachedGrammarFeature } from "./storage";
 
 export const CONTENT_ASSIST_EVENT_MESSAGE_TYPE = RuntimeMessageType.AssistEvent;
-export const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
+const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
   RuntimeMessageType.QualifiedExposureEvent;
 
 const QUALIFIED_DWELL_MS = 1_500;

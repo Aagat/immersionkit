@@ -6,7 +6,6 @@ import {
 } from "@immersionkit/shared";
 import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 
-import { DEFAULT_SENTENCE_THRESHOLD } from "../../constants";
 import { collectEligibleTextNodes } from "../../dom";
 import { normalizeSentenceWords, segmentText } from "../../tokenize";
 import type {
@@ -728,8 +727,4 @@ function withScenarioSandbox<T>(
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
-}
-
-export function readDefaultGoldilocksThreshold(): number {
-  return DEFAULT_SENTENCE_THRESHOLD;
 }

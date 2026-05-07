@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   Icon,
-  IconButton,
   ImmersionLogo,
   ProgressBar,
   Toggle,

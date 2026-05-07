@@ -5,8 +5,8 @@ import type { SentenceCandidateMetadata } from "./contracts";
 import { normalizeSentenceWords } from "./tokenize";
 
 const SENTENCE_PATTERN = /[^.!?]+[.!?]?/g;
-export const MIN_WORDS_PER_SENTENCE = 5;
-export const MAX_WORDS_PER_SENTENCE = 32;
+const MIN_WORDS_PER_SENTENCE = 5;
+const MAX_WORDS_PER_SENTENCE = 32;
 
 export type SentenceSegment = {
   text: string;

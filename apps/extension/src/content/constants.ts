@@ -1,8 +1,4 @@
-import {
-  DEFAULT_EXTENSION_SETTINGS,
-  type ExtensionSettings,
-  type SupportedPos
-} from "@immersionkit/shared";
+import { DEFAULT_EXTENSION_SETTINGS, type ExtensionSettings } from "@immersionkit/shared";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 export const IMMERSIONKIT_ROOT_ATTRIBUTE = "data-immersionkit-root";
@@ -13,15 +9,7 @@ export const IMMERSIONKIT_WORD_SELECTOR = `[${IMMERSIONKIT_TOKEN_ATTRIBUTE}]`;
 export const IMMERSIONKIT_NODE_SELECTOR = `[${IMMERSIONKIT_NODE_ATTRIBUTE}]`;
 export const IMMERSIONKIT_IGNORE_SELECTOR = "[data-immersionkit-ignore='true']";
 
-export const SAFE_POS: ReadonlySet<SupportedPos> = new Set([
-  "noun",
-  "adjective",
-  "adverb"
-]);
-
 export const DEFAULT_DISCOVERY_RATE = DEFAULT_EXTENSION_SETTINGS.discoveryRate;
-export const DEFAULT_SENTENCE_THRESHOLD =
-  DEFAULT_EXTENSION_SETTINGS.goldilocksThreshold;
 export const MAX_TEXT_NODE_LENGTH = 420;
 export const MAX_TEXT_NODE_SCAN_LENGTH = 8_000;
 export const MAX_SENTENCE_METADATA_LENGTH = 240;

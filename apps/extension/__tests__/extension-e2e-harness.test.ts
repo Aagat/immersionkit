@@ -315,13 +315,6 @@ async function setFixtureSiteEnabled(
   });
 }
 
-async function readSettings(serviceWorker: Worker): Promise<Record<string, unknown>> {
-  return (await readUserData(
-    serviceWorker,
-    "settings"
-  )) as Record<string, unknown>;
-}
-
 async function readSettingsFromExtensionPage(
   page: Page
 ): Promise<Record<string, unknown>> {
@@ -461,36 +454,6 @@ async function writeUserData(
     },
     { key, value }
   );
-}
-
-async function readUserData(
-  serviceWorker: Worker,
-  key: string
-): Promise<unknown> {
-  return serviceWorker.evaluate(async (userDataKey) => {
-    const database = await new Promise<IDBDatabase>((resolveOpen, rejectOpen) => {
-      const request = indexedDB.open("immersionkit-extension");
-      request.onsuccess = () => resolveOpen(request.result);
-      request.onerror = () =>
-        rejectOpen(request.error ?? new Error("IndexedDB open failed."));
-    });
-    try {
-      return await new Promise<unknown>((resolveRead, rejectRead) => {
-        const request = database
-          .transaction("user-data", "readonly")
-          .objectStore("user-data")
-          .get(userDataKey);
-        request.onsuccess = () => {
-          const result = request.result as { value?: unknown } | undefined;
-          resolveRead(result?.value ?? null);
-        };
-        request.onerror = () =>
-          rejectRead(request.error ?? new Error("IndexedDB read failed."));
-      });
-    } finally {
-      database.close();
-    }
-  }, key);
 }
 
 async function readAssetCacheSnapshot(serviceWorker: Worker): Promise<{

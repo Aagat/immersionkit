@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ExtensionOptions, type OptionsSection } from "@immersionkit/ui";
 import type { ProviderName } from "@immersionkit/shared";
 import {
-  PROFICIENCY_SEED_OPTIONS,
   isProviderKeyValid,
   loadCheckpointEligibilityPreview,
   loadFirstRunIntroVisible,
@@ -521,33 +520,6 @@ function shouldShowAdvancedTab(): boolean {
     params.get("debug") === "1" ||
     params.get("advanced") === "1"
   );
-}
-
-function describeDiscoveryRate(percent: number): string {
-  if (percent <= 5) {
-    return "Subtle";
-  }
-
-  if (percent <= 12) {
-    return "Balanced";
-  }
-
-  return "Bold";
-}
-
-function formatUpdatedAt(value: string): string {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "recently";
-  }
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
 }
 
 function getTranslationSummary(input: {

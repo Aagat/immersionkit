@@ -8,6 +8,10 @@
     "asset-packs:serve": "node tools/assets/asset-pack-server.mjs",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "build:local-assets": "VITE_IMMERSIONKIT_ASSET_BASE_URL=http://127.0.0.1:8787/assets pnpm build",
+    "lint": "pnpm lint:code && pnpm lint:dead",
+    "lint:code": "biome lint .",
+    "lint:code:fix": "biome lint --write .",
+    "lint:dead": "rev-dep config run",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "smoke:extension": "node tools/smoke/extension-runtime-smoke.mjs",
@@ -22,6 +26,8 @@
     "benchmark:sentence-suitability:test": "pnpm --filter @immersionkit/shared exec vitest run tests/sentence-suitability-validation.test.ts --reporter=verbose"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
+    "rev-dep": "^2.13.2",
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }

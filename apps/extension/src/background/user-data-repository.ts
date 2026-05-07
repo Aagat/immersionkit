@@ -17,11 +17,11 @@ const USER_VOCAB_SCHEMA_VERSION = 1;
 
 type StorageRecord = Record<string, unknown>;
 
-export type UserDataKeyDefinition = {
+type UserDataKeyDefinition = {
   key: string;
 };
 
-export const USER_DATA_KEY_DEFINITIONS = [
+const USER_DATA_KEY_DEFINITIONS = [
   {
     key: USER_DATA_KEYS.settings
   },
@@ -259,7 +259,7 @@ export async function removeUserDataValues(keys: readonly string[]): Promise<voi
   await repository.removeValues(definitions.map((definition) => definition.key));
 }
 
-export function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
+function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
   const entries: UserVocabEntry[] = [];
 
   if (Array.isArray(input)) {

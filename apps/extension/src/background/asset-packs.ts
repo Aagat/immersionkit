@@ -12,9 +12,7 @@ import {
 import {
   getRenderUnitSentenceHints,
   parseLexemeAsset,
-  parseRenderUnitAsset,
-  type ParsedLexemeAsset,
-  type ParsedRenderUnitAsset
+  parseRenderUnitAsset
 } from "../render-units/render-units";
 import {
   INDEXEDDB_STORES,
@@ -33,8 +31,6 @@ import {
 const LANGUAGE_PAIR = "en-es";
 const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
 const FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS = 2500;
-
-type StorageRecord = Record<string, unknown>;
 
 export type AssetPackManifestEntry = {
   bandId: string;
@@ -321,7 +317,7 @@ export class BackgroundAssetPackService {
   }
 }
 
-export class IndexedDbAssetPackRepository implements AssetPackRepository {
+class IndexedDbAssetPackRepository implements AssetPackRepository {
   async getLatestPacksForBands(
     languagePair: typeof LANGUAGE_PAIR,
     bandIds: readonly string[]
@@ -646,52 +642,7 @@ export function validateAssetPack(
   };
 }
 
-export function createAssetPacksFromParsedAssets(input: {
-  renderUnits: ParsedRenderUnitAsset;
-  lexemes: ParsedLexemeAsset;
-  bandIds?: readonly string[];
-}): AssetPack[] {
-  const requestedBandIds = input.bandIds ? new Set(input.bandIds) : null;
-  const lexemesById = new Map(
-    input.lexemes.entries.map((lexeme) => [lexeme.lexemeId, lexeme] as const)
-  );
-  const renderUnitsByBandId = new Map<string, RenderUnitEntry[]>();
-
-  for (const renderUnit of input.renderUnits.entries) {
-    if (requestedBandIds && !requestedBandIds.has(renderUnit.minBand)) {
-      continue;
-    }
-
-    const entries = renderUnitsByBandId.get(renderUnit.minBand) ?? [];
-    entries.push(renderUnit);
-    renderUnitsByBandId.set(renderUnit.minBand, entries);
-  }
-
-  return [...renderUnitsByBandId.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([bandId, renderUnits]) => {
-      const referencedLexemeIds = new Set(
-        renderUnits.flatMap((renderUnit) => renderUnit.lexemeIds)
-      );
-      const lexemes = [...referencedLexemeIds].flatMap((lexemeId): LexemeEntry[] => {
-        const lexeme = lexemesById.get(lexemeId);
-        return lexeme ? [lexeme] : [];
-      });
-
-      return {
-        schemaVersion:
-          input.renderUnits.schemaVersion ?? input.lexemes.schemaVersion ?? "1.0.0",
-        assetVersion:
-          input.renderUnits.assetVersion ?? input.lexemes.assetVersion ?? "legacy-storage",
-        languagePair: LANGUAGE_PAIR,
-        bandId,
-        renderUnits,
-        lexemes
-      };
-    });
-}
-
-export function buildManifestUrl(baseUrl: string): string {
+function buildManifestUrl(baseUrl: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/${LANGUAGE_PAIR}/manifest.json`;
 }
 

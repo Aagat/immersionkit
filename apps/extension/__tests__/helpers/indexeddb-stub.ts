@@ -147,7 +147,7 @@ class MemoryTransaction {
   constructor(
     private readonly state: DatabaseState,
     readonly mode: IDBTransactionMode,
-    private readonly storeNames: string[] = []
+    _storeNames: string[] = []
   ) {}
 
   objectStore(name: string): IDBObjectStore {

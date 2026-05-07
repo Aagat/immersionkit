@@ -53,7 +53,7 @@ export class IndexedDbLearningItemRepository implements LearningItemRepository {
   }
 }
 
-export function parseLearningItems(value: unknown): LearningItemRecord {
+function parseLearningItems(value: unknown): LearningItemRecord {
   const values = Array.isArray(value)
     ? value
     : isRecord(value)
