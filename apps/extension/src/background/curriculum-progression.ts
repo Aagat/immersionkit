@@ -12,18 +12,17 @@ import {
 import {
   isRecord,
   pickFirstDefinedValue,
-  readStorageValues,
-  readString,
-  writeStorageValues
+  readString
 } from "./storage";
+import {
+  loadUserDataValues,
+  setUserDataValues,
+  USER_DATA_KEYS
+} from "./user-data-repository";
 
 const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile",
-  "learningProfile"
+  "immersionkit.learningProfile"
 ] as const;
-
-const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEY =
-  "immersionkit.curriculum.lastProgressionDecision";
 
 export interface LearningProfileStore {
   load(): Promise<CurriculumRuntimeProfileInput>;
@@ -52,14 +51,14 @@ export type CurriculumProgressionResult = {
 
 export class ChromeLearningProfileStore implements LearningProfileStore {
   async load(): Promise<CurriculumRuntimeProfileInput> {
-    const storage = await readStorageValues(LEARNING_PROFILE_STORAGE_KEYS);
+    const storage = await loadUserDataValues(LEARNING_PROFILE_STORAGE_KEYS);
     const rawProfile = pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS);
     return parseLearningProfile(rawProfile);
   }
 
   async persist(profile: CurriculumRuntimeProfileInput): Promise<void> {
-    await writeStorageValues({
-      "immersionkit.learningProfile": profile
+    await setUserDataValues({
+      [USER_DATA_KEYS.learningProfile]: profile
     });
   }
 }
@@ -72,8 +71,8 @@ export class ChromeCurriculumProgressionDiagnosticsStore
   implements CurriculumProgressionDiagnosticsStore
 {
   async persist(diagnostics: CurriculumProgressionDecisionDiagnostics): Promise<void> {
-    await writeStorageValues({
-      [CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEY]: diagnostics
+    await setUserDataValues({
+      [USER_DATA_KEYS.curriculumProgressionDiagnostics]: diagnostics
     });
   }
 }

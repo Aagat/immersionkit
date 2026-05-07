@@ -46,9 +46,8 @@ import {
   getDefaultSentenceAnalyzer,
   type SentenceAnalyzer
 } from "./sentence-analyzers";
-import { pickFirstDefinedValue, readStorageValues } from "./storage";
+import { IndexedDbUserVocabRepository } from "./user-data-repository";
 
-const VOCAB_STORAGE_KEYS = ["immersionkit.vocab", "vocab", "vocabEntries"] as const;
 const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
 
 export type SentenceAnalysisCandidate = {
@@ -1239,63 +1238,11 @@ function normalizeAnalysisCandidates(
 }
 
 async function loadBackgroundVocab(): Promise<Map<string, UserVocabEntry>> {
-  const storage = await readStorageValues(VOCAB_STORAGE_KEYS);
-  return parseVocabEntries(pickFirstDefinedValue(storage, VOCAB_STORAGE_KEYS));
-}
-
-function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
-  const entries: UserVocabEntry[] = [];
-
-  if (Array.isArray(input)) {
-    for (const entry of input) {
-      const normalized = normalizeVocabEntry(entry);
-      if (normalized) {
-        entries.push(normalized);
-      }
-    }
-  } else if (isRecord(input)) {
-    for (const value of Object.values(input)) {
-      const normalized = normalizeVocabEntry(value);
-      if (normalized) {
-        entries.push(normalized);
-      }
-    }
-  }
-
-  return new Map(entries.map((entry) => [entry.lemmaId, entry] as const));
-}
-
-function normalizeVocabEntry(input: unknown): UserVocabEntry | null {
-  if (!isRecord(input)) {
-    return null;
-  }
-
-  const lemmaId = readString(input.lemmaId);
-  if (!lemmaId) {
-    return null;
-  }
-
-  return {
-    lemmaId,
-    status: normalizeVocabStatus(input.status),
-    lastSeenAt: readString(input.lastSeenAt),
-    exposureCount: readNumber(input.exposureCount, 0),
-    updatedAt: readString(input.updatedAt) ?? new Date().toISOString()
-  };
-}
-
-function normalizeVocabStatus(value: unknown): VocabStatus {
-  return value === "known" || value === "learning" || value === "ignored"
-    ? value
-    : "new";
+  return new IndexedDbUserVocabRepository().loadAll();
 }
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function readNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -191,15 +191,97 @@ try {
   });
 
   await serviceWorker.evaluate(async () => {
-    await chrome.storage.local.set({
-      "immersionkit.settings": {
-        enabled: true,
-        discoveryRate: 1,
-        targetLanguage: "es",
-        sentenceTranslationEnabled: false,
-        provider: "none"
+    const database = await openImmersionKitDatabaseForUserData();
+    try {
+      const transaction = database.transaction("user-data", "readwrite");
+      transaction.objectStore("user-data").put({
+        key: "immersionkit.settings",
+        value: {
+          enabled: true,
+          discoveryRate: 1,
+          targetLanguage: "es",
+          sentenceTranslationEnabled: false,
+          provider: "none"
+        },
+        schemaVersion: 1,
+        updatedAt: new Date().toISOString()
+      });
+      await transactionDone(transaction);
+    } finally {
+      database.close();
+    }
+
+    async function openImmersionKitDatabaseForUserData() {
+      return new Promise((resolveOpen, rejectOpen) => {
+        const request = indexedDB.open("immersionkit-extension", 7);
+        request.onupgradeneeded = () => {
+          ensureExtensionStores(request.result, request.transaction);
+        };
+        request.onsuccess = () => resolveOpen(request.result);
+        request.onerror = () =>
+          rejectOpen(request.error ?? new Error("IndexedDB open failed."));
+      });
+    }
+
+    function transactionDone(transaction) {
+      return new Promise((resolveDone, rejectDone) => {
+        transaction.oncomplete = () => resolveDone();
+        transaction.onabort = () =>
+          rejectDone(transaction.error ?? new Error("IndexedDB transaction aborted."));
+        transaction.onerror = () =>
+          rejectDone(transaction.error ?? new Error("IndexedDB transaction failed."));
+      });
+    }
+
+    function ensureExtensionStores(database, transaction) {
+      ensureStore(database, transaction, "sentence-cache", { keyPath: "sentenceHash" });
+      const analysis = ensureStore(database, transaction, "sentence-analysis-cache", {
+        keyPath: "identity"
+      });
+      ensureIndex(analysis, "sentenceHash", "sentenceHash");
+      ensureStore(database, transaction, "review-events", { keyPath: "eventId" });
+      ensureStore(database, transaction, "learning-items", { keyPath: "itemId" });
+      ensureStore(database, transaction, "phrase-registry", { keyPath: "phraseId" });
+      ensureStore(database, transaction, "learning-item-context-history", {
+        keyPath: "itemId"
+      });
+      ensureStore(database, transaction, "user-data", { keyPath: "key" });
+      ensureStore(database, transaction, "user-vocab", { keyPath: "lemmaId" });
+      const packs = ensureStore(database, transaction, "asset-packs", {
+        keyPath: "identity"
+      });
+      ensureIndex(packs, "languagePair", "languagePair");
+      ensureIndex(packs, "bandId", "bandId");
+      ensureIndex(packs, "assetVersion", "assetVersion");
+      const renderUnits = ensureStore(database, transaction, "asset-pack-render-units", {
+        keyPath: "identity"
+      });
+      ensureIndex(renderUnits, "packIdentity", "packIdentity");
+      ensureIndex(renderUnits, "bandId", "bandId");
+      ensureIndex(renderUnits, "languagePairBandId", ["languagePair", "bandId"]);
+      ensureIndex(renderUnits, "assetVersion", "assetVersion");
+      ensureIndex(renderUnits, "renderUnitId", "renderUnitId");
+      const lexemes = ensureStore(database, transaction, "asset-pack-lexemes", {
+        keyPath: "identity"
+      });
+      ensureIndex(lexemes, "packIdentity", "packIdentity");
+      ensureIndex(lexemes, "bandId", "bandId");
+      ensureIndex(lexemes, "languagePairBandId", ["languagePair", "bandId"]);
+      ensureIndex(lexemes, "assetVersion", "assetVersion");
+      ensureIndex(lexemes, "lexemeId", "lexemeId");
+    }
+
+    function ensureStore(database, transaction, storeName, options) {
+      return database.objectStoreNames.contains(storeName)
+        ? transaction.objectStore(storeName)
+        : database.createObjectStore(storeName, options);
+    }
+
+    function ensureIndex(store, indexName, keyPath) {
+      if (!store.indexNames.contains(indexName)) {
+        store.createIndex(indexName, keyPath, { unique: false });
       }
-    });
+    }
   });
 
   const page = await context.newPage();
@@ -214,13 +296,6 @@ try {
   }
 
   const storageSnapshot = await serviceWorker.evaluate(async () => {
-    const values = await chrome.storage.local.get([
-      "immersionkit.sentenceAnalysisCache",
-      "immersionkit.sentenceCache",
-      "immersionkit.settings"
-    ]);
-    const legacyAnalysisCache = values["immersionkit.sentenceAnalysisCache"] ?? {};
-    const legacyTranslationCache = values["immersionkit.sentenceCache"] ?? {};
     const indexedDbSnapshot = await new Promise((resolve) => {
       const request = indexedDB.open("immersionkit-extension");
 
@@ -265,18 +340,37 @@ try {
       };
     });
 
+    const userDataSettings = await new Promise((resolveSettings) => {
+      const request = indexedDB.open("immersionkit-extension");
+      request.onsuccess = () => {
+        const database = request.result;
+        if (!database.objectStoreNames.contains("user-data")) {
+          database.close();
+          resolveSettings(null);
+          return;
+        }
+
+        const readRequest = database
+          .transaction("user-data", "readonly")
+          .objectStore("user-data")
+          .get("immersionkit.settings");
+        readRequest.onsuccess = () => {
+          database.close();
+          resolveSettings(readRequest.result?.value ?? null);
+        };
+        readRequest.onerror = () => {
+          database.close();
+          resolveSettings(null);
+        };
+      };
+      request.onerror = () => resolveSettings(null);
+    });
+
     return {
-      analysisCacheEntries:
-        indexedDbSnapshot.analysisCacheEntries +
-        Object.keys(legacyAnalysisCache).length,
-      translationCacheEntries:
-        indexedDbSnapshot.translationCacheEntries +
-        Object.keys(legacyTranslationCache).length,
-      settings: values["immersionkit.settings"] ?? null,
-      firstAnalysisEntry:
-        indexedDbSnapshot.firstAnalysisEntry ??
-        Object.values(legacyAnalysisCache)[0] ??
-        null
+      analysisCacheEntries: indexedDbSnapshot.analysisCacheEntries,
+      translationCacheEntries: indexedDbSnapshot.translationCacheEntries,
+      settings: userDataSettings,
+      firstAnalysisEntry: indexedDbSnapshot.firstAnalysisEntry ?? null
     };
   });
 

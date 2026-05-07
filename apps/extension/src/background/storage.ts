@@ -19,19 +19,6 @@ export async function readStorageValues(
   });
 }
 
-export async function writeStorageValues(values: StorageRecord): Promise<void> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    chrome.storage.local.set(values, () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
-  });
-}
-
 export async function removeStorageValues(keys: readonly string[]): Promise<void> {
   if (typeof chrome === "undefined" || !chrome.storage?.local || keys.length === 0) {
     return;

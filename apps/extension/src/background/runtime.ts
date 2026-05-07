@@ -5,13 +5,19 @@ import type {
   GetAssetContextMessage,
   LearningItem,
   GetLearningItemsMessage,
+  GetUserDataMessage,
+  RemoveUserDataMessage,
+  SetUserDataMessage,
+  GetUserVocabMessage,
+  SetVocabStatusMessage,
   QueueSentenceCandidatesMessage,
   RefreshActiveTabMessage,
   RuntimeMessage,
   AssistEventMessage,
   QualifiedExposureEventMessage,
   SentenceAnalysisEntry,
-  SentenceTranslationResultMessage
+  SentenceTranslationResultMessage,
+  UserVocabEntry
 } from "@immersionkit/shared";
 
 import { getBackgroundAssetPackService } from "./asset-packs";
@@ -25,6 +31,15 @@ import {
   type SentenceTranslationDelivery
 } from "./sentence-queue";
 import { loadBackgroundRuntimeConfig } from "./settings";
+import { isRecord } from "./storage";
+import {
+  IndexedDbUserDataRepository,
+  IndexedDbUserVocabRepository,
+  loadUserDataValues,
+  removeUserDataValues,
+  setUserDataValues,
+  USER_DATA_KEYS
+} from "./user-data-repository";
 
 type RefreshActiveTabResponse =
   | {
@@ -71,6 +86,33 @@ export type GetSentenceAnalysisCacheResponse =
     }
   | ErrorResponse;
 
+export type GetUserDataResponse =
+  | {
+      ok: true;
+      values: Record<string, unknown>;
+    }
+  | ErrorResponse;
+
+export type MutateUserDataResponse =
+  | {
+      ok: true;
+    }
+  | ErrorResponse;
+
+export type GetUserVocabResponse =
+  | {
+      ok: true;
+      entries: UserVocabEntry[];
+    }
+  | ErrorResponse;
+
+export type SetVocabStatusResponse =
+  | {
+      ok: true;
+      entry: UserVocabEntry | null;
+    }
+  | ErrorResponse;
+
 export type GraduateCheckpointResponse =
   | {
       ok: true;
@@ -83,14 +125,13 @@ export type GraduateCheckpointResponse =
   | ErrorResponse;
 
 const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType));
-const FIRST_RUN_INTRO_STORAGE_KEY = "immersionkit.firstRun.showIntro";
-
 export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
   private readonly learningItems: BackgroundLearningItemService;
   private readonly curriculumProgression: CurriculumProgressionService;
   private readonly phraseRegistry: IndexedDbPhraseRegistryRepository;
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
+  private readonly userVocab: IndexedDbUserVocabRepository;
   private readonly assetPacks = getBackgroundAssetPackService();
   private isBooted = false;
 
@@ -103,6 +144,7 @@ export class BackgroundRuntimeCoordinator {
     this.curriculumProgression = new CurriculumProgressionService();
     this.phraseRegistry = new IndexedDbPhraseRegistryRepository();
     this.sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
+    this.userVocab = new IndexedDbUserVocabRepository();
   }
 
   boot() {
@@ -147,6 +189,31 @@ export class BackgroundRuntimeCoordinator {
 
       if (message.type === RuntimeMessageType.GetLearningItems) {
         void this.handleGetLearningItems(message, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.GetUserData) {
+        void this.handleGetUserData(message, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.SetUserData) {
+        void this.handleSetUserData(message, sender, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.RemoveUserData) {
+        void this.handleRemoveUserData(message, sender, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.GetUserVocab) {
+        void this.handleGetUserVocab(message, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.SetVocabStatus) {
+        void this.handleSetVocabStatus(message, sendResponse);
         return true;
       }
 
@@ -291,6 +358,129 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "asset-context-read-failed"
+      });
+    }
+  }
+
+  private async handleGetUserData(
+    message: GetUserDataMessage,
+    sendResponse: (response: GetUserDataResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        values: await loadUserDataValues(
+          Array.isArray(message.keys) ? message.keys.slice(0, 100) : []
+        )
+      });
+    } catch (error) {
+      console.warn("ImmersionKit user data read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "user-data-read-failed"
+      });
+    }
+  }
+
+  private async handleSetUserData(
+    message: SetUserDataMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: MutateUserDataResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "user-data-write-forbidden"
+      });
+      return;
+    }
+
+    try {
+      await setUserDataValues(isRecord(message.values) ? message.values : {});
+      sendResponse({ ok: true });
+    } catch (error) {
+      console.warn("ImmersionKit user data write failed.", error);
+      sendResponse({
+        ok: false,
+        error: "user-data-write-failed"
+      });
+    }
+  }
+
+  private async handleRemoveUserData(
+    message: RemoveUserDataMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: MutateUserDataResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "user-data-remove-forbidden"
+      });
+      return;
+    }
+
+    try {
+      await removeUserDataValues(
+        Array.isArray(message.keys) ? message.keys.slice(0, 100) : []
+      );
+      sendResponse({ ok: true });
+    } catch (error) {
+      console.warn("ImmersionKit user data remove failed.", error);
+      sendResponse({
+        ok: false,
+        error: "user-data-remove-failed"
+      });
+    }
+  }
+
+  private async handleGetUserVocab(
+    message: GetUserVocabMessage,
+    sendResponse: (response: GetUserVocabResponse) => void
+  ) {
+    try {
+      const entries = [...(await this.userVocab.loadAll()).values()];
+      const requestedLemmaIds = new Set(
+        (Array.isArray(message.lemmaIds) ? message.lemmaIds : [])
+          .map((lemmaId) => lemmaId.trim())
+          .filter(Boolean)
+      );
+      sendResponse({
+        ok: true,
+        entries:
+          requestedLemmaIds.size > 0
+            ? entries.filter((entry) => requestedLemmaIds.has(entry.lemmaId))
+            : entries
+      });
+    } catch (error) {
+      console.warn("ImmersionKit vocab read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "vocab-read-failed"
+      });
+    }
+  }
+
+  private async handleSetVocabStatus(
+    message: SetVocabStatusMessage,
+    sendResponse: (response: SetVocabStatusResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        entry: await this.userVocab.setStatus({
+          lemmaId: message.lemmaId,
+          status: message.status,
+          lastSeenAt: message.lastSeenAt,
+          updatedAt: message.updatedAt,
+          incrementExposure: message.incrementExposure
+        })
+      });
+    } catch (error) {
+      console.warn("ImmersionKit vocab status write failed.", error);
+      sendResponse({
+        ok: false,
+        error: "vocab-status-write-failed"
       });
     }
   }
@@ -462,12 +652,10 @@ function createContentAssetContext(context: ActiveAssetContext): ContentAssetCon
 }
 
 async function showFirstRunGuidance(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    chrome.storage.local.set({ [FIRST_RUN_INTRO_STORAGE_KEY]: true }, () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
-  });
+  await new IndexedDbUserDataRepository().setValue(
+    USER_DATA_KEYS.firstRunIntro,
+    true
+  );
 
   chrome.runtime.openOptionsPage?.();
 }
@@ -479,6 +667,17 @@ function isRuntimeMessage(message: unknown): message is RuntimeMessage {
 
   return (
     typeof message.type === "string" && RUNTIME_MESSAGE_TYPES.has(message.type)
+  );
+}
+
+function isExtensionPageSender(sender: chrome.runtime.MessageSender): boolean {
+  if (typeof chrome === "undefined" || !chrome.runtime?.getURL) {
+    return false;
+  }
+
+  return (
+    typeof sender.url === "string" &&
+    sender.url.startsWith(chrome.runtime.getURL(""))
   );
 }
 

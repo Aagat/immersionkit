@@ -56,9 +56,10 @@ async function main() {
     await runCommand(pnpmBinary, [
       "--filter",
       "@immersionkit/extension",
-      "test",
-      "--",
-      "sentence-shortlisting-validation.test.ts"
+      "exec",
+      "vitest",
+      "run",
+      "__tests__/sentence-shortlisting-validation.test.ts"
     ]);
 
     console.log("Task 04 benchmark run completed successfully.");

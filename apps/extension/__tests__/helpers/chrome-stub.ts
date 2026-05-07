@@ -154,11 +154,43 @@ function createDefaultRuntimeResponse(
   message: unknown,
   storageValues: StorageValues
 ): unknown {
-  if (
-    !message ||
-    typeof message !== "object" ||
-    (message as { type?: unknown }).type !== "assets/get-context"
-  ) {
+  if (!message || typeof message !== "object") {
+    return undefined;
+  }
+
+  const messageType = (message as { type?: unknown }).type;
+  if (messageType === "user-data/get") {
+    const keys = Array.isArray((message as { keys?: unknown }).keys)
+      ? (message as { keys: unknown[] }).keys
+      : [];
+    return {
+      ok: true,
+      values: resolveStorageRead(keys, storageValues)
+    };
+  }
+
+  if (messageType === "user-vocab/get") {
+    const lemmaIds = Array.isArray((message as { lemmaIds?: unknown }).lemmaIds)
+      ? new Set(
+          (message as { lemmaIds: unknown[] }).lemmaIds.filter(
+            (lemmaId): lemmaId is string => typeof lemmaId === "string"
+          )
+        )
+      : null;
+    const entries = readRuntimeVocabEntries(storageValues).filter((entry) =>
+      lemmaIds && lemmaIds.size > 0 ? lemmaIds.has(entry.lemmaId) : true
+    );
+    return {
+      ok: true,
+      entries
+    };
+  }
+
+  if (messageType === "user-vocab/set-status") {
+    return setRuntimeVocabStatus(message, storageValues);
+  }
+
+  if (messageType !== "assets/get-context") {
     return undefined;
   }
 
@@ -208,6 +240,108 @@ function createDefaultRuntimeResponse(
     }
   };
 }
+
+function readRuntimeVocabEntries(storageValues: StorageValues): RuntimeVocabEntry[] {
+  const rawVocab = storageValues["immersionkit.vocab"];
+  const values = Array.isArray(rawVocab)
+    ? rawVocab
+    : rawVocab && typeof rawVocab === "object"
+      ? Object.values(rawVocab)
+      : [];
+  return values.flatMap((value): RuntimeVocabEntry[] => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return [];
+    }
+
+    const entry = value as Record<string, unknown>;
+    const lemmaId = typeof entry.lemmaId === "string" ? entry.lemmaId : null;
+    if (!lemmaId) {
+      return [];
+    }
+
+    return [
+      {
+        lemmaId,
+        status:
+          entry.status === "known" ||
+          entry.status === "learning" ||
+          entry.status === "ignored"
+            ? entry.status
+            : "new",
+        lastSeenAt:
+          typeof entry.lastSeenAt === "string" ? entry.lastSeenAt : null,
+        exposureCount:
+          typeof entry.exposureCount === "number" &&
+          Number.isFinite(entry.exposureCount)
+            ? entry.exposureCount
+            : 0,
+        updatedAt:
+          typeof entry.updatedAt === "string"
+            ? entry.updatedAt
+            : new Date().toISOString()
+      }
+    ];
+  });
+}
+
+function setRuntimeVocabStatus(
+  message: unknown,
+  storageValues: StorageValues
+): unknown {
+  if (!message || typeof message !== "object") {
+    return { ok: true, entry: null };
+  }
+
+  const payload = message as Record<string, unknown>;
+  const lemmaId = typeof payload.lemmaId === "string" ? payload.lemmaId : "";
+  if (!lemmaId.trim()) {
+    return { ok: true, entry: null };
+  }
+
+  const entries = new Map(
+    readRuntimeVocabEntries(storageValues).map((entry) => [entry.lemmaId, entry])
+  );
+  const existingEntry = entries.get(lemmaId);
+  const now =
+    typeof payload.updatedAt === "string"
+      ? payload.updatedAt
+      : new Date().toISOString();
+  const status =
+    payload.status === "known" ||
+    payload.status === "learning" ||
+    payload.status === "ignored"
+      ? payload.status
+      : "new";
+  const entry: RuntimeVocabEntry = {
+    lemmaId,
+    status,
+    lastSeenAt:
+      payload.lastSeenAt === null
+        ? null
+        : typeof payload.lastSeenAt === "string"
+          ? payload.lastSeenAt
+          : now,
+    exposureCount:
+      (existingEntry?.exposureCount ?? 0) +
+      (payload.incrementExposure === false ? 0 : 1),
+    updatedAt: now
+  };
+  entries.set(lemmaId, entry);
+  storageValues["immersionkit.vocab"] = Object.fromEntries(entries);
+
+  return {
+    ok: true,
+    entry
+  };
+}
+
+type RuntimeVocabEntry = {
+  lemmaId: string;
+  status: "new" | "learning" | "known" | "ignored";
+  lastSeenAt: string | null;
+  exposureCount: number;
+  updatedAt: string;
+};
 
 function pickFirstDefinedValue(
   record: StorageValues,

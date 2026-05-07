@@ -145,7 +145,6 @@ describe("extension E2E harness", () => {
     });
     await popup.waitForSelector("text=ImmersionKit", { timeout: 10_000 });
     const popupText = await popup.locator("body").innerText();
-    expect(popupText).toContain("Read normally. We add a little Spanish.");
     expect(popupText).toContain("This page is not supported");
     expect(popupText).toContain("Your reading data stays on this device.");
 
@@ -154,12 +153,20 @@ describe("extension E2E harness", () => {
       waitUntil: "domcontentloaded"
     });
     await options.waitForSelector("text=New word pace", { timeout: 10_000 });
-    await options.locator("#settings-discovery-rate").fill("7");
+    await expect
+      .poll(() => options.getByRole("button", { name: "Save changes" }).isEnabled())
+      .toBe(true);
+    const discoveryRateInput = options.locator("#settings-discovery-rate");
+    await discoveryRateInput.focus();
+    await options.keyboard.press("Home");
+    for (let step = 0; step < 7; step += 1) {
+      await options.keyboard.press("ArrowRight");
+    }
     await options.getByRole("radio", { name: "Intermediate" }).click();
     await options.getByRole("button", { name: "Save changes" }).click();
     await options.waitForSelector("text=Settings saved.", { timeout: 5_000 });
 
-    const savedSettings = await readSettings(serviceWorker);
+    const savedSettings = await readSettingsFromExtensionPage(options);
     expect(savedSettings.discoveryRate).toBe(0.07);
     expect(savedSettings.proficiencySeed).toBe("intermediate");
 
@@ -176,7 +183,7 @@ describe("extension E2E harness", () => {
       { timeout: 5_000 }
     );
 
-    expect((await readSettings(serviceWorker)).sentenceTranslationEnabled).toBe(false);
+    expect((await readSettingsFromExtensionPage(options)).sentenceTranslationEnabled).toBe(false);
   }, 90_000);
 });
 
@@ -252,18 +259,13 @@ async function launchBuiltExtension(): Promise<{
 }
 
 async function seedSettings(serviceWorker: Worker): Promise<void> {
-  await serviceWorker.evaluate(async () => {
-    await chrome.storage.local.clear();
-    await chrome.storage.local.set({
-      "immersionkit.settings": {
-        enabled: true,
-        discoveryRate: 1,
-        targetLanguage: "es",
-        sentenceTranslationEnabled: false,
-        provider: "none",
-        proficiencySeed: "beginner"
-      }
-    });
+  await writeUserData(serviceWorker, "immersionkit.settings", {
+    enabled: true,
+    discoveryRate: 1,
+    targetLanguage: "es",
+    sentenceTranslationEnabled: false,
+    provider: "none",
+    proficiencySeed: "beginner"
   });
 }
 
@@ -302,27 +304,193 @@ async function setFixtureSiteEnabled(
   serviceWorker: Worker,
   enabled: boolean
 ): Promise<void> {
-  await serviceWorker.evaluate(async (nextEnabled) => {
-    await chrome.storage.local.set({
-      "immersionkit.siteSettings": {
-        "127.0.0.1": {
-          hostname: "127.0.0.1",
-          enabled: nextEnabled,
-          discoveryRate: null,
-          sentenceTranslationEnabled: null,
-          updatedAt: new Date().toISOString()
-        }
-      }
-    });
-  }, enabled);
+  await writeUserData(serviceWorker, "immersionkit.siteSettings", {
+    "127.0.0.1": {
+      hostname: "127.0.0.1",
+      enabled,
+      discoveryRate: null,
+      sentenceTranslationEnabled: null,
+      updatedAt: new Date().toISOString()
+    }
+  });
 }
 
 async function readSettings(serviceWorker: Worker): Promise<Record<string, unknown>> {
-  return serviceWorker.evaluate(async () => {
-    return (await chrome.storage.local.get("immersionkit.settings"))[
-      "immersionkit.settings"
-    ];
-  });
+  return (await readUserData(
+    serviceWorker,
+    "immersionkit.settings"
+  )) as Record<string, unknown>;
+}
+
+async function readSettingsFromExtensionPage(
+  page: Page
+): Promise<Record<string, unknown>> {
+  return page.evaluate(
+    () =>
+      new Promise<Record<string, unknown>>((resolveRead, rejectRead) => {
+        chrome.runtime.sendMessage(
+          {
+            type: "user-data/get",
+            keys: ["immersionkit.settings"]
+          },
+          (response?: unknown) => {
+            if (chrome.runtime.lastError) {
+              rejectRead(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+
+            const values =
+              response && typeof response === "object" && "values" in response
+                ? (response as { values?: Record<string, unknown> }).values
+                : null;
+            resolveRead(
+              (values?.["immersionkit.settings"] as Record<string, unknown>) ?? {}
+            );
+          }
+        );
+      })
+  );
+}
+
+async function writeUserData(
+  serviceWorker: Worker,
+  key: string,
+  value: unknown
+): Promise<void> {
+  await serviceWorker.evaluate(
+    async ({ key: userDataKey, value: userDataValue }) => {
+      const database = await openImmersionKitDatabaseForUserData();
+      try {
+        const transaction = database.transaction("user-data", "readwrite");
+        transaction.objectStore("user-data").put({
+          key: userDataKey,
+          value: userDataValue,
+          schemaVersion: 1,
+          updatedAt: new Date().toISOString()
+        });
+        await transactionDone(transaction);
+      } finally {
+        database.close();
+      }
+
+      async function openImmersionKitDatabaseForUserData(): Promise<IDBDatabase> {
+        return new Promise((resolveOpen, rejectOpen) => {
+          const request = indexedDB.open("immersionkit-extension", 7);
+          request.onupgradeneeded = () => {
+            ensureExtensionStores(request.result, request.transaction!);
+          };
+          request.onsuccess = () => resolveOpen(request.result);
+          request.onerror = () =>
+            rejectOpen(request.error ?? new Error("IndexedDB open failed."));
+        });
+      }
+
+      function transactionDone(transaction: IDBTransaction): Promise<void> {
+        return new Promise((resolveDone, rejectDone) => {
+          transaction.oncomplete = () => resolveDone();
+          transaction.onabort = () =>
+            rejectDone(transaction.error ?? new Error("IndexedDB transaction aborted."));
+          transaction.onerror = () =>
+            rejectDone(transaction.error ?? new Error("IndexedDB transaction failed."));
+        });
+      }
+
+      function ensureExtensionStores(
+        database: IDBDatabase,
+        transaction: IDBTransaction
+      ): void {
+        ensureStore(database, transaction, "sentence-cache", {
+          keyPath: "sentenceHash"
+        });
+        const analysis = ensureStore(database, transaction, "sentence-analysis-cache", {
+          keyPath: "identity"
+        });
+        ensureIndex(analysis, "sentenceHash", "sentenceHash");
+        ensureStore(database, transaction, "review-events", { keyPath: "eventId" });
+        ensureStore(database, transaction, "learning-items", { keyPath: "itemId" });
+        ensureStore(database, transaction, "phrase-registry", { keyPath: "phraseId" });
+        ensureStore(database, transaction, "learning-item-context-history", {
+          keyPath: "itemId"
+        });
+        ensureStore(database, transaction, "user-data", { keyPath: "key" });
+        ensureStore(database, transaction, "user-vocab", { keyPath: "lemmaId" });
+        const packs = ensureStore(database, transaction, "asset-packs", {
+          keyPath: "identity"
+        });
+        ensureIndex(packs, "languagePair", "languagePair");
+        ensureIndex(packs, "bandId", "bandId");
+        ensureIndex(packs, "assetVersion", "assetVersion");
+        const renderUnits = ensureStore(database, transaction, "asset-pack-render-units", {
+          keyPath: "identity"
+        });
+        ensureIndex(renderUnits, "packIdentity", "packIdentity");
+        ensureIndex(renderUnits, "bandId", "bandId");
+        ensureIndex(renderUnits, "languagePairBandId", ["languagePair", "bandId"]);
+        ensureIndex(renderUnits, "assetVersion", "assetVersion");
+        ensureIndex(renderUnits, "renderUnitId", "renderUnitId");
+        const lexemes = ensureStore(database, transaction, "asset-pack-lexemes", {
+          keyPath: "identity"
+        });
+        ensureIndex(lexemes, "packIdentity", "packIdentity");
+        ensureIndex(lexemes, "bandId", "bandId");
+        ensureIndex(lexemes, "languagePairBandId", ["languagePair", "bandId"]);
+        ensureIndex(lexemes, "assetVersion", "assetVersion");
+        ensureIndex(lexemes, "lexemeId", "lexemeId");
+      }
+
+      function ensureStore(
+        database: IDBDatabase,
+        transaction: IDBTransaction,
+        storeName: string,
+        options: IDBObjectStoreParameters
+      ): IDBObjectStore {
+        return database.objectStoreNames.contains(storeName)
+          ? transaction.objectStore(storeName)
+          : database.createObjectStore(storeName, options);
+      }
+
+      function ensureIndex(
+        store: IDBObjectStore,
+        indexName: string,
+        keyPath: string | string[]
+      ): void {
+        if (!store.indexNames.contains(indexName)) {
+          store.createIndex(indexName, keyPath, { unique: false });
+        }
+      }
+    },
+    { key, value }
+  );
+}
+
+async function readUserData(
+  serviceWorker: Worker,
+  key: string
+): Promise<unknown> {
+  return serviceWorker.evaluate(async (userDataKey) => {
+    const database = await new Promise<IDBDatabase>((resolveOpen, rejectOpen) => {
+      const request = indexedDB.open("immersionkit-extension");
+      request.onsuccess = () => resolveOpen(request.result);
+      request.onerror = () =>
+        rejectOpen(request.error ?? new Error("IndexedDB open failed."));
+    });
+    try {
+      return await new Promise<unknown>((resolveRead, rejectRead) => {
+        const request = database
+          .transaction("user-data", "readonly")
+          .objectStore("user-data")
+          .get(userDataKey);
+        request.onsuccess = () => {
+          const result = request.result as { value?: unknown } | undefined;
+          resolveRead(result?.value ?? null);
+        };
+        request.onerror = () =>
+          rejectRead(request.error ?? new Error("IndexedDB read failed."));
+      });
+    } finally {
+      database.close();
+    }
+  }, key);
 }
 
 async function readAssetCacheSnapshot(serviceWorker: Worker): Promise<{

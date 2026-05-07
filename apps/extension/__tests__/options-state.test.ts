@@ -10,11 +10,14 @@ import {
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
 } from "../src/options/state";
+import { setUserDataValues } from "../src/background/user-data-repository";
 import { installChromeStub } from "./helpers/chrome-stub";
+import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 
 describe("options state", () => {
   it("parses curriculum profile and last progression diagnostics", async () => {
-    const chromeStub = installChromeStub({
+    const indexedDbStub = installIndexedDbStub();
+    await setUserDataValues({
       "immersionkit.learningProfile": {
         activeVocabularyBandId: "level-1b",
         activePhraseBandId: "level-1b",
@@ -89,7 +92,7 @@ describe("options state", () => {
         }
       });
     } finally {
-      chromeStub.restore();
+      indexedDbStub.restore();
     }
   });
 
@@ -254,17 +257,14 @@ describe("options state", () => {
   });
 
   it("shows first-run guidance until it is dismissed", async () => {
-    const chromeStub = installChromeStub();
+    const indexedDbStub = installIndexedDbStub();
 
     try {
       await expect(loadFirstRunIntroVisible()).resolves.toBe(true);
       await markFirstRunIntroSeen();
       await expect(loadFirstRunIntroVisible()).resolves.toBe(false);
-      expect(chromeStub.getStorageSnapshot()).toMatchObject({
-        "immersionkit.firstRun.showIntro": false
-      });
     } finally {
-      chromeStub.restore();
+      indexedDbStub.restore();
     }
   });
 });

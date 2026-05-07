@@ -4,7 +4,9 @@ import type {
   RenderUnitEntry,
   SentenceAnalysisEntry,
   SentenceLearningNote,
-  SeedLexiconEntry
+  SeedLexiconEntry,
+  UserVocabEntry,
+  VocabStatus
 } from "../domain/models";
 
 export enum RuntimeMessageType {
@@ -12,6 +14,11 @@ export enum RuntimeMessageType {
   RefreshActiveTab = "settings/refresh-active-tab",
   GetAssetContext = "assets/get-context",
   GetLearningItems = "learning-items/get",
+  GetUserData = "user-data/get",
+  SetUserData = "user-data/set",
+  RemoveUserData = "user-data/remove",
+  GetUserVocab = "user-vocab/get",
+  SetVocabStatus = "user-vocab/set-status",
   GetSentenceAnalysisCache = "sentence-analysis-cache/get",
   GraduateCheckpoint = "curriculum/graduate-checkpoint",
   QueueSentenceCandidates = "sentence/queue-candidates",
@@ -53,6 +60,39 @@ export type ContentAssetContext = Omit<ActiveAssetContext, "renderUnits">;
 export type GetLearningItemsMessage = {
   type: RuntimeMessageType.GetLearningItems;
   unitRefIds?: string[];
+};
+
+export type GetUserDataMessage = {
+  type: RuntimeMessageType.GetUserData;
+  keys: string[];
+};
+
+export type SetUserDataMessage = {
+  type: RuntimeMessageType.SetUserData;
+  values: Record<string, unknown>;
+};
+
+export type RemoveUserDataMessage = {
+  type: RuntimeMessageType.RemoveUserData;
+  keys: string[];
+};
+
+export type GetUserVocabMessage = {
+  type: RuntimeMessageType.GetUserVocab;
+  lemmaIds?: string[];
+};
+
+export type SetVocabStatusMessage = {
+  type: RuntimeMessageType.SetVocabStatus;
+  lemmaId: string;
+  status: VocabStatus;
+  lastSeenAt?: string | null;
+  updatedAt?: string;
+  incrementExposure?: boolean;
+};
+
+export type UserVocabResponse = {
+  entries: UserVocabEntry[];
 };
 
 export type GetSentenceAnalysisCacheMessage = {
@@ -111,6 +151,11 @@ export type RuntimeMessage =
   | RefreshActiveTabMessage
   | GetAssetContextMessage
   | GetLearningItemsMessage
+  | GetUserDataMessage
+  | SetUserDataMessage
+  | RemoveUserDataMessage
+  | GetUserVocabMessage
+  | SetVocabStatusMessage
   | GetSentenceAnalysisCacheMessage
   | GraduateCheckpointMessage
   | QueueSentenceCandidatesMessage

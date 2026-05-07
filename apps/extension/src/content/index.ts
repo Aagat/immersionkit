@@ -67,7 +67,8 @@ import {
   collectEligibleTextNodes,
   isInImmersionNode,
   nodeToProcessRoot,
-  shouldSkipDocument
+  shouldSkipDocument,
+  visitEligibleTextNodes
 } from "./dom";
 import { segmentSentences } from "./sentences";
 import { ContentEvidenceTracker } from "./evidence";
@@ -802,13 +803,21 @@ function collectRootsSentenceHashes(
   const hashes = new Set<string>();
 
   for (const root of roots) {
-    for (const node of collectEligibleTextNodes(root)) {
+    let reachedLimit = false;
+    visitEligibleTextNodes(root, (node) => {
       for (const sentence of segmentSentences(node.nodeValue ?? "")) {
         hashes.add(sentence.hash);
         if (hashes.size >= limit) {
-          return [...hashes];
+          reachedLimit = true;
+          return false;
         }
       }
+
+      return true;
+    });
+
+    if (reachedLimit) {
+      return [...hashes];
     }
   }
 

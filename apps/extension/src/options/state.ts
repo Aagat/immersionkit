@@ -13,8 +13,7 @@ import {
   type LearningItem,
   type ProviderName,
   type ResolvedExtensionSettings,
-  type SiteSetting,
-  type VocabStatus
+  type SiteSetting
 } from "@immersionkit/shared";
 import {
   PAGE_DIAGNOSTICS_MESSAGE_TYPE,
@@ -25,36 +24,24 @@ import {
   countIndexedDbStore
 } from "../background/indexeddb";
 import { IndexedDbLearningItemRepository } from "../background/learning-item-repository";
+import {
+  IndexedDbUserVocabRepository,
+  loadUserDataValues as loadIndexedDbUserDataValues,
+  removeUserDataValues as removeIndexedDbUserDataValues,
+  setUserDataValues as setIndexedDbUserDataValues
+} from "../background/user-data-repository";
 
 type StorageRecord = Record<string, unknown>;
 
-export const SETTINGS_STORAGE_KEYS = ["immersionkit.settings", "settings"] as const;
+export const SETTINGS_STORAGE_KEYS = ["immersionkit.settings"] as const;
 export const SITE_SETTINGS_STORAGE_KEYS = [
-  "immersionkit.siteSettings",
-  "siteSettings"
+  "immersionkit.siteSettings"
 ] as const;
 export const PROVIDER_API_KEY_STORAGE_KEYS = [
-  "immersionkit.provider.openai.apiKey",
-  "providerApiKey",
-  "openaiApiKey"
-] as const;
-export const VOCAB_STORAGE_KEYS = [
-  "immersionkit.vocab",
-  "vocab",
-  "vocabEntries"
-] as const;
-export const SENTENCE_CACHE_STORAGE_KEYS = [
-  "immersionkit.sentenceCache",
-  "sentenceCache"
-] as const;
-export const SENTENCE_QUEUE_STORAGE_KEYS = [
-  "immersionkit.sentenceQueue",
-  "sentenceQueue",
-  "immersionkit.pendingSentences"
+  "immersionkit.provider.openai.apiKey"
 ] as const;
 export const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile",
-  "learningProfile"
+  "immersionkit.learningProfile"
 ] as const;
 export const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
   "immersionkit.curriculum.lastProgressionDecision"
@@ -189,7 +176,7 @@ export type CheckpointGraduationResult = {
 };
 
 export async function loadSettingsState(): Promise<SettingsState> {
-  const storage = await getStorageValues([
+  const storage = await getUserDataValues([
     ...SETTINGS_STORAGE_KEYS,
     ...PROVIDER_API_KEY_STORAGE_KEYS
   ]);
@@ -214,7 +201,7 @@ export async function saveSettingsState(state: SettingsState): Promise<SettingsS
     proficiencySeed: state.proficiencySeed
   };
 
-  await setStorageValues({
+  await setUserDataRuntimeValues({
     [CANONICAL_SETTINGS_STORAGE_KEY]: nextRawSettings
   });
 
@@ -228,13 +215,13 @@ export async function saveSettingsState(state: SettingsState): Promise<SettingsS
 }
 
 export async function loadSiteSettingsMap(): Promise<SiteSettingsMap> {
-  const storage = await getStorageValues([...SITE_SETTINGS_STORAGE_KEYS]);
+  const storage = await getUserDataValues([...SITE_SETTINGS_STORAGE_KEYS]);
   const value = pickFirstDefinedValue(storage, SITE_SETTINGS_STORAGE_KEYS);
   return normalizeSiteSettingsMap(value);
 }
 
 export async function saveSiteSettingsMap(siteSettings: SiteSettingsMap): Promise<void> {
-  await setStorageValues({
+  await setUserDataRuntimeValues({
     [CANONICAL_SITE_SETTINGS_STORAGE_KEY]: siteSettings
   });
 }
@@ -273,9 +260,8 @@ export function getSiteEnabledForHost(
 }
 
 export async function loadVocabStats(): Promise<VocabStats> {
-  const storage = await getStorageValues([...VOCAB_STORAGE_KEYS]);
-  const vocabValue = pickFirstDefinedValue(storage, VOCAB_STORAGE_KEYS);
-  const statuses = normalizeVocabStatuses(vocabValue);
+  const statuses = [...(await new IndexedDbUserVocabRepository().loadAll()).values()]
+    .map((entry) => entry.status);
 
   const stats: VocabStats = {
     total: statuses.length,
@@ -308,26 +294,18 @@ export async function loadVocabStats(): Promise<VocabStats> {
 }
 
 export async function loadSentenceStats(): Promise<SentenceStats> {
-  const storage = await getStorageValues([
-    ...SENTENCE_CACHE_STORAGE_KEYS,
-    ...SENTENCE_QUEUE_STORAGE_KEYS
-  ]);
   const indexedDbCacheSize = await countIndexedDbStore(
     INDEXEDDB_STORES.sentenceCache
   );
 
   return {
-    cacheSize:
-      indexedDbCacheSize ??
-      countEntries(pickFirstDefinedValue(storage, SENTENCE_CACHE_STORAGE_KEYS)),
-    pendingCount: countEntries(
-      pickFirstDefinedValue(storage, SENTENCE_QUEUE_STORAGE_KEYS)
-    )
+    cacheSize: indexedDbCacheSize ?? 0,
+    pendingCount: 0
   };
 }
 
 export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics> {
-  const storage = await getStorageValues([
+  const storage = await getUserDataValues([
     ...LEARNING_PROFILE_STORAGE_KEYS,
     ...CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS
   ]);
@@ -362,12 +340,12 @@ export async function loadCheckpointEligibilityPreview(): Promise<CheckpointElig
 }
 
 export async function loadFirstRunIntroVisible(): Promise<boolean> {
-  const storage = await getStorageValues([FIRST_RUN_INTRO_STORAGE_KEY]);
+  const storage = await getUserDataValues([FIRST_RUN_INTRO_STORAGE_KEY]);
   return storage[FIRST_RUN_INTRO_STORAGE_KEY] !== false;
 }
 
 export async function markFirstRunIntroSeen(): Promise<void> {
-  await setStorageValues({
+  await setUserDataRuntimeValues({
     [FIRST_RUN_INTRO_STORAGE_KEY]: false
   });
 }
@@ -650,18 +628,13 @@ async function persistProviderApiKey(apiKey: string): Promise<void> {
   const trimmed = apiKey.trim();
 
   if (trimmed.length === 0) {
-    await removeStorageKeys([...PROVIDER_API_KEY_STORAGE_KEYS]);
+    await removeUserDataRuntimeKeys([...PROVIDER_API_KEY_STORAGE_KEYS]);
     return;
   }
 
-  await setStorageValues({
+  await setUserDataRuntimeValues({
     [CANONICAL_PROVIDER_API_KEY_STORAGE_KEY]: trimmed
   });
-
-  const legacyKeys = PROVIDER_API_KEY_STORAGE_KEYS.slice(1);
-  if (legacyKeys.length > 0) {
-    await removeStorageKeys(legacyKeys);
-  }
 }
 
 function normalizeSiteSettingsMap(input: unknown): SiteSettingsMap {
@@ -722,70 +695,6 @@ function normalizeSiteSetting(hostname: string, input: StorageRecord): StoredSit
         : null,
     updatedAt: readString(input.updatedAt) ?? new Date().toISOString()
   };
-}
-
-function normalizeVocabStatuses(input: unknown): VocabStatus[] {
-  const statuses: VocabStatus[] = [];
-
-  if (Array.isArray(input)) {
-    for (const entry of input) {
-      const status = readVocabStatus(entry);
-      if (status) {
-        statuses.push(status);
-      }
-    }
-
-    return statuses;
-  }
-
-  if (!isRecord(input)) {
-    return statuses;
-  }
-
-  for (const value of Object.values(input)) {
-    const status = readVocabStatus(value);
-    if (status) {
-      statuses.push(status);
-    }
-  }
-
-  return statuses;
-}
-
-function readVocabStatus(input: unknown): VocabStatus | null {
-  if (!isRecord(input)) {
-    return null;
-  }
-
-  if (input.status === "known" || input.status === "learning" || input.status === "ignored") {
-    return input.status;
-  }
-
-  return "new";
-}
-
-function countEntries(value: unknown): number {
-  if (Array.isArray(value)) {
-    return value.length;
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.max(0, Math.round(value));
-  }
-
-  if (!isRecord(value)) {
-    return 0;
-  }
-
-  if (Array.isArray(value.entries)) {
-    return value.entries.length;
-  }
-
-  if (Array.isArray(value.items)) {
-    return value.items.length;
-  }
-
-  return Object.keys(value).length;
 }
 
 function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
@@ -850,47 +759,43 @@ function parseCurriculumProgressionDiagnostics(
   };
 }
 
-async function getStorageValues(keys: readonly string[]): Promise<StorageRecord> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return {};
+async function getUserDataValues(keys: readonly string[]): Promise<StorageRecord> {
+  const response = await sendRuntimeMessage<
+    { ok: true; values: StorageRecord } | { ok: false; error?: string }
+  >({
+    type: RuntimeMessageType.GetUserData,
+    keys: [...new Set(keys)]
+  });
+
+  if (response?.ok && isRecord(response.values)) {
+    return response.values;
   }
 
-  return new Promise((resolve) => {
-    chrome.storage.local.get([...new Set(keys)], (values) => {
-      if (chrome.runtime.lastError) {
-        resolve({});
-        return;
-      }
-
-      resolve(values as StorageRecord);
-    });
-  });
+  return loadIndexedDbUserDataValues(keys);
 }
 
-async function setStorageValues(values: StorageRecord): Promise<void> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+async function setUserDataRuntimeValues(values: StorageRecord): Promise<void> {
+  const response = await sendRuntimeMessage<{ ok?: boolean }>({
+    type: RuntimeMessageType.SetUserData,
+    values
+  });
+  if (response?.ok) {
     return;
   }
 
-  await new Promise<void>((resolve) => {
-    chrome.storage.local.set(values, () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
-  });
+  await setIndexedDbUserDataValues(values);
 }
 
-async function removeStorageKeys(keys: readonly string[]): Promise<void> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local || keys.length === 0) {
+async function removeUserDataRuntimeKeys(keys: readonly string[]): Promise<void> {
+  const response = await sendRuntimeMessage<{ ok?: boolean }>({
+    type: RuntimeMessageType.RemoveUserData,
+    keys: [...new Set(keys)]
+  });
+  if (response?.ok) {
     return;
   }
 
-  await new Promise<void>((resolve) => {
-    chrome.storage.local.remove([...new Set(keys)], () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
-  });
+  await removeIndexedDbUserDataValues(keys);
 }
 
 async function sendRuntimeMessage<TResponse>(message: unknown): Promise<TResponse | null> {

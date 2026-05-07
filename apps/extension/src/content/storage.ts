@@ -108,12 +108,23 @@ export async function loadProcessingContext(
   hostname: string,
   sentenceHashes: readonly string[] = []
 ): Promise<ProcessingContext> {
-  const storage = await readStorageValues([
-    ...STORAGE_KEYS.settings,
-    ...STORAGE_KEYS.siteSettings,
-    ...STORAGE_KEYS.vocab,
-    ...STORAGE_KEYS.curriculumConfig,
-    ...STORAGE_KEYS.learningProfile
+  const [
+    storage,
+    vocabByLemmaId,
+    assetContext,
+    sentenceAnalysisContext,
+    learningItemsByUnitRefId
+  ] = await Promise.all([
+    readUserDataValues([
+      ...STORAGE_KEYS.settings,
+      ...STORAGE_KEYS.siteSettings,
+      ...STORAGE_KEYS.curriculumConfig,
+      ...STORAGE_KEYS.learningProfile
+    ]),
+    loadUserVocabByLemmaId(),
+    requestActiveAssetContext(),
+    loadCachedSentenceAnalysisContext(sentenceHashes),
+    loadLearningItemsByUnitRefId()
   ]);
 
   const rawSettings = pickFirstDefinedValue(storage, STORAGE_KEYS.settings);
@@ -128,15 +139,14 @@ export async function loadProcessingContext(
     siteSetting?.discoveryRate ?? settings.discoveryRate ?? DEFAULT_DISCOVERY_RATE
   );
 
-  const assetContext = await requestActiveAssetContext();
-
-  const sentenceAnalysisContext = await loadCachedSentenceAnalysisContext(sentenceHashes);
-  const rawCurriculumConfig =
-    pickFirstDefinedValue(storage, STORAGE_KEYS.curriculumConfig) ??
-    (isRecord(rawSettings) ? rawSettings.curriculumConfig : null);
-  const rawLearningProfile =
-    pickFirstDefinedValue(storage, STORAGE_KEYS.learningProfile) ??
-    (isRecord(rawSettings) ? rawSettings.learningProfile : null);
+  const rawCurriculumConfig = pickFirstDefinedValue(
+    storage,
+    STORAGE_KEYS.curriculumConfig
+  );
+  const rawLearningProfile = pickFirstDefinedValue(
+    storage,
+    STORAGE_KEYS.learningProfile
+  );
 
   return {
     settings,
@@ -151,10 +161,8 @@ export async function loadProcessingContext(
       isFallback: assetContext.source === "empty"
     },
     sentenceHintPhrases: assetContext.sentenceHintPhrases,
-    vocabByLemmaId: parseVocabEntries(
-      pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
-    ),
-    learningItemsByUnitRefId: await loadLearningItemsByUnitRefId(),
+    vocabByLemmaId: vocabByLemmaId ?? new Map(),
+    learningItemsByUnitRefId,
     cachedContextSkipDecisions:
       sentenceAnalysisContext.cachedContextSkipDecisions,
     cachedPhraseMatchesBySentenceHash:
@@ -191,31 +199,15 @@ export async function persistVocabStatus(
     return null;
   }
 
-  const storage = await readStorageValues([...STORAGE_KEYS.vocab]);
-  const existingEntries = parseVocabEntries(
-    pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
-  );
-  const existingEntry = existingEntries.get(lemmaId);
-  const now = input.updatedAt ?? new Date().toISOString();
-  const shouldIncrementExposure = input.incrementExposure ?? true;
-
-  const nextEntry: UserVocabEntry = {
-    lemmaId,
-    status: input.status,
-    updatedAt: now,
-    lastSeenAt: input.lastSeenAt === undefined ? now : input.lastSeenAt,
-    exposureCount: Math.max(
-      0,
-      (existingEntry?.exposureCount ?? 0) + (shouldIncrementExposure ? 1 : 0)
-    )
-  };
-
-  existingEntries.set(lemmaId, nextEntry);
-  await writeStorageValues({
-    [STORAGE_KEYS.vocab[0]]: serializeVocabEntries(existingEntries)
+  const backgroundEntry = await persistVocabStatusInBackground({
+    ...input,
+    lemmaId
   });
+  if (backgroundEntry !== undefined) {
+    return backgroundEntry;
+  }
 
-  return nextEntry;
+  return null;
 }
 
 export async function refreshLearningItemsByUnitRefIds(
@@ -249,33 +241,37 @@ export async function refreshLearningItemsByUnitRefIds(
   });
 }
 
-async function readStorageValues(keys: readonly string[]): Promise<StorageRecord> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return {};
+async function readUserDataValues(keys: readonly string[]): Promise<StorageRecord> {
+  return (await requestUserDataValues(keys)) ?? {};
+}
+
+async function requestUserDataValues(
+  keys: readonly string[]
+): Promise<StorageRecord | null> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return null;
   }
 
   return new Promise((resolve) => {
-    chrome.storage.local.get([...new Set(keys)], (values) => {
-      if (chrome.runtime.lastError) {
-        resolve({});
-        return;
+    chrome.runtime.sendMessage(
+      {
+        type: RuntimeMessageType.GetUserData,
+        keys: [...new Set(keys)]
+      },
+      (response?: unknown) => {
+        if (
+          chrome.runtime.lastError ||
+          !isRecord(response) ||
+          response.ok !== true ||
+          !isRecord(response.values)
+        ) {
+          resolve(null);
+          return;
+        }
+
+        resolve(response.values as StorageRecord);
       }
-
-      resolve(values as StorageRecord);
-    });
-  });
-}
-
-async function writeStorageValues(values: StorageRecord): Promise<void> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    chrome.storage.local.set(values, () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
+    );
   });
 }
 
@@ -294,6 +290,64 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
         }
 
         resolve(parseLearningItems(response.items));
+      }
+    );
+  });
+}
+
+async function loadUserVocabByLemmaId(): Promise<Map<string, UserVocabEntry> | null> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { type: RuntimeMessageType.GetUserVocab },
+      (response?: unknown) => {
+        if (
+          chrome.runtime.lastError ||
+          !isRecord(response) ||
+          response.ok !== true ||
+          !Array.isArray(response.entries)
+        ) {
+          resolve(null);
+          return;
+        }
+
+        resolve(parseVocabEntries(response.entries));
+      }
+    );
+  });
+}
+
+async function persistVocabStatusInBackground(
+  input: PersistVocabStatusInput
+): Promise<UserVocabEntry | null | undefined> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return undefined;
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        type: RuntimeMessageType.SetVocabStatus,
+        lemmaId: input.lemmaId,
+        status: input.status,
+        lastSeenAt: input.lastSeenAt,
+        updatedAt: input.updatedAt,
+        incrementExposure: input.incrementExposure
+      },
+      (response?: unknown) => {
+        if (
+          chrome.runtime.lastError ||
+          !isRecord(response) ||
+          response.ok !== true
+        ) {
+          resolve(undefined);
+          return;
+        }
+
+        resolve(normalizeVocabEntry(response.entry));
       }
     );
   });
@@ -515,18 +569,6 @@ function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
   }
 
   return new Map(entries.map((entry) => [entry.lemmaId, entry]));
-}
-
-function serializeVocabEntries(
-  entries: Map<string, UserVocabEntry>
-): Record<string, UserVocabEntry> {
-  const serialized: Record<string, UserVocabEntry> = {};
-
-  for (const [lemmaId, entry] of entries) {
-    serialized[lemmaId] = entry;
-  }
-
-  return serialized;
 }
 
 function parseLearningItems(input: unknown): Map<string, LearningItem> {

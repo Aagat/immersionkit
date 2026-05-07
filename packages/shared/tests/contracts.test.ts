@@ -6,6 +6,11 @@ describe("runtime contracts", () => {
   it("keeps runtime message types stable and namespaced", () => {
     expect(RuntimeMessageType.Ping).toBe("runtime/ping");
     expect(RuntimeMessageType.RefreshActiveTab).toBe("settings/refresh-active-tab");
+    expect(RuntimeMessageType.GetUserData).toBe("user-data/get");
+    expect(RuntimeMessageType.SetUserData).toBe("user-data/set");
+    expect(RuntimeMessageType.RemoveUserData).toBe("user-data/remove");
+    expect(RuntimeMessageType.GetUserVocab).toBe("user-vocab/get");
+    expect(RuntimeMessageType.SetVocabStatus).toBe("user-vocab/set-status");
     expect(RuntimeMessageType.QueueSentenceCandidates).toBe(
       "sentence/queue-candidates"
     );

@@ -1,5 +1,5 @@
 const DATABASE_NAME = "immersionkit-extension";
-const DATABASE_VERSION = 6;
+const DATABASE_VERSION = 7;
 
 export const INDEXEDDB_STORES = {
   sentenceCache: "sentence-cache",
@@ -8,6 +8,8 @@ export const INDEXEDDB_STORES = {
   phraseRegistry: "phrase-registry",
   reviewEvents: "review-events",
   learningItemContextHistory: "learning-item-context-history",
+  userData: "user-data",
+  userVocab: "user-vocab",
   assetPacks: "asset-packs",
   assetPackRenderUnits: "asset-pack-render-units",
   assetPackLexemes: "asset-pack-lexemes"
@@ -17,6 +19,10 @@ type IndexedDbStoreName =
   (typeof INDEXEDDB_STORES)[keyof typeof INDEXEDDB_STORES];
 
 let databasePromise: Promise<IDBDatabase> | null = null;
+
+export function resetIndexedDbConnectionForTests(): void {
+  databasePromise = null;
+}
 
 export function isIndexedDbAvailable(): boolean {
   return typeof indexedDB !== "undefined";
@@ -136,6 +142,18 @@ async function openDatabase(): Promise<IDBDatabase> {
       ) {
         database.createObjectStore(INDEXEDDB_STORES.learningItemContextHistory, {
           keyPath: "itemId"
+        });
+      }
+
+      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.userData)) {
+        database.createObjectStore(INDEXEDDB_STORES.userData, {
+          keyPath: "key"
+        });
+      }
+
+      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.userVocab)) {
+        database.createObjectStore(INDEXEDDB_STORES.userVocab, {
+          keyPath: "lemmaId"
         });
       }
 
