@@ -1,13 +1,16 @@
 import type {
   AssistEvent,
   QualifiedExposureEvent,
+  RenderUnitEntry,
   SentenceAnalysisEntry,
-  SentenceLearningNote
+  SentenceLearningNote,
+  SeedLexiconEntry
 } from "../domain/models";
 
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
   RefreshActiveTab = "settings/refresh-active-tab",
+  GetAssetContext = "assets/get-context",
   GetLearningItems = "learning-items/get",
   GetSentenceAnalysisCache = "sentence-analysis-cache/get",
   GraduateCheckpoint = "curriculum/graduate-checkpoint",
@@ -23,6 +26,25 @@ export type PingMessage = {
 
 export type RefreshActiveTabMessage = {
   type: RuntimeMessageType.RefreshActiveTab;
+};
+
+export type GetAssetContextMessage = {
+  type: RuntimeMessageType.GetAssetContext;
+};
+
+export type AssetContextLoadSource =
+  | "remote-pack"
+  | "cached-pack"
+  | "empty";
+
+export type ActiveAssetContext = {
+  lexicon: SeedLexiconEntry[];
+  renderUnits: RenderUnitEntry[];
+  sentenceHintPhrases: string[];
+  source: AssetContextLoadSource;
+  assetVersion: string | null;
+  bandIds: string[];
+  missingBandIds: string[];
 };
 
 export type GetLearningItemsMessage = {
@@ -84,6 +106,7 @@ export type QualifiedExposureEventMessage = QualifiedExposureEvent & {
 export type RuntimeMessage =
   | PingMessage
   | RefreshActiveTabMessage
+  | GetAssetContextMessage
   | GetLearningItemsMessage
   | GetSentenceAnalysisCacheMessage
   | GraduateCheckpointMessage

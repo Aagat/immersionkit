@@ -53,9 +53,12 @@ describe("extension test scaffolding", () => {
       expect(context.discoveryRate).toBe(1);
       expect(context.settings.provider).toBe("openai");
       expect(context.lexicon.map((entry) => entry.lemmaId)).toEqual(["lemma-safe"]);
-      expect(context.lexiconInfo.source).toBe("storage-legacy-array");
+      expect(context.lexiconInfo.source).toBe("cached-pack");
       expect(context.lexiconInfo.isFallback).toBe(false);
       expect(context.vocabByLemmaId.get("lemma-safe")?.status).toBe("known");
+      expect(chromeStub.sentMessages).toContainEqual({
+        type: "assets/get-context"
+      });
     } finally {
       chromeStub.restore();
     }
@@ -85,7 +88,7 @@ describe("extension test scaffolding", () => {
     try {
       const context = await loadProcessingContext("fixtures.immersionkit.test");
 
-      expect(context.lexiconInfo.source).toBe("storage-wrapped-asset");
+      expect(context.lexiconInfo.source).toBe("cached-pack");
       expect(context.lexiconInfo.assetVersion).toBe("2026.04.18-seed2");
       expect(context.lexiconInfo.entryCount).toBe(2);
       expect(context.lexicon[0]?.lemmaId).toBe("en:city:noun");
@@ -95,19 +98,16 @@ describe("extension test scaffolding", () => {
     }
   });
 
-  it("uses bundled generated lexicon when storage is missing", async () => {
+  it("keeps pack-backed rendering empty when no background asset context is available", async () => {
     const chromeStub = installChromeStub();
 
     try {
       const context = await loadProcessingContext("fixtures.immersionkit.test");
 
-      expect(context.lexiconInfo.source).toBe("bundled-asset");
-      expect(context.lexiconInfo.isFallback).toBe(false);
-      expect(context.lexiconInfo.entryCount).toBeGreaterThan(100);
-      expect(context.lexiconInfo.assetVersion).toBeTruthy();
-      expect(context.lexicon.some((entry) => entry.lemmaId.startsWith("seed-"))).toBe(
-        false
-      );
+      expect(context.lexiconInfo.source).toBe("empty");
+      expect(context.lexiconInfo.isFallback).toBe(true);
+      expect(context.lexiconInfo.entryCount).toBe(0);
+      expect(context.lexiconInfo.assetVersion).toBeNull();
     } finally {
       chromeStub.restore();
     }
@@ -185,7 +185,7 @@ describe("extension test scaffolding", () => {
     try {
       const context = await loadProcessingContext("fixtures.immersionkit.test");
 
-      expect(context.lexiconInfo.source).toBe("storage-wrapped-asset");
+      expect(context.lexiconInfo.source).toBe("cached-pack");
       expect(context.lexiconInfo.assetVersion).toBe("test-render-units");
       expect(context.lexicon).toEqual([
         expect.objectContaining({

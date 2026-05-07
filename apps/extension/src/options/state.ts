@@ -874,6 +874,7 @@ async function setStorageValues(values: StorageRecord): Promise<void> {
 
   await new Promise<void>((resolve) => {
     chrome.storage.local.set(values, () => {
+      void chrome.runtime.lastError;
       resolve();
     });
   });
@@ -886,6 +887,7 @@ async function removeStorageKeys(keys: readonly string[]): Promise<void> {
 
   await new Promise<void>((resolve) => {
     chrome.storage.local.remove([...new Set(keys)], () => {
+      void chrome.runtime.lastError;
       resolve();
     });
   });

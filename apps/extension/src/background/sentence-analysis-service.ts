@@ -1,5 +1,3 @@
-import bundledLexemeAsset from "../assets/en-es.lexemes.v1.json";
-import bundledRenderUnitAsset from "../assets/en-es.render-units.v1.json";
 import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
@@ -29,12 +27,12 @@ import {
 } from "@immersionkit/shared";
 
 import {
-  parseLexemeAsset,
-  parseRenderUnitAsset,
-  renderUnitsToSeedLexiconEntries,
   resolveRenderUnitPhraseTarget
 } from "../render-units/render-units";
-import { parseSeedLexiconInput } from "../seed/seed-lexicon";
+import {
+  getBackgroundAssetPackService,
+  type BackgroundAssetPackService
+} from "./asset-packs";
 import {
   IndexedDbPhraseRegistryRepository,
   type PhraseRegistryRepository
@@ -51,16 +49,7 @@ import {
 import { pickFirstDefinedValue, readStorageValues } from "./storage";
 
 const VOCAB_STORAGE_KEYS = ["immersionkit.vocab", "vocab", "vocabEntries"] as const;
-const SEED_LEXICON_STORAGE_KEYS = [
-  "immersionkit.seedLexicon",
-  "seedLexicon",
-  "lexicon"
-] as const;
-const RENDER_UNIT_STORAGE_KEYS = ["immersionkit.renderUnits", "renderUnits"] as const;
-const LEXEME_STORAGE_KEYS = ["immersionkit.lexemes", "lexemes"] as const;
 const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
-const RUNTIME_RENDER_UNITS = parseRenderUnitAsset(bundledRenderUnitAsset);
-const RUNTIME_LEXEMES = parseLexemeAsset(bundledLexemeAsset);
 
 export type SentenceAnalysisCandidate = {
   sentenceHash?: string;
@@ -91,6 +80,7 @@ type SentenceAnalysisServiceOptions = {
   phraseRegistry?: PhraseRegistryRepository;
   learningItems?: Pick<BackgroundLearningItemService, "upsertGrammarFeatureItems">;
   analyzer?: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>);
+  assetPacks?: Pick<BackgroundAssetPackService, "loadActiveContext">;
   loadLexicon?: () => Promise<SeedLexiconEntry[]>;
   loadRenderUnits?: () => Promise<RenderUnitEntry[]>;
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
@@ -120,8 +110,10 @@ export class SentenceAnalysisService {
     "upsertGrammarFeatureItems"
   >;
   private readonly analyzerLoader: () => Promise<SentenceAnalyzer>;
-  private readonly loadLexicon: () => Promise<SeedLexiconEntry[]>;
-  private readonly loadRenderUnits: () => Promise<RenderUnitEntry[]>;
+  private readonly loadAssetContext: () => Promise<{
+    lexicon: SeedLexiconEntry[];
+    renderUnits: RenderUnitEntry[];
+  }>;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
 
   constructor(options: SentenceAnalysisServiceOptions = {}) {
@@ -137,8 +129,17 @@ export class SentenceAnalysisService {
     } else {
       this.analyzerLoader = options.analyzer;
     }
-    this.loadLexicon = options.loadLexicon ?? loadBackgroundLexicon;
-    this.loadRenderUnits = options.loadRenderUnits ?? loadBackgroundRenderUnits;
+    if (options.loadLexicon || options.loadRenderUnits) {
+      const loadLexicon = options.loadLexicon ?? (async () => []);
+      const loadRenderUnits = options.loadRenderUnits ?? (async () => []);
+      this.loadAssetContext = async () => ({
+        lexicon: await loadLexicon(),
+        renderUnits: await loadRenderUnits()
+      });
+    } else {
+      const assetPacks = options.assetPacks ?? getBackgroundAssetPackService();
+      this.loadAssetContext = () => assetPacks.loadActiveContext();
+    }
     this.loadVocab = options.loadVocab ?? loadBackgroundVocab;
   }
 
@@ -150,7 +151,8 @@ export class SentenceAnalysisService {
     }
 
     const analyzer = await this.analyzerLoader();
-    const renderUnits = await this.loadRenderUnits();
+    const assetContext = await this.loadAssetContext();
+    const renderUnits = assetContext.renderUnits;
     const analysisVersion = buildRenderUnitAnalysisVersion(
       analyzer.analyzerVersion,
       renderUnits
@@ -164,7 +166,7 @@ export class SentenceAnalysisService {
       cachedEntries.map((entry) => [entry.sentenceHash, entry] as const)
     );
     const [lexicon, vocab] = await Promise.all([
-      this.loadLexicon(),
+      Promise.resolve(assetContext.lexicon),
       this.loadVocab()
     ]);
     const lookup = buildLexiconLookup(lexicon);
@@ -1234,50 +1236,6 @@ function normalizeAnalysisCandidates(
   }
 
   return [...byHash.values()];
-}
-
-async function loadBackgroundLexicon(): Promise<SeedLexiconEntry[]> {
-  const storage = await readStorageValues([
-    ...SEED_LEXICON_STORAGE_KEYS,
-    ...RENDER_UNIT_STORAGE_KEYS,
-    ...LEXEME_STORAGE_KEYS
-  ]);
-  const lexemes =
-    parseLexemeAsset(pickFirstDefinedValue(storage, LEXEME_STORAGE_KEYS)) ??
-    RUNTIME_LEXEMES;
-  const storedRenderUnits = parseRenderUnitAsset(
-    pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS)
-  );
-  if (storedRenderUnits && storedRenderUnits.entries.length > 0) {
-    return renderUnitsToSeedLexiconEntries(
-      storedRenderUnits.entries,
-      lexemes?.entries ?? []
-    );
-  }
-
-  const stored = parseSeedLexiconInput(
-    pickFirstDefinedValue(storage, SEED_LEXICON_STORAGE_KEYS)
-  );
-  if (stored && stored.entries.length > 0) {
-    return stored.entries;
-  }
-
-  return renderUnitsToSeedLexiconEntries(
-    RUNTIME_RENDER_UNITS?.entries ?? [],
-    RUNTIME_LEXEMES?.entries ?? []
-  );
-}
-
-async function loadBackgroundRenderUnits(): Promise<RenderUnitEntry[]> {
-  const storage = await readStorageValues(RENDER_UNIT_STORAGE_KEYS);
-  const storedRenderUnits = parseRenderUnitAsset(
-    pickFirstDefinedValue(storage, RENDER_UNIT_STORAGE_KEYS)
-  );
-  if (storedRenderUnits && storedRenderUnits.entries.length > 0) {
-    return storedRenderUnits.entries;
-  }
-
-  return RUNTIME_RENDER_UNITS?.entries ?? [];
 }
 
 async function loadBackgroundVocab(): Promise<Map<string, UserVocabEntry>> {

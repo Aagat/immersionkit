@@ -1,5 +1,6 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
+  ActiveAssetContext,
   CurriculumConfig,
   CurriculumRuntimeProfileInput,
   ContextualWordCandidate,
@@ -14,24 +15,11 @@ import type {
 } from "@immersionkit/shared";
 import { resolveCurriculumConfig } from "@immersionkit/shared";
 
-import bundledLexemeAsset from "../assets/en-es.lexemes.v1.json";
-import bundledRenderUnitAsset from "../assets/en-es.render-units.v1.json";
 import {
   DEFAULT_DISCOVERY_RATE,
   DEFAULT_SETTINGS,
-  FALLBACK_SEED_LEXICON,
   STORAGE_KEYS
 } from "./constants";
-import {
-  getRenderUnitSentenceHints,
-  parseLexemeAsset,
-  parseRenderUnitAsset,
-  renderUnitsToSeedLexiconEntries
-} from "../render-units/render-units";
-import {
-  isLikelyFallbackSeedLexicon,
-  parseSeedLexiconInput
-} from "../seed/seed-lexicon";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -44,10 +32,9 @@ type VocabEntryRecord = {
 };
 
 export type LexiconLoadSource =
-  | "storage-wrapped-asset"
-  | "storage-legacy-array"
-  | "bundled-asset"
-  | "fallback";
+  | "remote-pack"
+  | "cached-pack"
+  | "empty";
 
 export type LexiconLoadInfo = {
   source: LexiconLoadSource;
@@ -125,9 +112,6 @@ export async function loadProcessingContext(
     ...STORAGE_KEYS.settings,
     ...STORAGE_KEYS.siteSettings,
     ...STORAGE_KEYS.vocab,
-    ...STORAGE_KEYS.lexemes,
-    ...STORAGE_KEYS.renderUnits,
-    ...STORAGE_KEYS.seedLexicon,
     ...STORAGE_KEYS.curriculumConfig,
     ...STORAGE_KEYS.learningProfile
   ]);
@@ -144,11 +128,7 @@ export async function loadProcessingContext(
     siteSetting?.discoveryRate ?? settings.discoveryRate ?? DEFAULT_DISCOVERY_RATE
   );
 
-  const lexiconInfo = resolveLexicon(
-    pickFirstDefinedValue(storage, STORAGE_KEYS.renderUnits) ??
-      pickFirstDefinedValue(storage, STORAGE_KEYS.seedLexicon),
-    pickFirstDefinedValue(storage, STORAGE_KEYS.lexemes)
-  );
+  const assetContext = await requestActiveAssetContext();
 
   const sentenceAnalysisContext = await loadCachedSentenceAnalysisContext(sentenceHashes);
   const rawCurriculumConfig =
@@ -163,14 +143,14 @@ export async function loadProcessingContext(
     discoveryRate,
     siteSetting,
     siteEnabled: siteSetting?.enabled ?? true,
-    lexicon: lexiconInfo.entries,
+    lexicon: assetContext.lexicon,
     lexiconInfo: {
-      source: lexiconInfo.source,
-      entryCount: lexiconInfo.entries.length,
-      assetVersion: lexiconInfo.assetVersion,
-      isFallback: lexiconInfo.isFallback
+      source: assetContext.source,
+      entryCount: assetContext.lexicon.length,
+      assetVersion: assetContext.assetVersion,
+      isFallback: assetContext.source === "empty"
     },
-    sentenceHintPhrases: lexiconInfo.sentenceHintPhrases,
+    sentenceHintPhrases: assetContext.sentenceHintPhrases,
     vocabByLemmaId: parseVocabEntries(
       pickFirstDefinedValue(storage, STORAGE_KEYS.vocab)
     ),
@@ -293,6 +273,7 @@ async function writeStorageValues(values: StorageRecord): Promise<void> {
 
   await new Promise<void>((resolve) => {
     chrome.storage.local.set(values, () => {
+      void chrome.runtime.lastError;
       resolve();
     });
   });
@@ -316,6 +297,128 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
       }
     );
   });
+}
+
+async function requestActiveAssetContext(): Promise<ActiveAssetContext> {
+  const emptyContext: ActiveAssetContext = {
+    lexicon: [],
+    renderUnits: [],
+    sentenceHintPhrases: [],
+    source: "empty",
+    assetVersion: null,
+    bandIds: [],
+    missingBandIds: []
+  };
+
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return emptyContext;
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { type: RuntimeMessageType.GetAssetContext },
+      (response?: unknown) => {
+        if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
+          resolve(emptyContext);
+          return;
+        }
+
+        const context = normalizeAssetContext(response.context);
+        resolve(context ?? emptyContext);
+      }
+    );
+  });
+}
+
+function normalizeAssetContext(input: unknown): ActiveAssetContext | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const source = readAssetContextSource(input.source);
+  if (!source) {
+    return null;
+  }
+
+  return {
+    lexicon: readSeedLexiconEntries(input.lexicon),
+    renderUnits: Array.isArray(input.renderUnits)
+      ? (input.renderUnits.filter(isRecord) as ActiveAssetContext["renderUnits"])
+      : [],
+    sentenceHintPhrases: Array.isArray(input.sentenceHintPhrases)
+      ? input.sentenceHintPhrases
+          .map((value) => readString(value))
+          .filter((value): value is string => Boolean(value))
+      : [],
+    source,
+    assetVersion: readString(input.assetVersion),
+    bandIds: readStringArray(input.bandIds),
+    missingBandIds: readStringArray(input.missingBandIds)
+  };
+}
+
+function readAssetContextSource(value: unknown): LexiconLoadSource | null {
+  return value === "remote-pack" ||
+    value === "cached-pack" ||
+    value === "empty"
+    ? value
+    : null;
+}
+
+function readSeedLexiconEntries(input: unknown): SeedLexiconEntry[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((entry): SeedLexiconEntry[] => {
+    const normalized = normalizeSeedLexiconEntry(entry);
+    return normalized ? [normalized] : [];
+  });
+}
+
+function normalizeSeedLexiconEntry(input: unknown): SeedLexiconEntry | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const lemmaId = readString(input.lemmaId);
+  const sourceLemma = readString(input.sourceLemma);
+  const targetLemma = readString(input.targetLemma);
+  const pos = readString(input.pos) as SeedLexiconEntry["pos"] | null;
+  if (!lemmaId || !sourceLemma || !targetLemma || !pos) {
+    return null;
+  }
+
+  return {
+    lemmaId,
+    lexemeId: readString(input.lexemeId) ?? undefined,
+    renderUnitId: readString(input.renderUnitId) ?? undefined,
+    renderUnitMinBand: readString(input.renderUnitMinBand) ?? undefined,
+    sourceLemma,
+    targetLemma,
+    pos,
+    frequencyRank:
+      typeof input.frequencyRank === "number" && Number.isFinite(input.frequencyRank)
+        ? input.frequencyRank
+        : null,
+    confidence: readNumber(input.confidence, 0.9),
+    exampleSentenceEnglish: readString(input.exampleSentenceEnglish) ?? undefined,
+    exampleSentenceNative: readString(input.exampleSentenceNative) ?? undefined,
+    inflections: Array.isArray(input.inflections)
+      ? input.inflections.filter((value): value is string => typeof value === "string")
+      : undefined,
+    sourceLanguage: input.sourceLanguage === "en" ? "en" : undefined,
+    targetLanguage: input.targetLanguage === "es" ? "es" : undefined,
+    sourceDataset: readString(input.sourceDataset) ?? undefined
+  };
+}
+
+function readStringArray(input: unknown): string[] {
+  return Array.isArray(input)
+    ? input
+        .map((value) => readString(value))
+        .filter((value): value is string => Boolean(value))
+    : [];
 }
 
 async function loadCachedSentenceAnalysisEntries(
@@ -395,19 +498,6 @@ function parseSiteSetting(input: unknown, hostname: string): SiteSetting | null 
 
   return null;
 }
-
-const BUNDLED_RENDER_UNITS = parseRenderUnitAsset(bundledRenderUnitAsset);
-const BUNDLED_LEXEMES = parseLexemeAsset(bundledLexemeAsset);
-const BUNDLED_SEED_LEXICON = BUNDLED_RENDER_UNITS
-  ? {
-      entries: renderUnitsToSeedLexiconEntries(
-        BUNDLED_RENDER_UNITS.entries,
-        BUNDLED_LEXEMES?.entries ?? []
-      ),
-      assetVersion: BUNDLED_RENDER_UNITS.assetVersion,
-      schemaVersion: BUNDLED_RENDER_UNITS.schemaVersion
-    }
-  : null;
 
 function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
   const entries: UserVocabEntry[] = [];
@@ -727,69 +817,6 @@ function normalizeCachedSkipDecision(
     lemmaId,
     normalizedText,
     rationale: readString(candidate.rationale) ?? undefined
-  };
-}
-
-function resolveLexicon(input: unknown, lexemeInput?: unknown): {
-  entries: SeedLexiconEntry[];
-  sentenceHintPhrases: string[];
-  source: LexiconLoadSource;
-  assetVersion: string | null;
-  isFallback: boolean;
-} {
-  const parsedLexemes =
-    parseLexemeAsset(lexemeInput) ?? BUNDLED_LEXEMES;
-  const parsedRenderUnits = parseRenderUnitAsset(input);
-  if (parsedRenderUnits && parsedRenderUnits.entries.length > 0) {
-    const entries = renderUnitsToSeedLexiconEntries(
-      parsedRenderUnits.entries,
-      parsedLexemes?.entries ?? []
-    );
-    if (entries.length > 0) {
-      return {
-        entries,
-        sentenceHintPhrases: getRenderUnitSentenceHints(parsedRenderUnits.entries),
-        source: "storage-wrapped-asset",
-        assetVersion: parsedRenderUnits.assetVersion,
-        isFallback: false
-      };
-    }
-  }
-
-  const parsedStorageLexicon = parseSeedLexiconInput(input);
-  if (
-    parsedStorageLexicon &&
-    parsedStorageLexicon.entries.length > 0 &&
-    !isLikelyFallbackSeedLexicon(parsedStorageLexicon.entries)
-  ) {
-    return {
-      entries: parsedStorageLexicon.entries,
-      sentenceHintPhrases: [],
-      source:
-        parsedStorageLexicon.format === "legacy-object-array"
-          ? "storage-legacy-array"
-          : "storage-wrapped-asset",
-      assetVersion: parsedStorageLexicon.assetVersion,
-      isFallback: false
-    };
-  }
-
-  if (BUNDLED_SEED_LEXICON && BUNDLED_SEED_LEXICON.entries.length > 0) {
-    return {
-      entries: BUNDLED_SEED_LEXICON.entries,
-      sentenceHintPhrases: getRenderUnitSentenceHints(BUNDLED_RENDER_UNITS?.entries ?? []),
-      source: "bundled-asset",
-      assetVersion: BUNDLED_SEED_LEXICON.assetVersion,
-      isFallback: false
-    };
-  }
-
-  return {
-    entries: FALLBACK_SEED_LEXICON,
-    sentenceHintPhrases: [],
-    source: "fallback",
-    assetVersion: null,
-    isFallback: true
   };
 }
 

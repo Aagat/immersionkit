@@ -7,6 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureLinuxHeadedBrowserDisplay } from "../headed-browser-display.mjs";
+import { startAssetPackServer } from "../assets/asset-pack-server.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
@@ -20,6 +21,10 @@ if (!existsSync(join(extensionPath, "manifest.json"))) {
     "Built extension not found. Run `pnpm build` before `pnpm smoke:extension`, or use `pnpm smoke:extension:build`."
   );
 }
+
+const assetServer = await startAssetPackServer({
+  port: Number(process.env.IK_ASSET_PACK_PORT ?? 8787)
+});
 
 const serviceWorkerLoader = await readFile(
   join(extensionPath, "service-worker-loader.js"),
@@ -320,6 +325,7 @@ try {
 } finally {
   await context.close();
   await new Promise((resolveServer) => server.close(resolveServer));
+  await new Promise((resolveServer) => assetServer.server.close(resolveServer));
   await rm(userDataDir, {
     recursive: true,
     force: true,

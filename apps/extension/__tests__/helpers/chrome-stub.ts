@@ -1,3 +1,11 @@
+import {
+  getRenderUnitSentenceHints,
+  parseLexemeAsset,
+  parseRenderUnitAsset,
+  renderUnitsToSeedLexiconEntries
+} from "../../src/render-units/render-units";
+import { parseSeedLexiconInput } from "../../src/seed/seed-lexicon";
+
 type RuntimeListener = (
   message: unknown,
   sender: chrome.runtime.MessageSender,
@@ -50,12 +58,16 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
       sendMessage(message: unknown, callback?: (response?: unknown) => void) {
         sentMessages.push(message);
         if (!sendMessageHandler) {
-          callback?.();
+          callback?.(createDefaultRuntimeResponse(message, storageValues));
           return;
         }
 
         Promise.resolve(sendMessageHandler(message)).then((response) => {
-          callback?.(response);
+          callback?.(
+            response === undefined
+              ? createDefaultRuntimeResponse(message, storageValues)
+              : response
+          );
         });
       }
     },
@@ -136,6 +148,76 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
       delete (globalThis as { chrome?: typeof chrome }).chrome;
     }
   };
+}
+
+function createDefaultRuntimeResponse(
+  message: unknown,
+  storageValues: StorageValues
+): unknown {
+  if (
+    !message ||
+    typeof message !== "object" ||
+    (message as { type?: unknown }).type !== "assets/get-context"
+  ) {
+    return undefined;
+  }
+
+  const renderUnitAsset = parseRenderUnitAsset(
+    pickFirstDefinedValue(storageValues, ["immersionkit.renderUnits", "renderUnits"])
+  );
+  if (renderUnitAsset) {
+    const lexemeAsset = parseLexemeAsset(
+      pickFirstDefinedValue(storageValues, ["immersionkit.lexemes", "lexemes"])
+    );
+    return {
+      ok: true,
+      context: {
+        lexicon: renderUnitsToSeedLexiconEntries(
+          renderUnitAsset.entries,
+          lexemeAsset?.entries ?? []
+        ),
+        renderUnits: renderUnitAsset.entries,
+        sentenceHintPhrases: getRenderUnitSentenceHints(renderUnitAsset.entries),
+        source: "cached-pack",
+        assetVersion: renderUnitAsset.assetVersion,
+        bandIds: [],
+        missingBandIds: []
+      }
+    };
+  }
+
+  const seedLexicon = parseSeedLexiconInput(
+    pickFirstDefinedValue(storageValues, [
+      "immersionkit.seedLexicon",
+      "seedLexicon",
+      "lexicon"
+    ])
+  );
+  return {
+    ok: true,
+    context: {
+      lexicon: seedLexicon?.entries ?? [],
+      renderUnits: [],
+      sentenceHintPhrases: [],
+      source: seedLexicon ? "cached-pack" : "empty",
+      assetVersion: seedLexicon?.assetVersion ?? null,
+      bandIds: [],
+      missingBandIds: []
+    }
+  };
+}
+
+function pickFirstDefinedValue(
+  record: StorageValues,
+  keys: readonly string[]
+): unknown {
+  for (const key of keys) {
+    if (record[key] !== undefined) {
+      return record[key];
+    }
+  }
+
+  return undefined;
 }
 
 function filterTabs(queryInfo: unknown, tabs: chrome.tabs.Tab[]): chrome.tabs.Tab[] {

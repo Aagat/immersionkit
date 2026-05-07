@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chromium, type BrowserContext, type Page, type Worker } from "playwright";
 import { ensureLinuxHeadedBrowserDisplay } from "../../../tools/headed-browser-display.mjs";
+import { startAssetPackServer } from "../../../tools/assets/asset-pack-server.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -35,7 +36,9 @@ const fixtureHtml = `<!doctype html>
 
 describe("extension E2E harness", () => {
   beforeAll(async () => {
-    await buildExtension();
+    const assetServer = await startAssetPackServer({ port: 0 });
+    servers.push(assetServer.server);
+    await buildExtension(assetServer.baseUrl);
   }, 60_000);
 
   afterAll(async () => {
@@ -92,6 +95,13 @@ describe("extension E2E harness", () => {
     expect(inlineSnapshot.injectedPhrases).toBeGreaterThan(0);
     expect(inlineSnapshot.blankPhraseTargets).toBe(0);
     expect(inlineSnapshot.sentenceNotes).toBe(0);
+
+    const assetCache = await readAssetCacheSnapshot(serviceWorker);
+    expect(assetCache.packMetadataCount).toBeGreaterThan(0);
+    expect(assetCache.renderUnitRowCount).toBeGreaterThan(
+      assetCache.packMetadataCount
+    );
+    expect(assetCache.lexemeRowCount).toBeGreaterThan(assetCache.packMetadataCount);
 
     await openFirstPopover(page, "[data-ik-unit-kind='word']");
     await expectPopover(page);
@@ -170,9 +180,13 @@ describe("extension E2E harness", () => {
   }, 90_000);
 });
 
-async function buildExtension(): Promise<void> {
+async function buildExtension(assetBaseUrl: string): Promise<void> {
   await execFileAsync("pnpm", ["build"], {
     cwd: extensionRoot,
+    env: {
+      ...process.env,
+      VITE_IMMERSIONKIT_ASSET_BASE_URL: assetBaseUrl
+    },
     maxBuffer: 1024 * 1024 * 8
   });
 
@@ -308,5 +322,49 @@ async function readSettings(serviceWorker: Worker): Promise<Record<string, unkno
     return (await chrome.storage.local.get("immersionkit.settings"))[
       "immersionkit.settings"
     ];
+  });
+}
+
+async function readAssetCacheSnapshot(serviceWorker: Worker): Promise<{
+  packMetadataCount: number;
+  renderUnitRowCount: number;
+  lexemeRowCount: number;
+}> {
+  return serviceWorker.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolveOpen, rejectOpen) => {
+      const request = indexedDB.open("immersionkit-extension");
+      request.onsuccess = () => resolveOpen(request.result);
+      request.onerror = () =>
+        rejectOpen(request.error ?? new Error("IndexedDB open failed."));
+    });
+
+    try {
+      const transaction = database.transaction(
+        ["asset-packs", "asset-pack-render-units", "asset-pack-lexemes"],
+        "readonly"
+      );
+      const countStore = (storeName: string) =>
+        new Promise<number>((resolveCount, rejectCount) => {
+          const request = transaction.objectStore(storeName).count();
+          request.onsuccess = () => resolveCount(request.result);
+          request.onerror = () =>
+            rejectCount(request.error ?? new Error("IndexedDB count failed."));
+        });
+
+      const [packMetadataCount, renderUnitRowCount, lexemeRowCount] =
+        await Promise.all([
+          countStore("asset-packs"),
+          countStore("asset-pack-render-units"),
+          countStore("asset-pack-lexemes")
+        ]);
+
+      return {
+        packMetadataCount,
+        renderUnitRowCount,
+        lexemeRowCount
+      };
+    } finally {
+      database.close();
+    }
   });
 }

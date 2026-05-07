@@ -26,6 +26,7 @@ export async function writeStorageValues(values: StorageRecord): Promise<void> {
 
   await new Promise<void>((resolve) => {
     chrome.storage.local.set(values, () => {
+      void chrome.runtime.lastError;
       resolve();
     });
   });
@@ -38,6 +39,7 @@ export async function removeStorageValues(keys: readonly string[]): Promise<void
 
   await new Promise<void>((resolve) => {
     chrome.storage.local.remove([...new Set(keys)], () => {
+      void chrome.runtime.lastError;
       resolve();
     });
   });
@@ -63,4 +65,3 @@ export function readString(value: unknown): string | null {
 export function isRecord(value: unknown): value is StorageRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
-

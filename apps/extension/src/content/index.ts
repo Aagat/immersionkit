@@ -420,7 +420,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     });
     if (processingContext.lexiconInfo.isFallback) {
       console.warn(
-        "ImmersionKit is using emergency fallback lexicon; check bundled/generated seed asset loading."
+        "ImmersionKit has no cached asset packs available; inline pack-backed learning will stay off for this page."
       );
     }
 

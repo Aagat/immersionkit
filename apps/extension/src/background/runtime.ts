@@ -1,5 +1,6 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
+  ActiveAssetContext,
   LearningItem,
   GetLearningItemsMessage,
   QueueSentenceCandidatesMessage,
@@ -11,6 +12,7 @@ import type {
   SentenceTranslationResultMessage
 } from "@immersionkit/shared";
 
+import { getBackgroundAssetPackService } from "./asset-packs";
 import { BackgroundLearningItemService } from "./learning-items";
 import { CurriculumProgressionService } from "./curriculum-progression";
 import { IndexedDbPhraseRegistryRepository } from "./phrase-registry";
@@ -20,7 +22,6 @@ import {
   type QueueSentenceCandidatesResponse,
   type SentenceTranslationDelivery
 } from "./sentence-queue";
-import { ensureSeedLexiconReady } from "./seed-lexicon";
 import { loadBackgroundRuntimeConfig } from "./settings";
 
 type RefreshActiveTabResponse =
@@ -54,6 +55,13 @@ export type GetLearningItemsResponse =
     }
   | ErrorResponse;
 
+export type GetAssetContextResponse =
+  | {
+      ok: true;
+      context: ActiveAssetContext;
+    }
+  | ErrorResponse;
+
 export type GetSentenceAnalysisCacheResponse =
   | {
       ok: true;
@@ -81,6 +89,7 @@ export class BackgroundRuntimeCoordinator {
   private readonly curriculumProgression: CurriculumProgressionService;
   private readonly phraseRegistry: IndexedDbPhraseRegistryRepository;
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
+  private readonly assetPacks = getBackgroundAssetPackService();
   private isBooted = false;
 
   constructor() {
@@ -100,7 +109,7 @@ export class BackgroundRuntimeCoordinator {
     }
 
     this.isBooted = true;
-    void this.bootstrapSeedLexicon();
+    void this.prepareAssetPacks();
     void this.backfillLearningItemBands();
     void this.cleanupLegacyPhraseIdentities();
 
@@ -109,7 +118,7 @@ export class BackgroundRuntimeCoordinator {
       if (details.reason === "install") {
         void showFirstRunGuidance();
       }
-      void this.bootstrapSeedLexicon();
+      void this.prepareAssetPacks();
       void this.backfillLearningItemBands();
       void this.cleanupLegacyPhraseIdentities();
     });
@@ -136,6 +145,11 @@ export class BackgroundRuntimeCoordinator {
 
       if (message.type === RuntimeMessageType.GetLearningItems) {
         void this.handleGetLearningItems(message, sendResponse);
+        return true;
+      }
+
+      if (message.type === RuntimeMessageType.GetAssetContext) {
+        void this.handleGetAssetContext(sendResponse);
         return true;
       }
 
@@ -254,6 +268,23 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "learning-items-read-failed"
+      });
+    }
+  }
+
+  private async handleGetAssetContext(
+    sendResponse: (response: GetAssetContextResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        context: await this.assetPacks.loadActiveContext()
+      });
+    } catch (error) {
+      console.warn("ImmersionKit asset context read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "asset-context-read-failed"
       });
     }
   }
@@ -385,16 +416,19 @@ export class BackgroundRuntimeCoordinator {
     );
   }
 
-  private async bootstrapSeedLexicon() {
+  private async prepareAssetPacks() {
     try {
-      const result = await ensureSeedLexiconReady();
-      console.info("ImmersionKit seed lexicon ready.", {
-        source: result.source,
-        entryCount: result.entryCount,
-        assetVersion: result.assetVersion
+      const context = await this.assetPacks.loadActiveContext();
+      console.info("ImmersionKit asset packs ready.", {
+        source: context.source,
+        entryCount: context.lexicon.length,
+        renderUnitCount: context.renderUnits.length,
+        assetVersion: context.assetVersion,
+        bandIds: context.bandIds,
+        missingBandIds: context.missingBandIds
       });
     } catch (error) {
-      console.warn("ImmersionKit failed to bootstrap seed lexicon.", error);
+      console.warn("ImmersionKit failed to prepare asset packs.", error);
     }
   }
 
@@ -413,6 +447,7 @@ export class BackgroundRuntimeCoordinator {
 async function showFirstRunGuidance(): Promise<void> {
   await new Promise<void>((resolve) => {
     chrome.storage.local.set({ [FIRST_RUN_INTRO_STORAGE_KEY]: true }, () => {
+      void chrome.runtime.lastError;
       resolve();
     });
   });
