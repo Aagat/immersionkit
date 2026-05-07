@@ -162,6 +162,8 @@ function createDefaultRuntimeResponse(
     return undefined;
   }
 
+  const includeRenderUnits =
+    (message as { includeRenderUnits?: unknown }).includeRenderUnits === true;
   const renderUnitAsset = parseRenderUnitAsset(
     pickFirstDefinedValue(storageValues, ["immersionkit.renderUnits", "renderUnits"])
   );
@@ -176,7 +178,7 @@ function createDefaultRuntimeResponse(
           renderUnitAsset.entries,
           lexemeAsset?.entries ?? []
         ),
-        renderUnits: renderUnitAsset.entries,
+        ...(includeRenderUnits ? { renderUnits: renderUnitAsset.entries } : {}),
         sentenceHintPhrases: getRenderUnitSentenceHints(renderUnitAsset.entries),
         source: "cached-pack",
         assetVersion: renderUnitAsset.assetVersion,
@@ -197,7 +199,7 @@ function createDefaultRuntimeResponse(
     ok: true,
     context: {
       lexicon: seedLexicon?.entries ?? [],
-      renderUnits: [],
+      ...(includeRenderUnits ? { renderUnits: [] } : {}),
       sentenceHintPhrases: [],
       source: seedLexicon ? "cached-pack" : "empty",
       assetVersion: seedLexicon?.assetVersion ?? null,

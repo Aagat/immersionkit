@@ -30,6 +30,7 @@ export type RefreshActiveTabMessage = {
 
 export type GetAssetContextMessage = {
   type: RuntimeMessageType.GetAssetContext;
+  includeRenderUnits?: boolean;
 };
 
 export type AssetContextLoadSource =
@@ -46,6 +47,8 @@ export type ActiveAssetContext = {
   bandIds: string[];
   missingBandIds: string[];
 };
+
+export type ContentAssetContext = Omit<ActiveAssetContext, "renderUnits">;
 
 export type GetLearningItemsMessage = {
   type: RuntimeMessageType.GetLearningItems;

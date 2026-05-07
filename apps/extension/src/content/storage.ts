@@ -1,6 +1,6 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
-  ActiveAssetContext,
+  ContentAssetContext,
   CurriculumConfig,
   CurriculumRuntimeProfileInput,
   ContextualWordCandidate,
@@ -299,10 +299,9 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
   });
 }
 
-async function requestActiveAssetContext(): Promise<ActiveAssetContext> {
-  const emptyContext: ActiveAssetContext = {
+async function requestActiveAssetContext(): Promise<ContentAssetContext> {
+  const emptyContext: ContentAssetContext = {
     lexicon: [],
-    renderUnits: [],
     sentenceHintPhrases: [],
     source: "empty",
     assetVersion: null,
@@ -330,7 +329,7 @@ async function requestActiveAssetContext(): Promise<ActiveAssetContext> {
   });
 }
 
-function normalizeAssetContext(input: unknown): ActiveAssetContext | null {
+function normalizeAssetContext(input: unknown): ContentAssetContext | null {
   if (!isRecord(input)) {
     return null;
   }
@@ -342,9 +341,6 @@ function normalizeAssetContext(input: unknown): ActiveAssetContext | null {
 
   return {
     lexicon: readSeedLexiconEntries(input.lexicon),
-    renderUnits: Array.isArray(input.renderUnits)
-      ? (input.renderUnits.filter(isRecord) as ActiveAssetContext["renderUnits"])
-      : [],
     sentenceHintPhrases: Array.isArray(input.sentenceHintPhrases)
       ? input.sentenceHintPhrases
           .map((value) => readString(value))

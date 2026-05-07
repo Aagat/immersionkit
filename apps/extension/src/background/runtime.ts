@@ -1,6 +1,8 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   ActiveAssetContext,
+  ContentAssetContext,
+  GetAssetContextMessage,
   LearningItem,
   GetLearningItemsMessage,
   QueueSentenceCandidatesMessage,
@@ -58,7 +60,7 @@ export type GetLearningItemsResponse =
 export type GetAssetContextResponse =
   | {
       ok: true;
-      context: ActiveAssetContext;
+      context: ActiveAssetContext | ContentAssetContext;
     }
   | ErrorResponse;
 
@@ -149,7 +151,7 @@ export class BackgroundRuntimeCoordinator {
       }
 
       if (message.type === RuntimeMessageType.GetAssetContext) {
-        void this.handleGetAssetContext(sendResponse);
+        void this.handleGetAssetContext(message, sendResponse);
         return true;
       }
 
@@ -273,12 +275,16 @@ export class BackgroundRuntimeCoordinator {
   }
 
   private async handleGetAssetContext(
+    message: GetAssetContextMessage,
     sendResponse: (response: GetAssetContextResponse) => void
   ) {
     try {
+      const context = await this.assetPacks.loadActiveContext();
       sendResponse({
         ok: true,
-        context: await this.assetPacks.loadActiveContext()
+        context: message.includeRenderUnits
+          ? context
+          : createContentAssetContext(context)
       });
     } catch (error) {
       console.warn("ImmersionKit asset context read failed.", error);
@@ -442,6 +448,17 @@ export class BackgroundRuntimeCoordinator {
       console.warn("ImmersionKit learning item band backfill failed.", error);
     }
   }
+}
+
+function createContentAssetContext(context: ActiveAssetContext): ContentAssetContext {
+  return {
+    lexicon: context.lexicon,
+    sentenceHintPhrases: context.sentenceHintPhrases,
+    source: context.source,
+    assetVersion: context.assetVersion,
+    bandIds: context.bandIds,
+    missingBandIds: context.missingBandIds
+  };
 }
 
 async function showFirstRunGuidance(): Promise<void> {
