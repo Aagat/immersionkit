@@ -7,7 +7,7 @@ import type {
 } from "../../../../packages/shared/src/validation/word-injection";
 
 import { processTextNode } from "../content/annotate";
-import { buildWordRenderIndex } from "../content/lexicon";
+import { buildWordRenderIndex } from "../content/word-render-index";
 
 export type BrowserBaselineDecision = WordInjectionDecisionResult & {
   id: string;
@@ -16,7 +16,7 @@ export type BrowserBaselineDecision = WordInjectionDecisionResult & {
 
 const VOCAB_BY_LEXEME_ID = new Map<string, UserVocabEntry>();
 
-export function runLemmaOnlyContentBaseline(
+export function runContentBaseline(
   candidates: ContextualWordCandidate[]
 ): BrowserBaselineDecision[] {
   let nodeSequence = 0;
@@ -47,11 +47,11 @@ export function runLemmaOnlyContentBaseline(
     return {
       id: candidate.id,
       decision,
-      code: result.injectedCount > 0 ? "lemma-only-safe-pos" : "lemma-only-unsafe-pos",
+      code: result.injectedCount > 0 ? "content-baseline-safe-pos" : "content-baseline-unsafe-pos",
       reason:
         result.injectedCount > 0
-          ? "Content-path lemma-only processing injected at least one matching token."
-          : "Content-path lemma-only processing injected zero matching tokens.",
+          ? "Content-path baseline rendering injected at least one matching token."
+          : "Content-path baseline rendering injected zero matching tokens.",
       injectedCount: result.injectedCount
     };
   });

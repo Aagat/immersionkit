@@ -33,13 +33,13 @@ type VocabEntryRecord = {
   updatedAt?: unknown;
 };
 
-export type LexiconLoadSource =
+export type RenderAssetLoadSource =
   | "remote-pack"
   | "cached-pack"
   | "empty";
 
-export type LexiconLoadInfo = {
-  source: LexiconLoadSource;
+export type RenderAssetLoadInfo = {
+  source: RenderAssetLoadSource;
   entryCount: number;
   assetVersion: string | null;
   isFallback: boolean;
@@ -51,7 +51,7 @@ export type ProcessingContext = {
   siteSetting: SiteSetting | null;
   siteEnabled: boolean;
   renderUnits: RenderUnitEntry[];
-  lexiconInfo: LexiconLoadInfo;
+  renderAssetInfo: RenderAssetLoadInfo;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
   cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
@@ -166,7 +166,7 @@ export async function loadProcessingContext(
     siteSetting,
     siteEnabled: siteSetting?.enabled ?? true,
     renderUnits: assetContext.renderUnits,
-    lexiconInfo: {
+    renderAssetInfo: {
       source: assetContext.source,
       entryCount: assetContext.renderUnits.length,
       assetVersion: assetContext.assetVersion,
@@ -419,7 +419,7 @@ function normalizeAssetContext(input: unknown): ContentAssetContext | null {
   };
 }
 
-function readAssetContextSource(value: unknown): LexiconLoadSource | null {
+function readAssetContextSource(value: unknown): RenderAssetLoadSource | null {
   return value === "remote-pack" ||
     value === "cached-pack" ||
     value === "empty"

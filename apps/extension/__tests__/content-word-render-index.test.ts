@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { hashSentence } from "@immersionkit/shared";
 
 import { processTextNode } from "../src/content/annotate";
-import { buildWordRenderIndex } from "../src/content/lexicon";
+import { buildWordRenderIndex } from "../src/content/word-render-index";
 import type { CachedWordRenderDecision } from "../src/content/storage";
 import type { WordRenderEntry } from "../src/render-units/render-units";
 import { withFixtureDom } from "./helpers/fixture-dom";

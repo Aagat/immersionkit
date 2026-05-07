@@ -17,7 +17,7 @@ import {
   type BrowserExpectedSnapshot
 } from "./word-injection-corpus";
 import {
-  runLemmaOnlyContentBaseline,
+  runContentBaseline,
   type BrowserBaselineDecision
 } from "./run-word-injection-baseline";
 
@@ -37,7 +37,7 @@ export type BrowserWordInjectionValidationResult = {
 
 export async function runWordInjectionValidation(): Promise<BrowserWordInjectionValidationResult> {
   const baselineById = new Map<string, BrowserBaselineDecision>(
-    runLemmaOnlyContentBaseline(WORD_INJECTION_CANDIDATES).map((decision) => [
+    runContentBaseline(WORD_INJECTION_CANDIDATES).map((decision) => [
       decision.id,
       decision
     ])

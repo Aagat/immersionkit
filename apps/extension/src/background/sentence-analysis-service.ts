@@ -5,7 +5,7 @@ import {
   createSentenceAnalysisEntry,
   detectPhraseCandidatesFromAnalyzerOutput,
   evaluateContextAwareDecision,
-  getV1AmbiguityGroupForLemma,
+  getV1AmbiguityGroupForWord,
   hashSentence,
   normalizeToken,
   scorePrototypeSuitability,
@@ -270,7 +270,7 @@ function buildContextualWordCandidates(
   analyzerOutput.tokens.forEach((token, tokenIndex) => {
     const wordEntries = findWordRenderEntriesForToken(token, tokenIndex, analyzerOutput, lookup);
     for (const wordEntry of wordEntries) {
-      const ambiguityGroup = getV1AmbiguityGroupForLemma(
+      const ambiguityGroup = getV1AmbiguityGroupForWord(
         wordEntry.sourceLemma
       );
       const observedPos = toObservedContextPos(token);
@@ -898,11 +898,11 @@ function computeSuitabilitySignals(
     (candidate) => candidate.decision === "inject"
   ).length;
   const ambiguousCandidateCount = contextualWordCandidates.filter((candidate) =>
-    Boolean(getV1AmbiguityGroupForLemma(candidate.candidateLemma))
+    Boolean(getV1AmbiguityGroupForWord(candidate.candidateLemma))
   ).length;
   const skippedAmbiguousCount = contextualWordCandidates.filter(
     (candidate) =>
-      Boolean(getV1AmbiguityGroupForLemma(candidate.candidateLemma)) &&
+      Boolean(getV1AmbiguityGroupForWord(candidate.candidateLemma)) &&
       candidate.decision === "skip"
   ).length;
   const averagePhraseConfidence =
@@ -968,7 +968,7 @@ function evaluateUnambiguousCandidate(
   if (candidate.observedPos !== candidate.candidatePos) {
     return {
       decision: "skip",
-      rationale: `Observed POS ${candidate.observedPos} does not match lexicon POS ${candidate.candidatePos}.`
+      rationale: `Observed POS ${candidate.observedPos} does not match render-unit POS ${candidate.candidatePos}.`
     };
   }
 
@@ -981,7 +981,7 @@ function evaluateUnambiguousCandidate(
 
   return {
     decision: "inject",
-    rationale: "Analyzer evidence is compatible with the lexicon entry."
+    rationale: "Analyzer evidence is compatible with the render unit."
   };
 }
 
@@ -1023,14 +1023,14 @@ function resolveTokenVocabStatus(
   vocab: ReadonlyMap<string, UserVocabEntry>
 ): VocabStatus {
   const observedPos = toObservedContextPos(token);
-  const lexiconEntry = findWordRenderEntriesForToken(token, -1, null, lookup).find(
+  const wordEntry = findWordRenderEntriesForToken(token, -1, null, lookup).find(
     (entry) => observedPos === entry.pos
   );
-  if (!lexiconEntry) {
+  if (!wordEntry) {
     return "new";
   }
 
-  return vocab.get(lexiconEntry.lexemeId)?.status ?? "new";
+  return vocab.get(wordEntry.lexemeId)?.status ?? "new";
 }
 
 function buildWordRenderLookup(renderUnits: readonly RenderUnitEntry[]): WordRenderLookup {

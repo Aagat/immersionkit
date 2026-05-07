@@ -1,4 +1,4 @@
-import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
+import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 
 export type ShortlistingPolicyId =
   | "analyze-every-segmented"
@@ -63,7 +63,7 @@ export type SentenceShortlistingBenchmarkResult = {
 export type SentenceShortlistingBenchmarkInput = {
   document: Document;
   scenarios: readonly SentenceShortlistingScenario[];
-  lexicon: readonly SeedLexiconEntry[];
+  wordInventory: readonly WordInventoryEntry[];
   vocabByLexemeId: ReadonlyMap<string, VocabStatus> | Record<string, VocabStatus>;
   discoveryRate: number;
   goldilocksThreshold: number;

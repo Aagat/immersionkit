@@ -307,12 +307,12 @@ export type PhraseRegistryEntry = {
   normalizedTargetText: string;
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
-  provenance: "seed" | "runtime";
+  provenance: "curated" | "runtime";
   confidence: number;
   firstSeenAt: IsoTimestamp;
   lastSeenAt: IsoTimestamp;
   exposureCount: number;
-  lexiconEntryId?: string;
+  sourceEntryId?: string;
 };
 
 export type PhraseOccurrence = {
@@ -488,7 +488,7 @@ export type UserLearningProfile = {
   updatedAt: IsoTimestamp;
 };
 
-export type SeedLexiconEntry = {
+export type WordInventoryEntry = {
   lexemeId: string;
   renderUnitId?: string;
   renderUnitMinBand?: string;
@@ -503,14 +503,6 @@ export type SeedLexiconEntry = {
   sourceLanguage?: SupportedSourceLanguage;
   targetLanguage?: SupportedTargetLanguage;
   sourceDataset?: string;
-};
-
-export type SeedLexiconAsset = {
-  version: string;
-  sourceLanguage: SupportedSourceLanguage;
-  targetLanguage: SupportedTargetLanguage;
-  createdAt: IsoTimestamp;
-  entries: SeedLexiconEntry[];
 };
 
 export type UserVocabEntry = {

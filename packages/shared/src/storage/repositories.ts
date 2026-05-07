@@ -2,10 +2,8 @@ import type {
   ExtensionSettings,
   IsoTimestamp,
   ResolvedExtensionSettings,
-  SeedLexiconEntry,
   SentenceCacheEntry,
   SiteSetting,
-  SupportedPos,
   UserVocabEntry,
   VocabStatus
 } from "../domain/models";
@@ -13,17 +11,6 @@ import type {
 export type RepositoryReadOptions = {
   signal?: AbortSignal;
 };
-
-export type SeedLexiconQuery = {
-  sourceLemma?: string;
-  pos?: SupportedPos;
-  limit?: number;
-};
-
-export interface SeedLexiconRepository {
-  getByLexemeId(lexemeId: string, options?: RepositoryReadOptions): Promise<SeedLexiconEntry | null>;
-  findEntries(query: SeedLexiconQuery, options?: RepositoryReadOptions): Promise<SeedLexiconEntry[]>;
-}
 
 export interface SettingsRepository {
   getSettings(options?: RepositoryReadOptions): Promise<ResolvedExtensionSettings>;

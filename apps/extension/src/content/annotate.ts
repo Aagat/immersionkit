@@ -66,7 +66,7 @@ export type ActivationDecision = {
 };
 
 export type WordActivationInput = {
-  lexiconEntry: WordRenderEntry;
+  wordEntry: WordRenderEntry;
   learningItem: LearningItem | null;
   status: VocabStatus;
   isDueForReview: boolean;
@@ -292,7 +292,7 @@ function renderTextWindow(input: {
       context.shouldActivateWord
     ) {
       activationDecision = context.shouldActivateWord({
-        lexiconEntry: wordEntry,
+        wordEntry,
         learningItem,
         status,
         isDueForReview
@@ -348,7 +348,7 @@ function renderTextWindow(input: {
       sourceToken: segment.value,
       targetToken: replacement,
       sentence,
-      lexiconEntry: wordEntry,
+      wordEntry,
       status,
       wordKind,
       isDueForReview,
@@ -679,7 +679,7 @@ function createTokenElement(input: {
     text: string;
     hash: string;
   } | null;
-  lexiconEntry: WordRenderEntry;
+  wordEntry: WordRenderEntry;
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
@@ -701,15 +701,15 @@ function createTokenElement(input: {
   element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
   element.setAttribute("data-ik-source-token", input.sourceToken);
   element.setAttribute("data-ik-target-token", input.targetToken);
-  element.setAttribute("data-ik-source-lemma", input.lexiconEntry.sourceLemma);
-  element.setAttribute("data-ik-lexeme-id", input.lexiconEntry.lexemeId);
-  element.setAttribute("data-ik-render-unit-id", input.lexiconEntry.renderUnitId);
+  element.setAttribute("data-ik-source-lemma", input.wordEntry.sourceLemma);
+  element.setAttribute("data-ik-lexeme-id", input.wordEntry.lexemeId);
+  element.setAttribute("data-ik-render-unit-id", input.wordEntry.renderUnitId);
   element.setAttribute(
     "data-ik-normalized-source-text",
-    input.lexiconEntry.normalizedSourceText
+    input.wordEntry.normalizedSourceText
   );
   element.setAttribute("data-ik-status", input.status);
-  element.setAttribute("data-ik-pos", input.lexiconEntry.pos);
+  element.setAttribute("data-ik-pos", input.wordEntry.pos);
   element.setAttribute("data-ik-word-kind", input.wordKind);
   element.setAttribute("data-ik-context-decision", "inject");
   element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
@@ -728,17 +728,17 @@ function createTokenElement(input: {
     `${input.sourceToken} translated to ${input.targetToken}`
   );
 
-  if (input.lexiconEntry.exampleSentenceEnglish) {
+  if (input.wordEntry.exampleSentenceEnglish) {
     element.setAttribute(
       "data-ik-example-sentence-english",
-      input.lexiconEntry.exampleSentenceEnglish
+      input.wordEntry.exampleSentenceEnglish
     );
   }
 
-  if (input.lexiconEntry.exampleSentenceNative) {
+  if (input.wordEntry.exampleSentenceNative) {
     element.setAttribute(
       "data-ik-example-sentence-native",
-      input.lexiconEntry.exampleSentenceNative
+      input.wordEntry.exampleSentenceNative
     );
   }
 

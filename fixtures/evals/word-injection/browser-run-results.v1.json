@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-05-07T20:32:07.113Z",
+  "capturedAt": "2026-05-07T20:48:39.750Z",
   "status": "pass",
   "result": {
-    "generatedAt": "2026-05-07T20:32:06.653Z",
+    "generatedAt": "2026-05-07T20:48:39.287Z",
     "browserUserAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "corpusVersion": "1.0.0",
     "summary": {
@@ -34,8 +34,8 @@
           "baseline": {
             "id": "can-01",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -69,8 +69,8 @@
           "baseline": {
             "id": "can-02",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -103,8 +103,8 @@
           "baseline": {
             "id": "can-03",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -137,8 +137,8 @@
           "baseline": {
             "id": "can-04",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -171,8 +171,8 @@
           "baseline": {
             "id": "can-05",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -206,8 +206,8 @@
           "baseline": {
             "id": "can-06",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -241,8 +241,8 @@
           "baseline": {
             "id": "watch-01",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -276,8 +276,8 @@
           "baseline": {
             "id": "watch-02",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -311,8 +311,8 @@
           "baseline": {
             "id": "watch-03",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -346,8 +346,8 @@
           "baseline": {
             "id": "watch-04",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -381,8 +381,8 @@
           "baseline": {
             "id": "watch-05",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -416,8 +416,8 @@
           "baseline": {
             "id": "watch-06",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -450,8 +450,8 @@
           "baseline": {
             "id": "light-01",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -485,8 +485,8 @@
           "baseline": {
             "id": "light-02",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -519,8 +519,8 @@
           "baseline": {
             "id": "light-03",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -553,8 +553,8 @@
           "baseline": {
             "id": "light-04",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -587,8 +587,8 @@
           "baseline": {
             "id": "light-05",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -622,8 +622,8 @@
           "baseline": {
             "id": "light-06",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -656,8 +656,8 @@
           "baseline": {
             "id": "right-01",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -690,8 +690,8 @@
           "baseline": {
             "id": "right-02",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -724,8 +724,8 @@
           "baseline": {
             "id": "right-03",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -758,8 +758,8 @@
           "baseline": {
             "id": "right-04",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -792,8 +792,8 @@
           "baseline": {
             "id": "right-05",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -826,8 +826,8 @@
           "baseline": {
             "id": "right-06",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -861,8 +861,8 @@
           "baseline": {
             "id": "plant-01",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -896,8 +896,8 @@
           "baseline": {
             "id": "plant-02",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -931,8 +931,8 @@
           "baseline": {
             "id": "plant-03",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -966,8 +966,8 @@
           "baseline": {
             "id": "plant-04",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -1000,8 +1000,8 @@
           "baseline": {
             "id": "plant-05",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -1035,8 +1035,8 @@
           "baseline": {
             "id": "plant-06",
             "decision": "inject",
-            "code": "lemma-only-safe-pos",
-            "reason": "Content-path lemma-only processing injected at least one matching token.",
+            "code": "content-baseline-safe-pos",
+            "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
           "prototype": {
@@ -1145,8 +1145,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1178,8 +1178,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1210,8 +1210,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1242,8 +1242,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1274,8 +1274,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1307,8 +1307,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1340,8 +1340,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1373,8 +1373,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1406,8 +1406,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1439,8 +1439,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1472,8 +1472,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1505,8 +1505,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1537,8 +1537,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1570,8 +1570,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1602,8 +1602,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1634,8 +1634,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1666,8 +1666,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1699,8 +1699,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1731,8 +1731,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1763,8 +1763,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1795,8 +1795,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1827,8 +1827,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1859,8 +1859,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1891,8 +1891,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1924,8 +1924,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -1957,8 +1957,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -1990,8 +1990,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2023,8 +2023,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2055,8 +2055,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2088,8 +2088,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2154,9 +2154,9 @@
         "label": "compromise/three derived features",
         "inputMode": "library-derived",
         "runtime": {
-          "totalMs": 201,
-          "averageCaseMs": 0.268,
-          "casesPerSecond": 3731.3432835820895,
+          "totalMs": 206,
+          "averageCaseMs": 0.27466666666666667,
+          "casesPerSecond": 3640.7766990291266,
           "repeatCount": 25
         },
         "featureAgreement": {
@@ -2193,8 +2193,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2227,8 +2227,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2261,8 +2261,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2294,8 +2294,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2327,8 +2327,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2360,8 +2360,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2395,8 +2395,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2429,8 +2429,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2465,8 +2465,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2498,8 +2498,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2531,8 +2531,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2564,8 +2564,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2596,8 +2596,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2628,8 +2628,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2661,8 +2661,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2694,8 +2694,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2727,8 +2727,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2761,8 +2761,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2794,8 +2794,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2824,8 +2824,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2856,8 +2856,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2889,8 +2889,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -2919,8 +2919,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2952,8 +2952,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -2985,8 +2985,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3018,8 +3018,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3051,8 +3051,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3087,8 +3087,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3117,8 +3117,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3150,8 +3150,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3257,8 +3257,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3292,8 +3292,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3325,8 +3325,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3358,8 +3358,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3391,8 +3391,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3424,8 +3424,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects can because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects can because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3458,8 +3458,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3491,8 +3491,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3526,8 +3526,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3559,8 +3559,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3592,8 +3592,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3625,8 +3625,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects watch because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3658,8 +3658,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3690,8 +3690,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3723,8 +3723,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3756,8 +3756,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3788,8 +3788,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3822,8 +3822,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects light because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3855,8 +3855,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3888,8 +3888,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3921,8 +3921,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -3954,8 +3954,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -3986,8 +3986,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -4018,8 +4018,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects right because adjective is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -4051,8 +4051,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -4081,8 +4081,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -4114,8 +4114,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "inject",
@@ -4149,8 +4149,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -4181,8 +4181,8 @@
               "expectedDecision": "skip",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",
@@ -4214,8 +4214,8 @@
               "expectedDecision": "inject",
               "baseline": {
                 "decision": "inject",
-                "code": "lemma-only-safe-pos",
-                "reason": "Lemma-only lookup injects plant because noun is in the safe POS set."
+                "code": "content-baseline-safe-pos",
+                "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
               "prototype": {
                 "decision": "skip",

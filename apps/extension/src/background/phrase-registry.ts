@@ -246,12 +246,12 @@ function normalizePhraseRegistryEntry(value: unknown): PhraseRegistryEntry | nul
     normalizedTargetText,
     sourceKind,
     category,
-    provenance: value.provenance === "seed" ? "seed" : "runtime",
+    provenance: value.provenance === "curated" ? "curated" : "runtime",
     confidence: readNumber(value.confidence, 0),
     firstSeenAt,
     lastSeenAt,
     exposureCount: Math.max(0, Math.floor(readNumber(value.exposureCount, 0))),
-    lexiconEntryId: readString(value.lexiconEntryId) ?? undefined
+    sourceEntryId: readString(value.sourceEntryId) ?? undefined
   };
 }
 

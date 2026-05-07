@@ -6,7 +6,7 @@ import {
   type PhraseRegistryEntry,
   type RenderUnitEntry,
   type SentenceAnalysisEntry,
-  type SeedLexiconEntry
+  type WordInventoryEntry
 } from "@immersionkit/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -85,9 +85,9 @@ describe("background sentence analysis service", () => {
       cache: new InMemorySentenceAnalysisCache(),
       loadRenderUnits: () =>
         Promise.resolve(createRenderUnits([
-          lexiconEntry("lemma-can", "can", "lata", "noun"),
-          lexiconEntry("lemma-watch", "watch", "reloj", "noun"),
-          lexiconEntry("lemma-plant", "plant", "planta", "noun")
+          wordEntry("lexeme-can", "can", "lata", "noun"),
+          wordEntry("lexeme-watch", "watch", "reloj", "noun"),
+          wordEntry("lexeme-plant", "plant", "planta", "noun")
         ])),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -163,12 +163,12 @@ describe("background sentence analysis service", () => {
       cache: new InMemorySentenceAnalysisCache(),
       loadRenderUnits: () =>
         Promise.resolve(createRenderUnits([
-          lexiconEntry("lemma-need", "need", "necesidad", "noun"),
-          lexiconEntry("lemma-this", "this", "este", "adjective"),
-          lexiconEntry("lemma-zero", "zero", "cero", "noun"),
-          lexiconEntry("lemma-on", "on", "encima", "adverb"),
-          lexiconEntry("lemma-up", "up", "arriba", "adverb"),
-          lexiconEntry("lemma-stable", "stable", "estable", "adjective")
+          wordEntry("lexeme-need", "need", "necesidad", "noun"),
+          wordEntry("lexeme-this", "this", "este", "adjective"),
+          wordEntry("lexeme-zero", "zero", "cero", "noun"),
+          wordEntry("lexeme-on", "on", "encima", "adverb"),
+          wordEntry("lexeme-up", "up", "arriba", "adverb"),
+          wordEntry("lexeme-stable", "stable", "estable", "adjective")
         ])),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -205,8 +205,8 @@ describe("background sentence analysis service", () => {
       loadVocab: () =>
         Promise.resolve(
           new Map([
-            ["lemma-captain", createVocabEntry("lemma-captain", "known")],
-            ["lemma-team", createVocabEntry("lemma-team", "learning")]
+            ["lexeme-captain", createVocabEntry("lexeme-captain", "known")],
+            ["lexeme-team", createVocabEntry("lexeme-team", "learning")]
           ])
         )
     });
@@ -535,8 +535,8 @@ describe("background sentence analysis service", () => {
       phraseRegistry,
       loadRenderUnits: () =>
         Promise.resolve(createRenderUnits([
-          ...createLexicon(),
-          lexiconEntry(
+          ...createWordInventory(),
+          wordEntry(
             "phrase-old-city-center-walls",
             "old city center walls",
             "murallas del centro antiguo",
@@ -564,7 +564,7 @@ describe("background sentence analysis service", () => {
     });
   });
 
-  it("resolves runtime phrase targets from the curated phrase target lexicon", async () => {
+  it("resolves runtime phrase targets from the curated phrase target asset", async () => {
     const sourceText = "The public health care system needs support.";
     const sentenceHash = hashSentence(sourceText);
     const analyzer = createAnalyzer("fixture-v1", () =>
@@ -1234,16 +1234,16 @@ function tokensFromSpecs(
   });
 }
 
-function createLexicon(): SeedLexiconEntry[] {
+function createWordInventory(): WordInventoryEntry[] {
   return [
-    lexiconEntry("lemma-captain", "captain", "capitan", "noun"),
-    lexiconEntry("lemma-football", "football", "futbol", "noun"),
-    lexiconEntry("lemma-team", "team", "equipo", "noun"),
-    lexiconEntry("lemma-patient", "patient", "paciente", "adjective")
+    wordEntry("lexeme-captain", "captain", "capitan", "noun"),
+    wordEntry("lexeme-football", "football", "futbol", "noun"),
+    wordEntry("lexeme-team", "team", "equipo", "noun"),
+    wordEntry("lexeme-patient", "patient", "paciente", "adjective")
   ];
 }
 
-function createRenderUnits(entries: readonly SeedLexiconEntry[] = createLexicon()): RenderUnitEntry[] {
+function createRenderUnits(entries: readonly WordInventoryEntry[] = createWordInventory()): RenderUnitEntry[] {
   return entries.map((entry) => {
     const sourceTokens = entry.sourceLemma.split(/\s+/).filter(Boolean);
     const normalizedSourceText = entry.sourceLemma.toLowerCase();
@@ -1275,12 +1275,12 @@ function createRenderUnits(entries: readonly SeedLexiconEntry[] = createLexicon(
   });
 }
 
-function lexiconEntry(
+function wordEntry(
   lexemeId: string,
   sourceLemma: string,
   targetLemma: string,
-  pos: SeedLexiconEntry["pos"]
-): SeedLexiconEntry {
+  pos: WordInventoryEntry["pos"]
+): WordInventoryEntry {
   return {
     lexemeId,
     sourceLemma,

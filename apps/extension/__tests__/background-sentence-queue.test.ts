@@ -781,8 +781,8 @@ function createToken(index: number): AnalyzerToken {
 
 function createLearningItem(overrides: Partial<LearningItem> = {}): LearningItem {
   return {
-    itemId: "word:lemma-city",
-    unitRefId: "lemma-city",
+    itemId: "word:lexeme-city",
+    unitRefId: "lexeme-city",
     unitType: "word",
     sourceText: "city",
     targetText: "ciudad",

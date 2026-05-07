@@ -27,7 +27,7 @@ describe("text normalization", () => {
     expect(normalizeSentenceText("Don\u2019t \u2014 stop")).toBe("Don't - stop");
   });
 
-  it("normalizes tokens for lexicon lookup", () => {
+  it("normalizes tokens for render lookup", () => {
     expect(normalizeToken(" \u201cRunner\u2019s,\u201d ")).toBe("runner's");
     expect(normalizeToken("...")).toBe("");
   });

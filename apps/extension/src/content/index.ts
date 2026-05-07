@@ -71,7 +71,7 @@ import {
 } from "./dom";
 import { segmentSentences } from "./sentences";
 import { ContentEvidenceTracker } from "./evidence";
-import { buildWordRenderIndex, type WordRenderIndex } from "./lexicon";
+import { buildWordRenderIndex, type WordRenderIndex } from "./word-render-index";
 import type { WordRenderEntry } from "../render-units/render-units";
 import {
   clearSentenceTranslations,
@@ -383,10 +383,10 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       pagePathname: window.location.pathname,
       siteEnabled: processingContext.siteEnabled,
       sentenceTranslationEnabled,
-      lexiconSource: processingContext.lexiconInfo.source,
-      lexiconEntryCount: processingContext.lexiconInfo.entryCount,
-      lexiconAssetVersion: processingContext.lexiconInfo.assetVersion,
-      fallbackLexicon: processingContext.lexiconInfo.isFallback,
+      assetSource: processingContext.renderAssetInfo.source,
+      renderUnitCount: processingContext.renderAssetInfo.entryCount,
+      renderAssetVersion: processingContext.renderAssetInfo.assetVersion,
+      fallbackAsset: processingContext.renderAssetInfo.isFallback,
       processedTextNodes: 0,
       injectedTokens: 0,
       injectedPhrases: 0,
@@ -414,12 +414,12 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     };
 
     console.info("ImmersionKit render units loaded for page.", {
-      source: processingContext.lexiconInfo.source,
-      entryCount: processingContext.lexiconInfo.entryCount,
-      assetVersion: processingContext.lexiconInfo.assetVersion,
-      fallback: processingContext.lexiconInfo.isFallback
+      source: processingContext.renderAssetInfo.source,
+      entryCount: processingContext.renderAssetInfo.entryCount,
+      assetVersion: processingContext.renderAssetInfo.assetVersion,
+      fallback: processingContext.renderAssetInfo.isFallback
     });
-    if (processingContext.lexiconInfo.isFallback) {
+    if (processingContext.renderAssetInfo.isFallback) {
       console.warn(
         "ImmersionKit has no cached asset packs available; inline pack-backed learning will stay off for this page."
       );
@@ -1191,9 +1191,9 @@ function shouldActivateWordByCurriculum(
   state: ProcessingState,
   input: WordActivationInput
 ) {
-  if (input.lexiconEntry.renderUnitMinBand) {
+  if (input.wordEntry.renderUnitMinBand) {
     const renderUnitBandDecision = evaluateWordCurriculumContentInventory({
-      lexiconEntry: input.lexiconEntry,
+      wordEntry: input.wordEntry,
       activeContent: state.activeWordCurriculumContent
     });
     if (!renderUnitBandDecision.eligible) {
@@ -1211,9 +1211,9 @@ function shouldActivateWordByCurriculum(
 
   const decision = evaluateCurriculumEligibility(state.curriculumConfig, {
     unitType: "word",
-    itemId: input.lexiconEntry.lexemeId,
+    itemId: input.wordEntry.lexemeId,
     bandId: input.learningItem?.bandId ?? null,
-    score: scoreWordRenderDifficulty(input.lexiconEntry),
+    score: scoreWordRenderDifficulty(input.wordEntry),
     profile: state.learningProfile
   });
 
@@ -1224,7 +1224,7 @@ function shouldActivateWordByCurriculum(
   }
 
   const inventoryDecision = evaluateWordCurriculumContentInventory({
-    lexiconEntry: input.lexiconEntry,
+    wordEntry: input.wordEntry,
     activeContent: state.activeWordCurriculumContent
   });
   if (!inventoryDecision.eligible) {
@@ -1237,7 +1237,7 @@ function shouldActivateWordByCurriculum(
   }
 
   const cognateDiscoveryRateFloor = beginnerCognateDiscoveryRateFloor(
-    input.lexiconEntry,
+    input.wordEntry,
     inventoryDecision.activeBandId
   );
 
@@ -2679,10 +2679,10 @@ function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
     pagePathname: window.location.pathname,
     siteEnabled: true,
     sentenceTranslationEnabled: false,
-    lexiconSource: "unknown",
-    lexiconEntryCount: 0,
-    lexiconAssetVersion: null,
-    fallbackLexicon: true,
+    assetSource: "unknown",
+    renderUnitCount: 0,
+    renderAssetVersion: null,
+    fallbackAsset: true,
     processedTextNodes: 0,
     injectedTokens: 0,
     injectedPhrases: 0,

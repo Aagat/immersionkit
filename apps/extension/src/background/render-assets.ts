@@ -2,13 +2,13 @@ import type { AssetContextLoadSource } from "@immersionkit/shared";
 
 import { getBackgroundAssetPackService } from "./asset-packs";
 
-type SeedLexiconBootstrapResult = {
+type RenderAssetBootstrapResult = {
   source: AssetContextLoadSource;
   renderUnitCount: number;
   assetVersion: string | null;
 };
 
-export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResult> {
+export async function ensureRenderAssetsReady(): Promise<RenderAssetBootstrapResult> {
   const context = await getBackgroundAssetPackService().loadActiveContext();
   return {
     source: context.source,

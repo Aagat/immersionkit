@@ -122,7 +122,7 @@ export const CONTEXTUAL_AMBIGUITY_RULES: ReadonlyMap<string, ContextualAmbiguity
     ]
   ]);
 
-export const INITIAL_AMBIGUOUS_LEMMA_INVENTORY = Object.freeze([
+export const INITIAL_AMBIGUOUS_WORD_INVENTORY = Object.freeze([
   "can",
   "watch",
   "light",
@@ -130,7 +130,7 @@ export const INITIAL_AMBIGUOUS_LEMMA_INVENTORY = Object.freeze([
   "plant"
 ]);
 
-export const V1_AMBIGUOUS_LEMMA_GROUPS: Readonly<Record<string, string>> =
+export const V1_AMBIGUOUS_WORD_GROUPS: Readonly<Record<string, string>> =
   Object.freeze({
     can: "can_modal_vs_noun",
     watch: "watch_verb_vs_noun",
@@ -139,16 +139,16 @@ export const V1_AMBIGUOUS_LEMMA_GROUPS: Readonly<Record<string, string>> =
     plant: "plant_verb_vs_noun"
   });
 
-export function getV1AmbiguityGroupForLemma(
-  lemma: string | undefined
+export function getV1AmbiguityGroupForWord(
+  word: string | undefined
 ): string | undefined {
-  if (!lemma) {
+  if (!word) {
     return undefined;
   }
 
-  return V1_AMBIGUOUS_LEMMA_GROUPS[lemma.trim().toLowerCase()];
+  return V1_AMBIGUOUS_WORD_GROUPS[word.trim().toLowerCase()];
 }
 
-export function isV1AmbiguousLemma(lemma: string | undefined): boolean {
-  return getV1AmbiguityGroupForLemma(lemma) !== undefined;
+export function isV1AmbiguousWord(word: string | undefined): boolean {
+  return getV1AmbiguityGroupForWord(word) !== undefined;
 }

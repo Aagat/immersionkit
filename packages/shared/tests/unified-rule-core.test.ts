@@ -11,7 +11,7 @@ import {
   detectGrammarCarriersFromAnalyzerOutput,
   detectHighConfidenceChunksFromAnalyzerOutput,
   evaluateContextAwareDecision,
-  getV1AmbiguityGroupForLemma,
+  getV1AmbiguityGroupForWord,
   normalizeAnalyzerToken,
   normalizePhraseText,
   scorePrototypeSuitability,
@@ -67,7 +67,7 @@ describe("unified ambiguity rules", () => {
       observedPos: "modal",
       chunkType: "verb-phrase",
       nearbyContextSignature: ["sentence-initial-modal-question"],
-      ambiguityGroup: getV1AmbiguityGroupForLemma("CAN") ?? "",
+      ambiguityGroup: getV1AmbiguityGroupForWord("CAN") ?? "",
       confidence: 0.98
     };
 

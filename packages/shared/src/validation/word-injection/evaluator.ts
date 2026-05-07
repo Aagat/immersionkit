@@ -13,21 +13,21 @@ import type {
 
 const SAFE_INJECTABLE_POS = new Set(SAFE_INJECTION_POS_VALUES);
 
-export function evaluateLemmaOnlyDecision(
+export function evaluateContentBaselineDecision(
   candidate: DomainContextualWordCandidate
 ): WordInjectionDecisionResult {
   if (!SAFE_INJECTABLE_POS.has(candidate.candidatePos)) {
     return {
       decision: "skip",
-      code: "lemma-only-unsafe-pos",
-      reason: `Lemma-only lookup rejects ${candidate.candidatePos} outside the safe POS set.`
+      code: "content-baseline-unsafe-pos",
+      reason: `Content baseline rejects ${candidate.candidatePos} outside the safe POS set.`
     };
   }
 
   return {
     decision: "inject",
-    code: "lemma-only-safe-pos",
-    reason: `Lemma-only lookup injects ${candidate.candidateLemma} because ${candidate.candidatePos} is in the safe POS set.`
+    code: "content-baseline-safe-pos",
+    reason: `Content baseline injects ${candidate.candidateLemma} because ${candidate.candidatePos} is in the safe POS set.`
   };
 }
 
@@ -110,7 +110,7 @@ export function evaluateWordInjectionCorpus(
   candidates: ContextualWordCandidate[]
 ): WordInjectionEvaluationSummary {
   const perCase: WordInjectionCaseEvaluation[] = candidates.map((candidate) => {
-    const baseline = evaluateLemmaOnlyDecision(candidate);
+    const baseline = evaluateContentBaselineDecision(candidate);
     const prototype = evaluateContextAwareDecision(candidate);
     const expectedDecision = mapExpectedOutcomeToDecision(candidate.expectedOutcome);
 

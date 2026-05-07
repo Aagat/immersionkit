@@ -31,7 +31,7 @@ describe("background curriculum progression", () => {
     const result = await service.advanceAfterImplicitEvidence({
       config: DEFAULT_CURRICULUM_CONFIG,
       items: [
-        createLearningItem("word:lemma-city", "word", "level-1a"),
+        createLearningItem("word:lexeme-city", "word", "level-1a"),
         createLearningItem("phrase:fixed-as-soon-as", "phrase", "level-1a")
       ],
       now: "2026-04-28T12:00:00.000Z"
@@ -70,7 +70,7 @@ describe("background curriculum progression", () => {
 
     const result = await service.advanceAfterImplicitEvidence({
       config: DEFAULT_CURRICULUM_CONFIG,
-      items: [createLearningItem("word:lemma-city", "word", "level-1c")],
+      items: [createLearningItem("word:lexeme-city", "word", "level-1c")],
       now: "2026-04-28T12:00:00.000Z"
     });
 
@@ -104,7 +104,7 @@ describe("background curriculum progression", () => {
 
     const result = await service.advanceAfterExplicitCheckpoint({
       config: DEFAULT_CURRICULUM_CONFIG,
-      items: [createLearningItem("word:lemma-city", "word", "level-1c")],
+      items: [createLearningItem("word:lexeme-city", "word", "level-1c")],
       now: "2026-04-28T12:00:00.000Z"
     });
 
@@ -140,7 +140,7 @@ describe("background curriculum progression", () => {
     const result = await service.advanceAfterExplicitCheckpoint({
       config: DEFAULT_CURRICULUM_CONFIG,
       items: [
-        createLearningItem("word:lemma-city", "word", "level-1c", {
+        createLearningItem("word:lexeme-city", "word", "level-1c", {
           status: "new",
           qualifiedExposureCount: 0
         })

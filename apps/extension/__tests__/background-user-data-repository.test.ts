@@ -31,7 +31,7 @@ describe("background user data repositories", () => {
         }
       });
       await new IndexedDbUserVocabRepository().setStatus({
-        lexemeId: "lemma-city",
+        lexemeId: "lexeme-city",
         status: "known",
         updatedAt: "2026-05-07T10:00:00.000Z"
       });
@@ -51,9 +51,9 @@ describe("background user data repositories", () => {
       ).resolves.toEqual(
         new Map([
           [
-            "lemma-city",
+            "lexeme-city",
             {
-              lexemeId: "lemma-city",
+              lexemeId: "lexeme-city",
               status: "known",
               updatedAt: "2026-05-07T10:00:00.000Z",
               createdAt: "2026-05-07T10:00:00.000Z",
@@ -76,9 +76,9 @@ describe("background user data repositories", () => {
     const learningItems = new IndexedDbLearningItemRepository();
     const history = new IndexedDbLearningHistoryRepository();
     const items: LearningItemRecord = {
-      "word:lemma-city": {
-        itemId: "word:lemma-city",
-        unitRefId: "lemma-city",
+      "word:lexeme-city": {
+        itemId: "word:lexeme-city",
+        unitRefId: "lexeme-city",
         unitType: "word",
         sourceText: "city",
         targetText: "ciudad",
@@ -103,7 +103,7 @@ describe("background user data repositories", () => {
       await history.persistReviewEvents([
         {
           eventId: "review-1",
-          itemId: "word:lemma-city",
+          itemId: "word:lexeme-city",
           unitType: "word",
           eventType: "explicit-review",
           grade: "good",
@@ -112,8 +112,8 @@ describe("background user data repositories", () => {
         }
       ]);
       await history.persistContextHistory({
-        "word:lemma-city": {
-          itemId: "word:lemma-city",
+        "word:lexeme-city": {
+          itemId: "word:lexeme-city",
           contexts: [
             {
               key: "example.test:sentence-1",
@@ -128,8 +128,8 @@ describe("background user data repositories", () => {
       await expect(learningItems.loadAll()).resolves.toMatchObject(items);
       await expect(history.loadReviewEvents()).resolves.toHaveLength(1);
       await expect(history.loadContextHistory()).resolves.toEqual({
-        "word:lemma-city": {
-          itemId: "word:lemma-city",
+        "word:lexeme-city": {
+          itemId: "word:lexeme-city",
           contexts: [
             {
               key: "example.test:sentence-1",

@@ -29,7 +29,7 @@ export function createRuntimePhraseRegistryEntry(input: {
   firstSeenAt: string;
   lastSeenAt?: string;
   exposureCount?: number;
-  lexiconEntryId?: string;
+  sourceEntryId?: string;
 }): PhraseRegistryEntry {
   const normalizedSourceText = normalizePhraseText(input.sourceText);
   const normalizedTargetText = normalizePhraseText(input.targetText);
@@ -50,7 +50,7 @@ export function createRuntimePhraseRegistryEntry(input: {
     firstSeenAt: input.firstSeenAt,
     lastSeenAt: input.lastSeenAt ?? input.firstSeenAt,
     exposureCount: Math.max(0, Math.floor(input.exposureCount ?? 0)),
-    lexiconEntryId: input.lexiconEntryId
+    sourceEntryId: input.sourceEntryId
   };
 }
 

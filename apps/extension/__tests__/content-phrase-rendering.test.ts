@@ -20,11 +20,11 @@ describe("content phrase-unit rendering", () => {
         wordRenderIndex: new Map([
           [
             "visit",
-            wordEntry("lemma-visit", "visit", "visitar", 100)
+            wordEntry("lexeme-visit", "visit", "visitar", 100)
           ],
           [
             "city",
-            wordEntry("lemma-city", "city", "ciudad", 101)
+            wordEntry("lexeme-city", "city", "ciudad", 101)
           ]
         ]),
         vocabByLexemeId: new Map(),
@@ -53,8 +53,8 @@ describe("content phrase-unit rendering", () => {
       const phrase = document.querySelector<HTMLElement>("[data-ik-unit-kind='phrase']");
       expect(phrase?.textContent).toBe("solia visitar");
       expect(phrase?.getAttribute("data-ik-source-token")).toBe("used to visit");
-      expect(document.querySelector("[data-ik-lexeme-id='lemma-visit']")).toBeNull();
-      expect(document.querySelector("[data-ik-lexeme-id='lemma-city']")).toBeTruthy();
+      expect(document.querySelector("[data-ik-lexeme-id='lexeme-visit']")).toBeNull();
+      expect(document.querySelector("[data-ik-lexeme-id='lexeme-city']")).toBeTruthy();
       expect(phrase?.querySelector("[data-ik-token-id]")).toBeNull();
     });
   });

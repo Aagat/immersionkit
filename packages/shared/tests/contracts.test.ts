@@ -32,7 +32,6 @@ describe("runtime contracts", () => {
 describe("storage namespace contracts", () => {
   it("keeps deterministic storage namespace ordering", () => {
     expect(STORAGE_NAMESPACES).toEqual([
-      "seed-lexicon",
       "vocab",
       "sentence-cache",
       "site-settings",

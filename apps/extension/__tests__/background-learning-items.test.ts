@@ -26,7 +26,7 @@ describe("background learning item service", () => {
     const item = await service.recordAssist({
       type: RuntimeMessageType.AssistEvent,
       eventId: "assist-1",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       assistType: "manual-lookup",
       contextSentenceHash: "sentence-1",
       hostname: "fixtures.immersionkit.test",
@@ -36,14 +36,14 @@ describe("background learning item service", () => {
 
     expect(item?.status).toBe("learning");
     expect(item?.assistCount).toBe(1);
-    expect(items.items["word:lemma-city"]).toMatchObject({
-      itemId: "word:lemma-city",
+    expect(items.items["word:lexeme-city"]).toMatchObject({
+      itemId: "word:lexeme-city",
       status: "learning",
       assistCount: 1
     });
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({
-        itemId: "word:lemma-city",
+        itemId: "word:lexeme-city",
         grade: "hard",
         contextSentenceHash: "sentence-1"
       })
@@ -53,7 +53,7 @@ describe("background learning item service", () => {
   it("records repeated assist evidence as an again review", async () => {
     const history = new InMemoryLearningHistoryRepository();
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem({
+      "word:lexeme-city": createLearningItem({
         assistCount: 1,
         lastReviewedAt: "2026-04-18T10:00:00.000Z"
       })
@@ -63,7 +63,7 @@ describe("background learning item service", () => {
     await service.recordAssist({
       type: RuntimeMessageType.AssistEvent,
       eventId: "assist-repeat",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       assistType: "manual-lookup",
       contextSentenceHash: "sentence-1",
       hostname: "fixtures.immersionkit.test",
@@ -73,7 +73,7 @@ describe("background learning item service", () => {
 
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({
-        itemId: "word:lemma-city",
+        itemId: "word:lexeme-city",
         grade: "again",
         contextSentenceHash: "sentence-1"
       })
@@ -133,7 +133,7 @@ describe("background learning item service", () => {
     const item = await service.recordAssist({
       type: RuntimeMessageType.AssistEvent,
       eventId: "assist-band-1",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       assistType: "manual-lookup",
       contextSentenceHash: "sentence-1",
       hostname: "fixtures.immersionkit.test",
@@ -142,7 +142,7 @@ describe("background learning item service", () => {
     });
 
     expect(item?.bandId).toBe("level-1a");
-    expect(items.items["word:lemma-city"]?.bandId).toBe("level-1a");
+    expect(items.items["word:lexeme-city"]?.bandId).toBe("level-1a");
   });
 
   it("preserves existing learning item bands when evidence is recorded", async () => {
@@ -180,9 +180,9 @@ describe("background learning item service", () => {
 
   it("backfills missing learning item bands without changing item identity", async () => {
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem({
-        itemId: "word:lemma-city",
-        unitRefId: "lemma-city",
+      "word:lexeme-city": createLearningItem({
+        itemId: "word:lexeme-city",
+        unitRefId: "lexeme-city",
         unitType: "word",
         bandId: undefined
       }),
@@ -194,9 +194,9 @@ describe("background learning item service", () => {
         targetText: "solia visitar",
         bandId: undefined
       }),
-      "word:lemma-town": createLearningItem({
-        itemId: "word:lemma-town",
-        unitRefId: "lemma-town",
+      "word:lexeme-town": createLearningItem({
+        itemId: "word:lexeme-town",
+        unitRefId: "lexeme-town",
         bandId: "level-1b"
       })
     });
@@ -217,12 +217,12 @@ describe("background learning item service", () => {
     });
     expect(Object.keys(items.items).sort()).toEqual([
       "phrase:pattern:used-to-visit",
-      "word:lemma-city",
-      "word:lemma-town"
+      "word:lexeme-city",
+      "word:lexeme-town"
     ]);
-    expect(items.items["word:lemma-city"]?.bandId).toBe("level-1a");
+    expect(items.items["word:lexeme-city"]?.bandId).toBe("level-1a");
     expect(items.items["phrase:pattern:used-to-visit"]?.bandId).toBe("level-2a");
-    expect(items.items["word:lemma-town"]?.bandId).toBe("level-1b");
+    expect(items.items["word:lexeme-town"]?.bandId).toBe("level-1b");
   });
 
   it("creates durable grammar feature learning items with active grammar bands", async () => {
@@ -357,14 +357,14 @@ describe("background learning item service", () => {
 
   it("bounds learning item band backfills", async () => {
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem({
-        itemId: "word:lemma-city",
-        unitRefId: "lemma-city",
+      "word:lexeme-city": createLearningItem({
+        itemId: "word:lexeme-city",
+        unitRefId: "lexeme-city",
         bandId: undefined
       }),
-      "word:lemma-town": createLearningItem({
-        itemId: "word:lemma-town",
-        unitRefId: "lemma-town",
+      "word:lexeme-town": createLearningItem({
+        itemId: "word:lexeme-town",
+        unitRefId: "lexeme-town",
         bandId: undefined
       })
     });
@@ -388,7 +388,7 @@ describe("background learning item service", () => {
     const service = new BackgroundLearningItemService(
       new InMemoryLearningHistoryRepository(),
       new InMemoryLearningItemRepository({
-        "word:lemma-city": createLearningItem(),
+        "word:lexeme-city": createLearningItem(),
         "phrase:pattern:used-to-visit": createLearningItem({
           itemId: "phrase:pattern:used-to-visit",
           unitRefId: "pattern:used-to-visit",
@@ -434,7 +434,7 @@ describe("background learning item service", () => {
   it("advances due qualified exposures on the interval ladder", async () => {
     const history = new InMemoryLearningHistoryRepository();
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem({
+      "word:lexeme-city": createLearningItem({
         qualifiedExposureCount: 0,
         consecutiveUnassistedCount: 0,
         distinctContextCount: 0
@@ -445,7 +445,7 @@ describe("background learning item service", () => {
     const item = await service.recordQualifiedExposure({
       type: RuntimeMessageType.QualifiedExposureEvent,
       eventId: "exposure-1",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       sentenceHash: "sentence-2",
       hostname: "fixtures.immersionkit.test",
       sessionId: "session-1",
@@ -462,7 +462,7 @@ describe("background learning item service", () => {
     expect(item?.nextReviewAt).toBe("2026-04-19T10:00:00.000Z");
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({
-        itemId: "word:lemma-city",
+        itemId: "word:lexeme-city",
         grade: "good",
         contextSentenceHash: "sentence-2"
       })
@@ -475,14 +475,14 @@ describe("background learning item service", () => {
       reviewEvents: [createReviewEvent()]
     });
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem()
+      "word:lexeme-city": createLearningItem()
     });
     const service = new BackgroundLearningItemService(history, items);
 
     const item = await service.recordQualifiedExposure({
       type: RuntimeMessageType.QualifiedExposureEvent,
       eventId: "exposure-duplicate",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       sentenceHash: "sentence-2",
       hostname: "fixtures.immersionkit.test",
       sessionId: "session-1",
@@ -497,7 +497,7 @@ describe("background learning item service", () => {
     expect(item?.nextReviewAt).toBe("2026-04-18T09:30:00.000Z");
     expect(history.reviewEvents).toHaveLength(1);
     expect(
-      history.contextHistory["word:lemma-city"]?.contexts[0]?.exposureCount
+      history.contextHistory["word:lexeme-city"]?.contexts[0]?.exposureCount
     ).toBe(1);
   });
 
@@ -506,14 +506,14 @@ describe("background learning item service", () => {
       contextHistory: createContextHistory("2026-04-18T10:00:00.000Z")
     });
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem()
+      "word:lexeme-city": createLearningItem()
     });
     const service = new BackgroundLearningItemService(history, items);
 
     const item = await service.recordQualifiedExposure({
       type: RuntimeMessageType.QualifiedExposureEvent,
       eventId: "exposure-repeat-later",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       sentenceHash: "sentence-2",
       hostname: "fixtures.immersionkit.test",
       sessionId: "session-1",
@@ -525,7 +525,7 @@ describe("background learning item service", () => {
 
     expect(item?.qualifiedExposureCount).toBe(2);
     expect(item?.distinctContextCount).toBe(1);
-    expect(history.contextHistory["word:lemma-city"]?.contexts[0]).toMatchObject({
+    expect(history.contextHistory["word:lexeme-city"]?.contexts[0]).toMatchObject({
       exposureCount: 2,
       lastSeenAt: "2026-04-18T10:08:00.000Z"
     });
@@ -539,7 +539,7 @@ describe("background learning item service", () => {
     await service.recordAssist({
       type: RuntimeMessageType.AssistEvent,
       eventId: "assist-1",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       assistType: "manual-lookup",
       contextSentenceHash: "sentence-1",
       hostname: "fixtures.immersionkit.test",
@@ -549,7 +549,7 @@ describe("background learning item service", () => {
     await service.recordQualifiedExposure({
       type: RuntimeMessageType.QualifiedExposureEvent,
       eventId: "exposure-1",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       sentenceHash: "sentence-2",
       hostname: "fixtures.immersionkit.test",
       sessionId: "session-1",
@@ -559,15 +559,15 @@ describe("background learning item service", () => {
       distinctContextKey: "fixtures.immersionkit.test:sentence-2"
     });
 
-    expect(items.items["word:lemma-city"]).toMatchObject({
-      itemId: "word:lemma-city",
+    expect(items.items["word:lexeme-city"]).toMatchObject({
+      itemId: "word:lexeme-city",
       qualifiedExposureCount: 1
     });
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({ eventId: "assist-1:review", unitType: "word" }),
       expect.objectContaining({ eventId: "exposure-1:review", unitType: "word" })
     ]);
-    expect(history.contextHistory["word:lemma-city"]?.contexts).toEqual([
+    expect(history.contextHistory["word:lexeme-city"]?.contexts).toEqual([
       expect.objectContaining({
         key: "fixtures.immersionkit.test:sentence-2"
       })
@@ -580,14 +580,14 @@ describe("background learning item service", () => {
       reviewEvents: [createReviewEvent()]
     });
     const items = new InMemoryLearningItemRepository({
-      "word:lemma-city": createLearningItem()
+      "word:lexeme-city": createLearningItem()
     });
     const service = new BackgroundLearningItemService(history, items);
 
     const item = await service.recordQualifiedExposure({
       type: RuntimeMessageType.QualifiedExposureEvent,
       eventId: "exposure-repeat-later",
-      itemId: "word:lemma-city",
+      itemId: "word:lexeme-city",
       sentenceHash: "sentence-2",
       hostname: "fixtures.immersionkit.test",
       sessionId: "session-1",
@@ -600,7 +600,7 @@ describe("background learning item service", () => {
     expect(item?.qualifiedExposureCount).toBe(2);
     expect(item?.distinctContextCount).toBe(1);
     expect(history.reviewEvents).toHaveLength(2);
-    expect(history.contextHistory["word:lemma-city"]?.contexts[0]).toMatchObject({
+    expect(history.contextHistory["word:lexeme-city"]?.contexts[0]).toMatchObject({
       exposureCount: 2,
       lastSeenAt: "2026-04-18T10:08:00.000Z"
     });
@@ -609,8 +609,8 @@ describe("background learning item service", () => {
 
 function createLearningItem(overrides: Partial<LearningItem> = {}): LearningItem {
   return {
-    itemId: "word:lemma-city",
-    unitRefId: "lemma-city",
+    itemId: "word:lexeme-city",
+    unitRefId: "lexeme-city",
     unitType: "word",
     sourceText: "city",
     targetText: "ciudad",
@@ -655,8 +655,8 @@ function createContextHistory(
   lastSeenAt: string
 ): LearningItemContextHistoryRecord {
   return {
-    "word:lemma-city": {
-      itemId: "word:lemma-city",
+    "word:lexeme-city": {
+      itemId: "word:lexeme-city",
       contexts: [
         {
           key: "fixtures.immersionkit.test:sentence-2",
@@ -672,7 +672,7 @@ function createContextHistory(
 function createReviewEvent(): ReviewEvent {
   return {
     eventId: "exposure-1:review",
-    itemId: "word:lemma-city",
+    itemId: "word:lexeme-city",
     eventType: "implicit-exposure",
     grade: "good",
     contextSentenceHash: "sentence-2",

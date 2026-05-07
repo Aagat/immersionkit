@@ -27,8 +27,8 @@ export type ContextualWordCandidate = DomainContextualWordCandidate & {
 };
 
 export type WordInjectionDecisionCode =
-  | "lemma-only-safe-pos"
-  | "lemma-only-unsafe-pos"
+  | "content-baseline-safe-pos"
+  | "content-baseline-unsafe-pos"
   | "group-not-in-inventory"
   | "low-confidence"
   | "blocked-observed-pos"

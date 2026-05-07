@@ -4,7 +4,7 @@ import {
   isGoldilocksSentence,
   scoreSentenceByKnownWords
 } from "@immersionkit/shared";
-import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
+import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 
 import { DEFAULT_SENTENCE_THRESHOLD } from "../../constants";
 import { collectEligibleTextNodes } from "../../dom";
@@ -85,7 +85,7 @@ export function runSentenceShortlistingBenchmark(
       ? Math.max(1, Math.floor(input.maxShortlistSize))
       : DEFAULT_MAX_SHORTLIST_SIZE;
 
-  const lexiconLookup = buildShortlistingLexiconLookup([...input.lexicon]);
+  const wordInventoryLookup = buildShortlistingWordInventoryLookup([...input.wordInventory]);
   const vocabByLexemeId = normalizeVocabEntries(input.vocabByLexemeId);
   const phraseHintsLowercase = input.phraseHints
     .map((value) => normalizeWhitespace(value).toLowerCase())
@@ -133,7 +133,7 @@ export function runSentenceShortlistingBenchmark(
       const passAnalysis = withScenarioSandbox(input.document, pass.html, (root) => {
         return analyzeScenarioPass({
           root,
-          lexiconLookup,
+          wordInventoryLookup,
           vocabByLexemeId,
           samplingSeed: `${scenario.urlPath}`,
           discoveryRate: input.discoveryRate,
@@ -319,25 +319,25 @@ export function runSentenceShortlistingBenchmark(
   };
 }
 
-function buildShortlistingLexiconLookup(
-  entries: readonly SeedLexiconEntry[]
-): Map<string, SeedLexiconEntry> {
-  const lookup = new Map<string, SeedLexiconEntry>();
+function buildShortlistingWordInventoryLookup(
+  entries: readonly WordInventoryEntry[]
+): Map<string, WordInventoryEntry> {
+  const lookup = new Map<string, WordInventoryEntry>();
 
   for (const entry of entries) {
-    registerShortlistingLexiconKey(lookup, entry.sourceLemma, entry);
+    registerShortlistingWordInventoryKey(lookup, entry.sourceLemma, entry);
     for (const inflection of entry.inflections ?? []) {
-      registerShortlistingLexiconKey(lookup, inflection, entry);
+      registerShortlistingWordInventoryKey(lookup, inflection, entry);
     }
   }
 
   return lookup;
 }
 
-function registerShortlistingLexiconKey(
-  lookup: Map<string, SeedLexiconEntry>,
+function registerShortlistingWordInventoryKey(
+  lookup: Map<string, WordInventoryEntry>,
   rawKey: string,
-  entry: SeedLexiconEntry
+  entry: WordInventoryEntry
 ) {
   const normalized = rawKey.toLowerCase().trim();
   if (!normalized || lookup.has(normalized)) {
@@ -349,7 +349,7 @@ function registerShortlistingLexiconKey(
 
 function analyzeScenarioPass(input: {
   root: ParentNode;
-  lexiconLookup: ReadonlyMap<string, SeedLexiconEntry>;
+  wordInventoryLookup: ReadonlyMap<string, WordInventoryEntry>;
   vocabByLexemeId: ReadonlyMap<string, VocabStatus>;
   samplingSeed: string;
   discoveryRate: number;
@@ -389,12 +389,12 @@ function analyzeScenarioPass(input: {
         continue;
       }
 
-      const lexiconEntry = input.lexiconLookup.get(segment.normalized);
-      if (!lexiconEntry) {
+      const wordEntry = input.wordInventoryLookup.get(segment.normalized);
+      if (!wordEntry) {
         continue;
       }
 
-      const status = input.vocabByLexemeId.get(lexiconEntry.lexemeId) ?? "new";
+      const status = input.vocabByLexemeId.get(wordEntry.lexemeId) ?? "new";
       if (status === "ignored") {
         continue;
       }
@@ -435,12 +435,12 @@ function analyzeScenarioPass(input: {
       }
 
       const knownWordCount = sentence.words.reduce((count, word) => {
-        const lexiconEntry = input.lexiconLookup.get(word);
-        if (!lexiconEntry) {
+        const wordEntry = input.wordInventoryLookup.get(word);
+        if (!wordEntry) {
           return count + 1;
         }
 
-        const status = input.vocabByLexemeId.get(lexiconEntry.lexemeId) ?? "new";
+        const status = input.vocabByLexemeId.get(wordEntry.lexemeId) ?? "new";
         return status === "known" || status === "learning" ? count + 1 : count;
       }, 0);
 

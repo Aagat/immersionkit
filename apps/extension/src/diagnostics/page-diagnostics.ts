@@ -10,10 +10,10 @@ export type PageDiagnosticsSnapshot = {
   pagePathname: string;
   siteEnabled: boolean;
   sentenceTranslationEnabled: boolean;
-  lexiconSource: string;
-  lexiconEntryCount: number;
-  lexiconAssetVersion: string | null;
-  fallbackLexicon: boolean;
+  assetSource: string;
+  renderUnitCount: number;
+  renderAssetVersion: string | null;
+  fallbackAsset: boolean;
   processedTextNodes: number;
   injectedTokens: number;
   injectedPhrases: number;

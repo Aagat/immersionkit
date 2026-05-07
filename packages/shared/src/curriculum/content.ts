@@ -2,7 +2,7 @@ import type {
   CurriculumBand,
   PhraseCategory,
   PhraseSourceKind,
-  SeedLexiconEntry
+  WordInventoryEntry
 } from "../domain/models";
 import {
   isBeginnerCognateBand,
@@ -19,7 +19,7 @@ import {
 } from "./config";
 
 type CurriculumWordEntry = Pick<
-  SeedLexiconEntry,
+  WordInventoryEntry,
   | "sourceLemma"
   | "targetLemma"
   | "confidence"
@@ -414,7 +414,7 @@ export function getActiveCurriculumContent(input?: {
 }
 
 export function evaluateWordCurriculumContentInventory(input: {
-  lexiconEntry: CurriculumWordEntry;
+  wordEntry: CurriculumWordEntry;
   activeContent: ActiveCurriculumContent;
 }): CurriculumContentInventoryDecision {
   const activeBandId = input.activeContent.band?.bandId ?? null;
@@ -428,9 +428,9 @@ export function evaluateWordCurriculumContentInventory(input: {
     };
   }
 
-  if (input.lexiconEntry.renderUnitMinBand) {
+  if (input.wordEntry.renderUnitMinBand) {
     if (
-      isRenderUnitBandEligible(input.lexiconEntry.renderUnitMinBand, input.activeContent)
+      isRenderUnitBandEligible(input.wordEntry.renderUnitMinBand, input.activeContent)
     ) {
       return {
         eligible: true,
@@ -448,7 +448,7 @@ export function evaluateWordCurriculumContentInventory(input: {
     };
   }
 
-  const frequencyRank = input.lexiconEntry.frequencyRank;
+  const frequencyRank = input.wordEntry.frequencyRank;
   const rankIsInBand =
     typeof frequencyRank === "number" &&
     Number.isFinite(frequencyRank) &&
@@ -465,7 +465,7 @@ export function evaluateWordCurriculumContentInventory(input: {
 
   if (
     isBeginnerCognateBand(activeBandId) &&
-    isBeginnerConfidenceCognate(input.lexiconEntry)
+    isBeginnerConfidenceCognate(input.wordEntry)
   ) {
     return {
       eligible: true,

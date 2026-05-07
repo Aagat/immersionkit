@@ -17,8 +17,8 @@ import {
 import { describe, expect, it } from "vitest";
 
 const BASE_ITEM: LearningItem = {
-  itemId: "word:lemma-city",
-  unitRefId: "lemma-city",
+  itemId: "word:lexeme-city",
+  unitRefId: "lexeme-city",
   unitType: "word",
   sourceText: "city",
   targetText: "ciudad",
@@ -213,7 +213,7 @@ describe("curriculum configuration", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         activeContent,
-        lexiconEntry: {
+        wordEntry: {
           lexemeId: "en:house:noun",
           sourceLemma: "house",
           targetLemma: "casa",
@@ -231,7 +231,7 @@ describe("curriculum configuration", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         activeContent,
-        lexiconEntry: {
+        wordEntry: {
           lexemeId: "en:river:noun",
           sourceLemma: "river",
           targetLemma: "rio",
@@ -257,7 +257,7 @@ describe("curriculum configuration", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         activeContent,
-        lexiconEntry: {
+        wordEntry: {
           lexemeId: "en:telescope:noun",
           sourceLemma: "telescope",
           targetLemma: "telescopio",

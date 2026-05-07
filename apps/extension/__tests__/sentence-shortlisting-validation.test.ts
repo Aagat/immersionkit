@@ -8,7 +8,7 @@ import {
   resolveSentenceShortlistingInputProfile,
   SENTENCE_SHORTLISTING_DISCOVERY_RATE,
   SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
-  SENTENCE_SHORTLISTING_LEXICON,
+  SENTENCE_SHORTLISTING_WORD_INVENTORY,
   SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE,
   SENTENCE_SHORTLISTING_PHRASE_HINTS,
   SENTENCE_SHORTLISTING_SCENARIOS,
@@ -48,7 +48,7 @@ describe("sentence shortlisting benchmark harness", () => {
       const result = runSentenceShortlistingBenchmark({
         document,
         scenarios: benchmarkScenarios,
-        lexicon: SENTENCE_SHORTLISTING_LEXICON,
+        wordInventory: SENTENCE_SHORTLISTING_WORD_INVENTORY,
         vocabByLexemeId: SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID,
         discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
         goldilocksThreshold: SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,

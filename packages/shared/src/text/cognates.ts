@@ -1,4 +1,4 @@
-import type { SeedLexiconEntry } from "../domain/models";
+import type { WordInventoryEntry } from "../domain/models";
 import { normalizeToken } from "./normalize";
 
 export type CognateEvaluation = {
@@ -22,7 +22,7 @@ const MIN_COGNATE_TOKEN_LENGTH = 4;
 
 export function evaluateEnglishSpanishCognate(
   entry: Pick<
-    SeedLexiconEntry,
+    WordInventoryEntry,
     | "sourceLemma"
     | "targetLemma"
     | "confidence"
@@ -80,7 +80,7 @@ export function isBeginnerCognateBand(bandId: string | null | undefined): boolea
 
 export function isBeginnerConfidenceCognate(
   entry: Pick<
-    SeedLexiconEntry,
+    WordInventoryEntry,
     | "sourceLemma"
     | "targetLemma"
     | "confidence"
@@ -104,7 +104,7 @@ export function isBeginnerConfidenceCognate(
 
 export function beginnerCognateDiscoveryRateFloor(
   entry: Pick<
-    SeedLexiconEntry,
+    WordInventoryEntry,
     | "sourceLemma"
     | "targetLemma"
     | "confidence"

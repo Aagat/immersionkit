@@ -25,7 +25,7 @@ describe("extension test scaffolding", () => {
         entries: [
           createRenderUnit({
             renderUnitId: "ru:test-garden",
-            lexemeId: "lemma-safe",
+            lexemeId: "lexeme-safe",
             sourceText: "garden",
             targetText: "jardin"
           })
@@ -33,7 +33,7 @@ describe("extension test scaffolding", () => {
       },
       "user-vocab": [
         {
-          lexemeId: "lemma-safe",
+          lexemeId: "lexeme-safe",
           status: "known",
           exposureCount: 4,
           updatedAt: "2026-04-01T10:00:00.000Z"
@@ -50,41 +50,12 @@ describe("extension test scaffolding", () => {
       expect(context.renderUnits.map((entry) => entry.renderUnitId)).toEqual([
         "ru:test-garden"
       ]);
-      expect(context.lexiconInfo.source).toBe("cached-pack");
-      expect(context.lexiconInfo.isFallback).toBe(false);
-      expect(context.vocabByLexemeId.get("lemma-safe")?.status).toBe("known");
+      expect(context.renderAssetInfo.source).toBe("cached-pack");
+      expect(context.renderAssetInfo.isFallback).toBe(false);
+      expect(context.vocabByLexemeId.get("lexeme-safe")?.status).toBe("known");
       expect(chromeStub.sentMessages).toContainEqual({
         type: "assets/get-context"
       });
-    } finally {
-      chromeStub.restore();
-    }
-  });
-
-  it("does not treat legacy seed assets as content render assets", async () => {
-    const chromeStub = installChromeStub({
-      "asset-seed-lexicon": {
-        schemaVersion: "1.0.0",
-        assetVersion: "2026.04.18-seed2",
-        entries: [
-          {
-            lexemeId: "en:city:noun",
-            sourceLemma: "city",
-            targetLemma: "ciudad",
-            pos: "noun",
-            frequencyRank: 12,
-            confidence: 0.98
-          }
-        ]
-      }
-    });
-
-    try {
-      const context = await loadProcessingContext("fixtures.immersionkit.test");
-
-      expect(context.lexiconInfo.source).toBe("empty");
-      expect(context.lexiconInfo.entryCount).toBe(0);
-      expect(context.renderUnits).toEqual([]);
     } finally {
       chromeStub.restore();
     }
@@ -96,10 +67,10 @@ describe("extension test scaffolding", () => {
     try {
       const context = await loadProcessingContext("fixtures.immersionkit.test");
 
-      expect(context.lexiconInfo.source).toBe("empty");
-      expect(context.lexiconInfo.isFallback).toBe(true);
-      expect(context.lexiconInfo.entryCount).toBe(0);
-      expect(context.lexiconInfo.assetVersion).toBeNull();
+      expect(context.renderAssetInfo.source).toBe("empty");
+      expect(context.renderAssetInfo.isFallback).toBe(true);
+      expect(context.renderAssetInfo.entryCount).toBe(0);
+      expect(context.renderAssetInfo.assetVersion).toBeNull();
     } finally {
       chromeStub.restore();
     }
@@ -144,8 +115,8 @@ describe("extension test scaffolding", () => {
     try {
       const context = await loadProcessingContext("fixtures.immersionkit.test");
 
-      expect(context.lexiconInfo.source).toBe("cached-pack");
-      expect(context.lexiconInfo.assetVersion).toBe("test-render-units");
+      expect(context.renderAssetInfo.source).toBe("cached-pack");
+      expect(context.renderAssetInfo.assetVersion).toBe("test-render-units");
       expect(context.renderUnits.map((entry) => entry.renderUnitId)).toEqual([
         "ru:test-city",
         "ru:test-need-help-only"

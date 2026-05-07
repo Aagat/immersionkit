@@ -62,15 +62,15 @@ export type {
 export * from "./validation/suitability";
 export {
   CONTEXTUAL_AMBIGUITY_RULES,
-  INITIAL_AMBIGUOUS_LEMMA_INVENTORY,
-  V1_AMBIGUOUS_LEMMA_GROUPS,
+  INITIAL_AMBIGUOUS_WORD_INVENTORY,
+  V1_AMBIGUOUS_WORD_GROUPS,
   WORD_INJECTION_DECISIONS,
   WORD_INJECTION_EXPECTED_OUTCOMES,
   evaluateContextAwareDecision,
-  evaluateLemmaOnlyDecision,
+  evaluateContentBaselineDecision,
   evaluateWordInjectionCorpus,
-  getV1AmbiguityGroupForLemma,
-  isV1AmbiguousLemma,
+  getV1AmbiguityGroupForWord,
+  isV1AmbiguousWord,
   mapExpectedOutcomeToDecision,
   runWordInjectionLibraryComparisons
 } from "./validation/word-injection";

@@ -21,7 +21,7 @@ const BASE_SETTINGS = {
 
 const SEED_LEXICON = [
   {
-    lexemeId: "lemma-city",
+    lexemeId: "lexeme-city",
     sourceLemma: "city",
     targetLemma: "ciudad",
     pos: "noun",
@@ -31,7 +31,7 @@ const SEED_LEXICON = [
     exampleSentenceNative: "La ciudad recibe a los visitantes cada primavera."
   },
   {
-    lexemeId: "lemma-important",
+    lexemeId: "lexeme-important",
     sourceLemma: "important",
     targetLemma: "importante",
     pos: "adjective",
@@ -168,7 +168,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
 
@@ -235,7 +235,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
 
@@ -274,8 +274,8 @@ describe("content inline learning loop", () => {
             }
           >;
 
-          expect(vocabEntries["lemma-city"].status).toBe("ignored");
-          expect(vocabEntries["lemma-city"].exposureCount).toBe(1);
+          expect(vocabEntries["lexeme-city"].status).toBe("ignored");
+          expect(vocabEntries["lexeme-city"].exposureCount).toBe(1);
         } finally {
           chromeStub.restore();
         }
@@ -283,7 +283,7 @@ describe("content inline learning loop", () => {
     );
   });
 
-  it("falls back to the page sentence when the lexicon has no example sentence", async () => {
+  it("falls back to the page sentence when the render entry has no example sentence", async () => {
     await withFixtureDom(
       "article-basic.html",
       { url: FIXTURE_URL },
@@ -308,7 +308,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-important']"
+            "[data-ik-lexeme-id='lexeme-important']"
           );
           expect(token).toBeTruthy();
 
@@ -425,7 +425,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
           expect(token?.getAttribute("data-ik-sentence-hash")).toBe(
@@ -463,7 +463,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
 
@@ -488,7 +488,7 @@ describe("content inline learning loop", () => {
           );
 
           expect(assistMessage).toMatchObject({
-            itemId: "word:lemma-city",
+            itemId: "word:lexeme-city",
             assistType: "manual-lookup",
             contextSentenceHash: hashSentence(
               "The city is important for every visitor."
@@ -684,7 +684,7 @@ describe("content inline learning loop", () => {
           "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lexemeId: "lemma-can",
+              lexemeId: "lexeme-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
@@ -739,7 +739,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lexemeId: "lemma-can",
+                      lexemeId: "lexeme-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -762,7 +762,7 @@ describe("content inline learning loop", () => {
           await wait(60);
 
           const canToken = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-can']"
+            "[data-ik-lexeme-id='lexeme-can']"
           );
           expect(canToken).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
@@ -903,7 +903,7 @@ describe("content inline learning loop", () => {
           );
           expect(phrase).toBeTruthy();
           expect(phrase?.textContent).toBe("solia visitar");
-          expect(document.querySelector("[data-ik-lexeme-id='lemma-city']")).toBeTruthy();
+          expect(document.querySelector("[data-ik-lexeme-id='lexeme-city']")).toBeTruthy();
 
           const diagnostics = (
             await chromeStub.dispatchRuntimeMessage({
@@ -1385,7 +1385,7 @@ describe("content inline learning loop", () => {
           "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lexemeId: "lemma-can",
+              lexemeId: "lexeme-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
@@ -1428,7 +1428,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lexemeId: "lemma-can",
+                      lexemeId: "lexeme-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -1452,12 +1452,12 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-can']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-can']")
           ).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
           expect(document.body.textContent).not.toContain("lata");
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-city']")
               ?.textContent
           ).toBe("ciudad");
         } finally {
@@ -1481,7 +1481,7 @@ describe("content inline learning loop", () => {
           "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lexemeId: "lemma-can",
+              lexemeId: "lexeme-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
@@ -1533,7 +1533,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lexemeId: "lemma-can",
+                      lexemeId: "lexeme-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -1564,12 +1564,12 @@ describe("content inline learning loop", () => {
           await wait(240);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-can']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-can']")
           ).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
           expect(document.body.textContent).not.toContain("lata");
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-city']")
               ?.textContent
           ).toBe("ciudad");
 
@@ -1624,8 +1624,8 @@ describe("content inline learning loop", () => {
               ok: true,
               items: [
                 {
-                  itemId: "word:lemma-city",
-                  unitRefId: "lemma-city",
+                  itemId: "word:lexeme-city",
+                  unitRefId: "lexeme-city",
                   unitType: "word",
                   sourceText: "city",
                   targetText: "ciudad",
@@ -1653,11 +1653,11 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-city']")
               ?.textContent
           ).toBe("ciudad");
           const cognateToken = document.querySelector<HTMLElement>(
-            "[data-ik-lexeme-id='lemma-important']"
+            "[data-ik-lexeme-id='lexeme-important']"
           );
           expect(cognateToken?.textContent).toBe("importante");
           expect(cognateToken?.getAttribute("data-ik-scheduler-reason")).toBe(
