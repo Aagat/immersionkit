@@ -4,7 +4,6 @@ import type {
   RenderUnitEntry,
   SentenceAnalysisEntry,
   SentenceLearningNote,
-  SeedLexiconEntry,
   UserVocabEntry,
   VocabStatus
 } from "../domain/models";
@@ -46,7 +45,6 @@ export type AssetContextLoadSource =
   | "empty";
 
 export type ActiveAssetContext = {
-  lexicon: SeedLexiconEntry[];
   renderUnits: RenderUnitEntry[];
   sentenceHintPhrases: string[];
   source: AssetContextLoadSource;
@@ -55,7 +53,7 @@ export type ActiveAssetContext = {
   missingBandIds: string[];
 };
 
-export type ContentAssetContext = Omit<ActiveAssetContext, "renderUnits">;
+export type ContentAssetContext = ActiveAssetContext;
 
 export type GetLearningItemsMessage = {
   type: RuntimeMessageType.GetLearningItems;
@@ -79,12 +77,12 @@ export type RemoveUserDataMessage = {
 
 export type GetUserVocabMessage = {
   type: RuntimeMessageType.GetUserVocab;
-  lemmaIds?: string[];
+  lexemeIds?: string[];
 };
 
 export type SetVocabStatusMessage = {
   type: RuntimeMessageType.SetVocabStatus;
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   lastSeenAt?: string | null;
   updatedAt?: string;

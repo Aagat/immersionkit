@@ -149,22 +149,22 @@ export class IndexedDbUserVocabRepository {
   }
 
   async setStatus(input: {
-    lemmaId: string;
+    lexemeId: string;
     status: VocabStatus;
     lastSeenAt?: string | null;
     updatedAt?: string;
     incrementExposure?: boolean;
   }): Promise<UserVocabEntry | null> {
-    const lemmaId = readString(input.lemmaId);
-    if (!lemmaId) {
+    const lexemeId = readString(input.lexemeId);
+    if (!lexemeId) {
       return null;
     }
 
-    const existingEntry = await this.getEntry(lemmaId);
+    const existingEntry = await this.getEntry(lexemeId);
     const now = input.updatedAt ?? new Date().toISOString();
     const shouldIncrementExposure = input.incrementExposure ?? true;
     const nextEntry: UserVocabEntry = {
-      lemmaId,
+      lexemeId,
       status: normalizeVocabStatus(input.status),
       updatedAt: now,
       createdAt: existingEntry?.createdAt ?? now,
@@ -204,14 +204,14 @@ export class IndexedDbUserVocabRepository {
     }
   }
 
-  private async getEntry(lemmaId: string): Promise<UserVocabEntry | null> {
+  private async getEntry(lexemeId: string): Promise<UserVocabEntry | null> {
     if (!isIndexedDbAvailable()) {
       return null;
     }
 
     try {
       const store = await getIndexedDbStore(INDEXEDDB_STORES.userVocab, "readonly");
-      return normalizeVocabEntry(await requestToPromise(store.get(lemmaId)));
+      return normalizeVocabEntry(await requestToPromise(store.get(lexemeId)));
     } catch (error) {
       console.warn("ImmersionKit IndexedDB vocab read failed.", error);
       return null;
@@ -278,7 +278,7 @@ export function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
     }
   }
 
-  return new Map(entries.map((entry) => [entry.lemmaId, entry] as const));
+  return new Map(entries.map((entry) => [entry.lexemeId, entry] as const));
 }
 
 function collectKnownDefinitions(
@@ -301,14 +301,14 @@ function normalizeVocabEntry(input: unknown): UserVocabEntry | null {
     return null;
   }
 
-  const lemmaId = readString(input.lemmaId);
-  if (!lemmaId) {
+  const lexemeId = readString(input.lexemeId);
+  if (!lexemeId) {
     return null;
   }
 
   const now = new Date().toISOString();
   return {
-    lemmaId,
+    lexemeId,
     status: normalizeVocabStatus(input.status),
     lastSeenAt: readString(input.lastSeenAt),
     exposureCount: readNumber(input.exposureCount, 0),

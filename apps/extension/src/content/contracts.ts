@@ -1,5 +1,5 @@
 import type {
-  SeedLexiconEntry,
+  SafeInjectionPos,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
@@ -19,8 +19,9 @@ export type TokenMetadata = {
   sourceToken: string;
   targetToken: string;
   sourceLemma: string;
-  lemmaId: string;
-  pos: SeedLexiconEntry["pos"];
+  lexemeId: string;
+  renderUnitId: string | null;
+  pos: SafeInjectionPos;
   status: VocabStatus;
   wordKind: InjectedWordKind;
   sentence: string | null;
@@ -60,7 +61,7 @@ export type PhraseActivatedDetail = PhraseMetadata & {
 
 export type TokenStatusUpdatedDetail = {
   tokenId: string;
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   entry?: UserVocabEntry;
 };

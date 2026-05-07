@@ -14,7 +14,7 @@ import {
   SENTENCE_SHORTLISTING_LEXICON,
   SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE,
   SENTENCE_SHORTLISTING_PHRASE_HINTS,
-  SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID
+  SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID
 } from "./sentence-shortlisting-data";
 
 type SentenceShortlistingBrowserBenchmarkArtifact = SentenceShortlistingBenchmarkResult & {
@@ -74,7 +74,7 @@ function executeBenchmark() {
       document,
       scenarios: shortlistingScenarios,
       lexicon: SENTENCE_SHORTLISTING_LEXICON,
-      vocabByLemmaId: SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID,
+      vocabByLexemeId: SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID,
       discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
       goldilocksThreshold: SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
       phraseHints: SENTENCE_SHORTLISTING_PHRASE_HINTS,

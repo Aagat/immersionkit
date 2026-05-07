@@ -75,7 +75,7 @@ export type PageDiagnosticsSentenceRankingReason = {
 export type PageDiagnosticsTokenSample = {
   sourceToken: string | null;
   targetToken: string | null;
-  lemmaId: string | null;
+  lexemeId: string | null;
   unitKind: string | null;
   wordKind: string | null;
   contextDecision: string | null;

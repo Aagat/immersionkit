@@ -1,10 +1,7 @@
 import {
   getRenderUnitSentenceHints,
-  parseLexemeAsset,
-  parseRenderUnitAsset,
-  renderUnitsToSeedLexiconEntries
+  parseRenderUnitAsset
 } from "../../src/render-units/render-units";
-import { parseSeedLexiconInput } from "../../src/seed/seed-lexicon";
 
 type RuntimeListener = (
   message: unknown,
@@ -147,15 +144,15 @@ function createDefaultRuntimeResponse(
   }
 
   if (messageType === "user-vocab/get") {
-    const lemmaIds = Array.isArray((message as { lemmaIds?: unknown }).lemmaIds)
+    const lexemeIds = Array.isArray((message as { lexemeIds?: unknown }).lexemeIds)
       ? new Set(
-          (message as { lemmaIds: unknown[] }).lemmaIds.filter(
-            (lemmaId): lemmaId is string => typeof lemmaId === "string"
+          (message as { lexemeIds: unknown[] }).lexemeIds.filter(
+            (lexemeId): lexemeId is string => typeof lexemeId === "string"
           )
         )
       : null;
     const entries = readRuntimeVocabEntries(storageValues).filter((entry) =>
-      lemmaIds && lemmaIds.size > 0 ? lemmaIds.has(entry.lemmaId) : true
+      lexemeIds && lexemeIds.size > 0 ? lexemeIds.has(entry.lexemeId) : true
     );
     return {
       ok: true,
@@ -171,23 +168,14 @@ function createDefaultRuntimeResponse(
     return undefined;
   }
 
-  const includeRenderUnits =
-    (message as { includeRenderUnits?: unknown }).includeRenderUnits === true;
   const renderUnitAsset = parseRenderUnitAsset(
     pickFirstDefinedValue(storageValues, ["asset-render-units", "renderUnits"])
   );
   if (renderUnitAsset) {
-    const lexemeAsset = parseLexemeAsset(
-      pickFirstDefinedValue(storageValues, ["asset-lexemes", "lexemes"])
-    );
     return {
       ok: true,
       context: {
-        lexicon: renderUnitsToSeedLexiconEntries(
-          renderUnitAsset.entries,
-          lexemeAsset?.entries ?? []
-        ),
-        ...(includeRenderUnits ? { renderUnits: renderUnitAsset.entries } : {}),
+        renderUnits: renderUnitAsset.entries,
         sentenceHintPhrases: getRenderUnitSentenceHints(renderUnitAsset.entries),
         source: "cached-pack",
         assetVersion: renderUnitAsset.assetVersion,
@@ -197,21 +185,13 @@ function createDefaultRuntimeResponse(
     };
   }
 
-  const seedLexicon = parseSeedLexiconInput(
-    pickFirstDefinedValue(storageValues, [
-      "asset-seed-lexicon",
-      "seedLexicon",
-      "lexicon"
-    ])
-  );
   return {
     ok: true,
     context: {
-      lexicon: seedLexicon?.entries ?? [],
-      ...(includeRenderUnits ? { renderUnits: [] } : {}),
+      renderUnits: [],
       sentenceHintPhrases: [],
-      source: seedLexicon ? "cached-pack" : "empty",
-      assetVersion: seedLexicon?.assetVersion ?? null,
+      source: "empty",
+      assetVersion: null,
       bandIds: [],
       missingBandIds: []
     }
@@ -231,14 +211,14 @@ function readRuntimeVocabEntries(storageValues: StorageValues): RuntimeVocabEntr
     }
 
     const entry = value as Record<string, unknown>;
-    const lemmaId = typeof entry.lemmaId === "string" ? entry.lemmaId : null;
-    if (!lemmaId) {
+    const lexemeId = typeof entry.lexemeId === "string" ? entry.lexemeId : null;
+    if (!lexemeId) {
       return [];
     }
 
     return [
       {
-        lemmaId,
+        lexemeId,
         status:
           entry.status === "known" ||
           entry.status === "learning" ||
@@ -270,15 +250,15 @@ function setRuntimeVocabStatus(
   }
 
   const payload = message as Record<string, unknown>;
-  const lemmaId = typeof payload.lemmaId === "string" ? payload.lemmaId : "";
-  if (!lemmaId.trim()) {
+  const lexemeId = typeof payload.lexemeId === "string" ? payload.lexemeId : "";
+  if (!lexemeId.trim()) {
     return { ok: true, entry: null };
   }
 
   const entries = new Map(
-    readRuntimeVocabEntries(storageValues).map((entry) => [entry.lemmaId, entry])
+    readRuntimeVocabEntries(storageValues).map((entry) => [entry.lexemeId, entry])
   );
-  const existingEntry = entries.get(lemmaId);
+  const existingEntry = entries.get(lexemeId);
   const now =
     typeof payload.updatedAt === "string"
       ? payload.updatedAt
@@ -290,7 +270,7 @@ function setRuntimeVocabStatus(
       ? payload.status
       : "new";
   const entry: RuntimeVocabEntry = {
-    lemmaId,
+    lexemeId,
     status,
     lastSeenAt:
       payload.lastSeenAt === null
@@ -303,7 +283,7 @@ function setRuntimeVocabStatus(
       (payload.incrementExposure === false ? 0 : 1),
     updatedAt: now
   };
-  entries.set(lemmaId, entry);
+  entries.set(lexemeId, entry);
   storageValues[USER_VOCAB_STORE_KEY] = Object.fromEntries(entries);
 
   return {
@@ -313,7 +293,7 @@ function setRuntimeVocabStatus(
 }
 
 type RuntimeVocabEntry = {
-  lemmaId: string;
+  lexemeId: string;
   status: "new" | "learning" | "known" | "ignored";
   lastSeenAt: string | null;
   exposureCount: number;

@@ -5,7 +5,7 @@
   "generatedAt": "2026-04-19T20:57:58+00:00",
   "entryEncoding": "array",
   "columns": [
-    "lemmaId",
+    "lexemeId",
     "sourceLemma",
     "targetLemma",
     "pos",

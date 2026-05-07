@@ -21,7 +21,7 @@ const BASE_SETTINGS = {
 
 const SEED_LEXICON = [
   {
-    lemmaId: "lemma-city",
+    lexemeId: "lemma-city",
     sourceLemma: "city",
     targetLemma: "ciudad",
     pos: "noun",
@@ -31,7 +31,7 @@ const SEED_LEXICON = [
     exampleSentenceNative: "La ciudad recibe a los visitantes cada primavera."
   },
   {
-    lemmaId: "lemma-important",
+    lexemeId: "lemma-important",
     sourceLemma: "important",
     targetLemma: "importante",
     pos: "adjective",
@@ -39,6 +39,59 @@ const SEED_LEXICON = [
     confidence: 0.95
   }
 ] as const;
+
+type TestSeedEntry = {
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  pos: "noun" | "adjective" | "adverb";
+  frequencyRank: number | null;
+  confidence: number;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: readonly string[];
+};
+
+function renderUnitAsset(entries: readonly TestSeedEntry[]) {
+  return {
+    schemaVersion: "1.0.0",
+    assetVersion: "test-render-units",
+    languagePair: "en-es",
+    entries: entries.map((entry) => ({
+      renderUnitId: `ru:${entry.lexemeId}`,
+      lexemeIds: [entry.lexemeId],
+      kind: "single-token",
+      renderPolicy: "inline",
+      sourceText: entry.sourceLemma,
+      normalizedSourceText: entry.sourceLemma,
+      targetText: entry.targetLemma,
+      normalizedTargetText: entry.targetLemma,
+      sourcePattern: {
+        matchMode: "exact",
+        tokens: [
+          {
+            normal: entry.sourceLemma,
+            lemma: entry.sourceLemma,
+            pos: entry.pos
+          }
+        ]
+      },
+      replacement: {
+        startToken: 0,
+        endToken: 1,
+        targetText: entry.targetLemma
+      },
+      pos: entry.pos,
+      minBand: "level-1a",
+      frequencyRank: entry.frequencyRank,
+      confidence: entry.confidence,
+      provenance: { source: "manual" },
+      exampleSentenceEnglish: entry.exampleSentenceEnglish,
+      exampleSentenceNative: entry.exampleSentenceNative,
+      inflections: entry.inflections
+    }))
+  };
+}
 
 describe("content inline learning loop", () => {
   it("restarts processing when a disabled site is re-enabled", async () => {
@@ -50,7 +103,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -99,7 +152,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -115,7 +168,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lemma-city']"
           );
           expect(token).toBeTruthy();
 
@@ -166,7 +219,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -182,7 +235,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lemma-city']"
           );
           expect(token).toBeTruthy();
 
@@ -239,7 +292,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -255,7 +308,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-important']"
+            "[data-ik-lexeme-id='lemma-important']"
           );
           expect(token).toBeTruthy();
 
@@ -291,7 +344,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -356,7 +409,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -372,7 +425,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lemma-city']"
           );
           expect(token).toBeTruthy();
           expect(token?.getAttribute("data-ik-sentence-hash")).toBe(
@@ -394,7 +447,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -410,7 +463,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lemma-city']"
           );
           expect(token).toBeTruthy();
 
@@ -460,7 +513,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -628,17 +681,17 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": [
+          "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lemmaId: "lemma-can",
+              lexemeId: "lemma-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
               frequencyRank: 200,
               confidence: 0.95
             }
-          ],
+          ]),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -686,7 +739,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lemmaId: "lemma-can",
+                      lexemeId: "lemma-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -709,12 +762,11 @@ describe("content inline learning loop", () => {
           await wait(60);
 
           const canToken = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-can']"
+            "[data-ik-lexeme-id='lemma-can']"
           );
-          expect(canToken).toBeTruthy();
-          expect(canToken?.textContent).toBe("can");
-          expect(canToken?.getAttribute("data-ik-context-decision")).toBe("skip");
-          expect(canToken?.getAttribute("data-status")).toBe("muted");
+          expect(canToken).toBeNull();
+          expect(document.body.textContent).toContain("I can watch");
+          expect(document.body.textContent).not.toContain("lata");
         } finally {
           chromeStub.restore();
         }
@@ -734,7 +786,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -851,7 +903,7 @@ describe("content inline learning loop", () => {
           );
           expect(phrase).toBeTruthy();
           expect(phrase?.textContent).toBe("solia visitar");
-          expect(document.querySelector("[data-ik-lemma-id='lemma-city']")).toBeTruthy();
+          expect(document.querySelector("[data-ik-lexeme-id='lemma-city']")).toBeTruthy();
 
           const diagnostics = (
             await chromeStub.dispatchRuntimeMessage({
@@ -908,7 +960,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1067,7 +1119,7 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1212,7 +1264,7 @@ describe("content inline learning loop", () => {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1330,17 +1382,17 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": [
+          "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lemmaId: "lemma-can",
+              lexemeId: "lemma-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
               frequencyRank: 200,
               confidence: 0.95
             }
-          ],
+          ]),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1376,7 +1428,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lemmaId: "lemma-can",
+                      lexemeId: "lemma-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -1400,12 +1452,12 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-can']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-can']")
           ).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
           expect(document.body.textContent).not.toContain("lata");
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-city']")
               ?.textContent
           ).toBe("ciudad");
         } finally {
@@ -1426,17 +1478,17 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
-          "asset-seed-lexicon": [
+          "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lemmaId: "lemma-can",
+              lexemeId: "lemma-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
               frequencyRank: 200,
               confidence: 0.95
             }
-          ],
+          ]),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1481,7 +1533,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lemmaId: "lemma-can",
+                      lexemeId: "lemma-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -1512,12 +1564,12 @@ describe("content inline learning loop", () => {
           await wait(240);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-can']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-can']")
           ).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
           expect(document.body.textContent).not.toContain("lata");
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-city']")
               ?.textContent
           ).toBe("ciudad");
 
@@ -1551,7 +1603,7 @@ describe("content inline learning loop", () => {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1601,11 +1653,11 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lemma-city']")
               ?.textContent
           ).toBe("ciudad");
           const cognateToken = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-important']"
+            "[data-ik-lexeme-id='lemma-important']"
           );
           expect(cognateToken?.textContent).toBe("importante");
           expect(cognateToken?.getAttribute("data-ik-scheduler-reason")).toBe(
@@ -1631,7 +1683,7 @@ describe("content inline learning loop", () => {
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1703,7 +1755,7 @@ describe("content inline learning loop", () => {
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1770,7 +1822,7 @@ describe("content inline learning loop", () => {
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
@@ -1899,7 +1951,7 @@ describe("content inline learning loop", () => {
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "asset-seed-lexicon": SEED_LEXICON,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,

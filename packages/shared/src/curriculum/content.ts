@@ -18,6 +18,18 @@ import {
   type CurriculumRuntimeProfileInput
 } from "./config";
 
+type CurriculumWordEntry = Pick<
+  SeedLexiconEntry,
+  | "sourceLemma"
+  | "targetLemma"
+  | "confidence"
+  | "frequencyRank"
+  | "sourceLanguage"
+  | "targetLanguage"
+> & {
+  renderUnitMinBand?: string;
+};
+
 export type SentenceComplexityPolicy = {
   tokenRange: readonly [number, number];
   clausePolicy: string;
@@ -402,7 +414,7 @@ export function getActiveCurriculumContent(input?: {
 }
 
 export function evaluateWordCurriculumContentInventory(input: {
-  lexiconEntry: SeedLexiconEntry;
+  lexiconEntry: CurriculumWordEntry;
   activeContent: ActiveCurriculumContent;
 }): CurriculumContentInventoryDecision {
   const activeBandId = input.activeContent.band?.bandId ?? null;

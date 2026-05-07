@@ -153,7 +153,7 @@ async function openDatabase(): Promise<IDBDatabase> {
 
       if (!database.objectStoreNames.contains(INDEXEDDB_STORES.userVocab)) {
         database.createObjectStore(INDEXEDDB_STORES.userVocab, {
-          keyPath: "lemmaId"
+          keyPath: "lexemeId"
         });
       }
 

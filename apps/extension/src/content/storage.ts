@@ -8,12 +8,14 @@ import type {
   GrammarFeatureMatch,
   LearningItem,
   PhraseOccurrence,
-  SeedLexiconEntry,
+  RenderUnitEntry,
   SiteSetting,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
 import { resolveCurriculumConfig } from "@immersionkit/shared";
+
+import { parseRenderUnitAsset } from "../render-units/render-units";
 
 import {
   DEFAULT_DISCOVERY_RATE,
@@ -24,7 +26,7 @@ import {
 type StorageRecord = Record<string, unknown>;
 
 type VocabEntryRecord = {
-  lemmaId: unknown;
+  lexemeId: unknown;
   status: unknown;
   lastSeenAt?: unknown;
   exposureCount?: unknown;
@@ -48,11 +50,11 @@ export type ProcessingContext = {
   discoveryRate: number;
   siteSetting: SiteSetting | null;
   siteEnabled: boolean;
-  lexicon: SeedLexiconEntry[];
+  renderUnits: RenderUnitEntry[];
   lexiconInfo: LexiconLoadInfo;
-  vocabByLemmaId: Map<string, UserVocabEntry>;
+  vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
-  cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+  cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   sentenceHintPhrases: string[];
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
@@ -62,17 +64,27 @@ export type ProcessingContext = {
 
 export type CachedSentenceAnalysisContext = {
   entryCount: number;
-  cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+  cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
 };
 
-export type CachedContextSkipDecision = {
+export type CachedWordRenderDecision = {
   sentenceHash: string;
-  lemmaId: string;
+  lexemeId: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
+  normalizedSourceText?: string;
   normalizedText: string;
+  targetText?: string;
+  candidateLemma?: string;
+  candidatePos?: ContextualWordCandidate["candidatePos"];
+  confidence?: number;
+  decision: "inject" | "skip";
   rationale?: string;
 };
+
+export type CachedContextSkipDecision = CachedWordRenderDecision;
 
 export type CachedPhraseMatch = Pick<
   PhraseOccurrence,
@@ -97,7 +109,7 @@ export type CachedGrammarFeature = Pick<
 >;
 
 export type PersistVocabStatusInput = {
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   lastSeenAt?: string | null;
   updatedAt?: string;
@@ -110,7 +122,7 @@ export async function loadProcessingContext(
 ): Promise<ProcessingContext> {
   const [
     storage,
-    vocabByLemmaId,
+    vocabByLexemeId,
     assetContext,
     sentenceAnalysisContext,
     learningItemsByUnitRefId
@@ -121,7 +133,7 @@ export async function loadProcessingContext(
       ...STORAGE_KEYS.curriculumConfig,
       ...STORAGE_KEYS.learningProfile
     ]),
-    loadUserVocabByLemmaId(),
+    loadUserVocabByLexemeId(),
     requestActiveAssetContext(),
     loadCachedSentenceAnalysisContext(sentenceHashes),
     loadLearningItemsByUnitRefId()
@@ -153,18 +165,18 @@ export async function loadProcessingContext(
     discoveryRate,
     siteSetting,
     siteEnabled: siteSetting?.enabled ?? true,
-    lexicon: assetContext.lexicon,
+    renderUnits: assetContext.renderUnits,
     lexiconInfo: {
       source: assetContext.source,
-      entryCount: assetContext.lexicon.length,
+      entryCount: assetContext.renderUnits.length,
       assetVersion: assetContext.assetVersion,
       isFallback: assetContext.source === "empty"
     },
     sentenceHintPhrases: assetContext.sentenceHintPhrases,
-    vocabByLemmaId: vocabByLemmaId ?? new Map(),
+    vocabByLexemeId: vocabByLexemeId ?? new Map(),
     learningItemsByUnitRefId,
-    cachedContextSkipDecisions:
-      sentenceAnalysisContext.cachedContextSkipDecisions,
+    cachedWordRenderDecisions:
+      sentenceAnalysisContext.cachedWordRenderDecisions,
     cachedPhraseMatchesBySentenceHash:
       sentenceAnalysisContext.cachedPhraseMatchesBySentenceHash,
     cachedGrammarFeaturesBySentenceHash:
@@ -185,7 +197,7 @@ export async function loadCachedSentenceAnalysisContext(
 
   return {
     entryCount: sentenceAnalysisCache.length,
-    cachedContextSkipDecisions: parseCachedContextSkipDecisions(sentenceAnalysisCache),
+    cachedWordRenderDecisions: parseCachedWordRenderDecisions(sentenceAnalysisCache),
     cachedPhraseMatchesBySentenceHash: parseCachedPhraseMatches(sentenceAnalysisCache),
     cachedGrammarFeaturesBySentenceHash: parseCachedGrammarFeatures(sentenceAnalysisCache)
   };
@@ -194,14 +206,14 @@ export async function loadCachedSentenceAnalysisContext(
 export async function persistVocabStatus(
   input: PersistVocabStatusInput
 ): Promise<UserVocabEntry | null> {
-  const lemmaId = readString(input.lemmaId);
-  if (!lemmaId) {
+  const lexemeId = readString(input.lexemeId);
+  if (!lexemeId) {
     return null;
   }
 
   const backgroundEntry = await persistVocabStatusInBackground({
     ...input,
-    lemmaId
+    lexemeId
   });
   if (backgroundEntry !== undefined) {
     return backgroundEntry;
@@ -295,7 +307,7 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
   });
 }
 
-async function loadUserVocabByLemmaId(): Promise<Map<string, UserVocabEntry> | null> {
+async function loadUserVocabByLexemeId(): Promise<Map<string, UserVocabEntry> | null> {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     return null;
   }
@@ -331,7 +343,7 @@ async function persistVocabStatusInBackground(
     chrome.runtime.sendMessage(
       {
         type: RuntimeMessageType.SetVocabStatus,
-        lemmaId: input.lemmaId,
+        lexemeId: input.lexemeId,
         status: input.status,
         lastSeenAt: input.lastSeenAt,
         updatedAt: input.updatedAt,
@@ -355,7 +367,7 @@ async function persistVocabStatusInBackground(
 
 async function requestActiveAssetContext(): Promise<ContentAssetContext> {
   const emptyContext: ContentAssetContext = {
-    lexicon: [],
+    renderUnits: [],
     sentenceHintPhrases: [],
     source: "empty",
     assetVersion: null,
@@ -394,7 +406,7 @@ function normalizeAssetContext(input: unknown): ContentAssetContext | null {
   }
 
   return {
-    lexicon: readSeedLexiconEntries(input.lexicon),
+    renderUnits: readRenderUnits(input.renderUnits),
     sentenceHintPhrases: Array.isArray(input.sentenceHintPhrases)
       ? input.sentenceHintPhrases
           .map((value) => readString(value))
@@ -415,52 +427,11 @@ function readAssetContextSource(value: unknown): LexiconLoadSource | null {
     : null;
 }
 
-function readSeedLexiconEntries(input: unknown): SeedLexiconEntry[] {
-  if (!Array.isArray(input)) {
-    return [];
-  }
-
-  return input.flatMap((entry): SeedLexiconEntry[] => {
-    const normalized = normalizeSeedLexiconEntry(entry);
-    return normalized ? [normalized] : [];
+function readRenderUnits(input: unknown): RenderUnitEntry[] {
+  const parsed = parseRenderUnitAsset({
+    entries: Array.isArray(input) ? input : []
   });
-}
-
-function normalizeSeedLexiconEntry(input: unknown): SeedLexiconEntry | null {
-  if (!isRecord(input)) {
-    return null;
-  }
-
-  const lemmaId = readString(input.lemmaId);
-  const sourceLemma = readString(input.sourceLemma);
-  const targetLemma = readString(input.targetLemma);
-  const pos = readString(input.pos) as SeedLexiconEntry["pos"] | null;
-  if (!lemmaId || !sourceLemma || !targetLemma || !pos) {
-    return null;
-  }
-
-  return {
-    lemmaId,
-    lexemeId: readString(input.lexemeId) ?? undefined,
-    renderUnitId: readString(input.renderUnitId) ?? undefined,
-    renderUnitMinBand: readString(input.renderUnitMinBand) ?? undefined,
-    sourceLemma,
-    targetLemma,
-    pos,
-    frequencyRank:
-      typeof input.frequencyRank === "number" && Number.isFinite(input.frequencyRank)
-        ? input.frequencyRank
-        : null,
-    confidence: readNumber(input.confidence, 0.9),
-    exampleSentenceEnglish: readString(input.exampleSentenceEnglish) ?? undefined,
-    exampleSentenceNative: readString(input.exampleSentenceNative) ?? undefined,
-    inflections: Array.isArray(input.inflections)
-      ? input.inflections.filter((value): value is string => typeof value === "string")
-      : undefined,
-    sourceLanguage: input.sourceLanguage === "en" ? "en" : undefined,
-    targetLanguage: input.targetLanguage === "es" ? "es" : undefined,
-    sourceDataset: readString(input.sourceDataset) ?? undefined
-  };
+  return parsed?.entries ?? [];
 }
 
 function readStringArray(input: unknown): string[] {
@@ -568,7 +539,7 @@ function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
     }
   }
 
-  return new Map(entries.map((entry) => [entry.lemmaId, entry]));
+  return new Map(entries.map((entry) => [entry.lexemeId, entry]));
 }
 
 function parseLearningItems(input: unknown): Map<string, LearningItem> {
@@ -647,10 +618,10 @@ function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
   };
 }
 
-function parseCachedContextSkipDecisions(
+function parseCachedWordRenderDecisions(
   input: unknown
-): Map<string, CachedContextSkipDecision[]> {
-  const decisionsBySentenceHash = new Map<string, CachedContextSkipDecision[]>();
+): Map<string, CachedWordRenderDecision[]> {
+  const decisionsBySentenceHash = new Map<string, CachedWordRenderDecision[]>();
   const values = Array.isArray(input)
     ? input
     : isRecord(input)
@@ -668,7 +639,7 @@ function parseCachedContextSkipDecisions(
     }
 
     for (const candidate of entry.contextualWordCandidates) {
-      const decision = normalizeCachedSkipDecision(sentenceHash, candidate);
+      const decision = normalizeCachedWordRenderDecision(sentenceHash, candidate);
       if (!decision) {
         continue;
       }
@@ -834,26 +805,41 @@ function normalizeCachedPhraseMatch(
   };
 }
 
-function normalizeCachedSkipDecision(
+function normalizeCachedWordRenderDecision(
   fallbackSentenceHash: string,
   input: unknown
-): CachedContextSkipDecision | null {
-  if (!isRecord(input) || input.decision !== "skip") {
+): CachedWordRenderDecision | null {
+  if (
+    !isRecord(input) ||
+    (input.decision !== "inject" && input.decision !== "skip")
+  ) {
     return null;
   }
 
   const candidate = input as Partial<ContextualWordCandidate>;
-  const lemmaId = readString(candidate.lemmaId);
+  const lexemeId = readString(candidate.lexemeId);
   const normalizedText =
     readString(candidate.normalizedText) ?? readString(candidate.tokenText);
-  if (!lemmaId || !normalizedText) {
+  if (!lexemeId || !normalizedText) {
     return null;
   }
 
   return {
     sentenceHash: readString(candidate.sentenceHash) ?? fallbackSentenceHash,
-    lemmaId,
+    lexemeId,
+    renderUnitId: readString(candidate.renderUnitId) ?? undefined,
+    renderUnitMinBand: readString(candidate.renderUnitMinBand) ?? undefined,
+    normalizedSourceText: readString(candidate.normalizedSourceText) ?? undefined,
     normalizedText,
+    targetText:
+      readString(candidate.targetText) ?? readString(candidate.targetLemma) ?? undefined,
+    candidateLemma: readString(candidate.candidateLemma) ?? undefined,
+    candidatePos: readSafeCandidatePos(candidate.candidatePos),
+    confidence:
+      typeof candidate.confidence === "number" && Number.isFinite(candidate.confidence)
+        ? candidate.confidence
+        : undefined,
+    decision: input.decision,
     rationale: readString(candidate.rationale) ?? undefined
   };
 }
@@ -864,8 +850,8 @@ function normalizeVocabEntry(input: unknown): UserVocabEntry | null {
   }
 
   const record = input as VocabEntryRecord;
-  const lemmaId = readString(record.lemmaId);
-  if (!lemmaId) {
+  const lexemeId = readString(record.lexemeId);
+  if (!lexemeId) {
     return null;
   }
 
@@ -873,7 +859,7 @@ function normalizeVocabEntry(input: unknown): UserVocabEntry | null {
   const updatedAt = readString(record.updatedAt) ?? new Date().toISOString();
 
   return {
-    lemmaId,
+    lexemeId,
     status,
     updatedAt,
     lastSeenAt: readString(record.lastSeenAt),
@@ -958,4 +944,12 @@ function readGrammarFeatureCategory(
     value === "other"
     ? value
     : null;
+}
+
+function readSafeCandidatePos(
+  value: unknown
+): ContextualWordCandidate["candidatePos"] | undefined {
+  return value === "noun" || value === "adjective" || value === "adverb"
+    ? value
+    : undefined;
 }

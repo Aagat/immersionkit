@@ -342,9 +342,13 @@ export type ContextualWordCandidate = {
   tokenText: string;
   surfaceText?: string;
   normalizedText?: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
+  lexemeId?: string;
+  normalizedSourceText?: string;
+  targetText?: string;
   targetLemma: string;
   candidateLemma: string;
-  lemmaId?: string;
   candidatePos: SafeInjectionPos;
   observedPos: ObservedContextPos;
   chunkType: ContextChunkType;
@@ -477,7 +481,7 @@ export type UserLearningProfile = {
   unlockedBandIds: string[];
   difficultyPresetId: string;
   stretchTolerance: number;
-  knownLemmaIds: string[];
+  knownLexemeIds: string[];
   learningItems: Record<string, LearningItem>;
   lastCheckpointAt?: IsoTimestamp;
   checkpointEligibilityAt?: IsoTimestamp;
@@ -485,8 +489,7 @@ export type UserLearningProfile = {
 };
 
 export type SeedLexiconEntry = {
-  lemmaId: string;
-  lexemeId?: string;
+  lexemeId: string;
   renderUnitId?: string;
   renderUnitMinBand?: string;
   sourceLemma: string;
@@ -511,7 +514,7 @@ export type SeedLexiconAsset = {
 };
 
 export type UserVocabEntry = {
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   lastSeenAt: IsoTimestamp | null;
   exposureCount: number;

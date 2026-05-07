@@ -4,7 +4,7 @@ import { loadProcessingContext } from "../src/content/storage";
 import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("extension test scaffolding", () => {
-  it("supports loading processing context from stubbed runtime storage", async () => {
+  it("supports loading processing context from render-unit runtime assets", async () => {
     const chromeStub = installChromeStub({
       "settings": {
         discoveryRate: 0.35,
@@ -18,27 +18,22 @@ describe("extension test scaffolding", () => {
           discoveryRate: 2
         }
       ],
-      "asset-seed-lexicon": [
-        {
-          lemmaId: "lemma-safe",
-          sourceLemma: "garden",
-          targetLemma: "jardin",
-          pos: "noun",
-          frequencyRank: 21,
-          confidence: 0.9
-        },
-        {
-          lemmaId: "lemma-unsafe",
-          sourceLemma: "run",
-          targetLemma: "correr",
-          pos: "other",
-          frequencyRank: 22,
-          confidence: 0.9
-        }
-      ],
+      "asset-render-units": {
+        schemaVersion: "1.0.0",
+        assetVersion: "test-render-units",
+        languagePair: "en-es",
+        entries: [
+          createRenderUnit({
+            renderUnitId: "ru:test-garden",
+            lexemeId: "lemma-safe",
+            sourceText: "garden",
+            targetText: "jardin"
+          })
+        ]
+      },
       "user-vocab": [
         {
-          lemmaId: "lemma-safe",
+          lexemeId: "lemma-safe",
           status: "known",
           exposureCount: 4,
           updatedAt: "2026-04-01T10:00:00.000Z"
@@ -52,10 +47,12 @@ describe("extension test scaffolding", () => {
       expect(context.siteEnabled).toBe(false);
       expect(context.discoveryRate).toBe(1);
       expect(context.settings.provider).toBe("openai");
-      expect(context.lexicon.map((entry) => entry.lemmaId)).toEqual(["lemma-safe"]);
+      expect(context.renderUnits.map((entry) => entry.renderUnitId)).toEqual([
+        "ru:test-garden"
+      ]);
       expect(context.lexiconInfo.source).toBe("cached-pack");
       expect(context.lexiconInfo.isFallback).toBe(false);
-      expect(context.vocabByLemmaId.get("lemma-safe")?.status).toBe("known");
+      expect(context.vocabByLexemeId.get("lemma-safe")?.status).toBe("known");
       expect(chromeStub.sentMessages).toContainEqual({
         type: "assets/get-context"
       });
@@ -64,23 +61,20 @@ describe("extension test scaffolding", () => {
     }
   });
 
-  it("parses wrapped compact seed assets from storage", async () => {
+  it("does not treat legacy seed assets as content render assets", async () => {
     const chromeStub = installChromeStub({
       "asset-seed-lexicon": {
         schemaVersion: "1.0.0",
         assetVersion: "2026.04.18-seed2",
-        entryEncoding: "array",
-        columns: [
-          "lemmaId",
-          "sourceLemma",
-          "targetLemma",
-          "pos",
-          "frequencyRank",
-          "confidence"
-        ],
         entries: [
-          ["en:city:noun", "city", "ciudad", "noun", 12, 0.98],
-          ["en:important:adjective", "important", "importante", "adjective", 30, 0.95]
+          {
+            lexemeId: "en:city:noun",
+            sourceLemma: "city",
+            targetLemma: "ciudad",
+            pos: "noun",
+            frequencyRank: 12,
+            confidence: 0.98
+          }
         ]
       }
     });
@@ -88,11 +82,9 @@ describe("extension test scaffolding", () => {
     try {
       const context = await loadProcessingContext("fixtures.immersionkit.test");
 
-      expect(context.lexiconInfo.source).toBe("cached-pack");
-      expect(context.lexiconInfo.assetVersion).toBe("2026.04.18-seed2");
-      expect(context.lexiconInfo.entryCount).toBe(2);
-      expect(context.lexicon[0]?.lemmaId).toBe("en:city:noun");
-      expect(context.lexicon[1]?.lemmaId).toBe("en:important:adjective");
+      expect(context.lexiconInfo.source).toBe("empty");
+      expect(context.lexiconInfo.entryCount).toBe(0);
+      expect(context.renderUnits).toEqual([]);
     } finally {
       chromeStub.restore();
     }
@@ -113,52 +105,19 @@ describe("extension test scaffolding", () => {
     }
   });
 
-  it("adapts stored render units into lexeme-backed words and sentence-help hints", async () => {
+  it("loads stored render units and sentence-help hints", async () => {
     const chromeStub = installChromeStub({
-      "asset-lexemes": {
-        schemaVersion: "1.0.0",
-        assetVersion: "test-lexemes",
-        languagePair: "en-es",
-        entries: [
-          {
-            lexemeId: "lx:city:noun",
-            sourceLemma: "city",
-            targetLemma: "ciudad",
-            pos: "noun",
-            frequencyRank: 12,
-            confidence: 0.98
-          }
-        ]
-      },
       "asset-render-units": {
         schemaVersion: "1.0.0",
         assetVersion: "test-render-units",
         languagePair: "en-es",
         entries: [
-          {
+          createRenderUnit({
             renderUnitId: "ru:test-city",
-            lexemeIds: ["lx:city:noun"],
-            kind: "single-token",
-            renderPolicy: "inline",
+            lexemeId: "lx:city:noun",
             sourceText: "city",
-            normalizedSourceText: "city",
-            targetText: "ciudad",
-            normalizedTargetText: "ciudad",
-            sourcePattern: {
-              matchMode: "exact",
-              tokens: [{ normal: "city", lemma: "city", pos: "noun" }]
-            },
-            replacement: {
-              startToken: 0,
-              endToken: 1,
-              targetText: "ciudad"
-            },
-            pos: "noun",
-            minBand: "level-1a",
-            frequencyRank: 12,
-            confidence: 0.98,
-            provenance: { source: "manual" }
-          },
+            targetText: "ciudad"
+          }),
           {
             renderUnitId: "ru:test-need-help-only",
             lexemeIds: ["lx:need:verb"],
@@ -187,13 +146,9 @@ describe("extension test scaffolding", () => {
 
       expect(context.lexiconInfo.source).toBe("cached-pack");
       expect(context.lexiconInfo.assetVersion).toBe("test-render-units");
-      expect(context.lexicon).toEqual([
-        expect.objectContaining({
-          lemmaId: "lx:city:noun",
-          lexemeId: "lx:city:noun",
-          renderUnitId: "ru:test-city",
-          renderUnitMinBand: "level-1a"
-        })
+      expect(context.renderUnits.map((entry) => entry.renderUnitId)).toEqual([
+        "ru:test-city",
+        "ru:test-need-help-only"
       ]);
       expect(context.sentenceHintPhrases).toContain("might need to");
     } finally {
@@ -201,3 +156,41 @@ describe("extension test scaffolding", () => {
     }
   });
 });
+
+function createRenderUnit(input: {
+  renderUnitId: string;
+  lexemeId: string;
+  sourceText: string;
+  targetText: string;
+}) {
+  return {
+    renderUnitId: input.renderUnitId,
+    lexemeIds: [input.lexemeId],
+    kind: "single-token",
+    renderPolicy: "inline",
+    sourceText: input.sourceText,
+    normalizedSourceText: input.sourceText,
+    targetText: input.targetText,
+    normalizedTargetText: input.targetText,
+    sourcePattern: {
+      matchMode: "exact",
+      tokens: [
+        {
+          normal: input.sourceText,
+          lemma: input.sourceText,
+          pos: "noun"
+        }
+      ]
+    },
+    replacement: {
+      startToken: 0,
+      endToken: 1,
+      targetText: input.targetText
+    },
+    pos: "noun",
+    minBand: "level-1a",
+    frequencyRank: 12,
+    confidence: 0.98,
+    provenance: { source: "manual" }
+  };
+}

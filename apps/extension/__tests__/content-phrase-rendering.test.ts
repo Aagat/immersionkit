@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { processTextNode } from "../src/content/annotate";
 import type { CachedPhraseMatch } from "../src/content/storage";
+import type { WordRenderEntry } from "../src/render-units/render-units";
 import { withFixtureDom } from "./helpers/fixture-dom";
 
 describe("content phrase-unit rendering", () => {
@@ -16,31 +17,17 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-test",
         createNodeId: () => "ikn-phrase-test",
-        lexiconLookup: new Map([
+        wordRenderIndex: new Map([
           [
             "visit",
-            {
-              lemmaId: "lemma-visit",
-              sourceLemma: "visit",
-              targetLemma: "visitar",
-              pos: "noun",
-              frequencyRank: 100,
-              confidence: 0.9
-            }
+            wordEntry("lemma-visit", "visit", "visitar", 100)
           ],
           [
             "city",
-            {
-              lemmaId: "lemma-city",
-              sourceLemma: "city",
-              targetLemma: "ciudad",
-              pos: "noun",
-              frequencyRank: 101,
-              confidence: 0.9
-            }
+            wordEntry("lemma-city", "city", "ciudad", 101)
           ]
         ]),
-        vocabByLemmaId: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -66,8 +53,8 @@ describe("content phrase-unit rendering", () => {
       const phrase = document.querySelector<HTMLElement>("[data-ik-unit-kind='phrase']");
       expect(phrase?.textContent).toBe("solia visitar");
       expect(phrase?.getAttribute("data-ik-source-token")).toBe("used to visit");
-      expect(document.querySelector("[data-ik-lemma-id='lemma-visit']")).toBeNull();
-      expect(document.querySelector("[data-ik-lemma-id='lemma-city']")).toBeTruthy();
+      expect(document.querySelector("[data-ik-lexeme-id='lemma-visit']")).toBeNull();
+      expect(document.querySelector("[data-ik-lexeme-id='lemma-city']")).toBeTruthy();
       expect(phrase?.querySelector("[data-ik-token-id]")).toBeNull();
     });
   });
@@ -82,8 +69,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-overlap-test",
         createNodeId: () => "ikn-phrase-overlap-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -153,8 +140,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-curriculum-test",
         createNodeId: () => "ikn-phrase-curriculum-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -202,8 +189,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-render-unit-due-gate-test",
         createNodeId: () => "ikn-phrase-render-unit-due-gate-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -263,8 +250,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-content-inventory-test",
         createNodeId: () => "ikn-phrase-content-inventory-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -315,8 +302,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 0,
         samplingSeed: "phrase-blank-target-test",
         createNodeId: () => "ikn-phrase-blank-target-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -358,6 +345,30 @@ function phraseMatchesFor(
   matches: CachedPhraseMatch[]
 ): Map<string, CachedPhraseMatch[]> {
   return new Map([[hashSentence(sentence), matches]]);
+}
+
+function wordEntry(
+  lexemeId: string,
+  sourceText: string,
+  targetText: string,
+  frequencyRank: number
+): WordRenderEntry {
+  return {
+    lexemeId,
+    renderUnitId: `ru:${lexemeId}`,
+    renderUnitMinBand: "level-1a",
+    renderUnitMatchMode: "exact",
+    normalizedSourceText: sourceText,
+    targetText,
+    sourceLemma: sourceText,
+    targetLemma: targetText,
+    pos: "noun",
+    frequencyRank,
+    confidence: 0.9,
+    sourceLanguage: "en",
+    targetLanguage: "es",
+    sourceDataset: "render-units"
+  };
 }
 
 function createPhraseMatch(

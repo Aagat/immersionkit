@@ -8,7 +8,6 @@ import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
 
 import { DEFAULT_SENTENCE_THRESHOLD } from "../../constants";
 import { collectEligibleTextNodes } from "../../dom";
-import { buildLexiconLookup } from "../../lexicon";
 import { normalizeSentenceWords, segmentText } from "../../tokenize";
 import type {
   SentenceObservation,
@@ -86,8 +85,8 @@ export function runSentenceShortlistingBenchmark(
       ? Math.max(1, Math.floor(input.maxShortlistSize))
       : DEFAULT_MAX_SHORTLIST_SIZE;
 
-  const lexiconLookup = buildLexiconLookup([...input.lexicon]);
-  const vocabByLemmaId = normalizeVocabEntries(input.vocabByLemmaId);
+  const lexiconLookup = buildShortlistingLexiconLookup([...input.lexicon]);
+  const vocabByLexemeId = normalizeVocabEntries(input.vocabByLexemeId);
   const phraseHintsLowercase = input.phraseHints
     .map((value) => normalizeWhitespace(value).toLowerCase())
     .filter((value) => value.length > 0);
@@ -135,7 +134,7 @@ export function runSentenceShortlistingBenchmark(
         return analyzeScenarioPass({
           root,
           lexiconLookup,
-          vocabByLemmaId,
+          vocabByLexemeId,
           samplingSeed: `${scenario.urlPath}`,
           discoveryRate: input.discoveryRate,
           goldilocksThreshold: input.goldilocksThreshold,
@@ -320,10 +319,38 @@ export function runSentenceShortlistingBenchmark(
   };
 }
 
+function buildShortlistingLexiconLookup(
+  entries: readonly SeedLexiconEntry[]
+): Map<string, SeedLexiconEntry> {
+  const lookup = new Map<string, SeedLexiconEntry>();
+
+  for (const entry of entries) {
+    registerShortlistingLexiconKey(lookup, entry.sourceLemma, entry);
+    for (const inflection of entry.inflections ?? []) {
+      registerShortlistingLexiconKey(lookup, inflection, entry);
+    }
+  }
+
+  return lookup;
+}
+
+function registerShortlistingLexiconKey(
+  lookup: Map<string, SeedLexiconEntry>,
+  rawKey: string,
+  entry: SeedLexiconEntry
+) {
+  const normalized = rawKey.toLowerCase().trim();
+  if (!normalized || lookup.has(normalized)) {
+    return;
+  }
+
+  lookup.set(normalized, entry);
+}
+
 function analyzeScenarioPass(input: {
   root: ParentNode;
   lexiconLookup: ReadonlyMap<string, SeedLexiconEntry>;
-  vocabByLemmaId: ReadonlyMap<string, VocabStatus>;
+  vocabByLexemeId: ReadonlyMap<string, VocabStatus>;
   samplingSeed: string;
   discoveryRate: number;
   goldilocksThreshold: number;
@@ -367,7 +394,7 @@ function analyzeScenarioPass(input: {
         continue;
       }
 
-      const status = input.vocabByLemmaId.get(lexiconEntry.lemmaId) ?? "new";
+      const status = input.vocabByLexemeId.get(lexiconEntry.lexemeId) ?? "new";
       if (status === "ignored") {
         continue;
       }
@@ -413,7 +440,7 @@ function analyzeScenarioPass(input: {
           return count + 1;
         }
 
-        const status = input.vocabByLemmaId.get(lexiconEntry.lemmaId) ?? "new";
+        const status = input.vocabByLexemeId.get(lexiconEntry.lexemeId) ?? "new";
         return status === "known" || status === "learning" ? count + 1 : count;
       }, 0);
 

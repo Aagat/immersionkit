@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getRenderUnitSentenceHints,
   parseLexemeAsset,
-  parseRenderUnitAsset,
-  renderUnitsToSeedLexiconEntries
+  parseRenderUnitAsset
 } from "../src/render-units/render-units";
 import lexemeAsset from "../src/assets/en-es.lexemes.v1.json";
 import renderUnitAsset from "../src/assets/en-es.render-units.v1.json";
@@ -14,7 +13,6 @@ describe("render unit assets", () => {
     const lexemes = parseLexemeAsset(lexemeAsset);
 
     expect(lexemes?.entries.length).toBeGreaterThanOrEqual(13_000);
-    expect(renderUnitsToSeedLexiconEntries([], lexemes?.entries ?? [])).toEqual([]);
   });
 
   it("accepts canonical analyzer-pattern rows and derives sentence-help hints", () => {
@@ -97,10 +95,9 @@ describe("render unit assets", () => {
 
     expect(unresolved).toEqual([]);
     expect(
-      renderUnitsToSeedLexiconEntries(renderUnits?.entries ?? [], lexemes?.entries ?? [])
-        .find((entry) => entry.renderUnitId === "ru:no:adverb:exact")
-        ?.lemmaId
-    ).toBe("lx:no:adverb");
+      renderUnits?.entries.find((entry) => entry.renderUnitId === "ru:no:adverb:exact")
+        ?.lexemeIds
+    ).toContain("lx:no:adverb");
   });
 
   it("does not keep unsafe bare conjugated grammar frames renderable", () => {

@@ -3,7 +3,7 @@ import type { SeedLexiconEntry } from "@immersionkit/shared";
 
 const SAFE_POS = new Set<string>(SAFE_INJECTION_POS_VALUES);
 const DEFAULT_ARRAY_COLUMNS = [
-  "lemmaId",
+  "lexemeId",
   "sourceLemma",
   "targetLemma",
   "pos",
@@ -82,7 +82,7 @@ export function parseSeedLexiconInput(input: unknown): ParsedSeedLexicon | null 
 export function isLikelyFallbackSeedLexicon(
   entries: readonly SeedLexiconEntry[]
 ): boolean {
-  return entries.length > 0 && entries.every((entry) => entry.lemmaId.startsWith("seed-"));
+  return entries.length > 0 && entries.every((entry) => entry.lexemeId.startsWith("seed-"));
 }
 
 function parseArrayEntries(
@@ -92,7 +92,7 @@ function parseArrayEntries(
   const columns = rawColumns.length > 0 ? rawColumns : DEFAULT_ARRAY_COLUMNS;
   const columnLookup = new Map(columns.map((column, index) => [column, index] as const));
 
-  const lemmaIdIndex = resolveColumnIndex(columnLookup, "lemmaId", 0);
+  const lexemeIdIndex = resolveColumnIndex(columnLookup, "lexemeId", 0);
   const sourceLemmaIndex = resolveColumnIndex(columnLookup, "sourceLemma", 1);
   const targetLemmaIndex = resolveColumnIndex(columnLookup, "targetLemma", 2);
   const posIndex = resolveColumnIndex(columnLookup, "pos", 3);
@@ -108,7 +108,7 @@ function parseArrayEntries(
     }
 
     const normalizedEntry = normalizeSeedEntry({
-      lemmaId: row[lemmaIdIndex],
+      lexemeId: row[lexemeIdIndex],
       sourceLemma: row[sourceLemmaIndex],
       targetLemma: row[targetLemmaIndex],
       pos: row[posIndex],
@@ -154,17 +154,17 @@ function normalizeSeedEntry(input: unknown): SeedLexiconEntry | null {
     return null;
   }
 
-  const lemmaId = readString(input.lemmaId);
+  const lexemeId = readString(input.lexemeId);
   const sourceLemma = readString(input.sourceLemma);
   const targetLemma = readString(input.targetLemma);
   const pos = readString(input.pos) as SeedLexiconEntry["pos"] | null;
 
-  if (!lemmaId || !sourceLemma || !targetLemma || !pos || !SAFE_POS.has(pos)) {
+  if (!lexemeId || !sourceLemma || !targetLemma || !pos || !SAFE_POS.has(pos)) {
     return null;
   }
 
   return {
-    lemmaId,
+    lexemeId,
     sourceLemma,
     targetLemma,
     pos,

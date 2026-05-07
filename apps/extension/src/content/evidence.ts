@@ -62,7 +62,7 @@ export class ContentEvidenceTracker {
   }
 
   recordAssist(metadata: TokenMetadata, assistType = "manual-lookup"): void {
-    const itemId = wordItemId(metadata.lemmaId);
+    const itemId = wordItemId(metadata.lexemeId);
     const contextSentenceHash = metadata.sentenceHash ?? undefined;
     const key = evidenceDedupeKey(itemId, contextSentenceHash);
     this.assistedAt.set(key, this.now());
@@ -213,7 +213,7 @@ export class ContentEvidenceTracker {
     }
 
     const unitKind = element.getAttribute("data-ik-unit-kind");
-    const lemmaId = element.getAttribute("data-ik-lemma-id");
+    const lexemeId = element.getAttribute("data-ik-lexeme-id");
     const phraseId = element.getAttribute("data-ik-phrase-id");
     const sentenceHash = element.getAttribute("data-ik-sentence-hash");
     if (!sentenceHash) {
@@ -223,8 +223,8 @@ export class ContentEvidenceTracker {
     const itemId =
       unitKind === "phrase" && phraseId
         ? phraseItemId(phraseId)
-        : lemmaId
-          ? wordItemId(lemmaId)
+        : lexemeId
+          ? wordItemId(lexemeId)
           : null;
     if (!itemId) {
       return;
@@ -341,8 +341,8 @@ function isDocumentVisible(): boolean {
   return document.visibilityState === "visible";
 }
 
-function wordItemId(lemmaId: string): string {
-  return `word:${lemmaId}`;
+function wordItemId(lexemeId: string): string {
+  return `word:${lexemeId}`;
 }
 
 function phraseItemId(phraseId: string): string {

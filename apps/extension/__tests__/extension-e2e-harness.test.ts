@@ -413,7 +413,7 @@ async function writeUserData(
           keyPath: "itemId"
         });
         ensureStore(database, transaction, "user-data", { keyPath: "key" });
-        ensureStore(database, transaction, "user-vocab", { keyPath: "lemmaId" });
+        ensureStore(database, transaction, "user-vocab", { keyPath: "lexemeId" });
         const packs = ensureStore(database, transaction, "asset-packs", {
           keyPath: "identity"
         });

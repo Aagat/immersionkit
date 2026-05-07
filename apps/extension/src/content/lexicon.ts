@@ -1,63 +1,82 @@
-import { normalizeToken } from "@immersionkit/shared";
-import type { SeedLexiconEntry } from "@immersionkit/shared";
+import { normalizeToken, type RenderUnitEntry } from "@immersionkit/shared";
 
-import { SAFE_POS } from "./constants";
+import {
+  isImmediateWordRenderUnit,
+  renderUnitToWordRenderEntry,
+  type WordRenderEntry
+} from "../render-units/render-units";
 
-export type LexiconLookup = Map<string, SeedLexiconEntry>;
+export type WordRenderIndex = Map<string, WordRenderEntry>;
 
-const BLOCKED_SINGLE_TOKEN_SOURCE_LEMMAS = new Set(["a", "an", "the"]);
+const BLOCKED_SINGLE_TOKEN_SOURCE_TEXTS = new Set(["a", "an", "the"]);
 
-export function buildLexiconLookup(seedEntries: SeedLexiconEntry[]): LexiconLookup {
-  const lookup = new Map<string, SeedLexiconEntry>();
+export function buildWordRenderIndex(
+  renderUnits: readonly RenderUnitEntry[],
+  options: { bandPreference?: readonly string[] } = {}
+): WordRenderIndex {
+  const index = new Map<string, WordRenderEntry>();
+  const bandOrder = new Map(
+    (options.bandPreference ?? []).map((bandId, order) => [bandId, order] as const)
+  );
 
-  for (const entry of seedEntries) {
-    if (!SAFE_POS.has(entry.pos)) {
+  for (const renderUnit of renderUnits) {
+    if (!isImmediateWordRenderUnit(renderUnit)) {
       continue;
     }
 
-    if (isBlockedLexicalKey(entry.sourceLemma)) {
+    if (isBlockedWordRenderKey(renderUnit.normalizedSourceText)) {
       continue;
     }
 
-    registerLexiconKey(lookup, entry.sourceLemma, entry);
+    const entry = renderUnitToWordRenderEntry(renderUnit);
+    if (!entry) {
+      continue;
+    }
 
-    for (const inflection of entry.inflections ?? []) {
-      registerLexiconKey(lookup, inflection, entry);
+    registerWordRenderKey(index, renderUnit.normalizedSourceText, entry, bandOrder);
+    registerWordRenderKey(index, renderUnit.sourceText, entry, bandOrder);
+
+    for (const inflection of renderUnit.inflections ?? []) {
+      registerWordRenderKey(index, inflection, entry, bandOrder);
     }
   }
 
-  return lookup;
+  return index;
 }
 
-function registerLexiconKey(
-  lookup: LexiconLookup,
+function registerWordRenderKey(
+  index: WordRenderIndex,
   rawKey: string,
-  entry: SeedLexiconEntry
+  entry: WordRenderEntry,
+  bandOrder: ReadonlyMap<string, number>
 ) {
   const normalized = normalizeToken(rawKey);
-  if (!normalized) {
+  if (!normalized || isBlockedWordRenderKey(normalized)) {
     return;
   }
 
-  if (isBlockedLexicalKey(normalized)) {
-    return;
-  }
-
-  const existing = lookup.get(normalized);
-  lookup.set(normalized, selectPreferredEntry(existing, entry));
+  const existing = index.get(normalized);
+  index.set(normalized, selectPreferredEntry(existing, entry, bandOrder));
 }
 
-function isBlockedLexicalKey(rawKey: string): boolean {
+function isBlockedWordRenderKey(rawKey: string): boolean {
   const normalized = normalizeToken(rawKey);
-  return BLOCKED_SINGLE_TOKEN_SOURCE_LEMMAS.has(normalized);
+  return BLOCKED_SINGLE_TOKEN_SOURCE_TEXTS.has(normalized);
 }
 
 function selectPreferredEntry(
-  current: SeedLexiconEntry | undefined,
-  candidate: SeedLexiconEntry
-): SeedLexiconEntry {
+  current: WordRenderEntry | undefined,
+  candidate: WordRenderEntry,
+  bandOrder: ReadonlyMap<string, number>
+): WordRenderEntry {
   if (!current) {
     return candidate;
+  }
+
+  const currentBandOrder = bandOrder.get(current.renderUnitMinBand) ?? Number.MAX_SAFE_INTEGER;
+  const candidateBandOrder = bandOrder.get(candidate.renderUnitMinBand) ?? Number.MAX_SAFE_INTEGER;
+  if (candidateBandOrder !== currentBandOrder) {
+    return candidateBandOrder < currentBandOrder ? candidate : current;
   }
 
   if (candidate.confidence !== current.confidence) {
@@ -70,5 +89,7 @@ function selectPreferredEntry(
     return candidateRank < currentRank ? candidate : current;
   }
 
-  return candidate.lemmaId.localeCompare(current.lemmaId) < 0 ? candidate : current;
+  return candidate.renderUnitId.localeCompare(current.renderUnitId) < 0
+    ? candidate
+    : current;
 }

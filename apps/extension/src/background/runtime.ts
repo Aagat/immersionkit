@@ -440,16 +440,16 @@ export class BackgroundRuntimeCoordinator {
   ) {
     try {
       const entries = [...(await this.userVocab.loadAll()).values()];
-      const requestedLemmaIds = new Set(
-        (Array.isArray(message.lemmaIds) ? message.lemmaIds : [])
-          .map((lemmaId) => lemmaId.trim())
+      const requestedLexemeIds = new Set(
+        (Array.isArray(message.lexemeIds) ? message.lexemeIds : [])
+          .map((lexemeId) => lexemeId.trim())
           .filter(Boolean)
       );
       sendResponse({
         ok: true,
         entries:
-          requestedLemmaIds.size > 0
-            ? entries.filter((entry) => requestedLemmaIds.has(entry.lemmaId))
+          requestedLexemeIds.size > 0
+            ? entries.filter((entry) => requestedLexemeIds.has(entry.lexemeId))
             : entries
       });
     } catch (error) {
@@ -469,7 +469,7 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: true,
         entry: await this.userVocab.setStatus({
-          lemmaId: message.lemmaId,
+          lexemeId: message.lexemeId,
           status: message.status,
           lastSeenAt: message.lastSeenAt,
           updatedAt: message.updatedAt,
@@ -617,7 +617,6 @@ export class BackgroundRuntimeCoordinator {
       const context = await this.assetPacks.loadActiveContext();
       console.info("ImmersionKit asset packs ready.", {
         source: context.source,
-        entryCount: context.lexicon.length,
         renderUnitCount: context.renderUnits.length,
         assetVersion: context.assetVersion,
         bandIds: context.bandIds,
@@ -642,7 +641,7 @@ export class BackgroundRuntimeCoordinator {
 
 function createContentAssetContext(context: ActiveAssetContext): ContentAssetContext {
   return {
-    lexicon: context.lexicon,
+    renderUnits: context.renderUnits,
     sentenceHintPhrases: context.sentenceHintPhrases,
     source: context.source,
     assetVersion: context.assetVersion,

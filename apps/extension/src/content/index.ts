@@ -15,7 +15,6 @@ import type {
   CurriculumRuntimeProfileInput,
   QueuedSentenceCandidate,
   LearningItem,
-  SeedLexiconEntry,
   SentenceAnalysisEntry,
   SentenceLearningNote,
   SentenceTranslationResult,
@@ -72,7 +71,8 @@ import {
 } from "./dom";
 import { segmentSentences } from "./sentences";
 import { ContentEvidenceTracker } from "./evidence";
-import { buildLexiconLookup } from "./lexicon";
+import { buildWordRenderIndex, type WordRenderIndex } from "./lexicon";
+import type { WordRenderEntry } from "../render-units/render-units";
 import {
   clearSentenceTranslations,
   parseSentenceTranslationResults,
@@ -87,7 +87,7 @@ import {
   persistVocabStatus,
   refreshLearningItemsByUnitRefIds
 } from "./storage";
-import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
+import type { CachedPhraseMatch, CachedWordRenderDecision } from "./storage";
 import type { CachedGrammarFeature } from "./storage";
 import "@immersionkit/ui/styles.css";
 import "./styles.css";
@@ -95,10 +95,10 @@ import "./styles.css";
 type ProcessingState = {
   discoveryRate: number;
   samplingSeed: string;
-  lexiconLookup: Map<string, SeedLexiconEntry>;
-  vocabByLemmaId: Map<string, UserVocabEntry>;
+  wordRenderIndex: WordRenderIndex;
+  vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
-  cachedContextSkipDecisions: Map<string, CachedContextSkipDecision[]>;
+  cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   sentenceHintPhrases: string[];
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
@@ -313,7 +313,7 @@ function setupInteractionHooks(runtimeState: RuntimeState) {
       return;
     }
 
-    applyStatusToLemmaTokens(detail);
+    applyStatusToLexemeTokens(detail);
     updateRuntimeVocabEntry(runtimeState, detail);
   });
 
@@ -413,7 +413,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       updatedAt: new Date().toISOString()
     };
 
-    console.info("ImmersionKit lexicon loaded for page.", {
+    console.info("ImmersionKit render units loaded for page.", {
       source: processingContext.lexiconInfo.source,
       entryCount: processingContext.lexiconInfo.entryCount,
       assetVersion: processingContext.lexiconInfo.assetVersion,
@@ -433,10 +433,12 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       return;
     }
 
-    const lexiconLookup = buildLexiconLookup(processingContext.lexicon);
-    if (lexiconLookup.size === 0) {
+    const wordRenderIndex = buildWordRenderIndex(processingContext.renderUnits, {
+      bandPreference: getCurriculumBandPreference(processingContext.curriculumConfig)
+    });
+    if (wordRenderIndex.size === 0 && processingContext.sentenceHintPhrases.length === 0) {
       stopProcessing(runtimeState);
-      console.info("ImmersionKit has no safe lexicon entries to inject.");
+      console.info("ImmersionKit has no approved render units to process.");
       return;
     }
 
@@ -444,10 +446,10 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     const state: ProcessingState = {
       discoveryRate: processingContext.discoveryRate,
       samplingSeed: `${window.location.hostname}${window.location.pathname}`,
-      lexiconLookup,
-      vocabByLemmaId: processingContext.vocabByLemmaId,
+      wordRenderIndex,
+      vocabByLexemeId: processingContext.vocabByLexemeId,
       learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
-      cachedContextSkipDecisions: processingContext.cachedContextSkipDecisions,
+      cachedWordRenderDecisions: processingContext.cachedWordRenderDecisions,
       cachedPhraseMatchesBySentenceHash:
         processingContext.cachedPhraseMatchesBySentenceHash,
       sentenceHintPhrases: processingContext.sentenceHintPhrases,
@@ -633,7 +635,7 @@ async function refreshScopedAnalysisCacheForRoots(
 ) {
   const sentenceHashes = collectRootsSentenceHashes(roots).filter(
     (hash) =>
-      !state.cachedContextSkipDecisions.has(hash) &&
+      !state.cachedWordRenderDecisions.has(hash) &&
       !state.cachedPhraseMatchesBySentenceHash.has(hash) &&
       !state.cachedGrammarFeaturesBySentenceHash.has(hash)
   );
@@ -648,8 +650,8 @@ async function refreshScopedAnalysisCacheForRoots(
     const context = await loadCachedSentenceAnalysisContext(sentenceHashes.slice(0, 100));
     state.mutationCacheRefreshHits += context.entryCount;
     mergeCachedAnalysisMap(
-      state.cachedContextSkipDecisions,
-      context.cachedContextSkipDecisions
+      state.cachedWordRenderDecisions,
+      context.cachedWordRenderDecisions
     );
     mergeCachedAnalysisMap(
       state.cachedPhraseMatchesBySentenceHash,
@@ -689,16 +691,16 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         discoveryRate: state.discoveryRate,
         samplingSeed: state.samplingSeed,
         createNodeId: () => createNodeId(state),
-        lexiconLookup: state.lexiconLookup,
-        vocabByLemmaId: state.vocabByLemmaId,
-        cachedContextSkipDecisions: state.cachedContextSkipDecisions,
+        wordRenderIndex: state.wordRenderIndex,
+        vocabByLexemeId: state.vocabByLexemeId,
+        cachedWordRenderDecisions: state.cachedWordRenderDecisions,
         cachedPhraseMatchesBySentenceHash: state.cachedPhraseMatchesBySentenceHash,
         sentenceHintPhrases: state.sentenceHintPhrases,
         learningItemsByUnitRefId: state.learningItemsByUnitRefId,
         shouldActivateWord: (input) => shouldActivateWordByCurriculum(state, input),
         shouldActivatePhrase: (input) => shouldActivatePhraseByCurriculum(state, input),
         isKnownWordForScoring: (word) => isKnownWord(state, word),
-        isDueForReview: (lemmaId) => isDueLearningItem(state, lemmaId),
+        isDueForReview: (lexemeId) => isDueLearningItem(state, lexemeId),
         allowPhraseOnlyCandidates: true
       });
 
@@ -837,6 +839,21 @@ function mergeCachedAnalysisMap<T>(
   }
 }
 
+function getCurriculumBandPreference(config: CurriculumConfig): string[] {
+  const seen = new Set<string>();
+  return [...config.bands]
+    .filter((band) => typeof band.bandId === "string" && band.bandId.trim().length > 0)
+    .sort((left, right) => left.order - right.order)
+    .flatMap((band): string[] => {
+      if (seen.has(band.bandId)) {
+        return [];
+      }
+
+      seen.add(band.bandId);
+      return [band.bandId];
+    });
+}
+
 async function refreshFreshPhraseMatches(
   state: ProcessingState,
   entries: readonly SentenceAnalysisEntry[]
@@ -846,10 +863,14 @@ async function refreshFreshPhraseMatches(
   }
 
   const sentenceHashesWithPhrases = new Set<string>();
+  const sentenceHashesWithWordDecisions = new Set<string>();
   for (const entry of entries) {
-    const skipDecisions = entry.contextualWordCandidates.flatMap(
-      (candidate): CachedContextSkipDecision[] => {
-        if (candidate.decision !== "skip" || !candidate.lemmaId) {
+    const wordDecisions = entry.contextualWordCandidates.flatMap(
+      (candidate): CachedWordRenderDecision[] => {
+        if (
+          (candidate.decision !== "inject" && candidate.decision !== "skip") ||
+          !candidate.lexemeId
+        ) {
           return [];
         }
 
@@ -862,15 +883,24 @@ async function refreshFreshPhraseMatches(
         return [
           {
             sentenceHash: entry.sentenceHash,
-            lemmaId: candidate.lemmaId,
+            lexemeId: candidate.lexemeId,
+            renderUnitId: candidate.renderUnitId,
+            renderUnitMinBand: candidate.renderUnitMinBand,
+            normalizedSourceText: candidate.normalizedSourceText,
             normalizedText,
+            targetText: candidate.targetText ?? candidate.targetLemma,
+            candidateLemma: candidate.candidateLemma,
+            candidatePos: candidate.candidatePos,
+            confidence: candidate.confidence,
+            decision: candidate.decision,
             rationale: candidate.rationale
           }
         ];
       }
     );
-    if (skipDecisions.length > 0) {
-      state.cachedContextSkipDecisions.set(entry.sentenceHash, skipDecisions);
+    if (wordDecisions.length > 0) {
+      state.cachedWordRenderDecisions.set(entry.sentenceHash, wordDecisions);
+      sentenceHashesWithWordDecisions.add(entry.sentenceHash);
     }
 
     const grammarFeatures = entry.grammarFeatures.flatMap(
@@ -935,7 +965,7 @@ async function refreshFreshPhraseMatches(
     sentenceHashesWithPhrases.add(entry.sentenceHash);
   }
 
-  if (sentenceHashesWithPhrases.size === 0) {
+  if (sentenceHashesWithPhrases.size === 0 && sentenceHashesWithWordDecisions.size === 0) {
     return;
   }
 
@@ -945,10 +975,10 @@ async function refreshFreshPhraseMatches(
   }
 
   state.freshPhraseAnalysisHits += sentenceHashesWithPhrases.size;
-  state.freshPhraseRerenders += rerenderAnnotatedNodesForSentenceHashes(
-    state,
-    sentenceHashesWithPhrases
-  );
+  state.freshPhraseRerenders += rerenderAnnotatedNodesForSentenceHashes(state, new Set([
+    ...sentenceHashesWithPhrases,
+    ...sentenceHashesWithWordDecisions
+  ]));
 }
 
 async function refreshPhraseLearningItemsForFreshMatches(
@@ -1143,17 +1173,17 @@ function createNodeId(state: ProcessingState): string {
 }
 
 function isKnownWord(state: ProcessingState, normalizedWord: string): boolean {
-  const lexiconEntry = state.lexiconLookup.get(normalizedWord);
-  if (!lexiconEntry) {
+  const wordEntry = state.wordRenderIndex.get(normalizedWord);
+  if (!wordEntry) {
     return true;
   }
 
-  const status = state.vocabByLemmaId.get(lexiconEntry.lemmaId)?.status ?? "new";
+  const status = state.vocabByLexemeId.get(wordEntry.lexemeId)?.status ?? "new";
   return status === "known" || status === "learning";
 }
 
-function isDueLearningItem(state: ProcessingState, lemmaId: string): boolean {
-  const item = state.learningItemsByUnitRefId.get(lemmaId);
+function isDueLearningItem(state: ProcessingState, lexemeId: string): boolean {
+  const item = state.learningItemsByUnitRefId.get(lexemeId);
   return shouldReceiveDueReviewBoost(item, Date.now());
 }
 
@@ -1181,9 +1211,9 @@ function shouldActivateWordByCurriculum(
 
   const decision = evaluateCurriculumEligibility(state.curriculumConfig, {
     unitType: "word",
-    itemId: input.lexiconEntry.lemmaId,
+    itemId: input.lexiconEntry.lexemeId,
     bandId: input.learningItem?.bandId ?? null,
-    score: scoreSeedLexiconDifficulty(input.lexiconEntry),
+    score: scoreWordRenderDifficulty(input.lexiconEntry),
     profile: state.learningProfile
   });
 
@@ -1279,7 +1309,7 @@ function shouldActivatePhraseByCurriculum(
   return decision;
 }
 
-function scoreSeedLexiconDifficulty(entry: SeedLexiconEntry): number | null {
+function scoreWordRenderDifficulty(entry: WordRenderEntry): number | null {
   if (typeof entry.frequencyRank !== "number" || !Number.isFinite(entry.frequencyRank)) {
     return null;
   }
@@ -1441,20 +1471,20 @@ async function handlePopoverStatusAction(
 
   try {
     persistedEntry = await persistVocabStatus({
-      lemmaId: detail.lemmaId,
+      lexemeId: detail.lexemeId,
       status
     });
   } catch (error) {
     console.warn("ImmersionKit failed to persist vocab status update.", {
       error,
-      lemmaId: detail.lemmaId,
+      lexemeId: detail.lexemeId,
       status
     });
   }
 
   const updateDetail: TokenStatusUpdatedDetail = {
     tokenId: detail.tokenId,
-    lemmaId: detail.lemmaId,
+    lexemeId: detail.lexemeId,
     status,
     entry: persistedEntry ?? undefined
   };
@@ -2069,12 +2099,12 @@ function clearActiveToken(runtimeState: RuntimeState) {
   runtimeState.activeToken = null;
 }
 
-function applyStatusToLemmaTokens(update: TokenStatusUpdatedDetail) {
+function applyStatusToLexemeTokens(update: TokenStatusUpdatedDetail) {
   const tokens = document.querySelectorAll<HTMLElement>(IMMERSIONKIT_WORD_SELECTOR);
   let anyUpdated = false;
 
   for (const token of tokens) {
-    if (token.getAttribute("data-ik-lemma-id") !== update.lemmaId) {
+    if (token.getAttribute("data-ik-lexeme-id") !== update.lexemeId) {
       continue;
     }
 
@@ -2106,11 +2136,11 @@ function updateRuntimeVocabEntry(
     return;
   }
 
-  const existingEntry = processing.vocabByLemmaId.get(update.lemmaId);
-  processing.vocabByLemmaId.set(
-    update.lemmaId,
+  const existingEntry = processing.vocabByLexemeId.get(update.lexemeId);
+  processing.vocabByLexemeId.set(
+    update.lexemeId,
     update.entry ?? {
-      lemmaId: update.lemmaId,
+      lexemeId: update.lexemeId,
       status: update.status,
       updatedAt: new Date().toISOString(),
       lastSeenAt: existingEntry?.lastSeenAt ?? null,
@@ -2766,7 +2796,7 @@ function collectTokenDecisionSamples(): PageDiagnosticsTokenSample[] {
     .map((token) => ({
       sourceToken: token.getAttribute("data-ik-source-token"),
       targetToken: token.getAttribute("data-ik-target-token"),
-      lemmaId: token.getAttribute("data-ik-lemma-id"),
+      lexemeId: token.getAttribute("data-ik-lexeme-id"),
       unitKind: token.getAttribute("data-ik-unit-kind"),
       wordKind: token.getAttribute("data-ik-word-kind"),
       contextDecision: token.getAttribute("data-ik-context-decision"),

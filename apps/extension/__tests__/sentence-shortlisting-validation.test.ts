@@ -12,7 +12,7 @@ import {
   SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE,
   SENTENCE_SHORTLISTING_PHRASE_HINTS,
   SENTENCE_SHORTLISTING_SCENARIOS,
-  SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID
+  SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID
 } from "../src/validation/sentence-shortlisting-data";
 import { withFixtureDom } from "./helpers/fixture-dom";
 import browserBenchmarkOutput from "../../../fixtures/evals/sentence-shortlisting/browser-benchmark-output.json";
@@ -49,7 +49,7 @@ describe("sentence shortlisting benchmark harness", () => {
         document,
         scenarios: benchmarkScenarios,
         lexicon: SENTENCE_SHORTLISTING_LEXICON,
-        vocabByLemmaId: SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID,
+        vocabByLexemeId: SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID,
         discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
         goldilocksThreshold: SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
         phraseHints: SENTENCE_SHORTLISTING_PHRASE_HINTS,

@@ -31,7 +31,7 @@ describe("background user data repositories", () => {
         }
       });
       await new IndexedDbUserVocabRepository().setStatus({
-        lemmaId: "lemma-city",
+        lexemeId: "lemma-city",
         status: "known",
         updatedAt: "2026-05-07T10:00:00.000Z"
       });
@@ -53,7 +53,7 @@ describe("background user data repositories", () => {
           [
             "lemma-city",
             {
-              lemmaId: "lemma-city",
+              lexemeId: "lemma-city",
               status: "known",
               updatedAt: "2026-05-07T10:00:00.000Z",
               createdAt: "2026-05-07T10:00:00.000Z",

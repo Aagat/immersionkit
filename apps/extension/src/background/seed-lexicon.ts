@@ -4,7 +4,7 @@ import { getBackgroundAssetPackService } from "./asset-packs";
 
 type SeedLexiconBootstrapResult = {
   source: AssetContextLoadSource;
-  entryCount: number;
+  renderUnitCount: number;
   assetVersion: string | null;
 };
 
@@ -12,7 +12,7 @@ export async function ensureSeedLexiconReady(): Promise<SeedLexiconBootstrapResu
   const context = await getBackgroundAssetPackService().loadActiveContext();
   return {
     source: context.source,
-    entryCount: context.lexicon.length,
+    renderUnitCount: context.renderUnits.length,
     assetVersion: context.assetVersion
   };
 }

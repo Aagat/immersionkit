@@ -35,7 +35,6 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache,
-      loadLexicon: () => Promise.resolve(createLexicon()),
       loadRenderUnits: () => Promise.resolve([]),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -84,12 +83,12 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
-      loadLexicon: () =>
-        Promise.resolve([
+      loadRenderUnits: () =>
+        Promise.resolve(createRenderUnits([
           lexiconEntry("lemma-can", "can", "lata", "noun"),
           lexiconEntry("lemma-watch", "watch", "reloj", "noun"),
           lexiconEntry("lemma-plant", "plant", "planta", "noun")
-        ]),
+        ])),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -162,15 +161,15 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
-      loadLexicon: () =>
-        Promise.resolve([
+      loadRenderUnits: () =>
+        Promise.resolve(createRenderUnits([
           lexiconEntry("lemma-need", "need", "necesidad", "noun"),
           lexiconEntry("lemma-this", "this", "este", "adjective"),
           lexiconEntry("lemma-zero", "zero", "cero", "noun"),
           lexiconEntry("lemma-on", "on", "encima", "adverb"),
           lexiconEntry("lemma-up", "up", "arriba", "adverb"),
           lexiconEntry("lemma-stable", "stable", "estable", "adjective")
-        ]),
+        ])),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -202,7 +201,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       learningItems,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () =>
         Promise.resolve(
           new Map([
@@ -264,7 +263,6 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
       loadRenderUnits: () => Promise.resolve(renderUnits),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -335,7 +333,6 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
-      loadLexicon: () => Promise.resolve(createLexicon()),
       loadRenderUnits: () => Promise.resolve(renderUnits),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -404,7 +401,6 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
-      loadLexicon: () => Promise.resolve([]),
       loadRenderUnits: () => Promise.resolve(renderUnits),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -435,7 +431,6 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
-      loadLexicon: () => Promise.resolve([]),
       loadRenderUnits: () => Promise.resolve(renderUnits),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -469,7 +464,6 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache,
-      loadLexicon: () => Promise.resolve([]),
       loadRenderUnits: () => Promise.resolve(renderUnits),
       loadVocab: () => Promise.resolve(new Map())
     });
@@ -504,7 +498,6 @@ describe("background sentence analysis service", () => {
     const service = new SentenceAnalysisService({
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
-      loadLexicon: () => Promise.resolve([]),
       loadRenderUnits: () =>
         Promise.resolve([
           createNeedHelpRenderUnit({
@@ -529,7 +522,7 @@ describe("background sentence analysis service", () => {
     );
   });
 
-  it("resolves runtime phrase targets from exact multiword seed entries", async () => {
+  it("resolves runtime phrase targets from exact multiword render units", async () => {
     const sourceText = "The old city center walls hold quiet memory.";
     const sentenceHash = hashSentence(sourceText);
     const analyzer = createAnalyzer("fixture-v1", () =>
@@ -540,8 +533,8 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () =>
-        Promise.resolve([
+      loadRenderUnits: () =>
+        Promise.resolve(createRenderUnits([
           ...createLexicon(),
           lexiconEntry(
             "phrase-old-city-center-walls",
@@ -549,8 +542,7 @@ describe("background sentence analysis service", () => {
             "murallas del centro antiguo",
             "noun"
           )
-        ]),
-      loadRenderUnits: () => Promise.resolve([]),
+        ])),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -564,8 +556,7 @@ describe("background sentence analysis service", () => {
       category: "noun-chunk",
       targetText: "murallas del centro antiguo",
       normalizedTargetText: "murallas del centro antiguo",
-      phraseId:
-        "phrase:chunk:old-city-center-walls:murallas-del-centro-antiguo"
+      phraseId: "ru:phrase-old-city-center-walls"
     });
     await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
       canonicalTargetText: "murallas del centro antiguo",
@@ -584,7 +575,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -618,7 +609,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -648,7 +639,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -678,7 +669,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -712,7 +703,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -745,7 +736,7 @@ describe("background sentence analysis service", () => {
       analyzer,
       cache: new InMemorySentenceAnalysisCache(),
       phraseRegistry,
-      loadLexicon: () => Promise.resolve(createLexicon()),
+      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
       loadVocab: () => Promise.resolve(new Map())
     });
 
@@ -1252,14 +1243,46 @@ function createLexicon(): SeedLexiconEntry[] {
   ];
 }
 
+function createRenderUnits(entries: readonly SeedLexiconEntry[] = createLexicon()): RenderUnitEntry[] {
+  return entries.map((entry) => {
+    const sourceTokens = entry.sourceLemma.split(/\s+/).filter(Boolean);
+    const normalizedSourceText = entry.sourceLemma.toLowerCase();
+    const normalizedTargetText = entry.targetLemma.toLowerCase();
+    return {
+      renderUnitId: `ru:${entry.lexemeId}`,
+      lexemeIds: [entry.lexemeId],
+      kind: sourceTokens.length === 1 ? "single-token" : "noun-phrase",
+      renderPolicy: "inline",
+      sourceText: entry.sourceLemma,
+      normalizedSourceText,
+      targetText: entry.targetLemma,
+      normalizedTargetText,
+      sourcePattern: {
+        matchMode: "exact",
+        tokens: sourceTokens.map((normal) => ({ normal }))
+      },
+      replacement: {
+        startToken: 0,
+        endToken: sourceTokens.length,
+        targetText: entry.targetLemma
+      },
+      pos: entry.pos,
+      minBand: "level-1a",
+      frequencyRank: entry.frequencyRank,
+      confidence: entry.confidence,
+      provenance: { source: "manual" }
+    } satisfies RenderUnitEntry;
+  });
+}
+
 function lexiconEntry(
-  lemmaId: string,
+  lexemeId: string,
   sourceLemma: string,
   targetLemma: string,
   pos: SeedLexiconEntry["pos"]
 ): SeedLexiconEntry {
   return {
-    lemmaId,
+    lexemeId,
     sourceLemma,
     targetLemma,
     pos,
@@ -1269,11 +1292,11 @@ function lexiconEntry(
 }
 
 function createVocabEntry(
-  lemmaId: string,
+  lexemeId: string,
   status: "new" | "learning" | "known" | "ignored"
 ) {
   return {
-    lemmaId,
+    lexemeId,
     status,
     lastSeenAt: null,
     exposureCount: 0,

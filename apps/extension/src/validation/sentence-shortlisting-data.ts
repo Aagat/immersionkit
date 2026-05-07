@@ -71,7 +71,7 @@ export const SENTENCE_SHORTLISTING_LEXICON: SeedLexiconEntry[] = [
   createEntry("bench-old-adjective", "old", "viejo", "adjective")
 ];
 
-export const SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID: Record<string, VocabStatus> = {
+export const SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID: Record<string, VocabStatus> = {
   "bench-city-noun": "known",
   "bench-garden-noun": "known",
   "bench-guide-noun": "known",
@@ -374,14 +374,14 @@ function buildStressSentences(count: number): string[] {
 }
 
 function createEntry(
-  lemmaId: string,
+  lexemeId: string,
   sourceLemma: string,
   targetLemma: string,
   pos: SeedLexiconEntry["pos"],
   inflections?: string[]
 ): SeedLexiconEntry {
   return {
-    lemmaId,
+    lexemeId,
     sourceLemma,
     targetLemma,
     pos,

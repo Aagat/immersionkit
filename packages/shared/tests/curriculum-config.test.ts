@@ -214,7 +214,7 @@ describe("curriculum configuration", () => {
       evaluateWordCurriculumContentInventory({
         activeContent,
         lexiconEntry: {
-          lemmaId: "en:house:noun",
+          lexemeId: "en:house:noun",
           sourceLemma: "house",
           targetLemma: "casa",
           pos: "noun",
@@ -232,7 +232,7 @@ describe("curriculum configuration", () => {
       evaluateWordCurriculumContentInventory({
         activeContent,
         lexiconEntry: {
-          lemmaId: "en:river:noun",
+          lexemeId: "en:river:noun",
           sourceLemma: "river",
           targetLemma: "rio",
           pos: "noun",
@@ -258,7 +258,7 @@ describe("curriculum configuration", () => {
       evaluateWordCurriculumContentInventory({
         activeContent,
         lexiconEntry: {
-          lemmaId: "en:telescope:noun",
+          lexemeId: "en:telescope:noun",
           sourceLemma: "telescope",
           targetLemma: "telescopio",
           pos: "noun",

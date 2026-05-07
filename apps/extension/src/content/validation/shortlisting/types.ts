@@ -64,7 +64,7 @@ export type SentenceShortlistingBenchmarkInput = {
   document: Document;
   scenarios: readonly SentenceShortlistingScenario[];
   lexicon: readonly SeedLexiconEntry[];
-  vocabByLemmaId: ReadonlyMap<string, VocabStatus> | Record<string, VocabStatus>;
+  vocabByLexemeId: ReadonlyMap<string, VocabStatus> | Record<string, VocabStatus>;
   discoveryRate: number;
   goldilocksThreshold: number;
   phraseHints: readonly string[];

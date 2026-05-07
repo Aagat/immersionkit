@@ -1,4 +1,5 @@
-import type { SeedLexiconEntry, UserVocabEntry } from "@immersionkit/shared";
+import { normalizeToken } from "@immersionkit/shared";
+import type { RenderUnitEntry, UserVocabEntry } from "@immersionkit/shared";
 import type {
   ContextualWordCandidate,
   WordInjectionDecision,
@@ -6,14 +7,14 @@ import type {
 } from "../../../../packages/shared/src/validation/word-injection";
 
 import { processTextNode } from "../content/annotate";
-import { buildLexiconLookup } from "../content/lexicon";
+import { buildWordRenderIndex } from "../content/lexicon";
 
 export type BrowserBaselineDecision = WordInjectionDecisionResult & {
   id: string;
   injectedCount: number;
 };
 
-const VOCAB_BY_LEMMA_ID = new Map<string, UserVocabEntry>();
+const VOCAB_BY_LEXEME_ID = new Map<string, UserVocabEntry>();
 
 export function runLemmaOnlyContentBaseline(
   candidates: ContextualWordCandidate[]
@@ -29,13 +30,13 @@ export function runLemmaOnlyContentBaseline(
     host.append(textNode);
     document.body.append(host);
 
-    const lexiconEntry = buildValidationLexiconEntry(candidate);
+    const renderUnit = buildValidationRenderUnit(candidate);
     const result = processTextNode(textNode, {
       discoveryRate: 1,
       samplingSeed: `validation:${candidate.id}`,
       createNodeId: () => `ik-validation-${nodeSequence++}`,
-      lexiconLookup: buildLexiconLookup([lexiconEntry]),
-      vocabByLemmaId: VOCAB_BY_LEMMA_ID,
+      wordRenderIndex: buildWordRenderIndex([renderUnit]),
+      vocabByLexemeId: VOCAB_BY_LEXEME_ID,
       isKnownWordForScoring: () => true
     });
 
@@ -56,16 +57,41 @@ export function runLemmaOnlyContentBaseline(
   });
 }
 
-function buildValidationLexiconEntry(
+function buildValidationRenderUnit(
   candidate: ContextualWordCandidate
-): SeedLexiconEntry {
+): RenderUnitEntry {
+  const normalizedSourceText = normalizeToken(candidate.candidateLemma);
+  const targetText = candidate.targetLemma;
+  const lexemeId = `validation-${candidate.id}`;
   return {
-    lemmaId: `validation-${candidate.id}`,
-    sourceLemma: candidate.candidateLemma,
-    targetLemma: candidate.targetLemma,
+    renderUnitId: `ru:${lexemeId}`,
+    lexemeIds: [lexemeId],
+    kind: "single-token",
+    renderPolicy: "inline",
+    sourceText: candidate.candidateLemma,
+    normalizedSourceText,
+    targetText,
+    normalizedTargetText: normalizeToken(targetText),
+    sourcePattern: {
+      matchMode: "exact",
+      tokens: [
+        {
+          normal: normalizedSourceText,
+          lemma: normalizedSourceText,
+          pos: candidate.candidatePos
+        }
+      ]
+    },
+    replacement: {
+      startToken: 0,
+      endToken: 1,
+      targetText
+    },
     pos: candidate.candidatePos,
+    minBand: "validation",
     frequencyRank: 1,
     confidence: 0.99,
+    provenance: { source: "manual" },
     inflections: [candidate.tokenText.toLowerCase()]
   };
 }

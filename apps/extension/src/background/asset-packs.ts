@@ -13,7 +13,6 @@ import {
   getRenderUnitSentenceHints,
   parseLexemeAsset,
   parseRenderUnitAsset,
-  renderUnitsToSeedLexiconEntries,
   type ParsedLexemeAsset,
   type ParsedRenderUnitAsset
 } from "../render-units/render-units";
@@ -757,13 +756,11 @@ function createActiveAssetContext(input: {
   assetVersion?: string | null;
 }): ActiveAssetContext {
   const renderUnits = input.packs.flatMap((pack) => pack.renderUnits);
-  const lexemes = input.packs.flatMap((pack) => pack.lexemes);
   const loadedBandIds = new Set(input.packs.map((pack) => pack.bandId));
   const assetVersions = [
     ...new Set(input.packs.map((pack) => pack.assetVersion).filter(Boolean))
   ];
   return {
-    lexicon: renderUnitsToSeedLexiconEntries(renderUnits, lexemes),
     renderUnits,
     sentenceHintPhrases: getRenderUnitSentenceHints(renderUnits),
     source: input.source,

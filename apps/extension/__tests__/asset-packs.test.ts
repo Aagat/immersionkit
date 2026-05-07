@@ -100,9 +100,9 @@ describe("background asset packs", () => {
 
     expect(context.source).toBe("cached-pack");
     expect(context.assetVersion).toBe("asset-old");
-    expect(context.lexicon[0]).toMatchObject({
-      sourceLemma: "city",
-      targetLemma: "ciudad"
+    expect(context.renderUnits[0]).toMatchObject({
+      sourceText: "city",
+      targetText: "ciudad"
     });
     expect(repository.packs.map((pack) => pack.assetVersion)).toEqual(["asset-old"]);
   });
@@ -137,9 +137,9 @@ describe("background asset packs", () => {
     ]);
 
     expect(context.source).toBe("cached-pack");
-    expect(context.lexicon[0]).toMatchObject({
-      sourceLemma: "city",
-      targetLemma: "ciudad"
+    expect(context.renderUnits[0]).toMatchObject({
+      sourceText: "city",
+      targetText: "ciudad"
     });
     expect(manifestRequested).toBe(true);
     expect(repository.packs.map((pack) => pack.assetVersion)).toEqual(["asset-old"]);
@@ -167,7 +167,7 @@ describe("background asset packs", () => {
     const context = await service.loadActiveContext();
 
     expect(context.source).toBe("empty");
-    expect(context.lexicon).toEqual([]);
+    expect(context.renderUnits).toEqual([]);
   });
 
   it("writes valid remote packs before pruning stale cached packs", async () => {
@@ -196,7 +196,7 @@ describe("background asset packs", () => {
     const context = await service.loadActiveContext();
 
     expect(context.source).toBe("remote-pack");
-    expect(context.lexicon).toHaveLength(1);
+    expect(context.renderUnits).toHaveLength(1);
     expect(repository.packs.map((pack) => pack.identity)).toEqual([
       buildAssetPackIdentity(remotePack)
     ]);
@@ -242,7 +242,7 @@ describe("background asset packs", () => {
 
     expect(context.source).toBe("cached-pack");
     expect(context.missingBandIds).toEqual(["level-1a"]);
-    expect(context.lexicon.map((entry) => entry.sourceLemma)).toEqual(["bridge"]);
+    expect(context.renderUnits.map((entry) => entry.sourceText)).toEqual(["bridge"]);
     await waitFor(() =>
       repository.packs.some((pack) => pack.identity === buildAssetPackIdentity(remotePack))
     );

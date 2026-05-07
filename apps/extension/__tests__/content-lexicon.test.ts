@@ -1,35 +1,45 @@
 import { describe, expect, it } from "vitest";
+import { hashSentence } from "@immersionkit/shared";
 
 import { processTextNode } from "../src/content/annotate";
-import { buildLexiconLookup } from "../src/content/lexicon";
+import { buildWordRenderIndex } from "../src/content/lexicon";
+import type { CachedWordRenderDecision } from "../src/content/storage";
+import type { WordRenderEntry } from "../src/render-units/render-units";
 import { withFixtureDom } from "./helpers/fixture-dom";
 
-describe("content lexicon lookup", () => {
-  it("does not register English articles as injectable lexical units", () => {
-    const lookup = buildLexiconLookup([
-      {
-        lemmaId: "en:a:noun",
+type TestWordUnit = {
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  pos: "noun" | "adjective" | "adverb";
+  matchMode?: "exact" | "analyzer-pattern";
+  frequencyRank?: number | null;
+  confidence?: number;
+  inflections?: readonly string[];
+};
+
+describe("content word render index", () => {
+  it("does not register English articles as injectable render units", () => {
+    const lookup = buildWordRenderIndex([
+      wordUnit({
+        lexemeId: "en:a:noun",
         sourceLemma: "a",
         targetLemma: "poquito",
-        pos: "noun",
-        frequencyRank: 1642,
-        confidence: 0.76
-      },
-      {
-        lemmaId: "en:house:noun",
+        pos: "noun"
+      }),
+      wordUnit({
+        lexemeId: "en:house:noun",
         sourceLemma: "house",
         targetLemma: "casa",
-        pos: "noun",
-        frequencyRank: 430,
-        confidence: 0.97
-      }
+        pos: "noun"
+      })
     ]);
 
     expect(lookup.has("a")).toBe(false);
     expect(lookup.get("house")?.targetLemma).toBe("casa");
   });
 
-  it("keeps articles in English while injecting the following lexical noun", async () => {
+  it("keeps articles in English while injecting the following render unit", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const textNode = document.createTextNode("I bought a house near the river.");
       document.body.append(textNode);
@@ -38,25 +48,21 @@ describe("content lexicon lookup", () => {
         discoveryRate: 1,
         samplingSeed: "article-test",
         createNodeId: () => "ikn-article-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:a:noun",
+        wordRenderIndex: buildWordRenderIndex([
+          wordUnit({
+            lexemeId: "en:a:noun",
             sourceLemma: "a",
             targetLemma: "poquito",
-            pos: "noun",
-            frequencyRank: 1642,
-            confidence: 0.76
-          },
-          {
-            lemmaId: "en:house:noun",
+            pos: "noun"
+          }),
+          wordUnit({
+            lexemeId: "en:house:noun",
             sourceLemma: "house",
             targetLemma: "casa",
-            pos: "noun",
-            frequencyRank: 430,
-            confidence: 0.97
-          }
+            pos: "noun"
+          })
         ]),
-        vocabByLemmaId: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false
       });
 
@@ -65,39 +71,10 @@ describe("content lexicon lookup", () => {
     });
   });
 
-  it("keeps sentence-initial discourse markers in English", async () => {
-    await withFixtureDom("article-basic.html", ({ document }) => {
-      const textNode = document.createTextNode("Well, the team worked well.");
-      document.body.append(textNode);
-
-      const result = processTextNode(textNode, {
-        discoveryRate: 1,
-        samplingSeed: "discourse-well-test",
-        createNodeId: () => "ikn-discourse-well-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:well:adverb",
-            sourceLemma: "well",
-            targetLemma: "bien",
-            pos: "adverb",
-            frequencyRank: 48,
-            confidence: 0.94
-          }
-        ]),
-        vocabByLemmaId: new Map(),
-        isKnownWordForScoring: () => false
-      });
-
-      expect(result.contextSkippedCount).toBe(1);
-      expect(document.body.textContent).toContain("Well, the team worked bien.");
-      expect(document.body.textContent).not.toContain("Bien,");
-    });
-  });
-
-  it("keeps context-sensitive surface forms in English before analyzer confirmation", async () => {
+  it("does not pre-render analyzer-pattern single-token units", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const textNode = document.createTextNode(
-        "You might not need to write specs. This creates zero friction. ACIDs rely on stable numbering. The feature boundary is up to you."
+        "Well, the team worked well. This creates zero friction. The stable number remains."
       );
       document.body.append(textNode);
 
@@ -105,101 +82,81 @@ describe("content lexicon lookup", () => {
         discoveryRate: 1,
         samplingSeed: "context-sensitive-word-test",
         createNodeId: () => "ikn-context-sensitive-word-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:need:noun",
-            sourceLemma: "need",
-            targetLemma: "necesidad",
-            pos: "noun",
-            frequencyRank: 594,
-            confidence: 0.97
-          },
-          {
-            lemmaId: "en:this:adjective",
+        wordRenderIndex: buildWordRenderIndex([
+          wordUnit({
+            lexemeId: "en:well:adverb",
+            sourceLemma: "well",
+            targetLemma: "bien",
+            pos: "adverb",
+            matchMode: "analyzer-pattern"
+          }),
+          wordUnit({
+            lexemeId: "en:this:adjective",
             sourceLemma: "this",
             targetLemma: "este",
             pos: "adjective",
-            frequencyRank: 29,
-            confidence: 0.97
-          },
-          {
-            lemmaId: "en:zero:noun",
+            matchMode: "analyzer-pattern"
+          }),
+          wordUnit({
+            lexemeId: "en:zero:noun",
             sourceLemma: "zero",
             targetLemma: "cero",
             pos: "noun",
-            frequencyRank: 1452,
-            confidence: 0.97
-          },
-          {
-            lemmaId: "en:on:adverb",
-            sourceLemma: "on",
-            targetLemma: "encima",
-            pos: "adverb",
-            frequencyRank: 488,
-            confidence: 0.78
-          },
-          {
-            lemmaId: "en:up:adverb",
-            sourceLemma: "up",
-            targetLemma: "arriba",
-            pos: "adverb",
-            frequencyRank: 527,
-            confidence: 0.78
-          },
-          {
-            lemmaId: "en:stable:adjective",
+            matchMode: "analyzer-pattern"
+          }),
+          wordUnit({
+            lexemeId: "en:stable:adjective",
             sourceLemma: "stable",
             targetLemma: "estable",
-            pos: "adjective",
-            frequencyRank: 2632,
-            confidence: 0.97
-          }
+            pos: "adjective"
+          })
         ]),
-        vocabByLemmaId: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false
       });
 
       expect(result.replaced).toBe(true);
-      expect(result.contextSkippedCount).toBe(5);
-      expect(document.body.textContent).toContain("not need to write");
+      expect(document.body.textContent).toContain("Well, the team worked well");
       expect(document.body.textContent).toContain("This creates zero friction");
-      expect(document.body.textContent).toContain("rely on estable numbering");
-      expect(document.body.textContent).toContain("up to you");
-      expect(document.body.textContent).not.toContain("necesidad");
-      expect(document.body.textContent).not.toContain("Este creates");
+      expect(document.body.textContent).toContain("The estable number");
+      expect(document.body.textContent).not.toContain("bien");
+      expect(document.body.textContent).not.toContain("este creates");
       expect(document.body.textContent).not.toContain("cero friction");
-      expect(document.body.textContent).not.toContain("encima estable");
-      expect(document.body.textContent).not.toContain("arriba to you");
     });
   });
 
-  it("still injects need when the local context supports the noun sense", async () => {
+  it("renders analyzer-pattern words after cached analyzer inject decisions", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
-      const textNode = document.createTextNode(
-        "There is a great need for clean water."
-      );
+      const sourceSentence = "There is a great need for clean water.";
+      const textNode = document.createTextNode(sourceSentence);
       document.body.append(textNode);
+      const sentenceHash = hashSentence(sourceSentence);
 
       const result = processTextNode(textNode, {
         discoveryRate: 1,
         samplingSeed: "noun-need-word-test",
         createNodeId: () => "ikn-noun-need-word-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:need:noun",
-            sourceLemma: "need",
-            targetLemma: "necesidad",
-            pos: "noun",
-            frequencyRank: 594,
-            confidence: 0.97
-          }
+        wordRenderIndex: new Map(),
+        cachedWordRenderDecisions: new Map([
+          [
+            sentenceHash,
+            [
+              cachedInjectDecision({
+                sentenceHash,
+                lexemeId: "en:need:noun",
+                sourceLemma: "need",
+                targetLemma: "necesidad",
+                pos: "noun"
+              })
+            ]
+          ]
         ]),
-        vocabByLemmaId: new Map(),
+        sentenceHintPhrases: ["great need for"],
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false
       });
 
       expect(result.replaced).toBe(true);
-      expect(result.contextSkippedCount).toBe(0);
       expect(document.body.textContent).toContain("great necesidad for");
     });
   });
@@ -213,17 +170,8 @@ describe("content lexicon lookup", () => {
         discoveryRate: 1,
         samplingSeed: "curriculum-word-test",
         createNodeId: () => "ikn-curriculum-word-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:telescope:noun",
-            sourceLemma: "telescope",
-            targetLemma: "telescopio",
-            pos: "noun",
-            frequencyRank: 2800,
-            confidence: 0.91
-          }
-        ]),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: buildWordRenderIndex([telescopeUnit()]),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         shouldActivateWord: () => ({
           eligible: false,
@@ -249,17 +197,8 @@ describe("content lexicon lookup", () => {
         discoveryRate: 1,
         samplingSeed: "curriculum-due-word-test",
         createNodeId: () => "ikn-curriculum-due-word-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:telescope:noun",
-            sourceLemma: "telescope",
-            targetLemma: "telescopio",
-            pos: "noun",
-            frequencyRank: 2800,
-            confidence: 0.91
-          }
-        ]),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: buildWordRenderIndex([telescopeUnit()]),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         isDueForReview: () => true,
         shouldActivateWord: () => ({
@@ -285,17 +224,8 @@ describe("content lexicon lookup", () => {
         discoveryRate: 0,
         samplingSeed: "beginner-cognate-word-test",
         createNodeId: () => "ikn-beginner-cognate-word-test",
-        lexiconLookup: buildLexiconLookup([
-          {
-            lemmaId: "en:telescope:noun",
-            sourceLemma: "telescope",
-            targetLemma: "telescopio",
-            pos: "noun",
-            frequencyRank: 2800,
-            confidence: 0.91
-          }
-        ]),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: buildWordRenderIndex([telescopeUnit()]),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         shouldActivateWord: () => ({
           eligible: true,
@@ -308,7 +238,7 @@ describe("content lexicon lookup", () => {
       });
 
       const token = document.querySelector<HTMLElement>(
-        "[data-ik-lemma-id='en:telescope:noun']"
+        "[data-ik-lexeme-id='en:telescope:noun']"
       );
 
       expect(result.replaced).toBe(true);
@@ -319,3 +249,72 @@ describe("content lexicon lookup", () => {
     });
   });
 });
+
+function telescopeUnit() {
+  return wordUnit({
+    lexemeId: "en:telescope:noun",
+    sourceLemma: "telescope",
+    targetLemma: "telescopio",
+    pos: "noun",
+    frequencyRank: 2800,
+    confidence: 0.91
+  });
+}
+
+function wordUnit(input: TestWordUnit) {
+  const matchMode = input.matchMode ?? "exact";
+  return {
+    renderUnitId: `ru:${input.lexemeId}:${matchMode}`,
+    lexemeIds: [input.lexemeId],
+    kind: "single-token",
+    renderPolicy: "inline",
+    sourceText: input.sourceLemma,
+    normalizedSourceText: input.sourceLemma,
+    targetText: input.targetLemma,
+    normalizedTargetText: input.targetLemma,
+    sourcePattern: {
+      matchMode,
+      tokens: [
+        {
+          normal: input.sourceLemma,
+          lemma: input.sourceLemma,
+          pos: input.pos
+        }
+      ]
+    },
+    replacement: {
+      startToken: 0,
+      endToken: 1,
+      targetText: input.targetLemma
+    },
+    pos: input.pos,
+    minBand: "level-1a",
+    frequencyRank: input.frequencyRank ?? 100,
+    confidence: input.confidence ?? 0.97,
+    provenance: { source: "manual" },
+    inflections: input.inflections
+  } as const;
+}
+
+function cachedInjectDecision(input: {
+  sentenceHash: string;
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  pos: WordRenderEntry["pos"];
+}): CachedWordRenderDecision {
+  return {
+    sentenceHash: input.sentenceHash,
+    lexemeId: input.lexemeId,
+    renderUnitId: `ru:${input.lexemeId}:analyzer-pattern`,
+    renderUnitMinBand: "level-1a",
+    normalizedSourceText: input.sourceLemma,
+    normalizedText: input.sourceLemma,
+    targetText: input.targetLemma,
+    candidateLemma: input.sourceLemma,
+    candidatePos: input.pos,
+    confidence: 0.99,
+    decision: "inject",
+    rationale: "Analyzer pattern matched the approved render unit."
+  };
+}

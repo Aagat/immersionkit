@@ -12,7 +12,7 @@ describe("background seed lexicon compatibility wrapper", () => {
       const storageSnapshot = chromeStub.getStorageSnapshot();
 
       expect(["empty", "remote-pack", "cached-pack"]).toContain(result.source);
-      expect(result.entryCount).toBeGreaterThanOrEqual(0);
+      expect(result.renderUnitCount).toBeGreaterThanOrEqual(0);
       expect(storageSnapshot["asset-seed-lexicon"]).toBeUndefined();
       expect(storageSnapshot["asset-render-units"]).toBeUndefined();
       expect(storageSnapshot["asset-lexemes"]).toBeUndefined();

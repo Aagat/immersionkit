@@ -1,11 +1,11 @@
 import { hashString, normalizeToken } from "@immersionkit/shared";
 import type {
   LearningItem,
-  SeedLexiconEntry,
   SentenceAnalysisEntry,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
+import type { WordRenderEntry } from "../render-units/render-units";
 
 import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
@@ -22,18 +22,18 @@ import type {
   TokenStatusUpdatedDetail
 } from "./contracts";
 import { findSentenceForOffset, scoreSentenceCandidates, segmentSentences } from "./sentences";
-import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
-import { preserveWordCasing, segmentText, type TextSegment } from "./tokenize";
+import type { CachedPhraseMatch, CachedWordRenderDecision } from "./storage";
+import { preserveWordCasing, segmentText } from "./tokenize";
 
 export type ProcessTextNodeContext = {
   discoveryRate: number;
   samplingSeed: string;
   createNodeId: () => string;
-  lexiconLookup: Map<string, SeedLexiconEntry>;
-  vocabByLemmaId: Map<string, UserVocabEntry>;
+  wordRenderIndex: Map<string, WordRenderEntry>;
+  vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
-  isDueForReview?: (lemmaId: string) => boolean;
-  cachedContextSkipDecisions?: Map<string, CachedContextSkipDecision[]>;
+  isDueForReview?: (lexemeId: string) => boolean;
+  cachedWordRenderDecisions?: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
   sentenceHintPhrases?: readonly string[];
   learningItemsByUnitRefId?: Map<string, LearningItem>;
@@ -66,7 +66,7 @@ export type ActivationDecision = {
 };
 
 export type WordActivationInput = {
-  lexiconEntry: SeedLexiconEntry;
+  lexiconEntry: WordRenderEntry;
   learningItem: LearningItem | null;
   status: VocabStatus;
   isDueForReview: boolean;
@@ -82,84 +82,6 @@ export type PhraseActivationInput = {
   renderUnitMinBand?: string;
   isDueForReview: boolean;
 };
-
-const ANALYZER_REQUIRED_SINGLE_WORDS = new Set(["like", "on", "up"]);
-const SENTENCE_INITIAL_DISCOURSE_ADVERBS = new Set(["well"]);
-const DEMONSTRATIVE_ADJECTIVE_LEMMAS = new Set([
-  "this",
-  "that",
-  "these",
-  "those"
-]);
-const SUBJECT_PRONOUNS = new Set(["i", "you", "he", "she", "it", "we", "they"]);
-const NEGATION_FORMS = new Set(["not", "never"]);
-const NEED_NOUN_PREVIOUS_CUES = new Set([
-  "a",
-  "an",
-  "any",
-  "clear",
-  "every",
-  "great",
-  "her",
-  "his",
-  "its",
-  "my",
-  "no",
-  "our",
-  "real",
-  "that",
-  "the",
-  "their",
-  "this",
-  "urgent",
-  "your"
-]);
-const NEED_NOUN_NEXT_CUES = new Set(["for", "of"]);
-const MODAL_OR_AUXILIARY_FORMS = new Set([
-  "am",
-  "are",
-  "be",
-  "been",
-  "being",
-  "can",
-  "could",
-  "did",
-  "do",
-  "does",
-  "had",
-  "has",
-  "have",
-  "is",
-  "may",
-  "might",
-  "must",
-  "shall",
-  "should",
-  "was",
-  "were",
-  "will",
-  "would"
-]);
-const COMMON_FINITE_VERBS = new Set([
-  ...MODAL_OR_AUXILIARY_FORMS,
-  "becomes",
-  "comes",
-  "creates",
-  "discourages",
-  "does",
-  "feels",
-  "gets",
-  "goes",
-  "looks",
-  "makes",
-  "means",
-  "needs",
-  "requires",
-  "seems",
-  "supports",
-  "takes",
-  "uses"
-]);
 
 export function processTextNode(
   node: Text,
@@ -334,28 +256,25 @@ function renderTextWindow(input: {
       continue;
     }
 
-    const lexiconEntry = context.lexiconLookup.get(segment.normalized);
-    if (!lexiconEntry) {
+    const sentence = findSentenceForOffset(sentences, segment.start);
+    const cachedInjectDecision = sentence
+      ? findCachedWordRenderDecision({
+          decisionsBySentenceHash: context.cachedWordRenderDecisions,
+          sentenceHash: sentence.hash,
+          sourceToken: segment.value,
+          decision: "inject"
+        })
+      : null;
+    const wordEntry =
+      context.wordRenderIndex.get(segment.normalized) ??
+      createWordEntryFromCachedDecision(cachedInjectDecision);
+    if (!wordEntry) {
       wrapper.append(segment.value);
       cursor = segment.end;
       continue;
     }
 
-    if (
-      shouldSkipLocalWordReplacement({
-        sourceText,
-        segments,
-        segmentIndex,
-        lexiconEntry
-      })
-    ) {
-      wrapper.append(segment.value);
-      contextSkippedCount += 1;
-      cursor = segment.end;
-      continue;
-    }
-
-    const status = getVocabStatus(lexiconEntry.lemmaId, context.vocabByLemmaId);
+    const status = getVocabStatus(wordEntry.lexemeId, context.vocabByLexemeId);
     if (status === "ignored") {
       wrapper.append(segment.value);
       cursor = segment.end;
@@ -363,9 +282,9 @@ function renderTextWindow(input: {
     }
 
     const wordKind: InjectedWordKind = status === "known" ? "known" : "discovery";
-    const isDueForReview = context.isDueForReview?.(lexiconEntry.lemmaId) ?? false;
+    const isDueForReview = context.isDueForReview?.(wordEntry.lexemeId) ?? false;
     const learningItem =
-      context.learningItemsByUnitRefId?.get(lexiconEntry.lemmaId) ?? null;
+      context.learningItemsByUnitRefId?.get(wordEntry.lexemeId) ?? null;
     let activationDecision: ActivationDecision | null = null;
     if (
       status === "new" &&
@@ -373,7 +292,7 @@ function renderTextWindow(input: {
       context.shouldActivateWord
     ) {
       activationDecision = context.shouldActivateWord({
-        lexiconEntry,
+        lexiconEntry: wordEntry,
         learningItem,
         status,
         isDueForReview
@@ -399,12 +318,12 @@ function renderTextWindow(input: {
       continue;
     }
 
-    const sentence = findSentenceForOffset(sentences, segment.start);
     const cachedSkipDecision = sentence
       ? findCachedSkipDecision({
-          decisionsBySentenceHash: context.cachedContextSkipDecisions,
+          decisionsBySentenceHash: context.cachedWordRenderDecisions,
           sentenceHash: sentence.hash,
-          lemmaId: lexiconEntry.lemmaId,
+          lexemeId: wordEntry.lexemeId,
+          renderUnitId: wordEntry.renderUnitId,
           sourceToken: segment.value
         })
       : null;
@@ -415,7 +334,7 @@ function renderTextWindow(input: {
       continue;
     }
 
-    const replacement = preserveWordCasing(segment.value, lexiconEntry.targetLemma);
+    const replacement = preserveWordCasing(segment.value, wordEntry.targetLemma);
     if (sentence) {
       injectedSentenceHashes.add(sentence.hash);
     }
@@ -429,7 +348,7 @@ function renderTextWindow(input: {
       sourceToken: segment.value,
       targetToken: replacement,
       sentence,
-      lexiconEntry,
+      lexiconEntry: wordEntry,
       status,
       wordKind,
       isDueForReview,
@@ -528,174 +447,6 @@ function renderTextWindow(input: {
   };
 }
 
-function shouldSkipLocalWordReplacement(input: {
-  sourceText: string;
-  segments: readonly TextSegment[];
-  segmentIndex: number;
-  lexiconEntry: SeedLexiconEntry;
-}): boolean {
-  const sourceLemma = normalizeToken(input.lexiconEntry.sourceLemma);
-  const segment = input.segments[input.segmentIndex];
-  if (!sourceLemma || !segment || segment.kind !== "word") {
-    return false;
-  }
-
-  const previous = findNeighborWordSegment(input.segments, input.segmentIndex, -1);
-  const next = findNeighborWordSegment(input.segments, input.segmentIndex, 1);
-
-  if (ANALYZER_REQUIRED_SINGLE_WORDS.has(sourceLemma)) {
-    return true;
-  }
-
-  if (
-    SENTENCE_INITIAL_DISCOURSE_ADVERBS.has(sourceLemma) &&
-    input.lexiconEntry.pos === "adverb" &&
-    isLikelySentenceInitialDiscourseMarker({
-      sourceText: input.sourceText,
-      segment,
-      previous,
-      next
-    })
-  ) {
-    return true;
-  }
-
-  if (
-    sourceLemma === "need" &&
-    input.lexiconEntry.pos === "noun" &&
-    isLikelyNeedVerbContext(previous?.normalized, next?.normalized)
-  ) {
-    return true;
-  }
-
-  if (
-    DEMONSTRATIVE_ADJECTIVE_LEMMAS.has(sourceLemma) &&
-    isLikelyDemonstrativePronounContext({
-      sourceText: input.sourceText,
-      segment,
-      next
-    })
-  ) {
-    return true;
-  }
-
-  if (
-    sourceLemma === "zero" &&
-    input.lexiconEntry.pos === "noun" &&
-    next &&
-    !hasPunctuationBetween(input.sourceText, segment.end, next.start)
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function isLikelySentenceInitialDiscourseMarker(input: {
-  sourceText: string;
-  segment: Extract<TextSegment, { kind: "word" }>;
-  previous: Extract<TextSegment, { kind: "word" }> | null;
-  next: Extract<TextSegment, { kind: "word" }> | null;
-}): boolean {
-  if (!input.next) {
-    return false;
-  }
-
-  const beforeNext = input.sourceText.slice(input.segment.end, input.next.start);
-  if (!/^\s*,/.test(beforeNext)) {
-    return false;
-  }
-
-  if (!input.previous) {
-    return true;
-  }
-
-  const beforeSegment = input.sourceText.slice(input.previous.end, input.segment.start);
-  return /[.!?;:]\s*$/.test(beforeSegment);
-}
-
-function isLikelyNeedVerbContext(
-  previous: string | undefined,
-  next: string | undefined
-): boolean {
-  if (next === "to") {
-    return true;
-  }
-
-  if (
-    (next && NEED_NOUN_NEXT_CUES.has(next)) ||
-    (previous && NEED_NOUN_PREVIOUS_CUES.has(previous))
-  ) {
-    return false;
-  }
-
-  if (
-    previous &&
-    (SUBJECT_PRONOUNS.has(previous) ||
-      MODAL_OR_AUXILIARY_FORMS.has(previous) ||
-      NEGATION_FORMS.has(previous))
-  ) {
-    return true;
-  }
-
-  return true;
-}
-
-function isLikelyDemonstrativePronounContext(input: {
-  sourceText: string;
-  segment: Extract<TextSegment, { kind: "word" }>;
-  next: Extract<TextSegment, { kind: "word" }> | null;
-}): boolean {
-  if (!input.next) {
-    return true;
-  }
-
-  if (hasPunctuationBetween(input.sourceText, input.segment.end, input.next.start)) {
-    return true;
-  }
-
-  return (
-    COMMON_FINITE_VERBS.has(input.next.normalized) ||
-    looksLikeThirdPersonVerb(input.next.normalized)
-  );
-}
-
-function findNeighborWordSegment(
-  segments: readonly TextSegment[],
-  segmentIndex: number,
-  direction: -1 | 1
-): Extract<TextSegment, { kind: "word" }> | null {
-  for (
-    let index = segmentIndex + direction;
-    index >= 0 && index < segments.length;
-    index += direction
-  ) {
-    const segment = segments[index];
-    if (segment.kind === "word") {
-      return segment;
-    }
-  }
-
-  return null;
-}
-
-function hasPunctuationBetween(
-  sourceText: string,
-  startOffset: number,
-  endOffset: number
-): boolean {
-  return /[^\s]/.test(sourceText.slice(startOffset, endOffset));
-}
-
-function looksLikeThirdPersonVerb(normalized: string): boolean {
-  return (
-    normalized.length > 3 &&
-    (normalized.endsWith("ates") ||
-      normalized.endsWith("ifies") ||
-      normalized.endsWith("izes"))
-  );
-}
-
 export function restoreAnnotatedNodes(root: ParentNode = document): number {
   const queryRoot = isQueryRoot(root) ? root : document;
 
@@ -740,7 +491,8 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
   const sourceToken = tokenElement.getAttribute("data-ik-source-token");
   const targetToken = tokenElement.getAttribute("data-ik-target-token");
   const sourceLemma = tokenElement.getAttribute("data-ik-source-lemma");
-  const lemmaId = tokenElement.getAttribute("data-ik-lemma-id");
+  const lexemeId = tokenElement.getAttribute("data-ik-lexeme-id");
+  const renderUnitId = tokenElement.getAttribute("data-ik-render-unit-id");
   const pos = tokenElement.getAttribute("data-ik-pos");
   const status = tokenElement.getAttribute("data-ik-status");
   const wordKind = tokenElement.getAttribute("data-ik-word-kind");
@@ -751,7 +503,7 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
     !sourceToken ||
     !targetToken ||
     !sourceLemma ||
-    !lemmaId ||
+    !lexemeId ||
     !pos ||
     !status ||
     !wordKind
@@ -771,8 +523,9 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
     sourceToken,
     targetToken,
     sourceLemma,
-    lemmaId,
-    pos: pos as SeedLexiconEntry["pos"],
+    lexemeId,
+    renderUnitId,
+    pos: pos as WordRenderEntry["pos"],
     status: safeStatus,
     wordKind: safeWordKind,
     sentence: tokenElement.getAttribute("data-ik-sentence"),
@@ -877,13 +630,18 @@ export function applySentenceAnalysisDecisions(
 
   for (const entry of entries) {
     for (const candidate of entry.contextualWordCandidates) {
-      if (candidate.decision !== "skip" || !candidate.lemmaId) {
+      if (candidate.decision !== "skip" || !candidate.lexemeId) {
         continue;
       }
 
-      const tokens = queryRoot.querySelectorAll<HTMLElement>(
-        `[data-ik-sentence-hash='${escapeSelector(entry.sentenceHash)}'][data-ik-lemma-id='${escapeSelector(candidate.lemmaId)}']`
-      );
+      const selector = [
+        `[data-ik-sentence-hash='${escapeSelector(entry.sentenceHash)}']`,
+        `[data-ik-lexeme-id='${escapeSelector(candidate.lexemeId)}']`,
+        candidate.renderUnitId
+          ? `[data-ik-render-unit-id='${escapeSelector(candidate.renderUnitId)}']`
+          : ""
+      ].join("");
+      const tokens = queryRoot.querySelectorAll<HTMLElement>(selector);
 
       for (const token of tokens) {
         if (token.getAttribute("data-ik-context-decision") === "skip") {
@@ -921,7 +679,7 @@ function createTokenElement(input: {
     text: string;
     hash: string;
   } | null;
-  lexiconEntry: SeedLexiconEntry;
+  lexiconEntry: WordRenderEntry;
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
@@ -944,7 +702,12 @@ function createTokenElement(input: {
   element.setAttribute("data-ik-source-token", input.sourceToken);
   element.setAttribute("data-ik-target-token", input.targetToken);
   element.setAttribute("data-ik-source-lemma", input.lexiconEntry.sourceLemma);
-  element.setAttribute("data-ik-lemma-id", input.lexiconEntry.lemmaId);
+  element.setAttribute("data-ik-lexeme-id", input.lexiconEntry.lexemeId);
+  element.setAttribute("data-ik-render-unit-id", input.lexiconEntry.renderUnitId);
+  element.setAttribute(
+    "data-ik-normalized-source-text",
+    input.lexiconEntry.normalizedSourceText
+  );
   element.setAttribute("data-ik-status", input.status);
   element.setAttribute("data-ik-pos", input.lexiconEntry.pos);
   element.setAttribute("data-ik-word-kind", input.wordKind);
@@ -1294,10 +1057,10 @@ function decodeOriginalText(input: string | null): string {
 }
 
 function getVocabStatus(
-  lemmaId: string,
-  vocabByLemmaId: Map<string, UserVocabEntry>
+  lexemeId: string,
+  vocabByLexemeId: Map<string, UserVocabEntry>
 ): VocabStatus {
-  const entry = vocabByLemmaId.get(lemmaId);
+  const entry = vocabByLexemeId.get(lexemeId);
   return entry?.status ?? "new";
 }
 
@@ -1410,12 +1173,49 @@ function normalizeStatus(status: string): VocabStatus {
   return "new";
 }
 
-function findCachedSkipDecision(input: {
-  decisionsBySentenceHash?: Map<string, CachedContextSkipDecision[]>;
+function createWordEntryFromCachedDecision(
+  decision: CachedWordRenderDecision | null
+): WordRenderEntry | null {
+  if (
+    !decision ||
+    decision.decision !== "inject" ||
+    !decision.renderUnitId ||
+    !decision.targetText ||
+    !decision.candidatePos
+  ) {
+    return null;
+  }
+
+  return {
+    lexemeId: decision.lexemeId,
+    renderUnitId: decision.renderUnitId,
+    renderUnitMinBand: decision.renderUnitMinBand ?? "",
+    renderUnitMatchMode: "analyzer-pattern",
+    normalizedSourceText:
+      decision.normalizedSourceText ?? decision.normalizedText,
+    targetText: decision.targetText,
+    sourceLemma:
+      decision.candidateLemma ??
+      decision.normalizedSourceText ??
+      decision.normalizedText,
+    targetLemma: decision.targetText,
+    pos: decision.candidatePos,
+    frequencyRank: null,
+    confidence: decision.confidence ?? 0.9,
+    sourceLanguage: "en",
+    targetLanguage: "es",
+    sourceDataset: "render-units"
+  };
+}
+
+function findCachedWordRenderDecision(input: {
+  decisionsBySentenceHash?: Map<string, CachedWordRenderDecision[]>;
   sentenceHash: string;
-  lemmaId: string;
   sourceToken: string;
-}): CachedContextSkipDecision | null {
+  decision: "inject" | "skip";
+  lexemeId?: string;
+  renderUnitId?: string;
+}): CachedWordRenderDecision | null {
   const decisions = input.decisionsBySentenceHash?.get(input.sentenceHash);
   if (!decisions || decisions.length === 0) {
     return null;
@@ -1424,12 +1224,38 @@ function findCachedSkipDecision(input: {
   const normalizedSourceToken = normalizeToken(input.sourceToken);
   return (
     decisions.find((decision) => {
-      return (
-        decision.lemmaId === input.lemmaId &&
-        normalizeToken(decision.normalizedText) === normalizedSourceToken
-      );
+      if (decision.decision !== input.decision) {
+        return false;
+      }
+
+      if (input.lexemeId && decision.lexemeId !== input.lexemeId) {
+        return false;
+      }
+
+      if (
+        input.renderUnitId &&
+        decision.renderUnitId &&
+        decision.renderUnitId !== input.renderUnitId
+      ) {
+        return false;
+      }
+
+      return normalizeToken(decision.normalizedText) === normalizedSourceToken;
     }) ?? null
   );
+}
+
+function findCachedSkipDecision(input: {
+  decisionsBySentenceHash?: Map<string, CachedWordRenderDecision[]>;
+  sentenceHash: string;
+  lexemeId: string;
+  renderUnitId?: string;
+  sourceToken: string;
+}): CachedWordRenderDecision | null {
+  return findCachedWordRenderDecision({
+    ...input,
+    decision: "skip"
+  });
 }
 
 function escapeSelector(value: string): string {
