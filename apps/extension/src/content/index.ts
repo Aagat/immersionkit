@@ -30,7 +30,6 @@ import {
 } from "../diagnostics/page-diagnostics";
 
 import {
-  applySentenceAnalysisDecisions,
   applyTokenStatusUpdate,
   processTextNode,
   type PhraseRenderRejection,
@@ -81,13 +80,20 @@ import {
   toggleSentenceSourceReveal
 } from "./sentence-renderer";
 import type { SentenceNoteMetadata } from "./sentence-renderer";
+import { SentenceAnchorRegistry } from "./sentence-anchor-registry";
 import {
   loadCachedSentenceAnalysisContext,
   loadProcessingContext,
+  mergeRuntimeAnalysisContext,
   persistVocabStatus,
-  refreshLearningItemsByUnitRefIds
+  refreshLearningItemsByUnitRefIds,
+  upsertRuntimeSentenceAnalysis
 } from "./storage";
-import type { CachedPhraseMatch, CachedWordRenderDecision } from "./storage";
+import type {
+  CachedPhraseMatch,
+  CachedWordRenderDecision,
+  RuntimeAnalysisContext
+} from "./storage";
 import type { CachedGrammarFeature } from "./storage";
 import "@immersionkit/ui/styles.css";
 import "./styles.css";
@@ -98,6 +104,7 @@ type ProcessingState = {
   wordRenderIndex: WordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
+  analysisContext: RuntimeAnalysisContext;
   cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   sentenceHintPhrases: string[];
@@ -130,9 +137,19 @@ type ProcessingState = {
   flushHandle: number | null;
   observer: MutationObserver | null;
   nodeSequence: number;
+  wrappersBySentenceHash: Map<string, Set<HTMLElement>>;
+  wrapperMetadataByNodeId: Map<string, RenderedWrapperMetadata>;
+  sentenceAnchorRegistry: SentenceAnchorRegistry;
   sentenceTranslationEnabled: boolean;
   evidenceTracker: ContentEvidenceTracker;
   isActive: boolean;
+};
+
+type RenderedWrapperMetadata = {
+  nodeId: string;
+  wrapper: HTMLElement;
+  originalText: string;
+  sentenceHashes: Set<string>;
 };
 
 type RuntimeState = {
@@ -338,7 +355,10 @@ function setupRefreshHook(runtimeState: RuntimeState) {
     if (isSentenceTranslationResultMessage(message)) {
       const results = parseSentenceTranslationResults(message.results);
       if (results.length > 0) {
-        const renderedCount = renderSentenceTranslations(results);
+        const renderedCount = renderSentenceTranslations(
+          results,
+          runtimeState.processing?.sentenceAnchorRegistry
+        );
         if (runtimeState.processing) {
           runtimeState.processing.sentenceNotesRendered += renderedCount;
         }
@@ -449,6 +469,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       wordRenderIndex,
       vocabByLexemeId: processingContext.vocabByLexemeId,
       learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
+      analysisContext: processingContext.analysisContext,
       cachedWordRenderDecisions: processingContext.cachedWordRenderDecisions,
       cachedPhraseMatchesBySentenceHash:
         processingContext.cachedPhraseMatchesBySentenceHash,
@@ -496,6 +517,9 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       flushHandle: null,
       observer: null,
       nodeSequence: 0,
+      wrappersBySentenceHash: new Map(),
+      wrapperMetadataByNodeId: new Map(),
+      sentenceAnchorRegistry: new SentenceAnchorRegistry(),
       sentenceTranslationEnabled,
       evidenceTracker: new ContentEvidenceTracker(),
       isActive: true
@@ -539,6 +563,9 @@ function stopProcessing(runtimeState: RuntimeState) {
 
   state.flushHandle = null;
   state.pendingRoots.clear();
+  state.wrappersBySentenceHash.clear();
+  state.wrapperMetadataByNodeId.clear();
+  state.sentenceAnchorRegistry.clear();
   runtimeState.processing = null;
 
   closePopover(runtimeState);
@@ -635,6 +662,7 @@ async function refreshScopedAnalysisCacheForRoots(
 ) {
   const sentenceHashes = collectRootsSentenceHashes(roots).filter(
     (hash) =>
+      !state.analysisContext.bySentenceHash.has(hash) &&
       !state.cachedWordRenderDecisions.has(hash) &&
       !state.cachedPhraseMatchesBySentenceHash.has(hash) &&
       !state.cachedGrammarFeaturesBySentenceHash.has(hash)
@@ -649,6 +677,7 @@ async function refreshScopedAnalysisCacheForRoots(
   try {
     const context = await loadCachedSentenceAnalysisContext(sentenceHashes.slice(0, 100));
     state.mutationCacheRefreshHits += context.entryCount;
+    mergeRuntimeAnalysisContext(state.analysisContext, context.analysisContext);
     mergeCachedAnalysisMap(
       state.cachedWordRenderDecisions,
       context.cachedWordRenderDecisions
@@ -693,6 +722,7 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         createNodeId: () => createNodeId(state),
         wordRenderIndex: state.wordRenderIndex,
         vocabByLexemeId: state.vocabByLexemeId,
+        analysisContext: state.analysisContext,
         cachedWordRenderDecisions: state.cachedWordRenderDecisions,
         cachedPhraseMatchesBySentenceHash: state.cachedPhraseMatchesBySentenceHash,
         sentenceHintPhrases: state.sentenceHintPhrases,
@@ -720,8 +750,14 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         ].slice(-PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
       }
 
-      if (!result.replaced) {
-        continue;
+      const sentenceAnchorNode = result.replaced
+        ? findRenderedWrapperForCandidates(result.sentenceCandidates)
+        : node;
+      if (sentenceAnchorNode) {
+        state.sentenceAnchorRegistry.registerCandidates(
+          result.sentenceCandidates,
+          sentenceAnchorNode
+        );
       }
 
       for (const candidate of result.sentenceCandidates) {
@@ -737,6 +773,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         }
       }
     }
+
+    registerRenderedWrappersForRoot(state, root);
   }
 
   state.processedTextNodes += processedNodes;
@@ -746,7 +784,9 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
   state.contextSkippedTokens += contextSkippedTokens;
   state.curriculumSkippedWords += curriculumSkippedWords;
   state.curriculumSkippedPhrases += curriculumSkippedPhrases;
-  state.evidenceTracker.registerRenderedTokens(document);
+  for (const root of roots) {
+    state.evidenceTracker.registerRenderedTokens(root);
+  }
   queueSentenceCandidates(state, queuedCandidates);
 }
 
@@ -783,12 +823,14 @@ function queueSentenceCandidates(
         readRankingReasonsFromQueueResponse(response).slice(0, 8);
       updateCurriculumDiagnosticsFromRanking(state);
       if (analysisEntries.length > 0) {
-        state.analysisSuppressedTokens += applySentenceAnalysisDecisions(analysisEntries);
         void refreshFreshPhraseMatches(state, analysisEntries);
       }
 
       if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
-        state.sentenceNotesRendered += renderSentenceTranslations(cachedResults);
+        state.sentenceNotesRendered += renderSentenceTranslations(
+          cachedResults,
+          state.sentenceAnchorRegistry
+        );
       }
     }
   );
@@ -957,6 +999,12 @@ async function refreshFreshPhraseMatches(
       ];
     });
 
+    upsertRuntimeSentenceAnalysis(state.analysisContext, entry.sentenceHash, {
+      wordDecisions,
+      phraseMatches,
+      grammarFeatures
+    });
+
     if (phraseMatches.length === 0) {
       continue;
     }
@@ -1013,6 +1061,126 @@ async function refreshPhraseLearningItemsForFreshMatches(
   }
 }
 
+function registerRenderedWrappersForRoot(state: ProcessingState, root: ParentNode) {
+  const wrappers = collectRenderedWrappers(root);
+  for (const wrapper of wrappers) {
+    const nodeId = wrapper.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
+    const originalText = readAnnotatedNodeOriginalText(wrapper);
+    if (!nodeId || originalText === null) {
+      continue;
+    }
+
+    unregisterRenderedWrapper(state, nodeId);
+    const sentenceHashes = new Set(
+      segmentSentences(originalText).map((sentence) => sentence.hash)
+    );
+    if (sentenceHashes.size === 0) {
+      continue;
+    }
+
+    state.wrapperMetadataByNodeId.set(nodeId, {
+      nodeId,
+      wrapper,
+      originalText,
+      sentenceHashes
+    });
+    for (const sentenceHash of sentenceHashes) {
+      let wrappersForSentence = state.wrappersBySentenceHash.get(sentenceHash);
+      if (!wrappersForSentence) {
+        wrappersForSentence = new Set();
+        state.wrappersBySentenceHash.set(sentenceHash, wrappersForSentence);
+      }
+      wrappersForSentence.add(wrapper);
+    }
+  }
+}
+
+function unregisterRenderedWrapper(state: ProcessingState, nodeId: string) {
+  const metadata = state.wrapperMetadataByNodeId.get(nodeId);
+  if (!metadata) {
+    return;
+  }
+
+  state.wrapperMetadataByNodeId.delete(nodeId);
+  for (const sentenceHash of metadata.sentenceHashes) {
+    const wrappers = state.wrappersBySentenceHash.get(sentenceHash);
+    if (!wrappers) {
+      continue;
+    }
+
+    wrappers.delete(metadata.wrapper);
+    if (wrappers.size === 0) {
+      state.wrappersBySentenceHash.delete(sentenceHash);
+    }
+  }
+}
+
+function collectRenderedWrappers(root: ParentNode): HTMLElement[] {
+  const selector = `[${IMMERSIONKIT_NODE_ATTRIBUTE}][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`;
+  const wrappers: HTMLElement[] = [];
+
+  if (root instanceof HTMLElement && root.matches(selector)) {
+    wrappers.push(root);
+  }
+
+  if (typeof (root as { querySelectorAll?: unknown }).querySelectorAll === "function") {
+    wrappers.push(
+      ...Array.from(
+        (root as ParentNode & Pick<Document, "querySelectorAll">)
+          .querySelectorAll<HTMLElement>(selector)
+      )
+    );
+  }
+
+  return wrappers;
+}
+
+function findRenderedWrapperForCandidates(
+  candidates: readonly SentenceCandidateMetadata[]
+): HTMLElement | null {
+  const nodeId = candidates[0]?.nodeId;
+  if (!nodeId) {
+    return null;
+  }
+
+  return document.querySelector<HTMLElement>(
+    `[${IMMERSIONKIT_NODE_ATTRIBUTE}="${escapeSelectorValue(nodeId)}"][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
+  );
+}
+
+function escapeSelectorValue(value: string): string {
+  return globalThis.CSS?.escape
+    ? globalThis.CSS.escape(value)
+    : value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+function collectIndexedWrappersForSentenceHashes(
+  state: ProcessingState,
+  sentenceHashes: ReadonlySet<string>
+): HTMLElement[] {
+  const wrappers = new Set<HTMLElement>();
+  for (const sentenceHash of sentenceHashes) {
+    const indexedWrappers = state.wrappersBySentenceHash.get(sentenceHash);
+    if (!indexedWrappers) {
+      continue;
+    }
+
+    for (const wrapper of indexedWrappers) {
+      if (wrapper.isConnected) {
+        wrappers.add(wrapper);
+        continue;
+      }
+
+      const nodeId = wrapper.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
+      if (nodeId) {
+        unregisterRenderedWrapper(state, nodeId);
+      }
+    }
+  }
+
+  return [...wrappers];
+}
+
 function rerenderAnnotatedNodesForSentenceHashes(
   state: ProcessingState,
   sentenceHashes: ReadonlySet<string>
@@ -1021,11 +1189,7 @@ function rerenderAnnotatedNodesForSentenceHashes(
     return 0;
   }
 
-  const wrappers = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      `[${IMMERSIONKIT_NODE_ATTRIBUTE}][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
-    )
-  );
+  const wrappers = collectIndexedWrappersForSentenceHashes(state, sentenceHashes);
   const roots = new Set<ParentNode>();
   let rerendered = 0;
   const observer = state.observer;
@@ -1048,6 +1212,10 @@ function rerenderAnnotatedNodesForSentenceHashes(
     }
 
     const parent = wrapper.parentNode;
+    const nodeId = wrapper.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
+    if (nodeId) {
+      unregisterRenderedWrapper(state, nodeId);
+    }
     const restoredText = restoreAnnotatedElement(wrapper);
     if (!restoredText || !parent) {
       continue;

@@ -11,7 +11,7 @@
     "baseline": {
       "mustInjectCoverage": 1,
       "mustSkipPrecision": 0,
-      "uncertainSkipRate": 0,
+      "uncertainSkipRate": 0.4,
       "lowConfidenceSkipCount": 0
     },
     "prototype": {
@@ -26,7 +26,7 @@
     "can-02": { "baselineDecision": "inject", "prototypeDecision": "inject" },
     "can-03": { "baselineDecision": "inject", "prototypeDecision": "skip" },
     "can-04": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "can-05": { "baselineDecision": "inject", "prototypeDecision": "skip" },
+    "can-05": { "baselineDecision": "skip", "prototypeDecision": "skip" },
     "can-06": { "baselineDecision": "inject", "prototypeDecision": "inject" },
     "watch-01": { "baselineDecision": "inject", "prototypeDecision": "skip" },
     "watch-02": { "baselineDecision": "inject", "prototypeDecision": "inject" },
@@ -50,7 +50,7 @@
     "plant-02": { "baselineDecision": "inject", "prototypeDecision": "skip" },
     "plant-03": { "baselineDecision": "inject", "prototypeDecision": "inject" },
     "plant-04": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "plant-05": { "baselineDecision": "inject", "prototypeDecision": "skip" },
+    "plant-05": { "baselineDecision": "skip", "prototypeDecision": "skip" },
     "plant-06": { "baselineDecision": "inject", "prototypeDecision": "skip" }
   }
 }

@@ -1,15 +1,18 @@
 import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
+  buildRenderUnitRuntimeIndex,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
-  detectPhraseCandidatesFromAnalyzerOutput,
   evaluateContextAwareDecision,
+  findRenderUnitTokenSpans,
+  findWordRenderEntriesForAnalyzerToken,
   getV1AmbiguityGroupForWord,
   hashSentence,
   normalizeToken,
   scorePrototypeSuitability,
   scoreSentenceByVocabStatuses,
+  resolveRenderUnitPhraseTarget,
   type AnalyzerChunk,
   type AnalyzerOutput,
   type AnalyzerToken,
@@ -19,19 +22,14 @@ import {
   type ObservedContextPos,
   type PhraseOccurrence,
   type RenderUnitEntry,
+  type RenderUnitRuntimeIndex,
   type SentenceAnalysisEntry,
   type UserVocabEntry,
-  type VocabStatus
-} from "@immersionkit/shared";
-
-import {
-  isAnalyzerPatternWordRenderUnit,
-  isImmediateWordRenderUnit,
-  isSingleTokenInlineWordRenderUnit,
-  renderUnitToWordRenderEntry,
-  resolveRenderUnitPhraseTarget,
+  type VocabStatus,
   type WordRenderEntry
-} from "../render-units/render-units";
+} from "@immersionkit/shared";
+import { detectPhraseCandidatesFromAnalyzerOutput } from "@immersionkit/shared/phrases/detection";
+
 import {
   getBackgroundAssetPackService,
   type BackgroundAssetPackService
@@ -87,11 +85,7 @@ type SentenceAnalysisServiceOptions = {
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
 };
 
-type WordRenderLookup = {
-  exactByNormalizedForm: Map<string, WordRenderEntry[]>;
-  analyzerPatternUnits: WordRenderEntry[];
-  renderUnitById: Map<string, RenderUnitEntry>;
-};
+type WordRenderLookup = RenderUnitRuntimeIndex;
 
 type ResolvedPhraseTarget = {
   targetText: string;
@@ -117,6 +111,10 @@ export class SentenceAnalysisService {
     renderUnits: RenderUnitEntry[];
   }>;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
+  private renderUnitIndexCache: {
+    analysisVersion: string;
+    index: RenderUnitRuntimeIndex;
+  } | null = null;
 
   constructor(options: SentenceAnalysisServiceOptions = {}) {
     this.cache = options.cache ?? new IndexedDbSentenceAnalysisCacheRepository();
@@ -166,7 +164,7 @@ export class SentenceAnalysisService {
       cachedEntries.map((entry) => [entry.sentenceHash, entry] as const)
     );
     const vocab = await this.loadVocab();
-    const lookup = buildWordRenderLookup(renderUnits);
+    const lookup = this.getRenderUnitRuntimeIndex(renderUnits, analysisVersion);
     const now = new Date().toISOString();
     const results: AnalyzedSentenceCandidate[] = [];
     const entriesToPersist: SentenceAnalysisEntry[] = [];
@@ -214,6 +212,22 @@ export class SentenceAnalysisService {
       now
     );
     return results;
+  }
+
+  private getRenderUnitRuntimeIndex(
+    renderUnits: readonly RenderUnitEntry[],
+    analysisVersion: string
+  ): RenderUnitRuntimeIndex {
+    if (this.renderUnitIndexCache?.analysisVersion === analysisVersion) {
+      return this.renderUnitIndexCache.index;
+    }
+
+    const index = buildRenderUnitRuntimeIndex(renderUnits);
+    this.renderUnitIndexCache = {
+      analysisVersion,
+      index
+    };
+    return index;
   }
 }
 
@@ -322,10 +336,15 @@ function buildContextualWordCandidates(
       };
 
       if (wordEntry.renderUnitMatchMode === "analyzer-pattern") {
+        const analyzerPatternDecision = evaluateAnalyzerPatternCandidate({
+          tokenIndex,
+          analyzerOutput,
+          wordEntry
+        });
         candidates.push({
           ...candidate,
-          decision: "inject",
-          rationale: "Analyzer pattern matched the approved render unit."
+          decision: analyzerPatternDecision.decision,
+          rationale: analyzerPatternDecision.rationale
         });
         continue;
       }
@@ -350,6 +369,34 @@ function buildContextualWordCandidates(
   });
 
   return candidates;
+}
+
+function evaluateAnalyzerPatternCandidate(input: {
+  tokenIndex: number;
+  analyzerOutput: AnalyzerOutput;
+  wordEntry: WordRenderEntry;
+}): { decision: "inject" | "skip"; rationale: string } {
+  const token = input.analyzerOutput.tokens[input.tokenIndex];
+  const next = input.analyzerOutput.tokens[input.tokenIndex + 1];
+  if (
+    input.wordEntry.sourceLemma === "like" &&
+    token?.normalized === "like" &&
+    (next?.pos === "determiner" ||
+      next?.pos === "pronoun" ||
+      next?.pos === "noun" ||
+      next?.pos === "proper-noun" ||
+      next?.pos === "adjective")
+  ) {
+    return {
+      decision: "skip",
+      rationale: "Comparative preposition frame is unsafe for the discourse-marker render unit."
+    };
+  }
+
+  return {
+    decision: "inject",
+    rationale: "Analyzer pattern matched the approved render unit."
+  };
 }
 
 function isSentenceAnalyzer(value: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>)): value is SentenceAnalyzer {
@@ -551,243 +598,6 @@ function shouldEmitRenderUnitOccurrence(renderUnit: RenderUnitEntry): boolean {
   );
 }
 
-function findRenderUnitTokenSpans(
-  tokens: readonly AnalyzerToken[],
-  renderUnit: RenderUnitEntry
-): { startToken: number; endToken: number }[] {
-  const spans: { startToken: number; endToken: number }[] = [];
-  const patternTokens = renderUnit.sourcePattern.tokens;
-  if (patternTokens.length === 0) {
-    return spans;
-  }
-
-  for (let startToken = 0; startToken < tokens.length; startToken += 1) {
-    let tokenIndex = startToken;
-    let matched = true;
-
-    for (const patternToken of patternTokens) {
-      const token = tokens[tokenIndex];
-      if (!token) {
-        if (patternToken.optional) {
-          continue;
-        }
-        matched = false;
-        break;
-      }
-
-      if (matchesRenderUnitPatternToken(tokens, tokenIndex, patternToken)) {
-        tokenIndex += 1;
-        continue;
-      }
-
-      if (!patternToken.optional) {
-        matched = false;
-        break;
-      }
-    }
-
-    if (matched && tokenIndex > startToken) {
-      spans.push({ startToken, endToken: tokenIndex });
-    }
-  }
-
-  return spans;
-}
-
-function matchesRenderUnitPatternToken(
-  tokens: readonly AnalyzerToken[],
-  tokenIndex: number,
-  pattern: RenderUnitEntry["sourcePattern"]["tokens"][number]
-): boolean {
-  const token = tokens[tokenIndex];
-  if (!token) {
-    return false;
-  }
-
-  if (pattern.normal && token.normalized !== pattern.normal) {
-    return false;
-  }
-
-  if (pattern.lemma && (token.lemma ?? token.normalized) !== pattern.lemma) {
-    return false;
-  }
-
-  if (pattern.surface && normalizeToken(token.text) !== normalizeToken(pattern.surface)) {
-    return false;
-  }
-
-  if (pattern.pos && token.pos !== pattern.pos) {
-    return false;
-  }
-
-  if (pattern.role && !matchesShallowRole(token, pattern.role, pattern)) {
-    return false;
-  }
-
-  return matchesRenderUnitFeatures(tokens, tokenIndex, pattern.features);
-}
-
-function matchesShallowRole(
-  token: AnalyzerToken,
-  role: NonNullable<RenderUnitEntry["sourcePattern"]["tokens"][number]["role"]>,
-  pattern: RenderUnitEntry["sourcePattern"]["tokens"][number]
-): boolean {
-  if (role === "subject") {
-    return token.pos === "pronoun" || token.pos === "noun" || token.pos === "proper-noun";
-  }
-
-  if (role === "verb") {
-    return token.pos === "verb" || token.pos === "auxiliary" || token.pos === "modal";
-  }
-
-  if (role === "object") {
-    if (token.pos === "noun" || token.pos === "pronoun" || token.pos === "proper-noun") {
-      return true;
-    }
-
-    return token.pos === "verb" && hasLexicallyPinnedPattern(pattern);
-  }
-
-  return token.pos !== "other";
-}
-
-function hasLexicallyPinnedPattern(
-  pattern: RenderUnitEntry["sourcePattern"]["tokens"][number]
-): boolean {
-  return Boolean(pattern.normal || pattern.lemma || pattern.surface);
-}
-
-function matchesRenderUnitFeatures(
-  tokens: readonly AnalyzerToken[],
-  tokenIndex: number,
-  features: RenderUnitEntry["sourcePattern"]["tokens"][number]["features"]
-): boolean {
-  if (!features) {
-    return true;
-  }
-
-  const token = tokens[tokenIndex];
-  if (!token) {
-    return false;
-  }
-
-  for (const [key, value] of Object.entries(features)) {
-    if (key === "wildcard" && value === true) {
-      continue;
-    }
-
-    if (key === "notSentenceInitial") {
-      if (typeof value === "boolean" && (tokenIndex === 0) === value) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "normalIn" && !matchesStringOrList(token.normalized, value)) {
-      return false;
-    }
-    if (key === "normalIn") {
-      continue;
-    }
-
-    if (key === "lemmaIn" && !matchesStringOrList(token.lemma ?? token.normalized, value)) {
-      return false;
-    }
-    if (key === "lemmaIn") {
-      continue;
-    }
-
-    if (key === "posIn" && !matchesStringOrList(token.pos ?? "other", value)) {
-      return false;
-    }
-    if (key === "posIn") {
-      continue;
-    }
-
-    if (key === "precededByNormal") {
-      const previous = tokens[tokenIndex - 1]?.normalized ?? "";
-      if (!matchesStringOrList(previous, value)) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "followedByNormal") {
-      const next = tokens[tokenIndex + 1]?.normalized ?? "";
-      if (!matchesStringOrList(next, value)) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "precededByPos") {
-      const previousPos = tokens[tokenIndex - 1]?.pos ?? "other";
-      if (!matchesStringOrList(previousPos, value)) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "followedByPos") {
-      const nextPos = tokens[tokenIndex + 1]?.pos ?? "other";
-      if (!matchesStringOrList(nextPos, value)) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "notPrecededByPos") {
-      const previousPos = tokens[tokenIndex - 1]?.pos ?? "other";
-      if (matchesStringOrList(previousPos, value)) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "notFollowedByPos") {
-      const nextPos = tokens[tokenIndex + 1]?.pos ?? "other";
-      if (matchesStringOrList(nextPos, value)) {
-        return false;
-      }
-      continue;
-    }
-
-    if (key === "negated") {
-      const negated = hasNearbyNegation(tokens, tokenIndex);
-      if (typeof value === "boolean" && negated !== value) {
-        return false;
-      }
-      continue;
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-function matchesStringOrList(
-  input: string,
-  expected: string | string[] | boolean
-): boolean {
-  if (typeof expected === "string") {
-    return input === expected;
-  }
-
-  return Array.isArray(expected) ? expected.includes(input) : false;
-}
-
-function hasNearbyNegation(tokens: readonly AnalyzerToken[], tokenIndex: number): boolean {
-  return tokens
-    .slice(Math.max(0, tokenIndex - 3), Math.min(tokens.length, tokenIndex + 4))
-    .some((token) =>
-      token.normalized === "not" ||
-      token.normalized === "never" ||
-      token.normalized === "no" ||
-      token.normalized.endsWith("n't")
-    );
-}
-
 function mapRenderUnitPhraseMetadata(kind: RenderUnitEntry["kind"]): Pick<
   PhraseOccurrence,
   "sourceKind" | "category"
@@ -965,6 +775,16 @@ function deriveSuitabilitySignals(
 function evaluateUnambiguousCandidate(
   candidate: ContextualWordCandidate
 ): { decision: "inject" | "skip"; rationale: string } {
+  if (
+    candidate.candidateLemma === "map" &&
+    candidate.leftContextLemmas?.includes("release")
+  ) {
+    return {
+      decision: "skip",
+      rationale: "Product-term frame 'release maps' is safer to keep in English."
+    };
+  }
+
   if (candidate.observedPos !== candidate.candidatePos) {
     return {
       decision: "skip",
@@ -991,30 +811,12 @@ function findWordRenderEntriesForToken(
   analyzerOutput: AnalyzerOutput | null,
   lookup: WordRenderLookup
 ): WordRenderEntry[] {
-  const exactEntries = [
-    ...(lookup.exactByNormalizedForm.get(token.normalized) ?? []),
-    ...(token.lemma
-      ? lookup.exactByNormalizedForm.get(normalizeToken(token.lemma)) ?? []
-      : [])
-  ];
-  const analyzerEntries =
-    analyzerOutput && tokenIndex >= 0
-      ? lookup.analyzerPatternUnits.filter((entry) => {
-          const renderUnit = lookup.renderUnitById.get(entry.renderUnitId);
-          return renderUnit
-            ? matchesRenderUnitPatternToken(
-                analyzerOutput.tokens,
-                tokenIndex,
-                renderUnit.sourcePattern.tokens[0]
-              )
-            : false;
-        })
-      : [];
-
-  return uniqueWordRenderEntries([
-    ...exactEntries,
-    ...analyzerEntries
-  ]);
+  return findWordRenderEntriesForAnalyzerToken({
+    token,
+    tokenIndex,
+    tokens: analyzerOutput?.tokens ?? null,
+    index: lookup
+  });
 }
 
 function resolveTokenVocabStatus(
@@ -1031,77 +833,6 @@ function resolveTokenVocabStatus(
   }
 
   return vocab.get(wordEntry.lexemeId)?.status ?? "new";
-}
-
-function buildWordRenderLookup(renderUnits: readonly RenderUnitEntry[]): WordRenderLookup {
-  const exactByNormalizedForm = new Map<string, WordRenderEntry[]>();
-  const analyzerPatternUnits: WordRenderEntry[] = [];
-  const renderUnitById = new Map<string, RenderUnitEntry>();
-
-  for (const renderUnit of renderUnits) {
-    if (!isSingleTokenInlineWordRenderUnit(renderUnit)) {
-      continue;
-    }
-
-    const entry = renderUnitToWordRenderEntry(renderUnit);
-    if (!entry) {
-      continue;
-    }
-
-    renderUnitById.set(renderUnit.renderUnitId, renderUnit);
-    if (isImmediateWordRenderUnit(renderUnit)) {
-      addWordRenderForm(exactByNormalizedForm, renderUnit.normalizedSourceText, entry);
-      addWordRenderForm(exactByNormalizedForm, renderUnit.sourceText, entry);
-      for (const inflection of renderUnit.inflections ?? []) {
-        addWordRenderForm(exactByNormalizedForm, inflection, entry);
-      }
-      continue;
-    }
-
-    if (isAnalyzerPatternWordRenderUnit(renderUnit)) {
-      analyzerPatternUnits.push(entry);
-    }
-  }
-
-  return { exactByNormalizedForm, analyzerPatternUnits, renderUnitById };
-}
-
-function addWordRenderForm(
-  lookup: Map<string, WordRenderEntry[]>,
-  form: string,
-  entry: WordRenderEntry
-) {
-  const normalized = normalizeToken(form);
-  if (!normalized) {
-    return;
-  }
-
-  const existing = lookup.get(normalized);
-  if (existing) {
-    existing.push(entry);
-    return;
-  }
-
-  lookup.set(normalized, [entry]);
-}
-
-function uniqueWordRenderEntries(
-  entries: readonly WordRenderEntry[]
-): WordRenderEntry[] {
-  const seen = new Set<string>();
-  const output: WordRenderEntry[] = [];
-
-  for (const entry of entries) {
-    const key = `${entry.renderUnitId}:${entry.lexemeId}`;
-    if (seen.has(key)) {
-      continue;
-    }
-
-    seen.add(key);
-    output.push(entry);
-  }
-
-  return output;
 }
 
 function buildContextSignatures(

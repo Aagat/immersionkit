@@ -12,10 +12,10 @@ export * from "./text/hash";
 export * from "./text/cognates";
 export * from "./text/normalize";
 export * from "./text/phrases";
+export * from "./text/sentences";
 export * from "./text/tokenize";
+export * from "./replacement/render-units";
 export {
-  CURATED_PHRASE_TARGET_LEXICON,
-  FIXED_PHRASE_LEXICON,
   buildCanonicalPhraseKey,
   detectAdjectiveNounPatterns,
   detectCoherentChunks,
@@ -27,18 +27,22 @@ export {
   detectPhraseCandidates,
   detectPhraseCandidatesFromAnalyzerOutput,
   detectPosBackedNounChunks,
+  materializePhraseTokens,
+  materializePhraseTokensFromAnalyzerOutput,
+  resolveOverlaps
+} from "./phrases/detection";
+export type { AnalyzerPhraseDetectionOptions } from "./phrases/detection";
+export {
+  CURATED_PHRASE_TARGET_LEXICON,
+  FIXED_PHRASE_LEXICON,
   evaluatePhraseDetectorAgainstCorpus,
   evaluatePhraseDetectorAgainstCorpusAsync,
   evaluatePhraseDetectorAgainstCorpusWithLexicon,
   findCaseResult,
   hasOverlappingSelections,
   listPhraseDetectorImplementations,
-  materializePhraseTokens,
-  materializePhraseTokensFromAnalyzerOutput,
-  resolveOverlaps
 } from "./validation/phrases";
 export type {
-  AnalyzerPhraseDetectionOptions,
   CuratedPhraseTargetEntry,
   FixedPhraseLexiconEntry,
   PhraseCandidate,

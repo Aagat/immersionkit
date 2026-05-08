@@ -12,6 +12,10 @@ import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
   IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE
 } from "./constants";
+import type {
+  RegisteredSentenceAnchor,
+  SentenceAnchorRegistry
+} from "./sentence-anchor-registry";
 
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
@@ -49,7 +53,8 @@ export function parseSentenceTranslationResults(
 }
 
 export function renderSentenceTranslations(
-  results: readonly SentenceTranslationResult[]
+  results: readonly SentenceTranslationResult[],
+  anchorRegistry?: SentenceAnchorRegistry
 ): number {
   if (results.length === 0) {
     return 0;
@@ -60,7 +65,7 @@ export function renderSentenceTranslations(
   let renderedCount = 0;
 
   for (const result of dedupedResults) {
-    const anchors = collectSentenceAnchors(result.sentenceHash);
+    const anchors = collectSentenceAnchors(result.sentenceHash, anchorRegistry);
 
     for (const anchor of anchors) {
       const existingNote = findSentenceNote(anchor.nodeId, result.sentenceHash);
@@ -70,12 +75,12 @@ export function renderSentenceTranslations(
         continue;
       }
 
-      if (!spacingGuard.canPlace(anchor.wrapper)) {
+      if (!spacingGuard.canPlace(anchor.node)) {
         continue;
       }
 
       const note = createSentenceNote(result, anchor.nodeId, anchor.sentenceKind);
-      anchor.wrapper.after(note);
+      anchor.node.after(note);
       renderedCount += 1;
     }
   }
@@ -142,10 +147,11 @@ export function clearSentenceTranslations(root: ParentNode = document): number {
 }
 
 function collectSentenceAnchors(
-  sentenceHash: string
+  sentenceHash: string,
+  anchorRegistry?: SentenceAnchorRegistry
 ): {
   nodeId: string;
-  wrapper: HTMLElement;
+  node: ChildNode;
   sentenceKind: "known" | "unknown";
 }[] {
   const escapedHash = escapeSelectorValue(sentenceHash);
@@ -189,11 +195,19 @@ function collectSentenceAnchors(
     }
   }
 
-  return [...anchors.entries()].map(([nodeId, entry]) => ({
-    nodeId,
-    wrapper: entry.wrapper,
-    sentenceKind: entry.hasUnknownToken ? "unknown" : "known"
-  }));
+  const domAnchors: RegisteredSentenceAnchor[] = [...anchors.entries()].map(
+    ([nodeId, entry]) => ({
+      nodeId,
+      node: entry.wrapper,
+      sentenceKind: entry.hasUnknownToken ? "unknown" : "known"
+    })
+  );
+  const existingNodeIds = new Set(domAnchors.map((anchor) => anchor.nodeId));
+  const registeredAnchors = (anchorRegistry?.collect(sentenceHash) ?? []).filter(
+    (anchor): anchor is RegisteredSentenceAnchor => !existingNodeIds.has(anchor.nodeId)
+  );
+
+  return [...domAnchors, ...registeredAnchors];
 }
 
 function findSentenceNote(
@@ -273,14 +287,18 @@ function ensureChild(note: HTMLElement, className: string): HTMLElement {
 }
 
 function createSentenceSpacingGuard(minCharGap: number): {
-  canPlace: (wrapper: HTMLElement) => boolean;
+  canPlace: (node: ChildNode) => boolean;
 } {
   const offsetsByContainer = new Map<HTMLElement, number[]>();
 
   return {
-    canPlace(wrapper) {
-      const container = findSentenceContainer(wrapper);
-      const wrapperOffset = readTextOffsetWithin(container, wrapper);
+    canPlace(node) {
+      if (!(node instanceof HTMLElement)) {
+        return true;
+      }
+
+      const container = findSentenceContainer(node);
+      const wrapperOffset = readTextOffsetWithin(container, node);
       if (wrapperOffset === null) {
         return true;
       }

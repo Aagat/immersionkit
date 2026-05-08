@@ -3,7 +3,6 @@ import {
   RENDER_UNIT_MATCH_MODES,
   RENDER_UNIT_POLICIES,
   RENDER_UNIT_PROVENANCE_SOURCES,
-  SAFE_INJECTION_POS_VALUES,
   SUPPORTED_POS_VALUES,
   normalizeToken,
   type RenderUnitEntry,
@@ -13,8 +12,26 @@ import {
   type RenderUnitProvenanceSource,
   type RenderUnitTokenPattern,
   type LexemeEntry,
-  type SafeInjectionPos,
   type SupportedPos
+} from "@immersionkit/shared";
+
+export {
+  buildRenderUnitRuntimeIndex,
+  findRenderUnitTokenSpans,
+  findWordRenderEntriesForAnalyzerToken,
+  getRenderUnitSentenceHints,
+  isAnalyzerPatternWordRenderUnit,
+  isImmediateWordRenderUnit,
+  isSingleTokenInlineWordRenderUnit,
+  matchesRenderUnitPatternToken,
+  renderUnitToWordRenderEntry,
+  resolveRenderUnitPhraseTarget,
+  uniqueWordRenderEntries
+} from "@immersionkit/shared";
+export type {
+  RenderUnitPhraseTarget,
+  RenderUnitRuntimeIndex,
+  WordRenderEntry
 } from "@immersionkit/shared";
 
 type StorageRecord = Record<string, unknown>;
@@ -31,33 +48,7 @@ export type ParsedLexemeAsset = {
   schemaVersion: string | null;
 };
 
-export type WordRenderEntry = {
-  lexemeId: string;
-  renderUnitId: string;
-  renderUnitMinBand: string;
-  renderUnitMatchMode: RenderUnitMatchMode;
-  normalizedSourceText: string;
-  targetText: string;
-  sourceLemma: string;
-  targetLemma: string;
-  pos: SafeInjectionPos;
-  frequencyRank: number | null;
-  confidence: number;
-  exampleSentenceEnglish?: string;
-  exampleSentenceNative?: string;
-  inflections?: string[];
-  sourceLanguage?: "en";
-  targetLanguage?: "es";
-  sourceDataset?: string;
-};
-
-type RenderUnitPhraseTarget = {
-  targetText: string;
-  normalizedTargetText: string;
-};
-
 const SUPPORTED_POS = new Set<string>(SUPPORTED_POS_VALUES);
-const SAFE_POS = new Set<string>(SAFE_INJECTION_POS_VALUES);
 const RENDER_UNIT_KIND_SET = new Set<string>(RENDER_UNIT_KINDS);
 const RENDER_UNIT_MATCH_MODE_SET = new Set<string>(RENDER_UNIT_MATCH_MODES);
 const RENDER_UNIT_POLICY_SET = new Set<string>(RENDER_UNIT_POLICIES);
@@ -137,143 +128,6 @@ function normalizeLexemeEntry(input: unknown): LexemeEntry | null {
     sourceLanguage: "en",
     targetLanguage: "es",
     sourceDataset: readString(input.sourceDataset) ?? undefined
-  };
-}
-
-export function resolveRenderUnitPhraseTarget(
-  entries: readonly RenderUnitEntry[],
-  normalizedSourceText: string
-): RenderUnitPhraseTarget | null {
-  const normalized = normalizeToken(normalizedSourceText);
-  if (!normalized) {
-    return null;
-  }
-
-  const match = entries.find(
-    (entry) =>
-      entry.kind !== "single-token" &&
-      (entry.renderPolicy === "inline" || entry.renderPolicy === "phrase-only") &&
-      entry.sourcePattern.matchMode === "exact" &&
-      entry.normalizedSourceText === normalized &&
-      hasUsableTarget(entry)
-  );
-
-  if (!match || !match.targetText || !match.normalizedTargetText) {
-    return null;
-  }
-
-  return {
-    targetText: match.targetText,
-    normalizedTargetText: match.normalizedTargetText
-  };
-}
-
-export function getRenderUnitSentenceHints(
-  entries: readonly RenderUnitEntry[]
-): string[] {
-  const hints = new Set<string>();
-  for (const entry of entries) {
-    if (
-      entry.kind === "single-token" ||
-      (entry.renderPolicy !== "sentence-help-only" &&
-        entry.renderPolicy !== "phrase-only" &&
-        entry.renderPolicy !== "inline")
-    ) {
-      continue;
-    }
-
-    const hint = renderUnitHintText(entry);
-    if (hint) {
-      hints.add(hint);
-    }
-  }
-
-  return [...hints];
-}
-
-export function isSingleTokenInlineWordRenderUnit(
-  entry: RenderUnitEntry
-): entry is RenderUnitEntry & {
-  pos: SafeInjectionPos;
-  targetText: string;
-  normalizedTargetText: string;
-} {
-  return (
-    entry.kind === "single-token" &&
-    entry.renderPolicy === "inline" &&
-    entry.sourcePattern.tokens.length === 1 &&
-    SAFE_POS.has(entry.pos ?? "") &&
-    !entry.normalizedSourceText.includes(" ") &&
-    entry.lexemeIds.length > 0 &&
-    hasUsableTarget(entry)
-  );
-}
-
-export function isImmediateWordRenderUnit(
-  entry: RenderUnitEntry
-): entry is RenderUnitEntry & {
-  pos: SafeInjectionPos;
-  targetText: string;
-  normalizedTargetText: string;
-} {
-  return (
-    isSingleTokenInlineWordRenderUnit(entry) &&
-    entry.sourcePattern.matchMode === "exact"
-  );
-}
-
-export function isAnalyzerPatternWordRenderUnit(
-  entry: RenderUnitEntry
-): entry is RenderUnitEntry & {
-  pos: SafeInjectionPos;
-  targetText: string;
-  normalizedTargetText: string;
-} {
-  return (
-    isSingleTokenInlineWordRenderUnit(entry) &&
-    entry.sourcePattern.matchMode === "analyzer-pattern"
-  );
-}
-
-export function renderUnitToWordRenderEntry(
-  entry: RenderUnitEntry,
-  lexemesById: ReadonlyMap<string, LexemeEntry> = new Map()
-): WordRenderEntry | null {
-  if (!isSingleTokenInlineWordRenderUnit(entry)) {
-    return null;
-  }
-
-  const lexemeId = entry.lexemeIds[0];
-  if (!lexemeId) {
-    return null;
-  }
-
-  const lexeme = lexemesById.get(lexemeId);
-  const targetText = entry.replacement?.targetText ?? entry.targetText;
-  if (!targetText.trim()) {
-    return null;
-  }
-
-  return {
-    lexemeId: lexeme?.lexemeId ?? lexemeId,
-    renderUnitId: entry.renderUnitId,
-    renderUnitMinBand: entry.minBand,
-    renderUnitMatchMode: entry.sourcePattern.matchMode,
-    normalizedSourceText: entry.normalizedSourceText,
-    targetText: targetText.trim(),
-    sourceLemma: entry.normalizedSourceText,
-    targetLemma: targetText.trim(),
-    pos: entry.pos,
-    frequencyRank: entry.frequencyRank ?? lexeme?.frequencyRank ?? null,
-    confidence: entry.confidence,
-    exampleSentenceEnglish:
-      entry.exampleSentenceEnglish ?? lexeme?.exampleSentenceEnglish,
-    exampleSentenceNative:
-      entry.exampleSentenceNative ?? lexeme?.exampleSentenceNative,
-    inflections: entry.inflections ?? lexeme?.inflections,
-    sourceLanguage: entry.sourceLanguage ?? "en",
-    targetLanguage: entry.targetLanguage ?? "es",
-    sourceDataset: "render-units"
   };
 }
 
@@ -457,17 +311,6 @@ function readReplacement(input: unknown): RenderUnitEntry["replacement"] | undef
   };
 }
 
-function hasUsableTarget(
-  entry: RenderUnitEntry
-): entry is RenderUnitEntry & { targetText: string; normalizedTargetText: string } {
-  return Boolean(
-    entry.targetText &&
-      entry.targetText.trim().length > 0 &&
-      entry.normalizedTargetText &&
-      entry.normalizedTargetText.trim().length > 0
-  );
-}
-
 function inferPatternPos(tokens: readonly RenderUnitTokenPattern[]): SupportedPos | undefined {
   return tokens.length === 1 ? tokens[0]?.pos : undefined;
 }
@@ -517,21 +360,6 @@ function readRenderUnitRole(
 function readStringSetValue(value: unknown, allowed: ReadonlySet<string>): string | null {
   const text = readString(value);
   return text && allowed.has(text) ? text : null;
-}
-
-function renderUnitHintText(entry: RenderUnitEntry): string | null {
-  const literalSource = entry.sourceText.replace(/\{[^}]+}/g, " ");
-  const sourceHint = normalizeToken(literalSource);
-  if (sourceHint && sourceHint.includes(" ")) {
-    return sourceHint;
-  }
-
-  const patternHint = entry.sourcePattern.tokens
-    .map((token) => token.normal ?? token.lemma ?? token.surface ?? "")
-    .filter(Boolean)
-    .join(" ");
-
-  return patternHint.includes(" ") ? normalizeToken(patternHint) : null;
 }
 
 function readString(value: unknown): string | null {

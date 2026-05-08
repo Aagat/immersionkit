@@ -387,7 +387,8 @@ describe("content inline learning loop", () => {
           });
           expect(
             document.querySelector("[data-ik-render-layer='word phrase-candidate']")
-          ).toBeTruthy();
+          ).toBeNull();
+          expect(document.body.textContent).toContain(sourceSentence);
         } finally {
           chromeStub.restore();
         }

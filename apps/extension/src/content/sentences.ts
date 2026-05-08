@@ -1,10 +1,10 @@
-import { hashSentence, scoreSentenceByKnownWords } from "@immersionkit/shared";
+import {
+  scoreSentenceByKnownWords,
+  segmentRuntimeSentences
+} from "@immersionkit/shared";
 
 import { SENTENCE_FIXED_PHRASE_HINTS } from "./constants";
 import type { SentenceCandidateMetadata } from "./contracts";
-import { normalizeSentenceWords } from "./tokenize";
-
-const SENTENCE_PATTERN = /[^.!?]+[.!?]?/g;
 const MIN_WORDS_PER_SENTENCE = 5;
 const MAX_WORDS_PER_SENTENCE = 32;
 
@@ -29,29 +29,14 @@ export function segmentSentences(
   const segments: SentenceSegment[] = [];
   let phraseHintPatterns: PhraseHintPattern[] | null = null;
 
-  for (const match of text.matchAll(SENTENCE_PATTERN)) {
-    const raw = match[0] ?? "";
-    const normalizedText = normalizeSentenceText(raw);
-    if (!normalizedText) {
-      continue;
-    }
-
-    const words = normalizeSentenceWords(normalizedText);
-    if (words.length < MIN_WORDS_PER_SENTENCE || words.length > MAX_WORDS_PER_SENTENCE) {
-      continue;
-    }
-
-    const start = match.index ?? 0;
-    const end = start + raw.length;
-
+  for (const sentence of segmentRuntimeSentences(text, {
+    minWords: MIN_WORDS_PER_SENTENCE,
+    maxWords: MAX_WORDS_PER_SENTENCE
+  })) {
     segments.push({
-      text: normalizedText,
-      start,
-      end,
-      hash: hashSentence(normalizedText),
-      words,
+      ...sentence,
       phraseHints: findFixedPhraseHints(
-        normalizedText,
+        sentence.text,
         (phraseHintPatterns ??= createPhraseHintPatterns(extraPhraseHints))
       )
     });
@@ -152,8 +137,4 @@ function createPhraseHintPatterns(
       };
     }
   );
-}
-
-function normalizeSentenceText(input: string): string {
-  return input.replace(/\s+/g, " ").trim();
 }

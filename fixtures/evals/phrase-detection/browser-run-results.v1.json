@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-04T22:35:50.002Z",
+  "generatedAt": "2026-05-08T00:02:51.333Z",
   "browserContext": {
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -29,9 +29,9 @@
       "label": "Shared annotated heuristics",
       "inputMode": "fixture-annotated",
       "runtime": {
-        "totalMs": 17,
-        "averageCaseMs": 0.03090909090909091,
-        "casesPerSecond": 32352.941176470587,
+        "totalMs": 5,
+        "averageCaseMs": 0.00909090909090909,
+        "casesPerSecond": 110000,
         "repeatCount": 25
       },
       "overall": {
@@ -153,9 +153,9 @@
       "label": "compromise/three + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 462,
-        "averageCaseMs": 0.84,
-        "casesPerSecond": 1190.4761904761904,
+        "totalMs": 167,
+        "averageCaseMs": 0.30363636363636365,
+        "casesPerSecond": 3293.4131736526942,
         "repeatCount": 25
       },
       "overall": {
@@ -262,9 +262,9 @@
       "label": "wink-nlp + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 45,
-        "averageCaseMs": 0.08181818181818182,
-        "casesPerSecond": 12222.222222222223,
+        "totalMs": 16,
+        "averageCaseMs": 0.02909090909090909,
+        "casesPerSecond": 34375,
         "repeatCount": 25
       },
       "overall": {

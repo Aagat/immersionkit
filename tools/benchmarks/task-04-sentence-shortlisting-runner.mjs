@@ -44,9 +44,8 @@ async function main() {
     await waitForHttpReady(validationUrl, 30_000, server);
 
     await runCommand(pnpmBinary, [
-      "dlx",
+      "exec",
       "playwright",
-      "--",
       "test",
       playwrightSpecPath,
       "--reporter=line",

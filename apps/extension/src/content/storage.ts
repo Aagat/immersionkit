@@ -1,4 +1,4 @@
-import { RuntimeMessageType } from "@immersionkit/shared";
+import { RuntimeMessageType, normalizeToken } from "@immersionkit/shared";
 import type {
   ContentAssetContext,
   CurriculumConfig,
@@ -58,6 +58,7 @@ export type ProcessingContext = {
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   sentenceHintPhrases: string[];
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
+  analysisContext: RuntimeAnalysisContext;
   curriculumConfig: CurriculumConfig;
   learningProfile: CurriculumRuntimeProfileInput;
 };
@@ -67,6 +68,7 @@ export type CachedSentenceAnalysisContext = {
   cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
+  analysisContext: RuntimeAnalysisContext;
 };
 
 export type CachedWordRenderDecision = {
@@ -108,6 +110,20 @@ export type CachedGrammarFeature = Pick<
   "featureId" | "featureKey" | "label" | "category" | "sourceText" | "confidence"
 >;
 
+export type RuntimeSentenceAnalysis = {
+  wordDecisions: CachedWordRenderDecision[];
+  wordDecisionsByToken: Map<string, CachedWordRenderDecision[]>;
+  injectDecisionsByToken: Map<string, CachedWordRenderDecision[]>;
+  skipByLexemeAndToken: Map<string, CachedWordRenderDecision>;
+  phraseMatches: CachedPhraseMatch[];
+  grammarFeatures: CachedGrammarFeature[];
+};
+
+export type RuntimeAnalysisContext = {
+  entryCount: number;
+  bySentenceHash: Map<string, RuntimeSentenceAnalysis>;
+};
+
 export type PersistVocabStatusInput = {
   lexemeId: string;
   status: VocabStatus;
@@ -122,10 +138,8 @@ export async function loadProcessingContext(
 ): Promise<ProcessingContext> {
   const [
     storage,
-    vocabByLexemeId,
     assetContext,
-    sentenceAnalysisContext,
-    learningItemsByUnitRefId
+    sentenceAnalysisContext
   ] = await Promise.all([
     readUserDataValues([
       ...STORAGE_KEYS.settings,
@@ -133,10 +147,16 @@ export async function loadProcessingContext(
       ...STORAGE_KEYS.curriculumConfig,
       ...STORAGE_KEYS.learningProfile
     ]),
-    loadUserVocabByLexemeId(),
     requestActiveAssetContext(),
-    loadCachedSentenceAnalysisContext(sentenceHashes),
-    loadLearningItemsByUnitRefId()
+    loadCachedSentenceAnalysisContext(sentenceHashes)
+  ]);
+  const relevantUnitRefIds = collectRelevantUnitRefIds(
+    assetContext.renderUnits,
+    sentenceAnalysisContext.analysisContext
+  );
+  const [vocabByLexemeId, learningItemsByUnitRefId] = await Promise.all([
+    loadUserVocabByLexemeId(relevantUnitRefIds.lexemeIds),
+    loadLearningItemsByUnitRefId(relevantUnitRefIds.learningUnitRefIds)
   ]);
 
   const rawSettings = pickFirstDefinedValue(storage, STORAGE_KEYS.settings);
@@ -181,6 +201,7 @@ export async function loadProcessingContext(
       sentenceAnalysisContext.cachedPhraseMatchesBySentenceHash,
     cachedGrammarFeaturesBySentenceHash:
       sentenceAnalysisContext.cachedGrammarFeaturesBySentenceHash,
+    analysisContext: sentenceAnalysisContext.analysisContext,
     curriculumConfig: resolveCurriculumConfig(
       isRecord(rawCurriculumConfig)
         ? (rawCurriculumConfig as Partial<CurriculumConfig>)
@@ -194,13 +215,204 @@ export async function loadCachedSentenceAnalysisContext(
   sentenceHashes: readonly string[]
 ): Promise<CachedSentenceAnalysisContext> {
   const sentenceAnalysisCache = await loadCachedSentenceAnalysisEntries(sentenceHashes);
+  const analysisContext = buildRuntimeAnalysisContext(sentenceAnalysisCache);
 
   return {
     entryCount: sentenceAnalysisCache.length,
-    cachedWordRenderDecisions: parseCachedWordRenderDecisions(sentenceAnalysisCache),
-    cachedPhraseMatchesBySentenceHash: parseCachedPhraseMatches(sentenceAnalysisCache),
-    cachedGrammarFeaturesBySentenceHash: parseCachedGrammarFeatures(sentenceAnalysisCache)
+    cachedWordRenderDecisions: mapRuntimeAnalysis(
+      analysisContext,
+      (entry) => entry.wordDecisions
+    ),
+    cachedPhraseMatchesBySentenceHash: mapRuntimeAnalysis(
+      analysisContext,
+      (entry) => entry.phraseMatches
+    ),
+    cachedGrammarFeaturesBySentenceHash: mapRuntimeAnalysis(
+      analysisContext,
+      (entry) => entry.grammarFeatures
+    ),
+    analysisContext
   };
+}
+
+function collectRelevantUnitRefIds(
+  renderUnits: readonly RenderUnitEntry[],
+  analysisContext: RuntimeAnalysisContext
+): {
+  lexemeIds: string[];
+  learningUnitRefIds: string[];
+} {
+  const lexemeIds = new Set<string>();
+  const learningUnitRefIds = new Set<string>();
+
+  for (const renderUnit of renderUnits) {
+    for (const lexemeId of renderUnit.lexemeIds) {
+      if (lexemeId.trim()) {
+        lexemeIds.add(lexemeId);
+        learningUnitRefIds.add(lexemeId);
+      }
+    }
+  }
+
+  for (const analysis of analysisContext.bySentenceHash.values()) {
+    for (const decision of analysis.wordDecisions) {
+      if (decision.lexemeId.trim()) {
+        lexemeIds.add(decision.lexemeId);
+        learningUnitRefIds.add(decision.lexemeId);
+      }
+    }
+
+    for (const phraseMatch of analysis.phraseMatches) {
+      if (phraseMatch.phraseId.trim()) {
+        learningUnitRefIds.add(phraseMatch.phraseId);
+      }
+    }
+
+    for (const grammarFeature of analysis.grammarFeatures) {
+      if (grammarFeature.featureId.trim()) {
+        learningUnitRefIds.add(grammarFeature.featureId);
+      }
+    }
+  }
+
+  return {
+    lexemeIds: [...lexemeIds],
+    learningUnitRefIds: [...learningUnitRefIds]
+  };
+}
+
+export function createEmptyRuntimeAnalysisContext(): RuntimeAnalysisContext {
+  return {
+    entryCount: 0,
+    bySentenceHash: new Map()
+  };
+}
+
+export function buildRuntimeAnalysisContext(input: unknown): RuntimeAnalysisContext {
+  const cachedWordRenderDecisions = parseCachedWordRenderDecisions(input);
+  const cachedPhraseMatchesBySentenceHash = parseCachedPhraseMatches(input);
+  const cachedGrammarFeaturesBySentenceHash = parseCachedGrammarFeatures(input);
+  const sentenceHashes = new Set([
+    ...cachedWordRenderDecisions.keys(),
+    ...cachedPhraseMatchesBySentenceHash.keys(),
+    ...cachedGrammarFeaturesBySentenceHash.keys()
+  ]);
+  const bySentenceHash = new Map<string, RuntimeSentenceAnalysis>();
+
+  for (const sentenceHash of sentenceHashes) {
+    bySentenceHash.set(
+      sentenceHash,
+      buildRuntimeSentenceAnalysis({
+        wordDecisions: cachedWordRenderDecisions.get(sentenceHash) ?? [],
+        phraseMatches: cachedPhraseMatchesBySentenceHash.get(sentenceHash) ?? [],
+        grammarFeatures: cachedGrammarFeaturesBySentenceHash.get(sentenceHash) ?? []
+      })
+    );
+  }
+
+  return {
+    entryCount: readEntryCount(input),
+    bySentenceHash
+  };
+}
+
+export function mergeRuntimeAnalysisContext(
+  target: RuntimeAnalysisContext,
+  source: RuntimeAnalysisContext
+) {
+  target.entryCount += source.entryCount;
+  for (const [sentenceHash, analysis] of source.bySentenceHash) {
+    target.bySentenceHash.set(sentenceHash, analysis);
+  }
+}
+
+export function upsertRuntimeSentenceAnalysis(
+  context: RuntimeAnalysisContext,
+  sentenceHash: string,
+  input: {
+    wordDecisions?: readonly CachedWordRenderDecision[];
+    phraseMatches?: readonly CachedPhraseMatch[];
+    grammarFeatures?: readonly CachedGrammarFeature[];
+  }
+) {
+  const existing = context.bySentenceHash.get(sentenceHash);
+  context.bySentenceHash.set(
+    sentenceHash,
+    buildRuntimeSentenceAnalysis({
+      wordDecisions: [...(input.wordDecisions ?? existing?.wordDecisions ?? [])],
+      phraseMatches: [...(input.phraseMatches ?? existing?.phraseMatches ?? [])],
+      grammarFeatures: [...(input.grammarFeatures ?? existing?.grammarFeatures ?? [])]
+    })
+  );
+}
+
+export function findRuntimeWordDecision(input: {
+  analysisContext?: RuntimeAnalysisContext;
+  sentenceHash: string;
+  sourceToken: string;
+  decision: "inject" | "skip";
+  lexemeId?: string;
+  renderUnitId?: string;
+}): CachedWordRenderDecision | null {
+  const sentenceAnalysis = input.analysisContext?.bySentenceHash.get(input.sentenceHash);
+  if (!sentenceAnalysis) {
+    return null;
+  }
+
+  const normalizedSourceToken = normalizeToken(input.sourceToken);
+  if (!normalizedSourceToken) {
+    return null;
+  }
+
+  if (input.decision === "skip" && input.lexemeId) {
+    const exactSkip = sentenceAnalysis.skipByLexemeAndToken.get(
+      createSkipDecisionKey({
+        lexemeId: input.lexemeId,
+        renderUnitId: input.renderUnitId,
+        normalizedText: normalizedSourceToken
+      })
+    );
+    if (exactSkip) {
+      return exactSkip;
+    }
+
+    const genericSkip = sentenceAnalysis.skipByLexemeAndToken.get(
+      createSkipDecisionKey({
+        lexemeId: input.lexemeId,
+        normalizedText: normalizedSourceToken
+      })
+    );
+    if (genericSkip) {
+      return genericSkip;
+    }
+  }
+
+  const decisions =
+    input.decision === "inject"
+      ? sentenceAnalysis.injectDecisionsByToken.get(normalizedSourceToken) ?? []
+      : sentenceAnalysis.wordDecisionsByToken.get(normalizedSourceToken) ?? [];
+
+  return (
+    decisions.find((decision) => {
+      if (decision.decision !== input.decision) {
+        return false;
+      }
+
+      if (input.lexemeId && decision.lexemeId !== input.lexemeId) {
+        return false;
+      }
+
+      if (
+        input.renderUnitId &&
+        decision.renderUnitId &&
+        decision.renderUnitId !== input.renderUnitId
+      ) {
+        return false;
+      }
+
+      return true;
+    }) ?? null
+  );
 }
 
 export async function persistVocabStatus(
@@ -287,14 +499,23 @@ async function requestUserDataValues(
   });
 }
 
-async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>> {
+async function loadLearningItemsByUnitRefId(
+  unitRefIds?: readonly string[]
+): Promise<Map<string, LearningItem>> {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     return new Map();
   }
 
+  const requestedUnitRefIds = Array.isArray(unitRefIds)
+    ? [...new Set(unitRefIds.map((id) => id.trim()).filter(Boolean))].slice(0, 500)
+    : undefined;
+
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
-      { type: RuntimeMessageType.GetLearningItems },
+      {
+        type: RuntimeMessageType.GetLearningItems,
+        unitRefIds: requestedUnitRefIds
+      },
       (response?: unknown) => {
         if (chrome.runtime.lastError || !isRecord(response) || response.ok !== true) {
           resolve(new Map());
@@ -307,14 +528,23 @@ async function loadLearningItemsByUnitRefId(): Promise<Map<string, LearningItem>
   });
 }
 
-async function loadUserVocabByLexemeId(): Promise<Map<string, UserVocabEntry> | null> {
+async function loadUserVocabByLexemeId(
+  lexemeIds?: readonly string[]
+): Promise<Map<string, UserVocabEntry> | null> {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     return null;
   }
 
+  const requestedLexemeIds = Array.isArray(lexemeIds)
+    ? [...new Set(lexemeIds.map((id) => id.trim()).filter(Boolean))].slice(0, 1000)
+    : undefined;
+
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
-      { type: RuntimeMessageType.GetUserVocab },
+      {
+        type: RuntimeMessageType.GetUserVocab,
+        lexemeIds: requestedLexemeIds
+      },
       (response?: unknown) => {
         if (
           chrome.runtime.lastError ||
@@ -616,6 +846,108 @@ function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
     ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
     ...(unlockedBandIds ? { unlockedBandIds } : {})
   };
+}
+
+function buildRuntimeSentenceAnalysis(input: {
+  wordDecisions: readonly CachedWordRenderDecision[];
+  phraseMatches: readonly CachedPhraseMatch[];
+  grammarFeatures: readonly CachedGrammarFeature[];
+}): RuntimeSentenceAnalysis {
+  const wordDecisions = [...input.wordDecisions];
+  const wordDecisionsByToken = new Map<string, CachedWordRenderDecision[]>();
+  const injectDecisionsByToken = new Map<string, CachedWordRenderDecision[]>();
+  const skipByLexemeAndToken = new Map<string, CachedWordRenderDecision>();
+
+  for (const decision of wordDecisions) {
+    const normalizedText = normalizeToken(decision.normalizedText);
+    if (!normalizedText) {
+      continue;
+    }
+
+    appendRuntimeAnalysisValue(wordDecisionsByToken, normalizedText, decision);
+    if (decision.decision === "inject") {
+      appendRuntimeAnalysisValue(injectDecisionsByToken, normalizedText, decision);
+      continue;
+    }
+
+    skipByLexemeAndToken.set(
+      createSkipDecisionKey({
+        lexemeId: decision.lexemeId,
+        renderUnitId: decision.renderUnitId,
+        normalizedText
+      }),
+      decision
+    );
+    skipByLexemeAndToken.set(
+      createSkipDecisionKey({
+        lexemeId: decision.lexemeId,
+        normalizedText
+      }),
+      decision
+    );
+  }
+
+  return {
+    wordDecisions,
+    wordDecisionsByToken,
+    injectDecisionsByToken,
+    skipByLexemeAndToken,
+    phraseMatches: [...input.phraseMatches],
+    grammarFeatures: [...input.grammarFeatures]
+  };
+}
+
+function appendRuntimeAnalysisValue<T>(
+  map: Map<string, T[]>,
+  key: string,
+  value: T
+) {
+  const existing = map.get(key);
+  if (existing) {
+    existing.push(value);
+    return;
+  }
+
+  map.set(key, [value]);
+}
+
+function createSkipDecisionKey(input: {
+  lexemeId: string;
+  renderUnitId?: string;
+  normalizedText: string;
+}): string {
+  return [
+    input.lexemeId,
+    input.renderUnitId ?? "",
+    normalizeToken(input.normalizedText)
+  ].join("\u0000");
+}
+
+function mapRuntimeAnalysis<T>(
+  context: RuntimeAnalysisContext,
+  select: (entry: RuntimeSentenceAnalysis) => readonly T[]
+): Map<string, T[]> {
+  const output = new Map<string, T[]>();
+  for (const [sentenceHash, entry] of context.bySentenceHash) {
+    const values = [...select(entry)];
+    if (values.length > 0) {
+      output.set(sentenceHash, values);
+    }
+  }
+
+  return output;
+}
+
+function readEntryCount(input: unknown): number {
+  if (Array.isArray(input)) {
+    return input.length;
+  }
+
+  if (isRecord(input)) {
+    return Object.keys(input).length;
+  }
+
+  return 0;
 }
 
 function parseCachedWordRenderDecisions(
