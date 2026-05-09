@@ -67,7 +67,7 @@ const QUALITY_SAMPLE_LIMIT = 32;
 
 const textEncoder = new TextEncoder();
 
-export async function runNlpPerformanceSpikeBenchmark(
+export async function runNlpAnalyzerPerformanceBenchmark(
   options: BenchmarkRunOptions = {}
 ): Promise<NlpPerformanceBenchmarkRun> {
   const includeWinkNlp = options.includeWinkNlp ?? true;

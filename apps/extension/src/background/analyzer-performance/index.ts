@@ -1,6 +1,6 @@
 export {
   createPortableSnapshots,
-  runNlpPerformanceSpikeBenchmark
+  runNlpAnalyzerPerformanceBenchmark
 } from "./benchmark";
 export {
   loadNlpPerformanceFixtures,

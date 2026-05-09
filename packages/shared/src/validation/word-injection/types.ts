@@ -34,13 +34,13 @@ export type WordInjectionCaseEvaluation = {
   candidate: ContextualWordCandidate;
   expectedDecision: WordInjectionDecision;
   baseline: WordInjectionDecisionResult;
-  prototype: WordInjectionDecisionResult;
+  contextAware: WordInjectionDecisionResult;
   baselineCorrect: boolean;
-  prototypeCorrect: boolean;
+  contextAwareCorrect: boolean;
 };
 
 export type WordInjectionStrategyMetrics = {
-  name: "baseline" | "prototype";
+  name: "baseline" | "context-aware";
   totalCases: number;
   correctCases: number;
   accuracy: number;
@@ -61,7 +61,7 @@ export type WordInjectionEvaluationSummary = {
   uncertainSkipCount: number;
   perCase: WordInjectionCaseEvaluation[];
   baseline: WordInjectionStrategyMetrics;
-  prototype: WordInjectionStrategyMetrics;
+  contextAware: WordInjectionStrategyMetrics;
 };
 
 export type WordInjectionLibraryImplementationId =

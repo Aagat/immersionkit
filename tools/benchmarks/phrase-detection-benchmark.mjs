@@ -15,7 +15,7 @@ const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectory = path.dirname(currentFilePath);
 const projectRoot = path.resolve(currentDirectory, "../..");
 const require = createRequire(import.meta.url);
-const { validateTask03Payload } = require("./benchmark-gates.cjs");
+const { validatePhraseDetectionPayload } = require("./benchmark-gates.cjs");
 
 const host = process.env.IK_VALIDATION_HOST ?? "127.0.0.1";
 const configuredPort = process.env.IK_VALIDATION_PORT
@@ -24,7 +24,7 @@ const configuredPort = process.env.IK_VALIDATION_PORT
 const basePort = configuredPort ?? 5173;
 const validationPath =
   process.env.IK_VALIDATION_PATH ??
-  "/validation.html?task=phrase-detection&autorun=1";
+  "/validation.html?lane=phrase-detection&autorun=1";
 const outputPath = path.resolve(
   projectRoot,
   "fixtures/evals/phrase-detection/browser-run-results.v1.json"
@@ -40,13 +40,13 @@ try {
   const selectedPort = await choosePort(host, basePort, configuredPort !== undefined);
   const validationUrl = `http://${host}:${selectedPort}${validationPath}`;
 
-  log(`Starting extension dev server for Task 03 benchmark on ${host}:${selectedPort}...`);
+  log(`Starting extension dev server for phrase detection benchmark on ${host}:${selectedPort}...`);
   devServerProcess = startDevServer(host, selectedPort, configuredPort !== undefined);
   await waitForHttpReady(validationUrl, 45_000);
 
   const playwright = await loadPlaywright();
   const payload = await runBrowserValidation(playwright, validationUrl);
-  payload.benchmarkGates = validateTask03Payload(payload);
+  payload.benchmarkGates = validatePhraseDetectionPayload(payload);
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
@@ -71,10 +71,10 @@ try {
     );
   }
 
-  log("Task 03 benchmark finished successfully.");
+  log("Phrase detection benchmark finished successfully.");
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`\n[task-03] Benchmark failed: ${message}`);
+  console.error(`\n[phrase-detection] Benchmark failed: ${message}`);
   process.exitCode = 1;
 } finally {
   await shutdown();
@@ -161,7 +161,7 @@ function startDevServer(serverHost, serverPort, strictPort) {
 
     const output = String(chunk).trim();
     if (output.length > 0) {
-      console.log(`[task-03][dev] ${output}`);
+      console.log(`[phrase-detection][dev] ${output}`);
     }
   });
 
@@ -172,13 +172,13 @@ function startDevServer(serverHost, serverPort, strictPort) {
 
     const output = String(chunk).trim();
     if (output.length > 0) {
-      console.error(`[task-03][dev] ${output}`);
+      console.error(`[phrase-detection][dev] ${output}`);
     }
   });
 
   child.on("exit", (code) => {
     if (!shuttingDown && code !== 0) {
-      console.error(`[task-03] Dev server exited unexpectedly with code ${code}.`);
+      console.error(`[phrase-detection] Dev server exited unexpectedly with code ${code}.`);
     }
   });
 
@@ -331,7 +331,7 @@ function resolveBrowserExecutable() {
 
 function printSummary(payload) {
   console.log("");
-  console.log("[task-03] Browser benchmark summary");
+  console.log("[phrase-detection] Browser benchmark summary");
 
   const implementations = Array.isArray(payload?.implementations)
     ? payload.implementations
@@ -398,7 +398,7 @@ async function stopDevServer(child) {
 }
 
 function log(message) {
-  console.log(`[task-03] ${message}`);
+  console.log(`[phrase-detection] ${message}`);
 }
 
 function sleep(ms) {

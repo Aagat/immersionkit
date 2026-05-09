@@ -1,6 +1,6 @@
 export type BenchmarkDatasetId = "synthetic" | "fixture-pages" | "cache-replay";
 
-export type AnalyzerId = "compromise-two" | "compromise-three" | "wink-nlp";
+export type AnalyzerId = "compromise-three" | "wink-nlp";
 
 export type NlpBenchmarkInputProfile =
   | "tiny"

@@ -1,8 +1,8 @@
 {
   "metadata": {
     "schemaVersion": "1.1.0",
-    "generatedAt": "2026-05-08T00:02:58.704Z",
-    "taskId": "task-04-sentence-shortlisting",
+    "generatedAt": "2026-05-09T18:15:40.310Z",
+    "laneId": "sentence-shortlisting",
     "canonicalCommand": "pnpm benchmark",
     "inputProfile": "baseline",
     "sourceOfTruth": "browser-run-validation",
@@ -41,8 +41,8 @@
       "falseNegatives": []
     },
     {
-      "policyId": "current-injected-token-gated",
-      "policyLabel": "Current Injected-Token-Gated Flow",
+      "policyId": "legacy-injected-token-gated",
+      "policyLabel": "Legacy Injected-Token-Gated Flow",
       "shortlistedCandidates": 23,
       "uniqueSentenceHashes": 20,
       "estimatedAnalysisCalls": 20,
@@ -119,8 +119,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 5,
           "uniqueSentenceHashes": 5,
           "estimatedAnalysisCalls": 5,
@@ -187,8 +187,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 3,
           "uniqueSentenceHashes": 3,
           "estimatedAnalysisCalls": 3,
@@ -255,8 +255,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 5,
           "uniqueSentenceHashes": 5,
           "estimatedAnalysisCalls": 5,
@@ -323,8 +323,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 3,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -391,8 +391,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 2,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -463,8 +463,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 0,
           "uniqueSentenceHashes": 0,
           "estimatedAnalysisCalls": 0,
@@ -535,8 +535,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 1,
           "uniqueSentenceHashes": 1,
           "estimatedAnalysisCalls": 1,
@@ -609,8 +609,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 4,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -657,12 +657,12 @@
     {
       "id": "analysis-calls-reduced-vs-baseline",
       "passed": true,
-      "message": "Current injected-token-gated flow should not exceed baseline analysis calls."
+      "message": "Legacy injected-token-gated flow should not exceed baseline analysis calls."
     },
     {
-      "id": "length-dedupe-reduces-or-matches-current-calls",
+      "id": "length-dedupe-reduces-or-matches-legacy-calls",
       "passed": true,
-      "message": "Injected + length + dedupe should not require more analysis calls than current flow."
+      "message": "Injected + length + dedupe should not require more analysis calls than the legacy flow."
     },
     {
       "id": "phrase-aware-does-not-increase-false-negatives",
@@ -679,46 +679,46 @@
     "pass": true,
     "checks": [
       {
-        "id": "task-04-provenance-generated-at-present",
+        "id": "sentence-shortlisting-provenance-generated-at-present",
         "passed": true,
-        "message": "Task 04 artifact should include metadata.generatedAt."
+        "message": "Sentence shortlisting artifact should include metadata.generatedAt."
       },
       {
-        "id": "task-04-provenance-browser-context-present",
+        "id": "sentence-shortlisting-provenance-browser-context-present",
         "passed": true,
-        "message": "Task 04 artifact should include browser user-agent provenance."
+        "message": "Sentence shortlisting artifact should include browser user-agent provenance."
       },
       {
-        "id": "task-04-browser-assertion-analysis-calls-reduced-vs-baseline",
+        "id": "sentence-shortlisting-browser-assertion-analysis-calls-reduced-vs-baseline",
         "passed": true,
-        "message": "Current injected-token-gated flow should not exceed baseline analysis calls."
+        "message": "Legacy injected-token-gated flow should not exceed baseline analysis calls."
       },
       {
-        "id": "task-04-browser-assertion-length-dedupe-reduces-or-matches-current-calls",
+        "id": "sentence-shortlisting-browser-assertion-length-dedupe-reduces-or-matches-legacy-calls",
         "passed": true,
-        "message": "Injected + length + dedupe should not require more analysis calls than current flow."
+        "message": "Injected + length + dedupe should not require more analysis calls than the legacy flow."
       },
       {
-        "id": "task-04-browser-assertion-phrase-aware-does-not-increase-false-negatives",
+        "id": "sentence-shortlisting-browser-assertion-phrase-aware-does-not-increase-false-negatives",
         "passed": true,
         "message": "Phrase-aware shortlist should keep or reduce obvious false negatives."
       },
       {
-        "id": "task-04-browser-assertion-rerender-cache-hits-observed",
+        "id": "sentence-shortlisting-browser-assertion-rerender-cache-hits-observed",
         "passed": true,
         "message": "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
       },
       {
-        "id": "task-04-phrase-aware-call-savings",
+        "id": "sentence-shortlisting-phrase-aware-call-savings",
         "passed": true,
         "actual": 0.4358974358974359,
         "minimum": 0.34,
-        "message": "Task 04 phrase-aware shortlist should preserve at least the current 34% analysis-call savings. Actual 0.435897, minimum 0.340000."
+        "message": "Phrase-aware shortlist should preserve at least 34% analysis-call savings. Actual 0.435897, minimum 0.340000."
       },
       {
-        "id": "task-04-phrase-aware-reduces-false-negatives",
+        "id": "sentence-shortlisting-phrase-aware-reduces-false-negatives",
         "passed": true,
-        "message": "Task 04 phrase-aware shortlist should reduce false negatives relative to injected-token length+dedupe."
+        "message": "Phrase-aware shortlist should reduce false negatives relative to injected-token length+dedupe."
       }
     ],
     "failures": []

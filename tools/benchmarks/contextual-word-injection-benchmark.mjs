@@ -12,9 +12,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "../..");
 const require = createRequire(import.meta.url);
-const { validateTask02Payload } = require("./benchmark-gates.cjs");
+const { validateWordInjectionPayload } = require("./benchmark-gates.cjs");
 const VALIDATION_URL =
-  "http://127.0.0.1:5174/validation.html?task=contextual-word-injection&autorun=1";
+  "http://127.0.0.1:5174/validation.html?lane=contextual-word-injection&autorun=1";
 const OUTPUT_PATH = path.resolve(
   REPO_ROOT,
   "fixtures/evals/word-injection/browser-run-results.v1.json"
@@ -29,7 +29,7 @@ try {
 
   const playwright = await loadPlaywright();
   const runPayload = await runBrowserValidation(playwright);
-  runPayload.benchmarkGates = validateTask02Payload(runPayload);
+  runPayload.benchmarkGates = validateWordInjectionPayload(runPayload);
 
   await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await writeFile(OUTPUT_PATH, `${JSON.stringify(runPayload, null, 2)}\n`, "utf8");
@@ -37,7 +37,7 @@ try {
   const summary = runPayload.result?.summary;
   const checks = runPayload.result?.checks;
 
-  console.log("Task 02 benchmark completed.");
+  console.log("Contextual word injection benchmark completed.");
   console.log(`Validation URL: ${VALIDATION_URL}`);
   console.log(`Output artifact: ${OUTPUT_PATH}`);
   if (summary) {
@@ -46,10 +46,10 @@ try {
       `Baseline must-skip precision: ${formatPercent(summary.baseline.mustSkipPrecision)}`
     );
     console.log(
-      `Prototype must-skip precision: ${formatPercent(summary.prototype.mustSkipPrecision)}`
+      `Context-aware must-skip precision: ${formatPercent(summary.contextAware.mustSkipPrecision)}`
     );
     console.log(
-      `Prototype must-inject coverage: ${formatPercent(summary.prototype.mustInjectCoverage)}`
+      `Context-aware must-inject coverage: ${formatPercent(summary.contextAware.mustInjectCoverage)}`
     );
   }
 
@@ -67,7 +67,7 @@ try {
     console.log("Parser-backed comparison lanes:");
     for (const comparison of runPayload.result.comparisons) {
       console.log(
-        `- ${comparison.implementationId}: prototype accuracy ${formatPercent(comparison.summary.prototype.accuracy)}, must-inject ${formatPercent(comparison.summary.prototype.mustInjectCoverage)}, must-skip ${formatPercent(comparison.summary.prototype.mustSkipPrecision)}, avg case ${comparison.runtime.averageCaseMs.toFixed(4)} ms`
+        `- ${comparison.implementationId}: context-aware accuracy ${formatPercent(comparison.summary.contextAware.accuracy)}, must-inject ${formatPercent(comparison.summary.contextAware.mustInjectCoverage)}, must-skip ${formatPercent(comparison.summary.contextAware.mustSkipPrecision)}, avg case ${comparison.runtime.averageCaseMs.toFixed(4)} ms`
       );
     }
   }
@@ -85,7 +85,7 @@ try {
   }
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`Task 02 benchmark failed: ${message}`);
+  console.error(`Contextual word injection benchmark failed: ${message}`);
   process.exitCode = 1;
 } finally {
   await stopValidationServer(serverProcess);
@@ -112,23 +112,23 @@ function startValidationServer() {
   child.stdout?.on("data", (chunk) => {
     const text = String(chunk);
     if (text.includes("ready in") || text.includes("Local:")) {
-      process.stdout.write(`[task-02:vite] ${text}`);
+      process.stdout.write(`[word-injection:vite] ${text}`);
     }
   });
 
   child.stderr?.on("data", (chunk) => {
-    process.stderr.write(`[task-02:vite] ${String(chunk)}`);
+    process.stderr.write(`[word-injection:vite] ${String(chunk)}`);
   });
 
   child.on("exit", (code, signal) => {
     if (code !== null && code !== 0) {
       process.stderr.write(
-        `[task-02:vite] exited unexpectedly with code ${code}.\n`
+        `[word-injection:vite] exited unexpectedly with code ${code}.\n`
       );
     }
 
     if (signal) {
-      process.stderr.write(`[task-02:vite] exited with signal ${signal}.\n`);
+      process.stderr.write(`[word-injection:vite] exited with signal ${signal}.\n`);
     }
   });
 

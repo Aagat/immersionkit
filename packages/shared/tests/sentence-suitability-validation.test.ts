@@ -70,8 +70,8 @@ describe("sentence suitability ranking", () => {
     }).filter((result) => result.profileId === "beginner_a2");
 
     const awkwardIds = new Set(["s09_nested_city_team", "s10_person_called_yesterday"]);
-    const topFivePrototype = beginner.prototypeOrder.slice(0, 5);
+    const topFiveSuitability = beginner.suitabilityOrder.slice(0, 5);
 
-    expect(topFivePrototype.some((id) => awkwardIds.has(id))).toBe(false);
+    expect(topFiveSuitability.some((id) => awkwardIds.has(id))).toBe(false);
   });
 });

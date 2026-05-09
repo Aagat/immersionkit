@@ -39,7 +39,7 @@ async function run() {
 
   try {
     const page = await browser.newPage();
-    const benchmarkUrl = `http://127.0.0.1:${port}/validation.html?task=nlp-performance&autorun=1&inputProfile=${encodeURIComponent(
+    const benchmarkUrl = `http://127.0.0.1:${port}/validation.html?lane=nlp-performance&autorun=1&inputProfile=${encodeURIComponent(
       inputProfile
     )}${includeWinkNlp ? "" : "&includeWink=0"}`;
 

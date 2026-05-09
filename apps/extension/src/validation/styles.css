@@ -68,23 +68,23 @@ body {
   color: var(--ik-muted);
 }
 
-.task-card {
+.lane-card {
   border: 1px solid var(--ik-border);
   border-radius: 10px;
   padding: 14px;
 }
 
-.task-card h2 {
+.lane-card h2 {
   margin: 0 0 8px;
   font-size: 1.1rem;
 }
 
-.task-card p {
+.lane-card p {
   margin: 0;
   color: var(--ik-muted);
 }
 
-.task-link {
+.lane-link {
   margin-top: 10px;
   display: inline-block;
   font-weight: 700;

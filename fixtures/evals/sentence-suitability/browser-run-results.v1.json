@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-05-08T00:03:06.980Z",
-  "validationUrl": "http://127.0.0.1:5173/validation.html?task=sentence-suitability&autorun=1",
+  "capturedAt": "2026-05-09T18:15:48.702Z",
+  "validationUrl": "http://127.0.0.1:5173/validation.html?lane=sentence-suitability&autorun=1",
   "checks": {
     "evaluations": [
       {
@@ -43,70 +43,70 @@
     "pass": true,
     "checks": [
       {
-        "id": "task-05-beginner_a2-present",
+        "id": "sentence-suitability-beginner_a2-present",
         "passed": true,
-        "message": "Task 05 profile beginner_a2 must be present."
+        "message": "Sentence suitability profile beginner_a2 must be present."
       },
       {
-        "id": "task-05-beginner_a2-prototype-ndcgAt5",
+        "id": "sentence-suitability-beginner_a2-suitability-ndcgAt5",
         "passed": true,
         "actual": 0.9787548397292644,
         "minimum": 0.9787548397292644,
-        "message": "Task 05 beginner_a2 prototype ndcgAt5 must not regress against the default preset target. Actual 0.978755, minimum 0.978755."
+        "message": "Sentence suitability beginner_a2 ndcgAt5 must not regress against the default preset target. Actual 0.978755, minimum 0.978755."
       },
       {
-        "id": "task-05-beginner_a2-prototype-pairwiseAccuracy",
+        "id": "sentence-suitability-beginner_a2-suitability-pairwiseAccuracy",
         "passed": true,
         "actual": 0.967741935483871,
         "minimum": 0.967741935483871,
-        "message": "Task 05 beginner_a2 prototype pairwiseAccuracy must not regress against the default preset target. Actual 0.967742, minimum 0.967742."
+        "message": "Sentence suitability beginner_a2 pairwiseAccuracy must not regress against the default preset target. Actual 0.967742, minimum 0.967742."
       },
       {
-        "id": "task-05-beginner_a2-prototype-spearmanRho",
+        "id": "sentence-suitability-beginner_a2-suitability-spearmanRho",
         "passed": true,
         "actual": 0.940357423386484,
         "minimum": 0.940357423386484,
-        "message": "Task 05 beginner_a2 prototype spearmanRho must not regress against the default preset target. Actual 0.940357, minimum 0.940357."
+        "message": "Sentence suitability beginner_a2 spearmanRho must not regress against the default preset target. Actual 0.940357, minimum 0.940357."
       },
       {
-        "id": "task-05-beginner_a2-prototype-precisionAt5",
+        "id": "sentence-suitability-beginner_a2-suitability-precisionAt5",
         "passed": true,
         "actual": 1,
         "minimum": 1,
-        "message": "Task 05 beginner_a2 prototype precisionAt5 must not regress against the default preset target. Actual 1.000000, minimum 1.000000."
+        "message": "Sentence suitability beginner_a2 precisionAt5 must not regress against the default preset target. Actual 1.000000, minimum 1.000000."
       },
       {
-        "id": "task-05-intermediate_b1-present",
+        "id": "sentence-suitability-intermediate_b1-present",
         "passed": true,
-        "message": "Task 05 profile intermediate_b1 must be present."
+        "message": "Sentence suitability profile intermediate_b1 must be present."
       },
       {
-        "id": "task-05-intermediate_b1-prototype-ndcgAt5",
+        "id": "sentence-suitability-intermediate_b1-suitability-ndcgAt5",
         "passed": true,
         "actual": 0.46072285643397193,
         "minimum": 0.46072285643397193,
-        "message": "Task 05 intermediate_b1 prototype ndcgAt5 must not regress against the default preset target. Actual 0.460723, minimum 0.460723."
+        "message": "Sentence suitability intermediate_b1 ndcgAt5 must not regress against the default preset target. Actual 0.460723, minimum 0.460723."
       },
       {
-        "id": "task-05-intermediate_b1-prototype-pairwiseAccuracy",
+        "id": "sentence-suitability-intermediate_b1-suitability-pairwiseAccuracy",
         "passed": true,
         "actual": 0.6507936507936508,
         "minimum": 0.6507936507936508,
-        "message": "Task 05 intermediate_b1 prototype pairwiseAccuracy must not regress against the default preset target. Actual 0.650794, minimum 0.650794."
+        "message": "Sentence suitability intermediate_b1 pairwiseAccuracy must not regress against the default preset target. Actual 0.650794, minimum 0.650794."
       },
       {
-        "id": "task-05-intermediate_b1-prototype-spearmanRho",
+        "id": "sentence-suitability-intermediate_b1-suitability-spearmanRho",
         "passed": true,
         "actual": 0.34352771533573245,
         "minimum": 0.34352771533573245,
-        "message": "Task 05 intermediate_b1 prototype spearmanRho must not regress against the default preset target. Actual 0.343528, minimum 0.343528."
+        "message": "Sentence suitability intermediate_b1 spearmanRho must not regress against the default preset target. Actual 0.343528, minimum 0.343528."
       },
       {
-        "id": "task-05-intermediate_b1-prototype-precisionAt5",
+        "id": "sentence-suitability-intermediate_b1-suitability-precisionAt5",
         "passed": true,
         "actual": 0.6,
         "minimum": 0.6,
-        "message": "Task 05 intermediate_b1 prototype precisionAt5 must not regress against the default preset target. Actual 0.600000, minimum 0.600000."
+        "message": "Sentence suitability intermediate_b1 precisionAt5 must not regress against the default preset target. Actual 0.600000, minimum 0.600000."
       }
     ],
     "failures": []
@@ -122,7 +122,7 @@
         "spearmanRho": 0.08353495392203326,
         "precisionAt5": 0.6
       },
-      "prototypeMetrics": {
+      "suitabilityMetrics": {
         "ndcgAt5": 0.9787548397292644,
         "ndcgAt10": 0.9801875615475569,
         "pairwiseAccuracy": 0.967741935483871,
@@ -144,7 +144,7 @@
           "goldLabel": 5,
           "rationale": "Very comprehensible and low-risk for beginners.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7394000000000001,
             "normalizedScore": 0.8130508474576272,
             "stretchAlignment": 0.8300000000000001,
@@ -167,7 +167,7 @@
           "goldLabel": 5,
           "rationale": "Simple noun phrase structure and transparent meaning.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7382000000000001,
             "normalizedScore": 0.8120338983050849,
             "stretchAlignment": 0.87,
@@ -190,7 +190,7 @@
           "goldLabel": 5,
           "rationale": "High-value phrase with manageable structure.",
           "baselineKnownRatio": 0.8571428571428571,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.773,
             "normalizedScore": 0.8415254237288136,
             "stretchAlignment": 0.97,
@@ -213,7 +213,7 @@
           "goldLabel": 4,
           "rationale": "Useful chunk, but short context limits robustness.",
           "baselineKnownRatio": 0.8333333333333334,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7412000000000001,
             "normalizedScore": 0.8145762711864407,
             "stretchAlignment": 0.99,
@@ -236,7 +236,7 @@
           "goldLabel": 5,
           "rationale": "Highly reusable phrase despite moderate lexical stretch.",
           "baselineKnownRatio": 0.7142857142857143,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7498,
             "normalizedScore": 0.8218644067796611,
             "stretchAlignment": 0.97,
@@ -259,7 +259,7 @@
           "goldLabel": 4,
           "rationale": "Great grammar carrier but requires some support for A2.",
           "baselineKnownRatio": 0.5714285714285714,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7068,
             "normalizedScore": 0.7854237288135594,
             "stretchAlignment": 0.89,
@@ -282,7 +282,7 @@
           "goldLabel": 2,
           "rationale": "Passive construction is usually too heavy at this stage.",
           "baselineKnownRatio": 0.7,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.5297999999999999,
             "normalizedScore": 0.6354237288135592,
             "stretchAlignment": 0.63,
@@ -305,7 +305,7 @@
           "goldLabel": 4,
           "rationale": "Slightly stretched, but still practical and interpretable.",
           "baselineKnownRatio": 0.8,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6588,
             "normalizedScore": 0.7447457627118644,
             "stretchAlignment": 0.85,
@@ -328,7 +328,7 @@
           "goldLabel": 1,
           "rationale": "Lexically easy, but structural nesting makes it poor learning material.",
           "baselineKnownRatio": 0.8666666666666667,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.3546,
             "normalizedScore": 0.4869491525423729,
             "stretchAlignment": 0.47,
@@ -351,7 +351,7 @@
           "goldLabel": 1,
           "rationale": "High known-ratio but severe chunking burden.",
           "baselineKnownRatio": 0.8571428571428571,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.29480000000000006,
             "normalizedScore": 0.436271186440678,
             "stretchAlignment": 0.39,
@@ -374,7 +374,7 @@
           "goldLabel": 1,
           "rationale": "Contains useful targets but too dense for beginner sentence learning.",
           "baselineKnownRatio": 0.8333333333333334,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.5152,
             "normalizedScore": 0.6230508474576271,
             "stretchAlignment": 0.43000000000000005,
@@ -397,7 +397,7 @@
           "goldLabel": 1,
           "rationale": "Too much tense layering for A2 despite useful target grammar.",
           "baselineKnownRatio": 0.8181818181818182,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.5004,
             "normalizedScore": 0.6105084745762711,
             "stretchAlignment": 0.37,
@@ -420,7 +420,7 @@
           "goldLabel": 1,
           "rationale": "Important pattern but too advanced as a sentence target for beginners.",
           "baselineKnownRatio": 0.8,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.5008,
             "normalizedScore": 0.6108474576271187,
             "stretchAlignment": 0.35,
@@ -443,7 +443,7 @@
           "goldLabel": 3,
           "rationale": "Useful phrase, but idiomatic ambiguity requires careful handling.",
           "baselineKnownRatio": 0.875,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6998,
             "normalizedScore": 0.7794915254237288,
             "stretchAlignment": 0.9099999999999999,
@@ -466,7 +466,7 @@
           "goldLabel": 1,
           "rationale": "Ambiguous chunks and senses should be deprioritized for A2.",
           "baselineKnownRatio": 0.8,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.3214,
             "normalizedScore": 0.45881355932203394,
             "stretchAlignment": 0.67,
@@ -489,7 +489,7 @@
           "goldLabel": 2,
           "rationale": "Valuable but generally too dense as a beginner sentence target.",
           "baselineKnownRatio": 0.7857142857142857,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.5922,
             "normalizedScore": 0.6883050847457627,
             "stretchAlignment": 0.51,
@@ -512,7 +512,7 @@
           "goldLabel": 3,
           "rationale": "Good only when noun sense is confirmed; otherwise should drop.",
           "baselineKnownRatio": 0.75,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6579999999999999,
             "normalizedScore": 0.7440677966101694,
             "stretchAlignment": 0.95,
@@ -535,7 +535,7 @@
           "goldLabel": 4,
           "rationale": "Useful modal-plus-condition structure at manageable complexity.",
           "baselineKnownRatio": 0.8,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6876000000000001,
             "normalizedScore": 0.7691525423728814,
             "stretchAlignment": 0.89,
@@ -572,7 +572,7 @@
         "s07_passive_team",
         "s06_used_to_station"
       ],
-      "prototypeOrder": [
+      "suitabilityOrder": [
         "s03_going_to_market",
         "s05_take_care_of",
         "s04_at_least_try",
@@ -599,7 +599,7 @@
           "category": "reusable_phrase_value",
           "goldLabel": 5,
           "baselineRank": 16,
-          "prototypeRank": 2,
+          "suitabilityRank": 2,
           "deltaAbsoluteError": 13
         },
         {
@@ -608,7 +608,7 @@
           "category": "reusable_phrase_value",
           "goldLabel": 4,
           "baselineRank": 18,
-          "prototypeRank": 6,
+          "suitabilityRank": 6,
           "deltaAbsoluteError": 11
         },
         {
@@ -617,7 +617,7 @@
           "category": "vocab_easy_structurally_awkward",
           "goldLabel": 1,
           "baselineRank": 4,
-          "prototypeRank": 16,
+          "suitabilityRank": 16,
           "deltaAbsoluteError": 11
         },
         {
@@ -626,7 +626,7 @@
           "category": "vocab_easy_structurally_awkward",
           "goldLabel": 1,
           "baselineRank": 6,
-          "prototypeRank": 18,
+          "suitabilityRank": 18,
           "deltaAbsoluteError": 7
         },
         {
@@ -635,7 +635,7 @@
           "category": "due_target_high_complexity",
           "goldLabel": 1,
           "baselineRank": 9,
-          "prototypeRank": 15,
+          "suitabilityRank": 15,
           "deltaAbsoluteError": 6
         }
       ],
@@ -646,7 +646,7 @@
           "category": "borderline",
           "goldLabel": 4,
           "baselineRank": 7,
-          "prototypeRank": 3,
+          "suitabilityRank": 3,
           "deltaAbsoluteError": -3
         },
         {
@@ -655,7 +655,7 @@
           "category": "clearly_beginner_friendly",
           "goldLabel": 5,
           "baselineRank": 2,
-          "prototypeRank": 5,
+          "suitabilityRank": 5,
           "deltaAbsoluteError": -2
         }
       ]
@@ -670,7 +670,7 @@
         "spearmanRho": -0.31494962255866593,
         "precisionAt5": 0.2
       },
-      "prototypeMetrics": {
+      "suitabilityMetrics": {
         "ndcgAt5": 0.46072285643397193,
         "ndcgAt10": 0.5599862055178851,
         "pairwiseAccuracy": 0.6507936507936508,
@@ -692,7 +692,7 @@
           "goldLabel": 2,
           "rationale": "Accurate but too easy to be high value for B1 review.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6134000000000001,
             "normalizedScore": 0.6667241379310346,
             "stretchAlignment": 0.45999999999999996,
@@ -715,7 +715,7 @@
           "goldLabel": 2,
           "rationale": "Low stretch and low new learning value for intermediate learners.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6256,
             "normalizedScore": 0.6772413793103449,
             "stretchAlignment": 0.5,
@@ -738,7 +738,7 @@
           "goldLabel": 3,
           "rationale": "Still useful but not very stretching for B1.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.729,
             "normalizedScore": 0.7663793103448276,
             "stretchAlignment": 0.6,
@@ -761,7 +761,7 @@
           "goldLabel": 3,
           "rationale": "Good chunk reinforcement but low grammatical depth.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.702,
             "normalizedScore": 0.743103448275862,
             "stretchAlignment": 0.62,
@@ -784,7 +784,7 @@
           "goldLabel": 4,
           "rationale": "Strong chunk value for fluency-focused review.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7448,
             "normalizedScore": 0.7800000000000001,
             "stretchAlignment": 0.66,
@@ -807,7 +807,7 @@
           "goldLabel": 4,
           "rationale": "Good balance of phrase value and manageable complexity.",
           "baselineKnownRatio": 0.8571428571428571,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7278,
             "normalizedScore": 0.765344827586207,
             "stretchAlignment": 0.74,
@@ -830,7 +830,7 @@
           "goldLabel": 4,
           "rationale": "Useful passive target with acceptable complexity for B1.",
           "baselineKnownRatio": 0.9,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.5982,
             "normalizedScore": 0.6536206896551724,
             "stretchAlignment": 1,
@@ -853,7 +853,7 @@
           "goldLabel": 4,
           "rationale": "Solid form-meaning mapping for useful conditional language.",
           "baselineKnownRatio": 0.9,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.666,
             "normalizedScore": 0.7120689655172415,
             "stretchAlignment": 0.78,
@@ -876,7 +876,7 @@
           "goldLabel": 1,
           "rationale": "Complex attachment with weak pedagogical payoff.",
           "baselineKnownRatio": 0.9333333333333333,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.3736,
             "normalizedScore": 0.46,
             "stretchAlignment": 0.84,
@@ -899,7 +899,7 @@
           "goldLabel": 1,
           "rationale": "Noisy structure with limited reusable value.",
           "baselineKnownRatio": 0.9285714285714286,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.31020000000000003,
             "normalizedScore": 0.405344827586207,
             "stretchAlignment": 0.76,
@@ -922,7 +922,7 @@
           "goldLabel": 4,
           "rationale": "High-value grammar despite higher structural demand.",
           "baselineKnownRatio": 0.9166666666666666,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6105999999999999,
             "normalizedScore": 0.6643103448275862,
             "stretchAlignment": 0.8,
@@ -945,7 +945,7 @@
           "goldLabel": 5,
           "rationale": "Excellent due-target sentence for upper-intermediate progression.",
           "baselineKnownRatio": 0.9090909090909091,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6055999999999999,
             "normalizedScore": 0.66,
             "stretchAlignment": 0.74,
@@ -968,7 +968,7 @@
           "goldLabel": 5,
           "rationale": "High-value grammar target with reusable communication payoff.",
           "baselineKnownRatio": 0.9,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.607,
             "normalizedScore": 0.6612068965517242,
             "stretchAlignment": 0.72,
@@ -991,7 +991,7 @@
           "goldLabel": 4,
           "rationale": "Good idiomatic chunk with manageable risk at B1.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.72,
             "normalizedScore": 0.7586206896551725,
             "stretchAlignment": 0.72,
@@ -1014,7 +1014,7 @@
           "goldLabel": 1,
           "rationale": "Ambiguity outweighs any grammar value here.",
           "baselineKnownRatio": 0.9,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.38160000000000005,
             "normalizedScore": 0.466896551724138,
             "stretchAlignment": 0.96,
@@ -1037,7 +1037,7 @@
           "goldLabel": 5,
           "rationale": "Excellent for B1 due to phrasal chunks and contextual grammar.",
           "baselineKnownRatio": 0.9285714285714286,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.7010000000000001,
             "normalizedScore": 0.742241379310345,
             "stretchAlignment": 0.88,
@@ -1060,7 +1060,7 @@
           "goldLabel": 2,
           "rationale": "Low challenge and moderate ambiguity for intermediate users.",
           "baselineKnownRatio": 1,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6128,
             "normalizedScore": 0.6662068965517243,
             "stretchAlignment": 0.6799999999999999,
@@ -1083,7 +1083,7 @@
           "goldLabel": 3,
           "rationale": "Still useful, but lower incremental value than richer targets.",
           "baselineKnownRatio": 0.9,
-          "prototypeScore": {
+          "suitabilityScore": {
             "score": 0.6859999999999999,
             "normalizedScore": 0.7293103448275863,
             "stretchAlignment": 0.74,
@@ -1120,7 +1120,7 @@
         "s18_if_you_help",
         "s06_used_to_station"
       ],
-      "prototypeOrder": [
+      "suitabilityOrder": [
         "s05_take_care_of",
         "s03_going_to_market",
         "s06_used_to_station",
@@ -1147,7 +1147,7 @@
           "category": "clearly_beginner_friendly",
           "goldLabel": 2,
           "baselineRank": 1,
-          "prototypeRank": 10,
+          "suitabilityRank": 10,
           "deltaAbsoluteError": 9
         },
         {
@@ -1156,7 +1156,7 @@
           "category": "vocab_easy_structurally_awkward",
           "goldLabel": 1,
           "baselineRank": 8,
-          "prototypeRank": 17,
+          "suitabilityRank": 17,
           "deltaAbsoluteError": 9
         },
         {
@@ -1165,7 +1165,7 @@
           "category": "reusable_phrase_value",
           "goldLabel": 4,
           "baselineRank": 18,
-          "prototypeRank": 3,
+          "suitabilityRank": 3,
           "deltaAbsoluteError": 8
         },
         {
@@ -1174,7 +1174,7 @@
           "category": "clearly_beginner_friendly",
           "goldLabel": 2,
           "baselineRank": 2,
-          "prototypeRank": 9,
+          "suitabilityRank": 9,
           "deltaAbsoluteError": 7
         },
         {
@@ -1183,7 +1183,7 @@
           "category": "vocab_easy_structurally_awkward",
           "goldLabel": 1,
           "baselineRank": 9,
-          "prototypeRank": 18,
+          "suitabilityRank": 18,
           "deltaAbsoluteError": 7
         }
       ],
@@ -1194,7 +1194,7 @@
           "category": "reusable_phrase_value",
           "goldLabel": 4,
           "baselineRank": 5,
-          "prototypeRank": 1,
+          "suitabilityRank": 1,
           "deltaAbsoluteError": -4
         },
         {
@@ -1203,7 +1203,7 @@
           "category": "borderline",
           "goldLabel": 4,
           "baselineRank": 13,
-          "prototypeRank": 15,
+          "suitabilityRank": 15,
           "deltaAbsoluteError": -2
         },
         {
@@ -1212,7 +1212,7 @@
           "category": "due_target_high_complexity",
           "goldLabel": 5,
           "baselineRank": 12,
-          "prototypeRank": 14,
+          "suitabilityRank": 14,
           "deltaAbsoluteError": -2
         },
         {
@@ -1221,7 +1221,7 @@
           "category": "reusable_phrase_value",
           "goldLabel": 4,
           "baselineRank": 6,
-          "prototypeRank": 4,
+          "suitabilityRank": 4,
           "deltaAbsoluteError": -2
         },
         {
@@ -1230,7 +1230,7 @@
           "category": "reusable_phrase_value",
           "goldLabel": 3,
           "baselineRank": 3,
-          "prototypeRank": 2,
+          "suitabilityRank": 2,
           "deltaAbsoluteError": -1
         }
       ]

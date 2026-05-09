@@ -40,7 +40,7 @@ export type SuitabilityCorpus = {
 
 export type DifficultyBand = "core" | "stretch" | "defer";
 
-export type PrototypeSignalContributions = {
+export type SuitabilitySignalContributions = {
   vocabularyFit: number;
   grammarFit: number;
   structuralSimplicity: number;
@@ -50,12 +50,12 @@ export type PrototypeSignalContributions = {
   ambiguityPenalty: number;
 };
 
-export type PrototypeSuitabilityScore = {
+export type SentenceSuitabilityScore = {
   score: number;
   normalizedScore: number;
   stretchAlignment: number;
   difficultyBand: DifficultyBand;
-  contributions: PrototypeSignalContributions;
+  contributions: SuitabilitySignalContributions;
 };
 
 export type SuitabilityRow = {
@@ -65,7 +65,7 @@ export type SuitabilityRow = {
   goldLabel: number;
   rationale: string;
   baselineKnownRatio: number;
-  prototypeScore: PrototypeSuitabilityScore;
+  suitabilityScore: SentenceSuitabilityScore;
 };
 
 export type RankingMetrics = {
@@ -82,7 +82,7 @@ export type RankErrorDelta = {
   category: string;
   goldLabel: number;
   baselineRank: number;
-  prototypeRank: number;
+  suitabilityRank: number;
   deltaAbsoluteError: number;
 };
 
@@ -90,11 +90,11 @@ export type ProfileComparisonResult = {
   profileId: string;
   profileDisplayName: string;
   baselineMetrics: RankingMetrics;
-  prototypeMetrics: RankingMetrics;
+  suitabilityMetrics: RankingMetrics;
   deltas: RankingMetrics;
   rows: SuitabilityRow[];
   baselineOrder: string[];
-  prototypeOrder: string[];
+  suitabilityOrder: string[];
   strongestImprovements: RankErrorDelta[];
   strongestRegressions: RankErrorDelta[];
 };

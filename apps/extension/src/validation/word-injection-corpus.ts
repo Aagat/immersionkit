@@ -6,7 +6,7 @@ import productionQualityFixture from "../../../../fixtures/evals/word-injection/
 
 export type BrowserExpectedPerCaseDecision = {
   baselineDecision: "inject" | "skip";
-  prototypeDecision: "inject" | "skip";
+  contextAwareDecision: "inject" | "skip";
 };
 
 export type BrowserExpectedSnapshot = {
@@ -25,7 +25,7 @@ export type BrowserExpectedSnapshot = {
       uncertainSkipRate: number;
       lowConfidenceSkipCount: number;
     };
-    prototype: {
+    contextAware: {
       mustInjectCoverage: number;
       mustSkipPrecision: number;
       uncertainSkipRate: number;

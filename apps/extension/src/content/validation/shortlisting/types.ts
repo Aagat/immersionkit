@@ -2,7 +2,7 @@ import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 
 export type ShortlistingPolicyId =
   | "analyze-every-segmented"
-  | "current-injected-token-gated"
+  | "legacy-injected-token-gated"
   | "injected-token-length-dedupe"
   | "phrase-aware-shortlist";
 

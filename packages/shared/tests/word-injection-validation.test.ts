@@ -91,17 +91,17 @@ describe("word injection corpus metrics", () => {
     expect(summary.baseline.mustSkipPrecision).toBe(0);
     expect(summary.baseline.uncertainSkipRate).toBe(0);
 
-    expect(summary.prototype.accuracy).toBeCloseTo(29 / 30, 6);
-    expect(summary.prototype.mustInjectCoverage).toBeCloseTo(13 / 14, 6);
-    expect(summary.prototype.mustSkipPrecision).toBe(1);
-    expect(summary.prototype.uncertainSkipRate).toBe(1);
-    expect(summary.prototype.lowConfidenceSkipCount).toBe(6);
-    expect(summary.prototype.lowConfidenceSkipRateAmongSkips).toBeCloseTo(6 / 17, 6);
-    expect(summary.prototype.lowConfidenceSkipRateOverall).toBeCloseTo(6 / 30, 6);
+    expect(summary.contextAware.accuracy).toBeCloseTo(29 / 30, 6);
+    expect(summary.contextAware.mustInjectCoverage).toBeCloseTo(13 / 14, 6);
+    expect(summary.contextAware.mustSkipPrecision).toBe(1);
+    expect(summary.contextAware.uncertainSkipRate).toBe(1);
+    expect(summary.contextAware.lowConfidenceSkipCount).toBe(6);
+    expect(summary.contextAware.lowConfidenceSkipRateAmongSkips).toBeCloseTo(6 / 17, 6);
+    expect(summary.contextAware.lowConfidenceSkipRateOverall).toBeCloseTo(6 / 30, 6);
 
     expect(summary.baseline.falsePositiveCaseIds).toHaveLength(16);
     expect(summary.baseline.falseNegativeCaseIds).toHaveLength(0);
-    expect(summary.prototype.falsePositiveCaseIds).toHaveLength(0);
-    expect(summary.prototype.falseNegativeCaseIds).toEqual(["plant-06"]);
+    expect(summary.contextAware.falsePositiveCaseIds).toHaveLength(0);
+    expect(summary.contextAware.falseNegativeCaseIds).toEqual(["plant-06"]);
   });
 });

@@ -55,16 +55,16 @@ export async function runWordInjectionValidation(): Promise<BrowserWordInjection
       throw new Error(`Missing baseline decision for case ${candidate.id}`);
     }
 
-    const prototype = evaluateContextAwareDecision(candidate);
+    const contextAware = evaluateContextAwareDecision(candidate);
     const expectedDecision = mapExpectedOutcomeToDecision(candidate.expectedOutcome);
 
     return {
       candidate,
       expectedDecision,
       baseline,
-      prototype,
+      contextAware,
       baselineCorrect: baseline.decision === expectedDecision,
-      prototypeCorrect: prototype.decision === expectedDecision
+      contextAwareCorrect: contextAware.decision === expectedDecision
     };
   });
 
@@ -109,8 +109,8 @@ function summarize(
       mustSkipCount,
       uncertainSkipCount
     ),
-    prototype: summarizeStrategy(
-      "prototype",
+    contextAware: summarizeStrategy(
+      "context-aware",
       perCase,
       mustInjectCount,
       mustSkipCount,
@@ -120,14 +120,14 @@ function summarize(
 }
 
 function summarizeStrategy(
-  name: "baseline" | "prototype",
+  name: "baseline" | "context-aware",
   perCase: WordInjectionCaseEvaluation[],
   mustInjectCount: number,
   mustSkipCount: number,
   uncertainSkipCount: number
 ): WordInjectionStrategyMetrics {
   const decisions = perCase.map((entry) =>
-    name === "baseline" ? entry.baseline : entry.prototype
+    name === "baseline" ? entry.baseline : entry.contextAware
   );
 
   let correctCases = 0;
@@ -246,21 +246,21 @@ function validateAgainstExpectedSnapshot(
   );
   assertMetric(
     mismatches,
-    "prototype.mustInjectCoverage",
-    summary.prototype.mustInjectCoverage,
-    expected.expectedMetrics.prototype.mustInjectCoverage
+    "contextAware.mustInjectCoverage",
+    summary.contextAware.mustInjectCoverage,
+    expected.expectedMetrics.contextAware.mustInjectCoverage
   );
   assertMetric(
     mismatches,
-    "prototype.mustSkipPrecision",
-    summary.prototype.mustSkipPrecision,
-    expected.expectedMetrics.prototype.mustSkipPrecision
+    "contextAware.mustSkipPrecision",
+    summary.contextAware.mustSkipPrecision,
+    expected.expectedMetrics.contextAware.mustSkipPrecision
   );
   assertMetric(
     mismatches,
-    "prototype.uncertainSkipRate",
-    summary.prototype.uncertainSkipRate,
-    expected.expectedMetrics.prototype.uncertainSkipRate
+    "contextAware.uncertainSkipRate",
+    summary.contextAware.uncertainSkipRate,
+    expected.expectedMetrics.contextAware.uncertainSkipRate
   );
 
   if (
@@ -273,11 +273,11 @@ function validateAgainstExpectedSnapshot(
   }
 
   if (
-    summary.prototype.lowConfidenceSkipCount !==
-    expected.expectedMetrics.prototype.lowConfidenceSkipCount
+    summary.contextAware.lowConfidenceSkipCount !==
+    expected.expectedMetrics.contextAware.lowConfidenceSkipCount
   ) {
     mismatches.push(
-      `prototype.lowConfidenceSkipCount expected ${expected.expectedMetrics.prototype.lowConfidenceSkipCount}, got ${summary.prototype.lowConfidenceSkipCount}`
+      `contextAware.lowConfidenceSkipCount expected ${expected.expectedMetrics.contextAware.lowConfidenceSkipCount}, got ${summary.contextAware.lowConfidenceSkipCount}`
     );
   }
 
@@ -294,9 +294,9 @@ function validateAgainstExpectedSnapshot(
       );
     }
 
-    if (entry.prototype.decision !== expectedCase.prototypeDecision) {
+    if (entry.contextAware.decision !== expectedCase.contextAwareDecision) {
       mismatches.push(
-        `${entry.candidate.id} prototype expected ${expectedCase.prototypeDecision}, got ${entry.prototype.decision}`
+        `${entry.candidate.id} context-aware expected ${expectedCase.contextAwareDecision}, got ${entry.contextAware.decision}`
       );
     }
   }

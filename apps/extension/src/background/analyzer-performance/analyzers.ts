@@ -178,7 +178,7 @@ function buildSnapshot(
 }
 
 async function createCompromiseEngine(
-  analyzerId: "compromise-two" | "compromise-three",
+  analyzerId: "compromise-three",
   loadModule: () => Promise<{
     default: (text: string) => CompromiseDoc;
   }>
@@ -285,14 +285,6 @@ function normalizePosTag(value: unknown): string {
 
 export function listAvailableAnalyzerFactories(includeWinkNlp: boolean): AnalyzerEngineFactory[] {
   const factories: AnalyzerEngineFactory[] = [
-    {
-      analyzerId: "compromise-two",
-      create: () =>
-        createCompromiseEngine(
-          "compromise-two",
-          () => import("compromise/two") as Promise<{ default: (text: string) => CompromiseDoc }>
-        )
-    },
     {
       analyzerId: "compromise-three",
       create: () =>

@@ -2,7 +2,7 @@ import {
   resolveDifficultyPreset,
   type DifficultyProfilePreset
 } from "../../scoring/difficulty";
-import { computeKnownRatioBaseline, scorePrototypeSuitability } from "./scorer";
+import { computeKnownRatioBaseline, scoreSentenceSuitability } from "./scorer";
 import type {
   ProfileComparisonResult,
   RankErrorDelta,
@@ -254,13 +254,13 @@ function subtractMetrics(
 function findRankErrorDeltas(
   rows: SuitabilityRow[],
   baselineOrder: string[],
-  prototypeOrder: string[]
+  suitabilityOrder: string[]
 ): { improvements: RankErrorDelta[]; regressions: RankErrorDelta[] } {
   const baselineRankMap = new Map<string, number>();
-  const prototypeRankMap = new Map<string, number>();
+  const suitabilityRankMap = new Map<string, number>();
 
   baselineOrder.forEach((id, index) => baselineRankMap.set(id, index + 1));
-  prototypeOrder.forEach((id, index) => prototypeRankMap.set(id, index + 1));
+  suitabilityOrder.forEach((id, index) => suitabilityRankMap.set(id, index + 1));
 
   const goldRankMap = buildAverageRankMap(
     rows.map((row) => ({
@@ -271,10 +271,10 @@ function findRankErrorDeltas(
 
   const deltas = rows.map((row) => {
     const baselineRank = baselineRankMap.get(row.id) ?? rows.length;
-    const prototypeRank = prototypeRankMap.get(row.id) ?? rows.length;
+    const suitabilityRank = suitabilityRankMap.get(row.id) ?? rows.length;
     const goldRank = goldRankMap.get(row.id) ?? rows.length;
     const baselineError = Math.abs(baselineRank - goldRank);
-    const prototypeError = Math.abs(prototypeRank - goldRank);
+    const suitabilityError = Math.abs(suitabilityRank - goldRank);
 
     return {
       id: row.id,
@@ -282,8 +282,8 @@ function findRankErrorDeltas(
       category: row.category,
       goldLabel: row.goldLabel,
       baselineRank,
-      prototypeRank,
-      deltaAbsoluteError: baselineError - prototypeError
+      suitabilityRank,
+      deltaAbsoluteError: baselineError - suitabilityError
     } satisfies RankErrorDelta;
   });
 
@@ -352,37 +352,37 @@ export function compareSuitabilityScorers(
         goldLabel: profileLabel.label,
         rationale: profileLabel.rationale,
         baselineKnownRatio: computeKnownRatioBaseline(profileLabel),
-        prototypeScore: scorePrototypeSuitability(example.signals, preset)
+        suitabilityScore: scoreSentenceSuitability(example.signals, preset)
       } satisfies SuitabilityRow;
     });
 
     const baselineMetrics = buildRankingMetrics(rows, (row) => row.baselineKnownRatio);
-    const prototypeMetrics = buildRankingMetrics(
+    const suitabilityMetrics = buildRankingMetrics(
       rows,
-      (row) => row.prototypeScore.normalizedScore
+      (row) => row.suitabilityScore.normalizedScore
     );
 
     const baselineOrder = sortByScore(
       rows.map((row) => ({ id: row.id, score: row.baselineKnownRatio }))
     ).map((entry) => entry.id);
-    const prototypeOrder = sortByScore(
+    const suitabilityOrder = sortByScore(
       rows.map((row) => ({
         id: row.id,
-        score: row.prototypeScore.normalizedScore
+        score: row.suitabilityScore.normalizedScore
       }))
     ).map((entry) => entry.id);
 
-    const rankDeltas = findRankErrorDeltas(rows, baselineOrder, prototypeOrder);
+    const rankDeltas = findRankErrorDeltas(rows, baselineOrder, suitabilityOrder);
 
     return {
       profileId: profile.id,
       profileDisplayName: profile.displayName,
       baselineMetrics,
-      prototypeMetrics,
-      deltas: subtractMetrics(prototypeMetrics, baselineMetrics),
+      suitabilityMetrics,
+      deltas: subtractMetrics(suitabilityMetrics, baselineMetrics),
       rows,
       baselineOrder,
-      prototypeOrder,
+      suitabilityOrder,
       strongestImprovements: rankDeltas.improvements,
       strongestRegressions: rankDeltas.regressions
     } satisfies ProfileComparisonResult;

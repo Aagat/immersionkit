@@ -19,10 +19,10 @@
     "benchmark": "node tools/benchmarks/run-browser-validation-suite.mjs",
     "benchmark:validation": "pnpm benchmark",
     "benchmark:nlp-performance": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",
-    "benchmark:contextual-word-injection": "node tools/benchmarks/run-task-02-contextual-word-injection-benchmark.mjs",
-    "benchmark:phrase-detection": "node tools/benchmarks/task-03-phrase-detection.mjs",
-    "benchmark:sentence-shortlisting": "node tools/benchmarks/task-04-sentence-shortlisting-runner.mjs",
-    "benchmark:sentence-suitability": "node tools/benchmarks/task-05-sentence-suitability-runner.mjs",
+    "benchmark:contextual-word-injection": "node tools/benchmarks/contextual-word-injection-benchmark.mjs",
+    "benchmark:phrase-detection": "node tools/benchmarks/phrase-detection-benchmark.mjs",
+    "benchmark:sentence-shortlisting": "node tools/benchmarks/sentence-shortlisting-benchmark.mjs",
+    "benchmark:sentence-suitability": "node tools/benchmarks/sentence-suitability-benchmark.mjs",
     "benchmark:sentence-suitability:test": "pnpm --filter @immersionkit/shared exec vitest run tests/sentence-suitability-validation.test.ts --reporter=verbose"
   },
   "devDependencies": {

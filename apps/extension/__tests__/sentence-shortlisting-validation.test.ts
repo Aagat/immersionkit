@@ -58,17 +58,17 @@ describe("sentence shortlisting benchmark harness", () => {
 
       const policyById = new Map(result.policies.map((policy) => [policy.policyId, policy]));
       const baseline = policyById.get("analyze-every-segmented");
-      const current = policyById.get("current-injected-token-gated");
+      const legacyInjectedToken = policyById.get("legacy-injected-token-gated");
       const injectedLengthDedupe = policyById.get("injected-token-length-dedupe");
       const phraseAware = policyById.get("phrase-aware-shortlist");
 
       expect(result.scenarios.length).toBe(benchmarkScenarios.length);
       expect(baseline?.estimatedAnalysisCalls).toBeGreaterThan(0);
-      expect(current?.estimatedAnalysisCalls).toBeLessThanOrEqual(
+      expect(legacyInjectedToken?.estimatedAnalysisCalls).toBeLessThanOrEqual(
         baseline?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER
       );
       expect(injectedLengthDedupe?.estimatedAnalysisCalls).toBeLessThanOrEqual(
-        current?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER
+        legacyInjectedToken?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER
       );
       expect(phraseAware?.falseNegativeCount).toBeLessThanOrEqual(
         injectedLengthDedupe?.falseNegativeCount ?? Number.MAX_SAFE_INTEGER
@@ -78,7 +78,7 @@ describe("sentence shortlisting benchmark harness", () => {
         (scenario) => scenario.scenarioId === "dynamic-rerender-same-hash"
       );
       const rerenderCurrent = rerenderScenario?.policySummaries.find(
-        (policy) => policy.policyId === "current-injected-token-gated"
+        (policy) => policy.policyId === "legacy-injected-token-gated"
       );
 
       expect(rerenderCurrent?.cacheHits).toBeGreaterThan(0);

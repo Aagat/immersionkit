@@ -18,16 +18,16 @@ export function evaluateWordInjectionCorpus(
 ): WordInjectionEvaluationSummary {
   const perCase: WordInjectionCaseEvaluation[] = candidates.map((candidate) => {
     const baseline = evaluateContentBaselineDecision(candidate);
-    const prototype = evaluateContextAwareDecision(candidate);
+    const contextAware = evaluateContextAwareDecision(candidate);
     const expectedDecision = mapExpectedOutcomeToDecision(candidate.expectedOutcome);
 
     return {
       candidate,
       expectedDecision,
       baseline,
-      prototype,
+      contextAware,
       baselineCorrect: baseline.decision === expectedDecision,
-      prototypeCorrect: prototype.decision === expectedDecision
+      contextAwareCorrect: contextAware.decision === expectedDecision
     };
   });
 
@@ -48,8 +48,8 @@ export function evaluateWordInjectionCorpus(
       mustSkipCount,
       uncertainSkipCount
     ),
-    prototype: summarizeStrategy(
-      "prototype",
+    contextAware: summarizeStrategy(
+      "context-aware",
       perCase,
       mustInjectCount,
       mustSkipCount,
@@ -59,14 +59,14 @@ export function evaluateWordInjectionCorpus(
 }
 
 function summarizeStrategy(
-  name: "baseline" | "prototype",
+  name: "baseline" | "context-aware",
   perCase: WordInjectionCaseEvaluation[],
   mustInjectCount: number,
   mustSkipCount: number,
   uncertainSkipCount: number
 ): WordInjectionStrategyMetrics {
   const decisions = perCase.map((entry) =>
-    name === "baseline" ? entry.baseline : entry.prototype
+    name === "baseline" ? entry.baseline : entry.contextAware
   );
 
   let correctCases = 0;

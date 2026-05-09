@@ -14,11 +14,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../..");
 const require = createRequire(import.meta.url);
-const { validateTask05Results } = require("./benchmark-gates.cjs");
+const { validateSentenceSuitabilityResults } = require("./benchmark-gates.cjs");
 
 const host = "127.0.0.1";
 const port = 5173;
-const validationUrl = `http://${host}:${port}/validation.html?task=sentence-suitability&autorun=1`;
+const validationUrl = `http://${host}:${port}/validation.html?lane=sentence-suitability&autorun=1`;
 const outputPath = path.resolve(
   workspaceRoot,
   "fixtures/evals/sentence-suitability/browser-run-results.v1.json"
@@ -57,7 +57,7 @@ try {
   await browser.close();
 
   const checks = validateRequiredLifts(captured.results);
-  const benchmarkGates = validateTask05Results(captured.results);
+  const benchmarkGates = validateSentenceSuitabilityResults(captured.results);
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(
@@ -88,7 +88,7 @@ try {
   }
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`Task 05 benchmark failed: ${message}`);
+  console.error(`Sentence suitability benchmark failed: ${message}`);
   process.exitCode = 1;
 } finally {
   await stopServer(serverProcess);
@@ -223,11 +223,11 @@ function validateRequiredLifts(results) {
 }
 
 function printSummary(results, checks) {
-  console.log("Task 05 benchmark completed.");
+  console.log("Sentence suitability benchmark completed.");
 
   for (const result of results) {
     console.log(
-      `- ${result.profileDisplayName}: NDCG@5 ${result.baselineMetrics.ndcgAt5.toFixed(3)} -> ${result.prototypeMetrics.ndcgAt5.toFixed(3)} (${toPercent(result.deltas.ndcgAt5)}), pairwise ${result.baselineMetrics.pairwiseAccuracy.toFixed(3)} -> ${result.prototypeMetrics.pairwiseAccuracy.toFixed(3)} (${toPercent(result.deltas.pairwiseAccuracy)})`
+      `- ${result.profileDisplayName}: NDCG@5 ${result.baselineMetrics.ndcgAt5.toFixed(3)} -> ${result.suitabilityMetrics.ndcgAt5.toFixed(3)} (${toPercent(result.deltas.ndcgAt5)}), pairwise ${result.baselineMetrics.pairwiseAccuracy.toFixed(3)} -> ${result.suitabilityMetrics.pairwiseAccuracy.toFixed(3)} (${toPercent(result.deltas.pairwiseAccuracy)})`
     );
   }
 

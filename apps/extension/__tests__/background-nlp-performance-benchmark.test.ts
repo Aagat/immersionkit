@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { runNlpPerformanceSpikeBenchmark } from "../src/background/analysis-spike";
+import { runNlpAnalyzerPerformanceBenchmark } from "../src/background/analyzer-performance";
 
 describe("background NLP performance benchmark runner", () => {
   it("produces benchmark metrics with passing integrity assertions", async () => {
-    const result = await runNlpPerformanceSpikeBenchmark({
+    const result = await runNlpAnalyzerPerformanceBenchmark({
       includeWinkNlp: false,
       inputProfile: "tiny"
     });
@@ -37,7 +37,7 @@ describe("background NLP performance benchmark runner", () => {
   });
 
   it("evaluates compromise and wink analyzers against labeled truth when wink is enabled", async () => {
-    const result = await runNlpPerformanceSpikeBenchmark({
+    const result = await runNlpAnalyzerPerformanceBenchmark({
       includeWinkNlp: true,
       inputProfile: "tiny"
     });

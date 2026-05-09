@@ -15,8 +15,8 @@
       "falseNegatives": []
     },
     {
-      "policyId": "current-injected-token-gated",
-      "policyLabel": "Current Injected-Token-Gated Flow",
+      "policyId": "legacy-injected-token-gated",
+      "policyLabel": "Legacy Injected-Token-Gated Flow",
       "shortlistedCandidates": 11,
       "uniqueSentenceHashes": 9,
       "estimatedAnalysisCalls": 9,
@@ -87,8 +87,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 5,
           "uniqueSentenceHashes": 5,
           "estimatedAnalysisCalls": 5,
@@ -155,8 +155,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 2,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -227,8 +227,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 4,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -275,12 +275,12 @@
     {
       "id": "analysis-calls-reduced-vs-baseline",
       "passed": true,
-      "message": "Current injected-token-gated flow should not exceed baseline analysis calls."
+      "message": "Legacy injected-token-gated flow should not exceed baseline analysis calls."
     },
     {
-      "id": "length-dedupe-reduces-or-matches-current-calls",
+      "id": "length-dedupe-reduces-or-matches-legacy-calls",
       "passed": true,
-      "message": "Injected + length + dedupe should not require more analysis calls than current flow."
+      "message": "Injected + length + dedupe should not require more analysis calls than the legacy flow."
     },
     {
       "id": "phrase-aware-does-not-increase-false-negatives",

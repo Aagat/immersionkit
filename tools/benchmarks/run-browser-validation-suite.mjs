@@ -10,7 +10,7 @@ const benchmarkEnv = inputProfile
     }
   : {};
 
-const tasks = [
+const lanes = [
   {
     id: "nlp-performance",
     label: "Background NLP performance",
@@ -44,9 +44,9 @@ if (inputProfile) {
   console.log(`Input profile override: ${inputProfile}`);
 }
 
-for (const task of tasks) {
-  console.log(`\n[suite] ${task.label}`);
-  const [command, args] = task.command;
+for (const lane of lanes) {
+  console.log(`\n[suite] ${lane.label}`);
+  const [command, args] = lane.command;
   await run(command, args, benchmarkEnv);
 }
 

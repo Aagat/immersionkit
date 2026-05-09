@@ -79,7 +79,7 @@ export async function runProductionQualityValidation(): Promise<ProductionQualit
     const service = new SentenceAnalysisService({
       analyzer: {
         analyzerId: "fixture-annotated",
-        analyzerVersion: `task-02-production-quality:${fixture.version}`,
+        analyzerVersion: `contextual-word-injection-production-quality:${fixture.version}`,
         analyze: async () => analyzerOutput
       },
       cache: new InMemorySentenceAnalysisCache(),
@@ -107,8 +107,8 @@ export async function runProductionQualityValidation(): Promise<ProductionQualit
       offsetBase: 0,
       context: {
         discoveryRate: 1,
-        samplingSeed: `task-02-production-quality:${scenario.id}`,
-        nodeId: `task-02-production-quality-${scenario.id}`,
+        samplingSeed: `contextual-word-injection-production-quality:${scenario.id}`,
+        nodeId: `contextual-word-injection-quality-${scenario.id}`,
         wordRenderIndex: buildWordRenderIndex(renderUnits),
         vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => true,
@@ -232,7 +232,7 @@ function createProductionQualityAnalyzerOutput(input: {
 }): AnalyzerOutput {
   return {
     analyzerId: "fixture-annotated",
-    analyzerVersion: "task-02-production-quality",
+    analyzerVersion: "contextual-word-injection-production-quality",
     sentenceHash: input.sentenceHash,
     sourceText: input.sentence,
     tokens: createAnalyzerTokens(input.sentence, input.tokens, input.scenarioId),
@@ -279,7 +279,7 @@ function createProductionQualityRenderUnits(
     const normalizedSourceText = normalizeToken(spec.sourceLemma);
     const normalizedTargetText = normalizeToken(spec.targetLemma);
     return {
-      renderUnitId: `ru:task-02-quality:${spec.lexemeId}`,
+      renderUnitId: `ru:contextual-word-injection-quality:${spec.lexemeId}`,
       lexemeIds: [spec.lexemeId],
       kind: "single-token",
       renderPolicy: "inline",

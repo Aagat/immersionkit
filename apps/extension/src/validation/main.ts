@@ -1,12 +1,12 @@
 import {
   parseNlpBenchmarkInputProfile,
   createPortableSnapshots,
-  runNlpPerformanceSpikeBenchmark,
+  runNlpAnalyzerPerformanceBenchmark,
   type AnalyzerBenchmarkMetrics,
   type AnalyzerBenchmarkResult,
   type NlpBenchmarkInputProfile,
   type NlpPerformanceBenchmarkRun
-} from "../background/analysis-spike";
+} from "../background/analyzer-performance";
 
 import {
   runWordInjectionValidation,
@@ -15,7 +15,7 @@ import {
 
 import "./styles.css";
 
-type ValidationTaskId =
+type ValidationLaneId =
   | "dashboard"
   | "nlp-performance"
   | "contextual-word-injection"
@@ -46,19 +46,19 @@ if (!rootElement) {
 const root = rootElement;
 
 const params = new URLSearchParams(window.location.search);
-const task = resolveTask(params.get("task"));
+const lane = resolveLane(params.get("lane"));
 
-void initializeTask(task, params);
+void initializeLane(lane, params);
 
-async function initializeTask(taskId: ValidationTaskId, searchParams: URLSearchParams) {
-  switch (taskId) {
+async function initializeLane(laneId: ValidationLaneId, searchParams: URLSearchParams) {
+  switch (laneId) {
     case "dashboard": {
       document.title = "ImmersionKit Validation Harness";
       root.innerHTML = renderDashboard();
       break;
     }
     case "nlp-performance": {
-      document.title = "ImmersionKit Validation - Task 01 NLP Performance";
+      document.title = "ImmersionKit Validation - NLP Analyzer Performance";
       const context = createNlpLayout(root);
       context.nlpInputProfile = parseNlpBenchmarkInputProfile(
         searchParams.get("inputProfile") ?? searchParams.get("sizeProfile")
@@ -75,15 +75,15 @@ async function initializeTask(taskId: ValidationTaskId, searchParams: URLSearchP
       break;
     }
     case "contextual-word-injection": {
-      document.title = "ImmersionKit Validation - Task 02 Contextual Word Injection";
+      document.title = "ImmersionKit Validation - Contextual Word Injection";
       root.innerHTML = renderWordInjectionLayout();
       await runWordInjectionBenchmark();
       break;
     }
     case "phrase-detection": {
-      document.title = "ImmersionKit Validation - Task 03 Phrase Detection";
-      root.innerHTML = renderTaskModuleHost(
-        "Task 03: Phrase Detection Validation",
+      document.title = "ImmersionKit Validation - Phrase Detection";
+      root.innerHTML = renderLaneModuleHost(
+        "Phrase Detection Benchmark",
         "Two-lane phrase detection benchmark (fixed phrases + grammar/chunk extraction).",
         "app"
       );
@@ -92,13 +92,13 @@ async function initializeTask(taskId: ValidationTaskId, searchParams: URLSearchP
       break;
     }
     case "sentence-shortlisting": {
-      document.title = "ImmersionKit Validation - Task 04 Sentence Shortlisting";
+      document.title = "ImmersionKit Validation - Sentence Shortlisting";
       root.innerHTML = renderSentenceShortlistingLayout();
       await import("./sentence-shortlisting");
       break;
     }
     case "sentence-suitability": {
-      document.title = "ImmersionKit Validation - Task 05 Sentence Suitability";
+      document.title = "ImmersionKit Validation - Sentence Suitability";
       root.innerHTML = renderSentenceSuitabilityLayout();
 
       try {
@@ -111,37 +111,35 @@ async function initializeTask(taskId: ValidationTaskId, searchParams: URLSearchP
       break;
     }
     default: {
-      const exhaustiveCheck: never = taskId;
-      throw new Error(`Unsupported task: ${String(exhaustiveCheck)}`);
+      const exhaustiveCheck: never = laneId;
+      throw new Error(`Unsupported validation lane: ${String(exhaustiveCheck)}`);
     }
   }
 }
 
-function resolveTask(rawValue: string | null): ValidationTaskId {
+function resolveLane(rawValue: string | null): ValidationLaneId {
   if (!rawValue) {
     return "dashboard";
   }
 
   const value = rawValue.trim().toLowerCase();
 
-  if (value === "task-01" || value === "nlp" || value === "nlp-performance") {
+  if (value === "nlp" || value === "nlp-performance") {
     return "nlp-performance";
   }
 
   if (
-    value === "task-02" ||
     value === "word-injection" ||
     value === "contextual-word-injection"
   ) {
     return "contextual-word-injection";
   }
 
-  if (value === "task-03" || value === "phrase-detection") {
+  if (value === "phrase-detection") {
     return "phrase-detection";
   }
 
   if (
-    value === "task-04" ||
     value === "sentence-cache" ||
     value === "sentence-shortlisting"
   ) {
@@ -149,7 +147,6 @@ function resolveTask(rawValue: string | null): ValidationTaskId {
   }
 
   if (
-    value === "task-05" ||
     value === "sentence-suitability" ||
     value === "sentence-suitability-score"
   ) {
@@ -165,36 +162,36 @@ function renderDashboard(): string {
       <header class="validation-header">
         <h1>ImmersionKit Browser Validation Harness</h1>
         <p>
-          Use one shared validation page for all benchmark lanes. Select a task below or pass
-          <code>?task=&lt;task-id&gt;&amp;autorun=1</code> from automation.
+          Use one shared validation page for all benchmark lanes. Select a lane below or pass
+          <code>?lane=&lt;lane-id&gt;&amp;autorun=1</code> from automation.
         </p>
       </header>
 
       <section class="validation-results">
-        <article class="task-card">
-          <h2>Task 01: Background NLP Performance</h2>
-          <p>Runtime and deterministic-cache metrics for compromise and winkNLP analyzers.</p>
-          <a class="task-link" href="/validation.html?task=nlp-performance">Open Task 01</a>
+        <article class="lane-card">
+          <h2>NLP Analyzer Performance</h2>
+          <p>Runtime and deterministic-cache metrics for wink-nlp and the compromise/three comparator.</p>
+          <a class="lane-link" href="/validation.html?lane=nlp-performance">Open Lane</a>
         </article>
-        <article class="task-card">
-          <h2>Task 02: Contextual Word Injection</h2>
+        <article class="lane-card">
+          <h2>Contextual Word Injection</h2>
           <p>Accuracy and decision-quality metrics for ambiguity suppression and production injection quality in browser context.</p>
-          <a class="task-link" href="/validation.html?task=contextual-word-injection&amp;autorun=1">Open Task 02</a>
+          <a class="lane-link" href="/validation.html?lane=contextual-word-injection&amp;autorun=1">Open Lane</a>
         </article>
-        <article class="task-card">
-          <h2>Task 03: Phrase Detection</h2>
+        <article class="lane-card">
+          <h2>Phrase Detection</h2>
           <p>Gold-corpus comparison for shared annotated logic versus compromise and wink-backed phrase extraction.</p>
-          <a class="task-link" href="/validation.html?task=phrase-detection&amp;autorun=1">Open Task 03</a>
+          <a class="lane-link" href="/validation.html?lane=phrase-detection&amp;autorun=1">Open Lane</a>
         </article>
-        <article class="task-card">
-          <h2>Task 04: Sentence Shortlisting and Cache</h2>
+        <article class="lane-card">
+          <h2>Sentence Shortlisting and Cache</h2>
           <p>Content-side shortlist policies, cache-hit behavior, and false-negative tradeoffs.</p>
-          <a class="task-link" href="/validation.html?task=sentence-shortlisting&amp;autorun=1">Open Task 04</a>
+          <a class="lane-link" href="/validation.html?lane=sentence-shortlisting&amp;autorun=1">Open Lane</a>
         </article>
-        <article class="task-card">
-          <h2>Task 05: Sentence Suitability Scoring</h2>
-          <p>Ranking-quality metrics comparing known-ratio baseline and prototype scorer.</p>
-          <a class="task-link" href="/validation.html?task=sentence-suitability&amp;autorun=1">Open Task 05</a>
+        <article class="lane-card">
+          <h2>Sentence Suitability Ranking</h2>
+          <p>Ranking-quality metrics comparing known-ratio baseline and suitability scorer.</p>
+          <a class="lane-link" href="/validation.html?lane=sentence-suitability&amp;autorun=1">Open Lane</a>
         </article>
       </section>
     </main>
@@ -205,9 +202,9 @@ function createNlpLayout(container: HTMLDivElement): RenderContext {
   container.innerHTML = `
     <main class="validation-shell">
       <header class="validation-header">
-        <h1>Task 01: Background NLP Performance Benchmark</h1>
+        <h1>NLP Analyzer Performance Benchmark</h1>
         <p>
-          Browser-run benchmark for compromise and winkNLP under extension-bundle constraints.
+          Browser-run benchmark for wink-nlp and the compromise/three comparator under extension-bundle constraints.
         </p>
       </header>
 
@@ -262,7 +259,7 @@ async function runNlpBenchmark(context: RenderContext) {
 
   try {
     const includeWinkNlp = context.includeWinkCheckbox.checked;
-    const result = await runNlpPerformanceSpikeBenchmark({
+    const result = await runNlpAnalyzerPerformanceBenchmark({
       includeWinkNlp,
       inputProfile: context.nlpInputProfile
     });
@@ -401,7 +398,7 @@ function renderWordInjectionLayout(): string {
   return `
     <main class="validation-shell">
       <header class="validation-header">
-        <h1>Task 02: Contextual Word Injection Validation</h1>
+        <h1>Contextual Word Injection Benchmark</h1>
         <p>
           Browser-run validation for ambiguity suppression and production inline injection quality.
         </p>
@@ -472,18 +469,18 @@ async function runWordInjectionBenchmark() {
 
 function renderWordInjectionResults(result: BrowserWordInjectionValidationResult): string {
   const baseline = result.summary.baseline;
-  const prototype = result.summary.prototype;
+  const contextAware = result.summary.contextAware;
   const comparisonRows = result.comparisons
     .map((comparison) => {
-      const prototypeMetrics = comparison.summary.prototype;
+      const contextAwareMetrics = comparison.summary.contextAware;
 
       return `
         <tr>
           <th>${escapeHtml(comparison.label)}</th>
           <td>${escapeHtml(comparison.inputMode)}</td>
-          <td>${formatPercent(prototypeMetrics.accuracy)}</td>
-          <td>${formatPercent(prototypeMetrics.mustInjectCoverage)}</td>
-          <td>${formatPercent(prototypeMetrics.mustSkipPrecision)}</td>
+          <td>${formatPercent(contextAwareMetrics.accuracy)}</td>
+          <td>${formatPercent(contextAwareMetrics.mustInjectCoverage)}</td>
+          <td>${formatPercent(contextAwareMetrics.mustSkipPrecision)}</td>
           <td>${formatPercent(comparison.featureAgreement.observedPosMatchRate)}</td>
           <td>${formatPercent(comparison.featureAgreement.chunkTypeMatchRate)}</td>
           <td>${formatPercent(comparison.featureAgreement.exactSignatureMatchRate)}</td>
@@ -523,21 +520,21 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
     </section>
 
     <section>
-      <h2>Baseline vs Prototype</h2>
+      <h2>Baseline vs Context-Aware Policy</h2>
       <table>
         <thead>
           <tr>
             <th>Metric</th>
             <th>Baseline</th>
-            <th>Prototype</th>
+            <th>Context-Aware Policy</th>
           </tr>
         </thead>
         <tbody>
-          <tr><th>Accuracy</th><td>${formatPercent(baseline.accuracy)}</td><td>${formatPercent(prototype.accuracy)}</td></tr>
-          <tr><th>Must-inject coverage</th><td>${formatPercent(baseline.mustInjectCoverage)}</td><td>${formatPercent(prototype.mustInjectCoverage)}</td></tr>
-          <tr><th>Must-skip precision</th><td>${formatPercent(baseline.mustSkipPrecision)}</td><td>${formatPercent(prototype.mustSkipPrecision)}</td></tr>
-          <tr><th>Uncertain-skip rate</th><td>${formatPercent(baseline.uncertainSkipRate)}</td><td>${formatPercent(prototype.uncertainSkipRate)}</td></tr>
-          <tr><th>Low-confidence skips</th><td>${baseline.lowConfidenceSkipCount}</td><td>${prototype.lowConfidenceSkipCount}</td></tr>
+          <tr><th>Accuracy</th><td>${formatPercent(baseline.accuracy)}</td><td>${formatPercent(contextAware.accuracy)}</td></tr>
+          <tr><th>Must-inject coverage</th><td>${formatPercent(baseline.mustInjectCoverage)}</td><td>${formatPercent(contextAware.mustInjectCoverage)}</td></tr>
+          <tr><th>Must-skip precision</th><td>${formatPercent(baseline.mustSkipPrecision)}</td><td>${formatPercent(contextAware.mustSkipPrecision)}</td></tr>
+          <tr><th>Uncertain-skip rate</th><td>${formatPercent(baseline.uncertainSkipRate)}</td><td>${formatPercent(contextAware.uncertainSkipRate)}</td></tr>
+          <tr><th>Low-confidence skips</th><td>${baseline.lowConfidenceSkipCount}</td><td>${contextAware.lowConfidenceSkipCount}</td></tr>
         </tbody>
       </table>
     </section>
@@ -583,7 +580,7 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
       <h2>Parser-Backed Comparison Lanes</h2>
       <p>
         The shared annotated corpus remains the authoritative quality lane. The rows below show
-        whether parser-derived features from raw text recover the same prototype decisions and
+        whether parser-derived features from raw text recover the same context-aware decisions and
         feature annotations closely enough to be useful.
       </p>
       <table>
@@ -591,7 +588,7 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
           <tr>
             <th>Implementation</th>
             <th>Input mode</th>
-            <th>Prototype accuracy</th>
+            <th>Context-aware accuracy</th>
             <th>Must-inject coverage</th>
             <th>Must-skip precision</th>
             <th>Observed POS match</th>
@@ -608,7 +605,7 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
   `;
 }
 
-function renderTaskModuleHost(title: string, description: string, mountId: string): string {
+function renderLaneModuleHost(title: string, description: string, mountId: string): string {
   return `
     <main class="validation-shell">
       <header class="validation-header">
@@ -626,7 +623,7 @@ function renderSentenceShortlistingLayout(): string {
   return `
     <main class="validation-shell">
       <header class="validation-header">
-        <h1>Task 04: Sentence Shortlisting and Cache Validation</h1>
+        <h1>Sentence Shortlisting and Cache Benchmark</h1>
         <p>
           Browser benchmark harness for shortlist policy tradeoffs across fixtures and rerender cache replay.
         </p>
@@ -681,9 +678,9 @@ function renderSentenceSuitabilityLayout(): string {
   return `
     <main class="validation-shell">
       <header class="validation-header">
-        <h1>Task 05: Sentence Suitability Validation</h1>
+        <h1>Sentence Suitability Ranking Benchmark</h1>
         <p>
-          Browser harness comparing known-ratio baseline ranking and prototype multi-signal scoring.
+          Browser harness comparing known-ratio baseline ranking and suitability scoring.
         </p>
       </header>
       <section id="validation-status" class="status">Running validation...</section>

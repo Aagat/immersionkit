@@ -8,7 +8,7 @@ import {
   findWordRenderEntriesForAnalyzerToken,
   hashSentence,
   normalizeToken,
-  scorePrototypeSuitability,
+  scoreSentenceSuitability,
   scoreSentenceByVocabStatuses,
   resolveRenderUnitPhraseTarget,
   type AnalyzerChunk,
@@ -264,7 +264,7 @@ function buildAnalysisEntry(
     phraseMatches,
     vocabStats
   );
-  const suitabilityScore = scorePrototypeSuitability(
+  const suitabilityScore = scoreSentenceSuitability(
     suitabilitySignals,
     BEGINNER_DIFFICULTY_PRESET
   );

@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-05-08T00:02:44.592Z",
+  "capturedAt": "2026-05-09T18:15:26.356Z",
   "status": "pass",
   "result": {
-    "generatedAt": "2026-05-08T00:02:44.126Z",
+    "generatedAt": "2026-05-09T18:15:26.149Z",
     "browserUserAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "corpusVersion": "1.0.0",
     "summary": {
@@ -38,13 +38,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -73,13 +73,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -107,13 +107,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS modal is blocked for can_modal_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -141,13 +141,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS modal is blocked for can_modal_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -175,13 +175,13 @@
             "reason": "Content-path baseline rendering injected zero matching tokens.",
             "injectedCount": 0
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "low-confidence",
             "reason": "Confidence 0.44 is below 0.72."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -210,13 +210,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -245,13 +245,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -280,13 +280,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -315,13 +315,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -350,13 +350,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -385,13 +385,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -420,13 +420,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "low-confidence",
             "reason": "Confidence 0.55 is below 0.72."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -454,13 +454,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -489,13 +489,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS noun is blocked for light_adjective_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -523,13 +523,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -557,13 +557,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS noun is blocked for light_adjective_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -591,13 +591,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "low-confidence",
             "reason": "Confidence 0.50 is below 0.75."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -626,13 +626,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -660,13 +660,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -694,13 +694,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -728,13 +728,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS noun is blocked for right_adjective_vs_adverb_or_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -762,13 +762,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -796,13 +796,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -830,13 +830,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "low-confidence",
             "reason": "Confidence 0.52 is below 0.78."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -865,13 +865,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -900,13 +900,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -935,13 +935,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "inject",
             "code": "context-evidence-accepted",
             "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -970,13 +970,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "blocked-observed-pos",
             "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
           },
           "baselineCorrect": false,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -1004,13 +1004,13 @@
             "reason": "Content-path baseline rendering injected zero matching tokens.",
             "injectedCount": 0
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "low-confidence",
             "reason": "Confidence 0.58 is below 0.72."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": true
+          "contextAwareCorrect": true
         },
         {
           "candidate": {
@@ -1039,13 +1039,13 @@
             "reason": "Content-path baseline rendering injected at least one matching token.",
             "injectedCount": 1
           },
-          "prototype": {
+          "contextAware": {
             "decision": "skip",
             "code": "low-confidence",
             "reason": "Confidence 0.68 is below 0.72."
           },
           "baselineCorrect": true,
-          "prototypeCorrect": false
+          "contextAwareCorrect": false
         }
       ],
       "baseline": {
@@ -1077,8 +1077,8 @@
         ],
         "falseNegativeCaseIds": []
       },
-      "prototype": {
-        "name": "prototype",
+      "contextAware": {
+        "name": "context-aware",
         "totalCases": 30,
         "correctCases": 29,
         "accuracy": 0.9666666666666667,
@@ -1230,9 +1230,9 @@
         "label": "Shared annotated features",
         "inputMode": "fixture-annotated",
         "runtime": {
-          "totalMs": 4,
-          "averageCaseMs": 0.005333333333333333,
-          "casesPerSecond": 187500,
+          "totalMs": 1,
+          "averageCaseMs": 0.0013333333333333333,
+          "casesPerSecond": 750000,
           "repeatCount": 25
         },
         "featureAgreement": {
@@ -1272,13 +1272,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1305,13 +1305,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1337,13 +1337,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS modal is blocked for can_modal_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1369,13 +1369,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS modal is blocked for can_modal_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1401,13 +1401,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.44 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1434,13 +1434,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1467,13 +1467,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1500,13 +1500,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1533,13 +1533,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1566,13 +1566,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1599,13 +1599,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1632,13 +1632,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.55 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1664,13 +1664,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1697,13 +1697,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS noun is blocked for light_adjective_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1729,13 +1729,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1761,13 +1761,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS noun is blocked for light_adjective_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1793,13 +1793,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.50 is below 0.75."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1826,13 +1826,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1858,13 +1858,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1890,13 +1890,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1922,13 +1922,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS noun is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1954,13 +1954,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -1986,13 +1986,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2018,13 +2018,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.52 is below 0.78."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2051,13 +2051,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2084,13 +2084,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2117,13 +2117,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2150,13 +2150,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2182,13 +2182,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.58 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2215,13 +2215,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.68 is below 0.72."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": false
+              "contextAwareCorrect": false
             }
           ],
           "baseline": {
@@ -2255,8 +2255,8 @@
             ],
             "falseNegativeCaseIds": []
           },
-          "prototype": {
-            "name": "prototype",
+          "contextAware": {
+            "name": "context-aware",
             "totalCases": 30,
             "correctCases": 29,
             "accuracy": 0.9666666666666667,
@@ -2278,9 +2278,9 @@
         "label": "compromise/three derived features",
         "inputMode": "library-derived",
         "runtime": {
-          "totalMs": 213,
-          "averageCaseMs": 0.284,
-          "casesPerSecond": 3521.1267605633802,
+          "totalMs": 206,
+          "averageCaseMs": 0.27466666666666667,
+          "casesPerSecond": 3640.7766990291266,
           "repeatCount": 25
         },
         "featureAgreement": {
@@ -2320,13 +2320,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2354,13 +2354,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2388,13 +2388,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": false
+              "contextAwareCorrect": false
             },
             {
               "candidate": {
@@ -2421,13 +2421,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS modal is blocked for can_modal_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2454,13 +2454,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.44 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2487,13 +2487,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2522,13 +2522,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2556,13 +2556,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2592,13 +2592,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2625,13 +2625,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2658,13 +2658,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2691,13 +2691,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.55 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2723,13 +2723,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2755,13 +2755,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for light_adjective_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2788,13 +2788,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2821,13 +2821,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS noun is blocked for light_adjective_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2854,13 +2854,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.50 is below 0.75."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2888,13 +2888,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2921,13 +2921,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2951,13 +2951,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -2983,13 +2983,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3016,13 +3016,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3046,13 +3046,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "insufficient-context-evidence",
                 "reason": "No required context signature was present for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3079,13 +3079,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.52 is below 0.78."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3112,13 +3112,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3145,13 +3145,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3178,13 +3178,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3214,13 +3214,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3244,13 +3244,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.58 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3277,13 +3277,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.68 is below 0.72."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": false
+              "contextAwareCorrect": false
             }
           ],
           "baseline": {
@@ -3317,8 +3317,8 @@
             ],
             "falseNegativeCaseIds": []
           },
-          "prototype": {
-            "name": "prototype",
+          "contextAware": {
+            "name": "context-aware",
             "totalCases": 30,
             "correctCases": 28,
             "accuracy": 0.9333333333333333,
@@ -3342,9 +3342,9 @@
         "label": "wink-nlp derived features",
         "inputMode": "library-derived",
         "runtime": {
-          "totalMs": 21,
-          "averageCaseMs": 0.028,
-          "casesPerSecond": 35714.28571428571,
+          "totalMs": 23,
+          "averageCaseMs": 0.030666666666666665,
+          "casesPerSecond": 32608.695652173912,
           "repeatCount": 25
         },
         "featureAgreement": {
@@ -3384,13 +3384,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3419,13 +3419,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3452,13 +3452,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS modal is blocked for can_modal_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3485,13 +3485,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS modal is blocked for can_modal_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3518,13 +3518,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.44 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3551,13 +3551,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects can because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the can_modal_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3585,13 +3585,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3618,13 +3618,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3653,13 +3653,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for watch_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3686,13 +3686,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3719,13 +3719,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the watch_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3752,13 +3752,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects watch because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.55 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3785,13 +3785,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3817,13 +3817,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "insufficient-context-evidence",
                 "reason": "No required context signature was present for light_adjective_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3850,13 +3850,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3883,13 +3883,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for light_adjective_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3915,13 +3915,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.50 is below 0.75."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3949,13 +3949,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects light because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the light_adjective_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -3982,13 +3982,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4015,13 +4015,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4048,13 +4048,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS noun is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4081,13 +4081,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the right_adjective_vs_adverb_or_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4113,13 +4113,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS adverb is blocked for right_adjective_vs_adverb_or_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4145,13 +4145,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects right because adjective is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.52 is below 0.78."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4178,13 +4178,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4208,13 +4208,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "insufficient-context-evidence",
                 "reason": "No required context signature was present for plant_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4241,13 +4241,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "inject",
                 "code": "context-evidence-accepted",
                 "reason": "Context evidence and confidence meet the plant_verb_vs_noun injection rule."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4276,13 +4276,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "blocked-observed-pos",
                 "reason": "Observed POS verb is blocked for plant_verb_vs_noun."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4308,13 +4308,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.58 is below 0.72."
               },
               "baselineCorrect": false,
-              "prototypeCorrect": true
+              "contextAwareCorrect": true
             },
             {
               "candidate": {
@@ -4341,13 +4341,13 @@
                 "code": "content-baseline-safe-pos",
                 "reason": "Content baseline injects plant because noun is in the safe POS set."
               },
-              "prototype": {
+              "contextAware": {
                 "decision": "skip",
                 "code": "low-confidence",
                 "reason": "Confidence 0.68 is below 0.72."
               },
               "baselineCorrect": true,
-              "prototypeCorrect": false
+              "contextAwareCorrect": false
             }
           ],
           "baseline": {
@@ -4381,8 +4381,8 @@
             ],
             "falseNegativeCaseIds": []
           },
-          "prototype": {
-            "name": "prototype",
+          "contextAware": {
+            "name": "context-aware",
             "totalCases": 30,
             "correctCases": 29,
             "accuracy": 0.9666666666666667,
@@ -4405,56 +4405,56 @@
     "pass": true,
     "checks": [
       {
-        "id": "task-02-browser-status-pass",
+        "id": "word-injection-browser-status-pass",
         "passed": true,
         "message": "Browser validation status should be pass; got pass."
       },
       {
-        "id": "task-02-snapshot-checks-pass",
+        "id": "word-injection-snapshot-checks-pass",
         "passed": true,
-        "message": "Task 02 annotated browser snapshot checks must pass."
+        "message": "Contextual word injection annotated browser snapshot checks must pass."
       },
       {
-        "id": "task-02-prototype-must-skip-precision",
+        "id": "word-injection-context-aware-must-skip-precision",
         "passed": true,
         "actual": 1,
         "minimum": 1,
-        "message": "Task 02 prototype must-skip precision must remain 100% on the current annotated corpus. Actual 1.000000, minimum 1.000000."
+        "message": "Context-aware word injection must-skip precision must remain 100% on the current annotated corpus. Actual 1.000000, minimum 1.000000."
       },
       {
-        "id": "task-02-prototype-must-inject-coverage",
+        "id": "word-injection-context-aware-must-inject-coverage",
         "passed": true,
         "actual": 0.9285714285714286,
         "minimum": 0.9285714285714286,
-        "message": "Task 02 prototype must-inject coverage must stay at or above the current 92.9% rounded target unless an approval is documented. Actual 0.928571, minimum 0.928571."
+        "message": "Context-aware word injection must-inject coverage must stay at or above the current 92.9% rounded target unless an approval is documented. Actual 0.928571, minimum 0.928571."
       },
       {
-        "id": "task-02-production-quality-decision-accuracy",
+        "id": "word-injection-production-quality-decision-accuracy",
         "passed": true,
         "actual": 1,
         "minimum": 1,
-        "message": "Task 02 production quality decisions must stay exact on the refactor-aligned corpus. Actual 1.000000, minimum 1.000000."
+        "message": "Contextual word injection production quality decisions must stay exact on the refactor-aligned corpus. Actual 1.000000, minimum 1.000000."
       },
       {
-        "id": "task-02-production-quality-wrong-sense-rendered",
+        "id": "word-injection-production-quality-wrong-sense-rendered",
         "passed": true,
         "actual": 0,
         "maximum": 0,
-        "message": "Task 02 production quality rendering must not render known wrong-sense replacements. Actual 0.000000, maximum 0.000000."
+        "message": "Contextual word injection production quality rendering must not render known wrong-sense replacements. Actual 0.000000, maximum 0.000000."
       },
       {
-        "id": "task-02-production-quality-missed-expected-inject",
+        "id": "word-injection-production-quality-missed-expected-inject",
         "passed": true,
         "actual": 0,
         "maximum": 0,
-        "message": "Task 02 production quality rendering must keep safe positive injections renderable. Actual 0.000000, maximum 0.000000."
+        "message": "Contextual word injection production quality rendering must keep safe positive injections renderable. Actual 0.000000, maximum 0.000000."
       },
       {
-        "id": "task-02-production-quality-wrong-target",
+        "id": "word-injection-production-quality-wrong-target",
         "passed": true,
         "actual": 0,
         "maximum": 0,
-        "message": "Task 02 production quality rendering must keep expected target senses aligned. Actual 0.000000, maximum 0.000000."
+        "message": "Contextual word injection production quality rendering must keep expected target senses aligned. Actual 0.000000, maximum 0.000000."
       }
     ],
     "failures": []

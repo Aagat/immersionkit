@@ -25,14 +25,14 @@ const DEFAULT_MAX_SHORTLIST_SIZE = 12;
 
 const POLICY_ORDER: readonly ShortlistingPolicyId[] = [
   "analyze-every-segmented",
-  "current-injected-token-gated",
+  "legacy-injected-token-gated",
   "injected-token-length-dedupe",
   "phrase-aware-shortlist"
 ] as const;
 
 const POLICY_LABELS: Readonly<Record<ShortlistingPolicyId, string>> = {
   "analyze-every-segmented": "Analyze Every Segmented Sentence",
-  "current-injected-token-gated": "Current Injected-Token-Gated Flow",
+  "legacy-injected-token-gated": "Legacy Injected-Token-Gated Flow",
   "injected-token-length-dedupe": "Injected Token + Length + Dedupe",
   "phrase-aware-shortlist": "Phrase-Aware Shortlist"
 };
@@ -467,7 +467,7 @@ function analyzeScenarioPass(input: {
     boundedSentences,
     policyCandidates: {
       "analyze-every-segmented": rawSentences,
-      "current-injected-token-gated": dedupedCurrentCandidates,
+      "legacy-injected-token-gated": dedupedCurrentCandidates,
       "injected-token-length-dedupe": dedupedInjectedLengthCandidates,
       "phrase-aware-shortlist": phraseAwareCandidates
     }
@@ -636,7 +636,7 @@ function buildBenchmarkAssertions(input: {
 }): SentenceShortlistingAssertion[] {
   const policyById = new Map(input.policies.map((policy) => [policy.policyId, policy]));
   const baseline = policyById.get("analyze-every-segmented");
-  const current = policyById.get("current-injected-token-gated");
+  const legacyInjectedToken = policyById.get("legacy-injected-token-gated");
   const injected = policyById.get("injected-token-length-dedupe");
   const phraseAware = policyById.get("phrase-aware-shortlist");
 
@@ -646,18 +646,18 @@ function buildBenchmarkAssertions(input: {
     id: "analysis-calls-reduced-vs-baseline",
     passed:
       (baseline?.estimatedAnalysisCalls ?? 0) >=
-      (current?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER),
+      (legacyInjectedToken?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER),
     message:
-      "Current injected-token-gated flow should not exceed baseline analysis calls."
+      "Legacy injected-token-gated flow should not exceed baseline analysis calls."
   });
 
   assertions.push({
-    id: "length-dedupe-reduces-or-matches-current-calls",
+    id: "length-dedupe-reduces-or-matches-legacy-calls",
     passed:
-      (current?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER) >=
+      (legacyInjectedToken?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER) >=
       (injected?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER),
     message:
-      "Injected + length + dedupe should not require more analysis calls than current flow."
+      "Injected + length + dedupe should not require more analysis calls than the legacy flow."
   });
 
   assertions.push({
@@ -672,13 +672,13 @@ function buildBenchmarkAssertions(input: {
   const rerenderScenario = input.scenarios.find(
     (scenario) => scenario.scenarioId === "dynamic-rerender-same-hash"
   );
-  const rerenderCurrent = rerenderScenario?.policySummaries.find(
-    (policy) => policy.policyId === "current-injected-token-gated"
+  const rerenderLegacyInjectedToken = rerenderScenario?.policySummaries.find(
+    (policy) => policy.policyId === "legacy-injected-token-gated"
   );
 
   assertions.push({
     id: "rerender-cache-hits-observed",
-    passed: (rerenderCurrent?.cacheHits ?? 0) > 0,
+    passed: (rerenderLegacyInjectedToken?.cacheHits ?? 0) > 0,
     message:
       "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
   });

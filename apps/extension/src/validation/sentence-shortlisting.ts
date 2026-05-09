@@ -21,7 +21,7 @@ type SentenceShortlistingBrowserBenchmarkArtifact = SentenceShortlistingBenchmar
   metadata: {
     schemaVersion: "1.1.0";
     generatedAt: string;
-    taskId: "task-04-sentence-shortlisting";
+    laneId: "sentence-shortlisting";
     canonicalCommand: "pnpm benchmark";
     inputProfile: string;
     sourceOfTruth: "browser-run-validation";
@@ -101,7 +101,7 @@ function buildMetadata(): SentenceShortlistingBrowserBenchmarkArtifact["metadata
   return {
     schemaVersion: "1.1.0",
     generatedAt: new Date().toISOString(),
-    taskId: "task-04-sentence-shortlisting",
+    laneId: "sentence-shortlisting",
     canonicalCommand: "pnpm benchmark",
     inputProfile: shortlistingInputProfile,
     sourceOfTruth: "browser-run-validation",

@@ -8,18 +8,18 @@ const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../..");
 
 const shortlistingInputProfile = process.env.IK_BENCHMARK_INPUT_PROFILE ?? "baseline";
-const validationUrl = `http://127.0.0.1:5173/validation.html?task=sentence-shortlisting&autorun=1&inputProfile=${encodeURIComponent(
+const validationUrl = `http://127.0.0.1:5173/validation.html?lane=sentence-shortlisting&autorun=1&inputProfile=${encodeURIComponent(
   shortlistingInputProfile
 )}`;
 const playwrightSpecPath = path.join(
   workspaceRoot,
-  "tools/benchmarks/task-04-shortlisting.playwright.spec.cjs"
+  "tools/benchmarks/sentence-shortlisting.playwright.spec.cjs"
 );
 
 const pnpmBinary = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 async function main() {
-  console.log(`Task 04 input profile: ${shortlistingInputProfile}`);
+  console.log(`Sentence shortlisting input profile: ${shortlistingInputProfile}`);
 
   const server = spawn(
     pnpmBinary,
@@ -61,7 +61,7 @@ async function main() {
       "__tests__/sentence-shortlisting-validation.test.ts"
     ]);
 
-    console.log("Task 04 benchmark run completed successfully.");
+    console.log("Sentence shortlisting benchmark run completed successfully.");
   } finally {
     await stopServer(server);
   }
