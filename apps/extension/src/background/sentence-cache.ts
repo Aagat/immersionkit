@@ -4,6 +4,10 @@ import type {
   SentenceLearningNote
 } from "@immersionkit/shared";
 import {
+  DEFAULT_LANGUAGE_PAIR_ID,
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+  isLanguagePairId,
   createSentenceLearningNote,
   hasSentenceLearningNoteContent
 } from "@immersionkit/shared";
@@ -172,10 +176,18 @@ function normalizeSentenceCacheEntry(
     return null;
   }
 
-  const targetLanguage = value.targetLanguage === "es" ? "es" : null;
+  const targetLanguage = readString(value.targetLanguage);
   if (!targetLanguage) {
     return null;
   }
+  const sourceLanguage = readString(value.sourceLanguage);
+  const languagePair =
+    isLanguagePairId(value.languagePair)
+      ? value.languagePair
+      : (!sourceLanguage || sourceLanguage === DEFAULT_SOURCE_LANGUAGE) &&
+          targetLanguage === DEFAULT_TARGET_LANGUAGE
+        ? DEFAULT_LANGUAGE_PAIR_ID
+        : undefined;
 
   return {
     sentenceHash,
@@ -185,8 +197,9 @@ function normalizeSentenceCacheEntry(
     model,
     promptVersion,
     createdAt,
+    languagePair,
     targetLanguage,
-    sourceLanguage: value.sourceLanguage === "en" ? "en" : undefined,
+    sourceLanguage: sourceLanguage ?? undefined,
     provider:
       value.provider === "openai" || value.provider === "none"
         ? value.provider

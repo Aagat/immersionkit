@@ -3,6 +3,7 @@ import type {
   ExtensionSettings,
   QualifiedExposureEvent,
   LearningItem,
+  LanguagePairId,
   RenderUnitEntry,
   SentenceAnalysisEntry,
   SentenceLearningNote,
@@ -54,6 +55,7 @@ export type AssetContextLoadSource =
   | "empty";
 
 export type ActiveAssetContext = {
+  languagePair: LanguagePairId;
   renderUnits: RenderUnitEntry[];
   sentenceHintPhrases: string[];
   source: AssetContextLoadSource;

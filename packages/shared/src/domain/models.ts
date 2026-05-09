@@ -1,5 +1,23 @@
-export const SUPPORTED_SOURCE_LANGUAGES = ["en"] as const;
-export const SUPPORTED_TARGET_LANGUAGES = ["es"] as const;
+import {
+  DEFAULT_LANGUAGE_PAIR_ID,
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+  buildLanguagePairId,
+  isLanguagePairId,
+  splitLanguagePairId,
+  type LanguagePairId,
+  type SourceLanguageCode,
+  type TargetLanguageCode
+} from "../language-pairs/types";
+
+export type {
+  LanguagePairId,
+  SourceLanguageCode,
+  TargetLanguageCode
+} from "../language-pairs/types";
+
+export const SUPPORTED_SOURCE_LANGUAGES = [DEFAULT_SOURCE_LANGUAGE] as const;
+export const SUPPORTED_TARGET_LANGUAGES = [DEFAULT_TARGET_LANGUAGE] as const;
 export const SUPPORTED_POS_VALUES = [
   "noun",
   "verb",
@@ -125,8 +143,8 @@ export const RENDER_UNIT_PROVENANCE_SOURCES = [
   "curated"
 ] as const;
 
-export type SupportedSourceLanguage = (typeof SUPPORTED_SOURCE_LANGUAGES)[number];
-export type SupportedTargetLanguage = (typeof SUPPORTED_TARGET_LANGUAGES)[number];
+export type SupportedSourceLanguage = SourceLanguageCode;
+export type SupportedTargetLanguage = TargetLanguageCode;
 export type SupportedPos = (typeof SUPPORTED_POS_VALUES)[number];
 export type SafeInjectionPos = (typeof SAFE_INJECTION_POS_VALUES)[number];
 export type VocabStatus = (typeof VOCAB_STATUS_VALUES)[number];
@@ -235,7 +253,7 @@ export type LexemeEntry = {
 export type LexemeAsset = {
   schemaVersion: string;
   assetVersion: string;
-  languagePair: "en-es";
+  languagePair: LanguagePairId;
   generatedAt?: IsoTimestamp;
   entries: LexemeEntry[];
 };
@@ -295,7 +313,7 @@ export type RenderUnitEntry = {
 export type RenderUnitAsset = {
   schemaVersion: string;
   assetVersion: string;
-  languagePair: "en-es";
+  languagePair: LanguagePairId;
   generatedAt?: IsoTimestamp;
   entries: RenderUnitEntry[];
 };
@@ -527,6 +545,7 @@ export type SentenceCacheEntry = {
   sourceText: string;
   translatedText: string;
   learningNote: SentenceLearningNote;
+  languagePair?: LanguagePairId;
   targetLanguage: SupportedTargetLanguage;
   model: string;
   promptVersion: string;
@@ -545,6 +564,7 @@ export type SiteSetting = {
 };
 
 export type ExtensionSettings = {
+  languagePair?: LanguagePairId;
   discoveryRate: number;
   targetLanguage: SupportedTargetLanguage;
   sentenceTranslationEnabled: boolean;
@@ -559,6 +579,7 @@ export type ResolvedExtensionSettings = Omit<
   ExtensionSettings,
   "enabled" | "sourceLanguage" | "goldilocksThreshold" | "sentenceBatchSize"
 > & {
+  languagePair: LanguagePairId;
   enabled: boolean;
   sourceLanguage: SupportedSourceLanguage;
   goldilocksThreshold: number;
@@ -566,10 +587,11 @@ export type ResolvedExtensionSettings = Omit<
 };
 
 export const DEFAULT_EXTENSION_SETTINGS: ResolvedExtensionSettings = {
+  languagePair: DEFAULT_LANGUAGE_PAIR_ID,
   enabled: true,
   discoveryRate: 0.15,
-  targetLanguage: "es",
-  sourceLanguage: "en",
+  targetLanguage: DEFAULT_TARGET_LANGUAGE,
+  sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
   sentenceTranslationEnabled: false,
   provider: "none",
   goldilocksThreshold: 0.6,
@@ -628,15 +650,23 @@ export function resolveExtensionSettings(
   settings: Partial<ExtensionSettings> | null | undefined
 ): ResolvedExtensionSettings {
   const draft = settings ?? {};
+  const languagePair = resolveSettingsLanguagePair(draft);
+  const pairLanguages = splitLanguagePairId(languagePair);
+  const hasExplicitLanguagePair = isLanguagePairId(draft.languagePair);
 
   return {
+    languagePair,
     enabled: draft.enabled ?? DEFAULT_EXTENSION_SETTINGS.enabled,
     discoveryRate: clampUnitInterval(
       draft.discoveryRate,
       DEFAULT_EXTENSION_SETTINGS.discoveryRate
     ),
-    targetLanguage: draft.targetLanguage ?? DEFAULT_EXTENSION_SETTINGS.targetLanguage,
-    sourceLanguage: draft.sourceLanguage ?? DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
+    targetLanguage: hasExplicitLanguagePair
+      ? pairLanguages.targetLanguage
+      : draft.targetLanguage ?? pairLanguages.targetLanguage,
+    sourceLanguage: hasExplicitLanguagePair
+      ? pairLanguages.sourceLanguage
+      : draft.sourceLanguage ?? pairLanguages.sourceLanguage,
     sentenceTranslationEnabled:
       draft.sentenceTranslationEnabled ??
       DEFAULT_EXTENSION_SETTINGS.sentenceTranslationEnabled,
@@ -647,6 +677,20 @@ export function resolveExtensionSettings(
     ),
     sentenceBatchSize: clampSentenceBatchSize(draft.sentenceBatchSize)
   };
+}
+
+function resolveSettingsLanguagePair(
+  settings: Partial<ExtensionSettings>
+): LanguagePairId {
+  if (isLanguagePairId(settings.languagePair)) {
+    return settings.languagePair;
+  }
+
+  if (settings.sourceLanguage && settings.targetLanguage) {
+    return buildLanguagePairId(settings.sourceLanguage, settings.targetLanguage);
+  }
+
+  return DEFAULT_EXTENSION_SETTINGS.languagePair;
 }
 
 function normalizeLearningNoteField(value: string | undefined): string {

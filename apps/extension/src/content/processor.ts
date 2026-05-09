@@ -50,6 +50,8 @@ export function processRoots(state: ProcessingState, roots: ParentNode[]) {
     for (const node of nodes) {
       const result = processTextNode(node, {
         discoveryRate: state.discoveryRate,
+        sourceLanguage: state.sourceLanguage,
+        targetLanguage: state.targetLanguage,
         samplingSeed: state.samplingSeed,
         createNodeId: () => createNodeId(state),
         wordRenderIndex: state.wordRenderIndex,
@@ -273,6 +275,7 @@ function shouldActivateWordByCurriculum(
     config: state.curriculum.config,
     profile: state.curriculum.profile,
     activeContent: state.curriculum.activeWordContent,
+    beginnerCognatePolicy: state.curriculum.beginnerCognatePolicy,
     ...input
   });
 

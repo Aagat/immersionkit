@@ -4,7 +4,10 @@ import {
   RENDER_UNIT_POLICIES,
   RENDER_UNIT_PROVENANCE_SOURCES,
   SUPPORTED_POS_VALUES,
+  DEFAULT_LANGUAGE_PAIR_ID,
+  isLanguagePairId,
   normalizeToken,
+  splitLanguagePairId,
   type RenderUnitEntry,
   type RenderUnitKind,
   type RenderUnitMatchMode,
@@ -12,6 +15,7 @@ import {
   type RenderUnitProvenanceSource,
   type RenderUnitTokenPattern,
   type LexemeEntry,
+  type LanguagePairId,
   type SupportedPos
 } from "@immersionkit/shared";
 
@@ -26,12 +30,14 @@ type StorageRecord = Record<string, unknown>;
 
 export type ParsedRenderUnitAsset = {
   entries: RenderUnitEntry[];
+  languagePair: LanguagePairId;
   assetVersion: string | null;
   schemaVersion: string | null;
 };
 
 export type ParsedLexemeAsset = {
   entries: LexemeEntry[];
+  languagePair: LanguagePairId;
   assetVersion: string | null;
   schemaVersion: string | null;
 };
@@ -49,8 +55,10 @@ export function parseRenderUnitAsset(input: unknown): ParsedRenderUnitAsset | nu
     return null;
   }
 
+  const languagePair = readLanguagePair(input.languagePair);
+  const languages = splitLanguagePairId(languagePair);
   const entries = input.entries.flatMap((entry): RenderUnitEntry[] => {
-    const normalized = normalizeRenderUnitEntry(entry);
+    const normalized = normalizeRenderUnitEntry(entry, languages);
     return normalized ? [normalized] : [];
   });
 
@@ -60,6 +68,7 @@ export function parseRenderUnitAsset(input: unknown): ParsedRenderUnitAsset | nu
 
   return {
     entries,
+    languagePair,
     assetVersion: readString(input.assetVersion),
     schemaVersion: readString(input.schemaVersion)
   };
@@ -70,8 +79,10 @@ export function parseLexemeAsset(input: unknown): ParsedLexemeAsset | null {
     return null;
   }
 
+  const languagePair = readLanguagePair(input.languagePair);
+  const languages = splitLanguagePairId(languagePair);
   const entries = input.entries.flatMap((entry): LexemeEntry[] => {
-    const normalized = normalizeLexemeEntry(entry);
+    const normalized = normalizeLexemeEntry(entry, languages);
     return normalized ? [normalized] : [];
   });
 
@@ -81,12 +92,19 @@ export function parseLexemeAsset(input: unknown): ParsedLexemeAsset | null {
 
   return {
     entries,
+    languagePair,
     assetVersion: readString(input.assetVersion),
     schemaVersion: readString(input.schemaVersion)
   };
 }
 
-function normalizeLexemeEntry(input: unknown): LexemeEntry | null {
+function normalizeLexemeEntry(
+  input: unknown,
+  languages: {
+    sourceLanguage: string;
+    targetLanguage: string;
+  }
+): LexemeEntry | null {
   if (!isRecord(input)) {
     return null;
   }
@@ -113,13 +131,19 @@ function normalizeLexemeEntry(input: unknown): LexemeEntry | null {
     inflections: Array.isArray(input.inflections)
       ? input.inflections.filter((value): value is string => typeof value === "string")
       : undefined,
-    sourceLanguage: "en",
-    targetLanguage: "es",
+    sourceLanguage: readString(input.sourceLanguage) ?? languages.sourceLanguage,
+    targetLanguage: readString(input.targetLanguage) ?? languages.targetLanguage,
     sourceDataset: readString(input.sourceDataset) ?? undefined
   };
 }
 
-function normalizeRenderUnitEntry(input: unknown): RenderUnitEntry | null {
+function normalizeRenderUnitEntry(
+  input: unknown,
+  languages: {
+    sourceLanguage: string;
+    targetLanguage: string;
+  }
+): RenderUnitEntry | null {
   if (!isRecord(input)) {
     return null;
   }
@@ -206,8 +230,8 @@ function normalizeRenderUnitEntry(input: unknown): RenderUnitEntry | null {
     inflections: Array.isArray(input.inflections)
       ? input.inflections.filter((value): value is string => typeof value === "string")
       : undefined,
-    sourceLanguage: "en",
-    targetLanguage: "es"
+    sourceLanguage: readString(input.sourceLanguage) ?? languages.sourceLanguage,
+    targetLanguage: readString(input.targetLanguage) ?? languages.targetLanguage
   };
 }
 
@@ -352,6 +376,14 @@ function readStringSetValue(value: unknown, allowed: ReadonlySet<string>): strin
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readLanguagePair(value: unknown): LanguagePairId {
+  if (isLanguagePairId(value)) {
+    return value;
+  }
+
+  return DEFAULT_LANGUAGE_PAIR_ID;
 }
 
 function readFiniteNumber(value: unknown, fallback: number): number {

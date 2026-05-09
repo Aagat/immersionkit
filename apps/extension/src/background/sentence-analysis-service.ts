@@ -1,6 +1,8 @@
 import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
+  DEFAULT_LANGUAGE_PAIR_ID,
+  createFallbackLanguagePairDefinition,
   buildRenderUnitRuntimeIndex,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
@@ -8,6 +10,7 @@ import {
   findWordRenderEntriesForAnalyzerToken,
   hashSentence,
   normalizeToken,
+  getLanguagePairDefinition,
   scoreSentenceSuitability,
   scoreSentenceByVocabStatuses,
   resolveRenderUnitPhraseTarget,
@@ -17,6 +20,8 @@ import {
   type ContextChunkType,
   type ContextualWordCandidate,
   type CuratedPhraseTargetEntry,
+  type LanguagePairDefinition,
+  type LanguagePairId,
   type ObservedContextPos,
   type PhraseOccurrence,
   type RenderUnitEntry,
@@ -51,7 +56,15 @@ import {
 } from "./sentence-analyzers";
 import { IndexedDbUserVocabRepository } from "../storage/user-data-repository";
 
-const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
+const RUNTIME_PHRASE_TARGET_LEXICON_BY_PAIR = new Map<
+  LanguagePairId,
+  readonly CuratedPhraseTargetEntry[]
+>([
+  [
+    DEFAULT_LANGUAGE_PAIR_ID,
+    parsePhraseTargetAsset(phraseTargetAsset, DEFAULT_LANGUAGE_PAIR_ID)
+  ]
+]);
 
 export type SentenceAnalysisCandidate = {
   sentenceHash?: string;
@@ -84,6 +97,12 @@ type SentenceAnalysisServiceOptions = {
   analyzer?: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>);
   assetPacks?: Pick<BackgroundAssetPackService, "loadActiveContext">;
   loadRenderUnits?: () => Promise<RenderUnitEntry[]>;
+  languagePair?: LanguagePairId;
+  languagePairDefinitions?: ReadonlyMap<LanguagePairId, LanguagePairDefinition>;
+  phraseTargetsByLanguagePair?: ReadonlyMap<
+    LanguagePairId,
+    readonly CuratedPhraseTargetEntry[]
+  >;
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
 };
 
@@ -114,8 +133,17 @@ export class SentenceAnalysisService {
   >;
   private readonly analyzerLoader: () => Promise<SentenceAnalyzer>;
   private readonly loadAssetContext: () => Promise<{
+    languagePair: LanguagePairId;
     renderUnits: RenderUnitEntry[];
   }>;
+  private readonly phraseTargetsByLanguagePair: ReadonlyMap<
+    LanguagePairId,
+    readonly CuratedPhraseTargetEntry[]
+  >;
+  private readonly languagePairDefinitions: ReadonlyMap<
+    LanguagePairId,
+    LanguagePairDefinition
+  >;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
   private renderUnitIndexCache: {
     analysisVersion: string;
@@ -138,12 +166,16 @@ export class SentenceAnalysisService {
     if (options.loadRenderUnits) {
       const loadRenderUnits = options.loadRenderUnits ?? (async () => []);
       this.loadAssetContext = async () => ({
+        languagePair: options.languagePair ?? DEFAULT_LANGUAGE_PAIR_ID,
         renderUnits: await loadRenderUnits()
       });
     } else {
       const assetPacks = options.assetPacks ?? getBackgroundAssetPackService();
       this.loadAssetContext = () => assetPacks.loadActiveContext();
     }
+    this.phraseTargetsByLanguagePair =
+      options.phraseTargetsByLanguagePair ?? RUNTIME_PHRASE_TARGET_LEXICON_BY_PAIR;
+    this.languagePairDefinitions = options.languagePairDefinitions ?? new Map();
     this.loadVocab = options.loadVocab ?? loadBackgroundVocab;
   }
 
@@ -156,10 +188,16 @@ export class SentenceAnalysisService {
 
     const analyzer = await this.analyzerLoader();
     const assetContext = await this.loadAssetContext();
+    const languagePair = assetContext.languagePair;
+    const pairDefinition =
+      this.languagePairDefinitions.get(languagePair) ??
+      getLanguagePairDefinition(languagePair) ??
+      createFallbackLanguagePairDefinition(languagePair);
     const renderUnits = assetContext.renderUnits;
     const analysisVersion = buildRenderUnitAnalysisVersion(
       analyzer.analyzerVersion,
-      renderUnits
+      renderUnits,
+      languagePair
     );
     const normalizedCandidates = normalizeAnalysisCandidates(candidates);
     const cachedEntries = await this.cache.getMany(
@@ -199,7 +237,15 @@ export class SentenceAnalysisService {
         ...rawAnalyzerOutput,
         analyzerVersion: analysisVersion
       };
-      const entry = buildAnalysisEntry(analyzerOutput, lookup, vocab, now, renderUnits);
+      const entry = buildAnalysisEntry(
+        analyzerOutput,
+        lookup,
+        vocab,
+        now,
+        renderUnits,
+        pairDefinition,
+        this.phraseTargetsByLanguagePair.get(languagePair) ?? []
+      );
       entriesToPersist.push(entry);
       results.push({
         entry,
@@ -242,7 +288,9 @@ function buildAnalysisEntry(
   lookup: WordRenderLookup,
   vocab: ReadonlyMap<string, UserVocabEntry>,
   now: string,
-  renderUnits: readonly RenderUnitEntry[]
+  renderUnits: readonly RenderUnitEntry[],
+  pairDefinition: LanguagePairDefinition,
+  curatedPhraseTargets: readonly CuratedPhraseTargetEntry[]
 ): SentenceAnalysisEntry {
   const contextualWordCandidates = buildContextualWordCandidates(
     analyzerOutput,
@@ -250,8 +298,9 @@ function buildAnalysisEntry(
   );
   const phraseMatches = buildPhraseOccurrences(
     analyzerOutput,
-    buildRenderUnitPhraseTargetResolver(renderUnits),
-    renderUnits
+    buildRenderUnitPhraseTargetResolver(renderUnits, curatedPhraseTargets),
+    renderUnits,
+    pairDefinition
   );
   const vocabStats = scoreSentenceByVocabStatuses(
     analyzerOutput.tokens.map((token) =>
@@ -412,11 +461,16 @@ function isSentenceAnalyzer(value: SentenceAnalyzer | (() => Promise<SentenceAna
 function buildPhraseOccurrences(
   analyzerOutput: AnalyzerOutput,
   resolvePhraseTarget: PhraseTargetResolver,
-  renderUnits: readonly RenderUnitEntry[]
+  renderUnits: readonly RenderUnitEntry[],
+  pairDefinition: LanguagePairDefinition
 ): PhraseOccurrence[] {
-  const detection = detectPhraseCandidatesFromAnalyzerOutput(analyzerOutput, undefined, {
-    minimumChunkConfidence: 0.76
-  });
+  const detection = detectPhraseCandidatesFromAnalyzerOutput(
+    analyzerOutput,
+    pairDefinition.fixedPhraseLexicon,
+    {
+      minimumChunkConfidence: 0.76
+    }
+  );
   const renderUnitOccurrences = buildRenderUnitPhraseOccurrences(
     analyzerOutput,
     renderUnits
@@ -481,10 +535,11 @@ function resolveDetectedPhraseTarget(
 
 function buildRenderUnitAnalysisVersion(
   analyzerVersion: string,
-  renderUnits: readonly RenderUnitEntry[]
+  renderUnits: readonly RenderUnitEntry[],
+  languagePair: LanguagePairId = DEFAULT_LANGUAGE_PAIR_ID
 ): string {
   if (renderUnits.length === 0) {
-    return analyzerVersion;
+    return `${analyzerVersion}+pair:${languagePair}`;
   }
 
   const signature = renderUnits
@@ -509,7 +564,7 @@ function buildRenderUnitAnalysisVersion(
     .sort()
     .join("|");
 
-  return `${analyzerVersion}+render-units:${hashSentence(signature).slice(0, 12)}`;
+  return `${analyzerVersion}+pair:${languagePair}+render-units:${hashSentence(signature).slice(0, 12)}`;
 }
 
 function stableSerializeRenderUnitSignature(input: unknown): string {
@@ -636,7 +691,8 @@ function mapRenderUnitPhraseMetadata(kind: RenderUnitEntry["kind"]): Pick<
 }
 
 function buildRenderUnitPhraseTargetResolver(
-  renderUnits: readonly RenderUnitEntry[]
+  renderUnits: readonly RenderUnitEntry[],
+  curatedPhraseTargets: readonly CuratedPhraseTargetEntry[]
 ): PhraseTargetResolver {
   return (input) => {
     const renderUnitTarget = resolveRenderUnitPhraseTarget(
@@ -651,7 +707,7 @@ function buildRenderUnitPhraseTargetResolver(
       return null;
     }
 
-    const curatedTarget = RUNTIME_PHRASE_TARGET_LEXICON.find(
+    const curatedTarget = curatedPhraseTargets.find(
       (entry) =>
         entry.sourceKind === input.sourceKind &&
         entry.category === input.category &&
@@ -668,8 +724,15 @@ function buildRenderUnitPhraseTargetResolver(
   };
 }
 
-function parsePhraseTargetAsset(value: unknown): readonly CuratedPhraseTargetEntry[] {
-  if (!isRecord(value) || !Array.isArray(value.entries)) {
+function parsePhraseTargetAsset(
+  value: unknown,
+  expectedLanguagePair: LanguagePairId
+): readonly CuratedPhraseTargetEntry[] {
+  if (
+    !isRecord(value) ||
+    value.languagePair !== expectedLanguagePair ||
+    !Array.isArray(value.entries)
+  ) {
     return [];
   }
 

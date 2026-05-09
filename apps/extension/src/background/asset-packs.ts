@@ -1,10 +1,13 @@
 import {
   resolveCurriculumConfig,
   resolveActiveCurriculumBand,
+  DEFAULT_LANGUAGE_PAIR_ID,
+  isLanguagePairId,
   type ActiveAssetContext,
   type AssetContextLoadSource,
   type CurriculumConfig,
   type CurriculumRuntimeProfileInput,
+  type LanguagePairId,
   type LexemeEntry,
   type RenderUnitEntry
 } from "@immersionkit/shared";
@@ -28,7 +31,6 @@ import {
   type BackgroundRuntimeConfig
 } from "./settings";
 
-const LANGUAGE_PAIR = "en-es";
 const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
 const FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS = 2500;
 
@@ -36,20 +38,20 @@ export type AssetPackManifestEntry = {
   bandId: string;
   url: string;
   assetVersion?: string;
-  languagePair?: typeof LANGUAGE_PAIR;
+  languagePair?: LanguagePairId;
 };
 
 export type AssetPackManifest = {
   schemaVersion: string;
   assetVersion: string;
-  languagePair: typeof LANGUAGE_PAIR;
+  languagePair: LanguagePairId;
   packs: AssetPackManifestEntry[];
 };
 
 export type AssetPack = {
   schemaVersion: string;
   assetVersion: string;
-  languagePair: typeof LANGUAGE_PAIR;
+  languagePair: LanguagePairId;
   bandId: string;
   renderUnits: RenderUnitEntry[];
   lexemes: LexemeEntry[];
@@ -73,7 +75,7 @@ type StoredAssetPackMetadata = Omit<AssetPack, "renderUnits" | "lexemes"> & {
 type StoredAssetRenderUnitRow = {
   identity: string;
   packIdentity: string;
-  languagePair: typeof LANGUAGE_PAIR;
+  languagePair: LanguagePairId;
   assetVersion: string;
   bandId: string;
   renderUnitId: string;
@@ -85,7 +87,7 @@ type StoredAssetRenderUnitRow = {
 type StoredAssetLexemeRow = {
   identity: string;
   packIdentity: string;
-  languagePair: typeof LANGUAGE_PAIR;
+  languagePair: LanguagePairId;
   assetVersion: string;
   bandId: string;
   lexemeId: string;
@@ -96,7 +98,7 @@ type StoredAssetLexemeRow = {
 
 export interface AssetPackRepository {
   getLatestPacksForBands(
-    languagePair: typeof LANGUAGE_PAIR,
+    languagePair: LanguagePairId,
     bandIds: readonly string[]
   ): Promise<StoredAssetPack[]>;
   putPacks(
@@ -160,18 +162,20 @@ export class BackgroundAssetPackService {
 
   async loadActiveContext(): Promise<ActiveAssetContext> {
     const runtimeConfig = await this.loadRuntimeConfig();
+    const languagePair = runtimeConfig.settings.languagePair;
     const bandIds = resolveActiveAssetBandWindow(
       runtimeConfig.curriculum.config,
       runtimeConfig.curriculum.profile
     );
 
     const cachedPacks = await this.repository.getLatestPacksForBands(
-      LANGUAGE_PAIR,
+      languagePair,
       bandIds
     );
     if (cachedPacks.length > 0) {
-      void this.refreshRemotePacks(bandIds);
+      void this.refreshRemotePacks(languagePair, bandIds);
       return createActiveAssetContext({
+        languagePair,
         packs: cachedPacks,
         source: "cached-pack",
         bandIds
@@ -179,7 +183,7 @@ export class BackgroundAssetPackService {
     }
 
     const remoteContext = await withTimeout(
-      this.refreshRemotePacks(bandIds),
+      this.refreshRemotePacks(languagePair, bandIds),
       this.remoteLoadTimeoutMs
     );
     if (remoteContext) {
@@ -187,6 +191,7 @@ export class BackgroundAssetPackService {
     }
 
     return createActiveAssetContext({
+      languagePair,
       packs: [],
       source: "empty",
       bandIds
@@ -194,19 +199,20 @@ export class BackgroundAssetPackService {
   }
 
   private refreshRemotePacks(
+    languagePair: LanguagePairId,
     bandIds: readonly string[]
   ): Promise<ActiveAssetContext | null> {
     if (!this.assetBaseUrl || bandIds.length === 0) {
       return Promise.resolve(null);
     }
 
-    const bandWindowKey = buildBandWindowKey(bandIds);
+    const bandWindowKey = buildBandWindowKey(languagePair, bandIds);
     const existingRefresh = this.remoteRefreshesByBandWindow.get(bandWindowKey);
     if (existingRefresh) {
       return existingRefresh;
     }
 
-    const refresh = this.refreshRemotePacksNow(bandIds)
+    const refresh = this.refreshRemotePacksNow(languagePair, bandIds)
       .catch((error) => {
         console.info("ImmersionKit asset pack refresh skipped.", error);
         return null;
@@ -219,9 +225,10 @@ export class BackgroundAssetPackService {
   }
 
   private async refreshRemotePacksNow(
+    languagePair: LanguagePairId,
     bandIds: readonly string[]
   ): Promise<ActiveAssetContext | null> {
-    const remoteResult = await this.loadRemotePacks(bandIds);
+    const remoteResult = await this.loadRemotePacks(languagePair, bandIds);
     if (remoteResult.status !== "success") {
       return null;
     }
@@ -229,7 +236,7 @@ export class BackgroundAssetPackService {
     const cachedMissingPacks =
       remoteResult.missingBandIds.length > 0
         ? await this.repository.getLatestPacksForBands(
-            LANGUAGE_PAIR,
+            languagePair,
             remoteResult.missingBandIds
           )
         : [];
@@ -247,6 +254,7 @@ export class BackgroundAssetPackService {
     }
 
     return createActiveAssetContext({
+      languagePair,
       packs: packsForContext,
       source: "remote-pack",
       bandIds,
@@ -257,6 +265,7 @@ export class BackgroundAssetPackService {
   }
 
   private async loadRemotePacks(
+    languagePair: LanguagePairId,
     bandIds: readonly string[]
   ): Promise<RemotePackLoadResult> {
     if (!this.assetBaseUrl) {
@@ -264,9 +273,10 @@ export class BackgroundAssetPackService {
     }
 
     try {
-      const manifestUrl = buildManifestUrl(this.assetBaseUrl);
+      const manifestUrl = buildManifestUrl(this.assetBaseUrl, languagePair);
       const manifest = validateAssetPackManifest(
-        await this.fetchJson(manifestUrl)
+        await this.fetchJson(manifestUrl),
+        languagePair
       );
       if (!manifest) {
         return { status: "failure" };
@@ -319,7 +329,7 @@ export class BackgroundAssetPackService {
 
 class IndexedDbAssetPackRepository implements AssetPackRepository {
   async getLatestPacksForBands(
-    languagePair: typeof LANGUAGE_PAIR,
+    languagePair: LanguagePairId,
     bandIds: readonly string[]
   ): Promise<StoredAssetPack[]> {
     if (bandIds.length === 0 || !isIndexedDbAvailable()) {
@@ -518,15 +528,21 @@ export function resolveActiveAssetBandWindow(
     .filter((bandId) => windowIds.has(bandId));
 }
 
-export function validateAssetPackManifest(input: unknown): AssetPackManifest | null {
+export function validateAssetPackManifest(
+  input: unknown,
+  expectedLanguagePair?: LanguagePairId
+): AssetPackManifest | null {
   if (!isRecord(input)) {
     return null;
   }
 
   const schemaVersion = readString(input.schemaVersion);
   const assetVersion = readString(input.assetVersion);
-  const languagePair = input.languagePair === LANGUAGE_PAIR ? LANGUAGE_PAIR : null;
+  const languagePair = readLanguagePair(input.languagePair);
   if (!schemaVersion || !assetVersion || !languagePair || !Array.isArray(input.packs)) {
+    return null;
+  }
+  if (expectedLanguagePair && languagePair !== expectedLanguagePair) {
     return null;
   }
 
@@ -546,7 +562,7 @@ export function validateAssetPackManifest(input: unknown): AssetPackManifest | n
         bandId,
         url,
         assetVersion: readString(entry.assetVersion) ?? undefined,
-        languagePair: entry.languagePair === LANGUAGE_PAIR ? LANGUAGE_PAIR : undefined
+        languagePair: readLanguagePair(entry.languagePair) ?? undefined
       }
     ];
   });
@@ -568,7 +584,7 @@ export function validateAssetPack(
   expected: {
     bandId?: string;
     assetVersion?: string;
-    languagePair?: typeof LANGUAGE_PAIR;
+    languagePair?: LanguagePairId;
   } = {}
 ): AssetPack | null {
   if (!isRecord(input)) {
@@ -578,7 +594,7 @@ export function validateAssetPack(
   const schemaVersion = readString(input.schemaVersion);
   const assetVersion = readString(input.assetVersion);
   const bandId = readString(input.bandId);
-  const languagePair = input.languagePair === LANGUAGE_PAIR ? LANGUAGE_PAIR : null;
+  const languagePair = readLanguagePair(input.languagePair);
   if (!schemaVersion || !assetVersion || !bandId || !languagePair) {
     return null;
   }
@@ -612,7 +628,12 @@ export function validateAssetPack(
 
   const parsedLexemes =
     rawLexemes.length === 0
-      ? { entries: [] as LexemeEntry[] }
+      ? {
+          entries: [] as LexemeEntry[],
+          languagePair,
+          assetVersion,
+          schemaVersion
+        }
       : parseLexemeAsset({
           schemaVersion,
           assetVersion,
@@ -642,8 +663,11 @@ export function validateAssetPack(
   };
 }
 
-function buildManifestUrl(baseUrl: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/${LANGUAGE_PAIR}/manifest.json`;
+export function buildManifestUrl(
+  baseUrl: string,
+  languagePair: LanguagePairId = DEFAULT_LANGUAGE_PAIR_ID
+): string {
+  return `${baseUrl.replace(/\/+$/, "")}/${languagePair}/manifest.json`;
 }
 
 export function resolvePackUrl(url: string, manifestUrl: string): string {
@@ -657,8 +681,11 @@ export function buildAssetPackIdentity(pack: Pick<
   return `${pack.languagePair}:${pack.assetVersion}:${pack.bandId}`;
 }
 
-function buildBandWindowKey(bandIds: readonly string[]): string {
-  return bandIds.join("\u0000");
+function buildBandWindowKey(
+  languagePair: LanguagePairId,
+  bandIds: readonly string[]
+): string {
+  return `${languagePair}\u0000${bandIds.join("\u0000")}`;
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -700,6 +727,7 @@ function withTimeout<T>(
 }
 
 function createActiveAssetContext(input: {
+  languagePair: LanguagePairId;
   packs: readonly AssetPack[];
   source: AssetContextLoadSource;
   bandIds: readonly string[];
@@ -712,6 +740,7 @@ function createActiveAssetContext(input: {
     ...new Set(input.packs.map((pack) => pack.assetVersion).filter(Boolean))
   ];
   return {
+    languagePair: input.languagePair,
     renderUnits,
     sentenceHintPhrases: getRenderUnitSentenceHints(renderUnits),
     source: input.source,
@@ -728,7 +757,7 @@ function createActiveAssetContext(input: {
 
 async function readLatestPackMetadataForBands(
   store: IDBObjectStore,
-  languagePair: typeof LANGUAGE_PAIR,
+  languagePair: LanguagePairId,
   bandIds: readonly string[]
 ): Promise<StoredAssetPackMetadata[]> {
   const latestByBandId = new Map<string, StoredAssetPackMetadata>();
@@ -839,7 +868,7 @@ function normalizeStoredAssetPackMetadata(
   const schemaVersion = readString(input.schemaVersion);
   const assetVersion = readString(input.assetVersion);
   const bandId = readString(input.bandId);
-  const languagePair = input.languagePair === LANGUAGE_PAIR ? LANGUAGE_PAIR : null;
+  const languagePair = readLanguagePair(input.languagePair);
   if (
     !identity ||
     !cachedAt ||
@@ -880,7 +909,7 @@ function normalizeStoredRenderUnitRow(
   }
 
   const identity = readString(input.identity);
-  const languagePair = input.languagePair === LANGUAGE_PAIR ? LANGUAGE_PAIR : null;
+  const languagePair = readLanguagePair(input.languagePair);
   const assetVersion = readString(input.assetVersion);
   const bandId = readString(input.bandId);
   const renderUnitId = readString(input.renderUnitId);
@@ -920,7 +949,7 @@ function normalizeStoredLexemeRow(
   }
 
   const identity = readString(input.identity);
-  const languagePair = input.languagePair === LANGUAGE_PAIR ? LANGUAGE_PAIR : null;
+  const languagePair = readLanguagePair(input.languagePair);
   const assetVersion = readString(input.assetVersion);
   const bandId = readString(input.bandId);
   const lexemeId = readString(input.lexemeId);
@@ -975,6 +1004,10 @@ function readNonNegativeInteger(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= 0
     ? value
     : null;
+}
+
+function readLanguagePair(value: unknown): LanguagePairId | null {
+  return isLanguagePairId(value) ? value : null;
 }
 
 function deleteStoredRowsForPack(

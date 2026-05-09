@@ -650,6 +650,7 @@ export class BackgroundRuntimeCoordinator {
 
 function createContentAssetContext(context: ActiveAssetContext): ContentAssetContext {
   return {
+    languagePair: context.languagePair,
     renderUnits: context.renderUnits,
     sentenceHintPhrases: context.sentenceHintPhrases,
     source: context.source,

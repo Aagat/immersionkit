@@ -1,4 +1,6 @@
 import {
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
   hashSentence,
   normalizeToken,
   type AnalyzerOutput,
@@ -107,6 +109,8 @@ export async function runProductionQualityValidation(): Promise<ProductionQualit
       offsetBase: 0,
       context: {
         discoveryRate: 1,
+        sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
+        targetLanguage: DEFAULT_TARGET_LANGUAGE,
         samplingSeed: `contextual-word-injection-production-quality:${scenario.id}`,
         nodeId: `contextual-word-injection-quality-${scenario.id}`,
         wordRenderIndex: buildWordRenderIndex(renderUnits),

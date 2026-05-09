@@ -177,7 +177,9 @@ export async function saveSettingsState(state: SettingsState): Promise<SettingsS
   const nextRawSettings: StorageRecord = {
     ...state.rawSettings,
     ...state.settings,
-    targetLanguage: "es",
+    languagePair: state.settings.languagePair,
+    sourceLanguage: state.settings.sourceLanguage,
+    targetLanguage: state.settings.targetLanguage,
     proficiencySeed: state.proficiencySeed
   };
 

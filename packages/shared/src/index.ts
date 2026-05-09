@@ -6,6 +6,7 @@ export * from "./curriculum/config";
 export * from "./curriculum/content";
 export * from "./curriculum/profile";
 export * from "./curriculum/runtime-activation";
+export * from "./language-pairs/registry";
 export * from "./messaging/contracts";
 export * from "./scoring/difficulty";
 export * from "./scoring/evidence";

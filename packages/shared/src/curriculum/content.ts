@@ -5,7 +5,7 @@ import type {
   WordInventoryEntry
 } from "../domain/models";
 import {
-  isBeginnerCognateBand,
+  ENGLISH_SPANISH_COGNATE_POLICY,
   isBeginnerConfidenceCognate
 } from "../text/cognates";
 import { normalizePhraseText } from "../text/phrases";
@@ -17,6 +17,8 @@ import {
   type CurriculumGateUnitType,
   type CurriculumRuntimeProfileInput
 } from "./config";
+import type { BeginnerCognatePolicy } from "../text/cognates";
+import type { CurriculumDefinition } from "../language-pairs/types";
 
 type CurriculumWordEntry = Pick<
   WordInventoryEntry,
@@ -55,6 +57,8 @@ export type CurriculumBandContent = {
 export type ActiveCurriculumContent = {
   band: CurriculumBand | null;
   content: CurriculumBandContent | null;
+  definition?: CurriculumDefinition | null;
+  beginnerCognatePolicy?: BeginnerCognatePolicy | null;
 };
 
 export type CurriculumContentInventoryDecision = {
@@ -398,9 +402,14 @@ export function getActiveCurriculumContent(input?: {
   config?: Partial<CurriculumConfig> | null;
   profile?: CurriculumRuntimeProfileInput | null;
   content?: readonly CurriculumBandContent[];
+  definition?: CurriculumDefinition | null;
+  beginnerCognatePolicy?: BeginnerCognatePolicy | null;
   unitType?: CurriculumGateUnitType;
 }): ActiveCurriculumContent {
-  const config = resolveCurriculumConfig(input?.config ?? DEFAULT_CURRICULUM_CONFIG);
+  const definition = input?.definition ?? null;
+  const config = resolveCurriculumConfig(
+    input?.config ?? definition?.config ?? DEFAULT_CURRICULUM_CONFIG
+  );
   const band = resolveActiveCurriculumBand(
     config,
     input?.unitType ?? "word",
@@ -409,13 +418,24 @@ export function getActiveCurriculumContent(input?: {
 
   return {
     band,
-    content: getCurriculumContentForBand(band?.bandId, input?.content)
+    content: getCurriculumContentForBand(
+      band?.bandId,
+      input?.content ?? definition?.content
+    ),
+    definition,
+    beginnerCognatePolicy:
+      input && "beginnerCognatePolicy" in input
+        ? input.beginnerCognatePolicy
+        : definition
+          ? null
+          : ENGLISH_SPANISH_COGNATE_POLICY
   };
 }
 
 export function evaluateWordCurriculumContentInventory(input: {
   wordEntry: CurriculumWordEntry;
   activeContent: ActiveCurriculumContent;
+  beginnerCognatePolicy?: BeginnerCognatePolicy | null;
 }): CurriculumContentInventoryDecision {
   const activeBandId = input.activeContent.band?.bandId ?? null;
   const content = input.activeContent.content;
@@ -463,9 +483,17 @@ export function evaluateWordCurriculumContentInventory(input: {
     };
   }
 
+  const beginnerCognatePolicy =
+    input.beginnerCognatePolicy === undefined
+      ? input.activeContent.beginnerCognatePolicy === undefined
+        ? ENGLISH_SPANISH_COGNATE_POLICY
+        : input.activeContent.beginnerCognatePolicy
+      : input.beginnerCognatePolicy;
+
   if (
-    isBeginnerCognateBand(activeBandId) &&
-    isBeginnerConfidenceCognate(input.wordEntry)
+    beginnerCognatePolicy &&
+    beginnerCognatePolicy.isEligibleBand(activeBandId) &&
+    isBeginnerConfidenceCognate(input.wordEntry, beginnerCognatePolicy)
   ) {
     return {
       eligible: true,

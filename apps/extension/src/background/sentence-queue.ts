@@ -1,4 +1,7 @@
 import {
+  DEFAULT_LANGUAGE_PAIR_ID,
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
   evaluateCurriculumEligibility,
   getActiveCurriculumContent,
   hashSentence,
@@ -328,6 +331,7 @@ export class SentenceQueueOrchestrator {
         sourceText: translation.sourceText,
         translatedText: translation.translatedText,
         learningNote: translation.learningNote,
+        languagePair: config.settings.languagePair,
         targetLanguage: config.settings.targetLanguage,
         sourceLanguage: config.settings.sourceLanguage,
         model: translation.model,
@@ -832,6 +836,27 @@ function isSentenceCacheEntryCompatible(
   entry: SentenceCacheEntry,
   config: BackgroundRuntimeConfig
 ): boolean {
+  const entryLanguagePair =
+    entry.languagePair ??
+    ((!entry.sourceLanguage || entry.sourceLanguage === DEFAULT_SOURCE_LANGUAGE) &&
+    entry.targetLanguage === DEFAULT_TARGET_LANGUAGE
+      ? DEFAULT_LANGUAGE_PAIR_ID
+      : null);
+  if (entryLanguagePair !== config.settings.languagePair) {
+    return false;
+  }
+
+  if (
+    entry.sourceLanguage &&
+    entry.sourceLanguage !== config.settings.sourceLanguage
+  ) {
+    return false;
+  }
+
+  if (entry.targetLanguage !== config.settings.targetLanguage) {
+    return false;
+  }
+
   if (config.settings.provider !== "openai") {
     return true;
   }

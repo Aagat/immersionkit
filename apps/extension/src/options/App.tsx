@@ -219,7 +219,9 @@ export function OptionsApp() {
       ...settingsState,
       settings: {
         ...settingsState.settings,
-        targetLanguage: "es",
+        languagePair: settingsState.settings.languagePair,
+        sourceLanguage: settingsState.settings.sourceLanguage,
+        targetLanguage: settingsState.settings.targetLanguage,
         discoveryRate: normalizeDiscoveryRate(settingsState.settings.discoveryRate),
         sentenceTranslationEnabled:
           settingsState.settings.provider === "openai"

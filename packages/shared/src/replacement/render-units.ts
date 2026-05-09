@@ -4,8 +4,14 @@ import {
   type LexemeEntry,
   type RenderUnitEntry,
   type RenderUnitTokenPattern,
-  type SafeInjectionPos
+  type SafeInjectionPos,
+  type SupportedSourceLanguage,
+  type SupportedTargetLanguage
 } from "../domain/models";
+import {
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE
+} from "../language-pairs/types";
 import { normalizeToken } from "../text/normalize";
 
 export type WordRenderEntry = {
@@ -23,8 +29,8 @@ export type WordRenderEntry = {
   exampleSentenceEnglish?: string;
   exampleSentenceNative?: string;
   inflections?: string[];
-  sourceLanguage?: "en";
-  targetLanguage?: "es";
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
   sourceDataset?: string;
 };
 
@@ -271,8 +277,8 @@ export function renderUnitToWordRenderEntry(
     exampleSentenceNative:
       entry.exampleSentenceNative ?? lexeme?.exampleSentenceNative,
     inflections: entry.inflections ?? lexeme?.inflections,
-    sourceLanguage: entry.sourceLanguage ?? "en",
-    targetLanguage: entry.targetLanguage ?? "es",
+    sourceLanguage: entry.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE,
+    targetLanguage: entry.targetLanguage ?? DEFAULT_TARGET_LANGUAGE,
     sourceDataset: "render-units"
   };
 }

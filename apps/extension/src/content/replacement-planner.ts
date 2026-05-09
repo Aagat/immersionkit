@@ -1,10 +1,14 @@
 import {
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
   evaluateLearningItemDueStatus,
   hashString,
   normalizeToken
 } from "@immersionkit/shared";
 import type {
   LearningItem,
+  SupportedSourceLanguage,
+  SupportedTargetLanguage,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
@@ -27,6 +31,8 @@ export type ReplacementPlannerContext = {
   discoveryRate: number;
   samplingSeed: string;
   nodeId: string;
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   wordRenderIndex: Map<string, WordRenderEntry>;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
@@ -91,6 +97,8 @@ export type PhraseReplacementSpan = {
   end: number;
   sourceText: string;
   targetText: string;
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sentence: {
     text: string;
     hash: string;
@@ -197,6 +205,8 @@ export function planTextReplacements(input: {
         end: phraseCandidate.end,
         sourceText: sourceText.slice(phraseCandidate.start, phraseCandidate.end),
         targetText: phraseCandidate.targetText,
+        sourceLanguage: context.sourceLanguage,
+        targetLanguage: context.targetLanguage,
         sentence: phraseCandidate.sentence,
         phraseId: phraseCandidate.phraseId,
         itemId: phraseCandidate.itemId,
@@ -546,8 +556,8 @@ function createWordEntryFromCachedDecision(
     pos: decision.candidatePos,
     frequencyRank: null,
     confidence: decision.confidence ?? 0.9,
-    sourceLanguage: "en",
-    targetLanguage: "es",
+    sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
+    targetLanguage: DEFAULT_TARGET_LANGUAGE,
     sourceDataset: "render-units"
   };
 }

@@ -34,8 +34,10 @@ export const SENTENCE_FIXED_PHRASE_HINTS = [
 ] as const;
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
+  languagePair: DEFAULT_EXTENSION_SETTINGS.languagePair,
   discoveryRate: DEFAULT_DISCOVERY_RATE,
-  targetLanguage: "es",
+  sourceLanguage: DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
+  targetLanguage: DEFAULT_EXTENSION_SETTINGS.targetLanguage,
   sentenceTranslationEnabled: false,
   provider: "none"
 };

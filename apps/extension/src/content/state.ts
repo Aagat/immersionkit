@@ -1,9 +1,14 @@
 import {
+  DEFAULT_SOURCE_LANGUAGE,
+  getLanguagePairDefinition,
   getActiveCurriculumContent,
   resolveActiveCurriculumBand,
+  type BeginnerCognatePolicy,
   type CurriculumConfig,
   type CurriculumRuntimeProfileInput,
   type LearningItem,
+  type SupportedSourceLanguage,
+  type SupportedTargetLanguage,
   type UserVocabEntry
 } from "@immersionkit/shared";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
@@ -31,6 +36,7 @@ export type ProcessingAnalysisCacheState = {
 export type ProcessingCurriculumState = {
   config: CurriculumConfig;
   profile: CurriculumRuntimeProfileInput;
+  beginnerCognatePolicy: BeginnerCognatePolicy | null;
   activeWordContent: ReturnType<typeof getActiveCurriculumContent>;
   activePhraseContent: ReturnType<typeof getActiveCurriculumContent>;
 };
@@ -47,6 +53,8 @@ export type ProcessingRenderRegistryState = ContentWrapperRegistryState & {
 
 export type ProcessingState = {
   discoveryRate: number;
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   samplingSeed: string;
   wordRenderIndex: WordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
@@ -85,9 +93,14 @@ export function createProcessingState(input: {
   sentenceTranslationEnabled: boolean;
 }): ProcessingState {
   const { processingContext } = input;
+  const languagePair = getLanguagePairDefinition(
+    processingContext.settings.languagePair
+  );
 
   return {
     discoveryRate: processingContext.discoveryRate,
+    sourceLanguage: processingContext.settings.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE,
+    targetLanguage: processingContext.settings.targetLanguage,
     samplingSeed: `${window.location.hostname}${window.location.pathname}`,
     wordRenderIndex: input.wordRenderIndex,
     vocabByLexemeId: processingContext.vocabByLexemeId,
@@ -131,9 +144,11 @@ export function createProcessingState(input: {
     curriculum: {
       config: processingContext.curriculumConfig,
       profile: processingContext.learningProfile,
+      beginnerCognatePolicy: languagePair?.beginnerCognatePolicy ?? null,
       activeWordContent: getActiveCurriculumContent({
         config: processingContext.curriculumConfig,
         profile: processingContext.learningProfile,
+        beginnerCognatePolicy: languagePair?.beginnerCognatePolicy ?? null,
         unitType: "word"
       }),
       activePhraseContent: getActiveCurriculumContent({

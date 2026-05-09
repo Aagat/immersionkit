@@ -87,6 +87,59 @@ describe("render unit assets", () => {
     expect(parsed?.entries[0]?.sourcePattern.matchMode).toBe("analyzer-pattern");
   });
 
+  it("preserves asset language-pair languages for lexemes and render units", () => {
+    const lexemes = parseLexemeAsset({
+      schemaVersion: "1.0.0",
+      assetVersion: "test-fr",
+      languagePair: "en-fr",
+      entries: [
+        {
+          lexemeId: "lx:city:noun:fr",
+          sourceLemma: "city",
+          targetLemma: "ville",
+          pos: "noun",
+          frequencyRank: 10,
+          confidence: 0.95
+        }
+      ]
+    });
+    const renderUnits = parseRenderUnitAsset({
+      schemaVersion: "1.0.0",
+      assetVersion: "test-fr",
+      languagePair: "en-fr",
+      entries: [
+        {
+          renderUnitId: "ru:city:noun:fr",
+          lexemeIds: ["lx:city:noun:fr"],
+          kind: "single-token",
+          renderPolicy: "inline",
+          sourceText: "city",
+          normalizedSourceText: "city",
+          targetText: "ville",
+          normalizedTargetText: "ville",
+          sourcePattern: {
+            matchMode: "exact",
+            tokens: [{ normal: "city", lemma: "city", pos: "noun" }]
+          },
+          minBand: "level-1a",
+          confidence: 0.95,
+          provenance: { source: "manual" }
+        }
+      ]
+    });
+
+    expect(lexemes?.languagePair).toBe("en-fr");
+    expect(lexemes?.entries[0]).toMatchObject({
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+    expect(renderUnits?.languagePair).toBe("en-fr");
+    expect(renderUnits?.entries[0]).toMatchObject({
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+  });
+
   it("keeps bundled render-unit lexemeIds backed by the lexeme asset", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset);
     const lexemes = parseLexemeAsset(lexemeAsset);

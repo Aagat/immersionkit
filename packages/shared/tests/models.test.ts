@@ -47,6 +47,21 @@ describe("settings model helpers", () => {
     expect(resolveExtensionSettings(null)).toEqual(DEFAULT_EXTENSION_SETTINGS);
   });
 
+  it("derives source and target languages from an explicit language pair", () => {
+    expect(
+      resolveExtensionSettings({
+        languagePair: "en-fr",
+        sourceLanguage: "en",
+        targetLanguage: "es"
+      })
+    ).toEqual({
+      ...DEFAULT_EXTENSION_SETTINGS,
+      languagePair: "en-fr",
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+  });
+
   it("retains explicit flags while clamping noisy numeric inputs", () => {
     expect(
       resolveExtensionSettings({

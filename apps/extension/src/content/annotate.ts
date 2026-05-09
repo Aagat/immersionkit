@@ -1,6 +1,12 @@
-import { splitTextIntoWindows } from "@immersionkit/shared";
+import {
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+  splitTextIntoWindows
+} from "@immersionkit/shared";
 import type {
   LearningItem,
+  SupportedSourceLanguage,
+  SupportedTargetLanguage,
   TextWindow,
   UserVocabEntry,
   VocabStatus
@@ -41,6 +47,8 @@ export type ProcessTextNodeContext = {
   discoveryRate: number;
   samplingSeed: string;
   createNodeId: () => string;
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
   wordRenderIndex: Map<string, WordRenderEntry>;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
@@ -181,7 +189,9 @@ function renderTextWindow(input: {
     sourceText,
     context: {
       ...context,
-      nodeId
+      nodeId,
+      sourceLanguage: context.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE,
+      targetLanguage: context.targetLanguage ?? DEFAULT_TARGET_LANGUAGE
     },
     offsetBase
   });
@@ -338,6 +348,10 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
   const sourceLemma = tokenElement.getAttribute("data-ik-source-lemma");
   const lexemeId = tokenElement.getAttribute("data-ik-lexeme-id");
   const renderUnitId = tokenElement.getAttribute("data-ik-render-unit-id");
+  const sourceLanguage =
+    tokenElement.getAttribute("data-ik-source-language") ?? DEFAULT_SOURCE_LANGUAGE;
+  const targetLanguage =
+    tokenElement.getAttribute("data-ik-target-language") ?? DEFAULT_TARGET_LANGUAGE;
   const pos = tokenElement.getAttribute("data-ik-pos");
   const status = tokenElement.getAttribute("data-ik-status");
   const wordKind = tokenElement.getAttribute("data-ik-word-kind");
@@ -363,8 +377,8 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
   return {
     tokenId,
     nodeId,
-    sourceLanguage: "en",
-    targetLanguage: "es",
+    sourceLanguage,
+    targetLanguage,
     sourceToken,
     targetToken,
     sourceLemma,
@@ -390,6 +404,10 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
   const category = tokenElement.getAttribute("data-ik-phrase-category");
   const sourceKind = tokenElement.getAttribute("data-ik-phrase-source-kind");
   const ruleId = tokenElement.getAttribute("data-ik-phrase-rule-id");
+  const sourceLanguage =
+    tokenElement.getAttribute("data-ik-source-language") ?? DEFAULT_SOURCE_LANGUAGE;
+  const targetLanguage =
+    tokenElement.getAttribute("data-ik-target-language") ?? DEFAULT_TARGET_LANGUAGE;
 
   if (
     !tokenId ||
@@ -411,8 +429,8 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
   return {
     tokenId,
     nodeId,
-    sourceLanguage: "en",
-    targetLanguage: "es",
+    sourceLanguage,
+    targetLanguage,
     sourceText,
     targetText,
     phraseId,
@@ -487,8 +505,14 @@ function createTokenElement(input: {
   element.textContent = input.targetToken;
   element.tabIndex = 0;
   element.setAttribute("role", "button");
-  element.setAttribute("data-ik-source-language", "en");
-  element.setAttribute("data-ik-target-language", "es");
+  element.setAttribute(
+    "data-ik-source-language",
+    input.wordEntry.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE
+  );
+  element.setAttribute(
+    "data-ik-target-language",
+    input.wordEntry.targetLanguage ?? DEFAULT_TARGET_LANGUAGE
+  );
   element.setAttribute("data-ik-unit-kind", "word");
   element.setAttribute("data-kind", "word");
   element.setAttribute("data-status", toUiTokenStatus(input.status));
@@ -554,6 +578,8 @@ function createPhraseElement(input: {
   nodeId: string;
   sourceText: string;
   targetText: string;
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sentence: {
     text: string;
     hash: string;
@@ -572,8 +598,8 @@ function createPhraseElement(input: {
   element.textContent = preserveWordCasing(input.sourceText, input.targetText);
   element.tabIndex = 0;
   element.setAttribute("role", "button");
-  element.setAttribute("data-ik-source-language", "en");
-  element.setAttribute("data-ik-target-language", "es");
+  element.setAttribute("data-ik-source-language", input.sourceLanguage);
+  element.setAttribute("data-ik-target-language", input.targetLanguage);
   element.setAttribute("data-ik-unit-kind", "phrase");
   element.setAttribute("data-kind", "phrase");
   element.setAttribute("data-status", input.isDueForReview ? "learning" : "new");

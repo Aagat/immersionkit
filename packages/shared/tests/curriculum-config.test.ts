@@ -11,6 +11,7 @@ import {
   normalizePhraseText,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
+  type CurriculumDefinition,
   type CurriculumConfig,
   type LearningItem
 } from "../src";
@@ -271,6 +272,83 @@ describe("curriculum configuration", () => {
       activeBandId: "level-1a",
       matchReason: "beginner-cognate",
       skipReason: null
+    });
+  });
+
+  it("resolves custom pair curriculum content without falling back to en-es gates", () => {
+    const customDefinition: CurriculumDefinition = {
+      config: {
+        ...DEFAULT_CURRICULUM_CONFIG,
+        configId: "en-test-default-v1",
+        targetLanguage: "test",
+        bands: [
+          {
+            ...DEFAULT_CURRICULUM_CONFIG.bands[0]!,
+            bandId: "test-1",
+            label: "Test 1",
+            difficultyLimits: {
+              minimumScore: 0,
+              maximumScore: 0.2
+            }
+          }
+        ],
+        levels: [
+          {
+            levelId: "test-level-1",
+            label: "Test Level 1",
+            order: 1,
+            bandIds: ["test-1"],
+            checkpointRequired: false
+          }
+        ]
+      },
+      content: [
+        {
+          ...DEFAULT_CURRICULUM_CONTENT[0]!,
+          bandId: "test-1",
+          vocabularyDomains: ["synthetic"],
+          vocabularyMaxFrequencyRank: 10,
+          phraseChunks: ["synthetic chunk"],
+          phraseInventory: {
+            exactSourceTexts: ["synthetic chunk"],
+            allowedCategories: ["fixed-idiom"],
+            allowedSourceKinds: ["fixed-phrase"]
+          },
+          sentencePolicy: {
+            tokenRange: [2, 4],
+            clausePolicy: "synthetic",
+            targetPolicy: "synthetic target",
+            notes: "Synthetic pair content."
+          }
+        }
+      ]
+    };
+    const activeContent = getActiveCurriculumContent({
+      definition: customDefinition
+    });
+
+    expect(activeContent).toMatchObject({
+      band: expect.objectContaining({ bandId: "test-1" }),
+      content: expect.objectContaining({
+        vocabularyDomains: ["synthetic"],
+        vocabularyMaxFrequencyRank: 10
+      })
+    });
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        wordEntry: {
+          lexemeId: "en:telescope:noun",
+          sourceLemma: "telescope",
+          targetLemma: "telescopio",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91
+        }
+      })
+    ).toMatchObject({
+      eligible: false,
+      skipReason: "word-rank-outside-content"
     });
   });
 

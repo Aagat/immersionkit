@@ -12,7 +12,10 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { SentenceProviderClient } from "../src/background/provider-client";
-import { OPENAI_SENTENCE_PROMPT_VERSION } from "../src/background/provider-client";
+import {
+  OPENAI_SENTENCE_PROMPT_VERSION,
+  buildOpenAiSentenceSystemPrompt
+} from "../src/background/provider-client";
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
 import {
   SentenceQueueOrchestrator,
@@ -74,6 +77,44 @@ describe("sentence queue orchestration", () => {
       }
     ]);
     expect(providerCalls).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse en-es sentence cache rows for another active pair", async () => {
+    const sourceText = "The station opens early in the morning.";
+    const sentenceHash = hashSentence(sourceText);
+    const cache = new InMemorySentenceCache([
+      createCacheEntry({
+        sentenceHash,
+        sourceText,
+        translatedText: "La estacion abre temprano por la manana.",
+        learningNote: createLearningNote("Spanish cached row.")
+      })
+    ]);
+
+    const orchestrator = new SentenceQueueOrchestrator({
+      sentenceCache: cache,
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createReadyConfig({
+            languagePair: "en-fr",
+            sourceLanguage: "en",
+            targetLanguage: "fr"
+          })
+        ),
+      createProviderClient: () => createProviderClientMock([]),
+      flushDelayMs: 0
+    });
+
+    const response = await orchestrator.queueMessage({
+      type: RuntimeMessageType.QueueSentenceCandidates,
+      candidates: [{ sentenceHash, sourceText }]
+    });
+
+    expect(response.cacheHits).toBe(0);
+    expect(response.queued).toBe(1);
   });
 
   it("delivers fresh background translations to the sender tab", async () => {
@@ -144,6 +185,51 @@ describe("sentence queue orchestration", () => {
         ]
       }
     ]);
+  });
+
+  it("passes the active language pair into provider translation requests", async () => {
+    const sourceText = "The city is quiet today.";
+    const sentenceHash = hashSentence(sourceText);
+    const providerInputs: { sourceLanguage: string; targetLanguage: string }[] = [];
+    const orchestrator = new SentenceQueueOrchestrator({
+      sentenceCache: new InMemorySentenceCache(),
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createReadyConfig({
+            languagePair: "en-fr",
+            sourceLanguage: "en",
+            targetLanguage: "fr"
+          })
+        ),
+      createProviderClient: () => ({
+        providerName: "openai",
+        async translateSentences(input) {
+          providerInputs.push({
+            sourceLanguage: input.sourceLanguage,
+            targetLanguage: input.targetLanguage
+          });
+          return [];
+        }
+      }),
+      flushDelayMs: 0
+    });
+
+    await orchestrator.queueMessage({
+      type: RuntimeMessageType.QueueSentenceCandidates,
+      candidates: [{ sentenceHash, sourceText }]
+    });
+    await waitForMicrotasks();
+
+    expect(providerInputs).toEqual([{ sourceLanguage: "en", targetLanguage: "fr" }]);
+    expect(
+      buildOpenAiSentenceSystemPrompt({
+        sourceLanguage: "en",
+        targetLanguage: "fr"
+      })
+    ).toContain("learner-friendly fr");
   });
 
   it("treats stale prompt-version cache entries as misses and refreshes them", async () => {
@@ -634,6 +720,12 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
       clearTimeout(timeoutHandle);
     }
   }
+}
+
+function waitForMicrotasks(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 class InMemorySentenceCache implements SentenceCacheRepository {

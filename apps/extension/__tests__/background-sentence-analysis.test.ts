@@ -1,7 +1,10 @@
 import {
+  DEFAULT_CURRICULUM_CONFIG,
   hashSentence,
   normalizeAnalyzerToken,
   type AnalyzerOutput,
+  type CuratedPhraseTargetEntry,
+  type LanguagePairDefinition,
   type PhraseOccurrence,
   type PhraseRegistryEntry,
   type RenderUnitEntry,
@@ -49,7 +52,7 @@ describe("background sentence analysis service", () => {
     expect(analyze).toHaveBeenCalledTimes(1);
     expect(first[0]?.cacheHit).toBe(false);
     expect(second[0]?.cacheHit).toBe(true);
-    expect(await cache.get(sentenceHash, "fixture-v1")).toBeTruthy();
+    expect(await cache.get(sentenceHash, "fixture-v1+pair:en-es")).toBeTruthy();
     expect(await cache.get(sentenceHash, "fixture-v2")).toBeNull();
   });
 
@@ -225,6 +228,91 @@ describe("background sentence analysis service", () => {
         })
       ],
       expect.any(String)
+    );
+  });
+
+  it("uses the active pair fixed phrase lexicon and curated phrase targets", async () => {
+    const sourceText = "We are at home near the quiet city center.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["We", "we", "pronoun", ["PRON", "pronoun"]],
+        ["are", "be", "verb", ["VERB", "verb"]],
+        ["at", "at", "preposition", ["ADP", "preposition"]],
+        ["home", "home", "noun", ["NOUN", "noun"]],
+        ["near", "near", "preposition", ["ADP", "preposition"]],
+        ["the", "the", "determiner", ["DET", "determiner"]],
+        ["quiet", "quiet", "adjective", ["ADJ", "adjective"]],
+        ["city", "city", "noun", ["NOUN", "noun"]],
+        ["center", "center", "noun", ["NOUN", "noun"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [
+        {
+          text: "the quiet city center",
+          normalized: "the quiet city center",
+          type: "noun-phrase",
+          tokenStart: 5,
+          tokenEnd: 9,
+          confidence: 0.9
+        }
+      ],
+      grammarFeatures: []
+    }));
+    const pairDefinition: LanguagePairDefinition = {
+      id: "en-fr",
+      sourceLanguage: "en",
+      targetLanguage: "fr",
+      displayNames: {
+        sourceLanguage: "English",
+        targetLanguage: "French"
+      },
+      curriculum: {
+        config: {
+          ...DEFAULT_CURRICULUM_CONFIG,
+          targetLanguage: "fr"
+        },
+        content: []
+      },
+      fixedPhraseLexicon: []
+    };
+    const phraseTargets: CuratedPhraseTargetEntry[] = [
+      {
+        sourceText: "the quiet city center",
+        targetText: "le centre-ville calme",
+        sourceKind: "chunk",
+        category: "noun-chunk",
+        confidence: 0.92,
+        normalizedSourceText: "the quiet city center",
+        normalizedTargetText: "le centre ville calme"
+      }
+    ];
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      languagePair: "en-fr",
+      languagePairDefinitions: new Map([["en-fr", pairDefinition]]),
+      phraseTargetsByLanguagePair: new Map([["en-fr", phraseTargets]]),
+      loadRenderUnits: () => Promise.resolve([]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const phraseMatches = analysis?.entry.phraseMatches ?? [];
+
+    expect(phraseMatches.some((match) => match.sourceText === "at home")).toBe(false);
+    expect(phraseMatches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceText: "the quiet city center",
+          targetText: "le centre-ville calme",
+          normalizedTargetText: "le centre ville calme"
+        })
+      ])
     );
   });
 

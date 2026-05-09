@@ -2,6 +2,7 @@ import {
   DEFAULT_CURRICULUM_CONFIG,
   resolveExtensionSettings,
   type CurriculumConfig,
+  type LanguagePairId,
   type LexemeEntry,
   type RenderUnitEntry
 } from "@immersionkit/shared";
@@ -10,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   BackgroundAssetPackService,
   buildAssetPackIdentity,
+  buildManifestUrl,
   resolveActiveAssetBandWindow,
   resolvePackUrl,
   validateAssetPack,
@@ -70,6 +72,72 @@ describe("background asset packs", () => {
         lexemes: []
       })
     ).toBeNull();
+  });
+
+  it("loads and filters remote packs by the active non-en-es language pair", async () => {
+    const requestedUrls: string[] = [];
+    const remotePack = createPack("level-1a", "asset-fr", "city", "ville", "en-fr");
+    const repository = new InMemoryAssetPackRepository([
+      createPack("level-1a", "asset-es", "city", "ciudad", "en-es")
+    ]);
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createRuntimeConfig(DEFAULT_CURRICULUM_CONFIG, {
+            languagePair: "en-fr",
+            sourceLanguage: "en",
+            targetLanguage: "fr"
+          })
+        ),
+      fetchJson: async (url) => {
+        requestedUrls.push(url);
+        if (url.endsWith("/manifest.json")) {
+          return {
+            schemaVersion: "1.0.0",
+            assetVersion: "asset-fr",
+            languagePair: "en-fr",
+            packs: [{ bandId: "level-1a", url: "packs/asset-fr/level-1a.json" }]
+          };
+        }
+
+        return remotePack;
+      }
+    });
+
+    const manifest = validateAssetPackManifest({
+      schemaVersion: "1.0.0",
+      assetVersion: "asset-fr",
+      languagePair: "en-fr",
+      packs: [{ bandId: "level-1a", url: "packs/asset-fr/level-1a.json" }]
+    });
+    const validatedPack = validateAssetPack(remotePack, {
+      bandId: "level-1a",
+      assetVersion: "asset-fr",
+      languagePair: "en-fr"
+    });
+    const context = await service.loadActiveContext();
+
+    expect(buildManifestUrl("https://cdn.example/assets", "en-fr")).toBe(
+      "https://cdn.example/assets/en-fr/manifest.json"
+    );
+    expect(requestedUrls[0]).toBe("https://cdn.example/assets/en-fr/manifest.json");
+    expect(manifest?.languagePair).toBe("en-fr");
+    expect(validatedPack?.languagePair).toBe("en-fr");
+    expect(validatedPack?.renderUnits[0]).toMatchObject({
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+    expect(context.languagePair).toBe("en-fr");
+    expect(context.renderUnits[0]).toMatchObject({
+      sourceText: "city",
+      targetText: "ville",
+      targetLanguage: "fr"
+    });
+    expect(repository.packs.map((pack) => pack.languagePair).sort()).toEqual([
+      "en-fr"
+    ]);
   });
 
   it("falls back to stale cached packs when a remote replacement pack is invalid", async () => {
@@ -265,7 +333,7 @@ class InMemoryAssetPackRepository implements AssetPackRepository {
   }
 
   async getLatestPacksForBands(
-    languagePair: "en-es",
+    languagePair: LanguagePairId,
     bandIds: readonly string[]
   ): Promise<StoredAssetPack[]> {
     const requestedBandIds = new Set(bandIds);
@@ -296,9 +364,12 @@ class InMemoryAssetPackRepository implements AssetPackRepository {
   }
 }
 
-function createRuntimeConfig(config: CurriculumConfig = DEFAULT_CURRICULUM_CONFIG): BackgroundRuntimeConfig {
+function createRuntimeConfig(
+  config: CurriculumConfig = DEFAULT_CURRICULUM_CONFIG,
+  settings: Parameters<typeof resolveExtensionSettings>[0] = null
+): BackgroundRuntimeConfig {
   return {
-    settings: resolveExtensionSettings(null),
+    settings: resolveExtensionSettings(settings),
     credentials: { openAiApiKey: null },
     curriculum: {
       config,
@@ -311,15 +382,18 @@ function createPack(
   bandId: string,
   assetVersion: string,
   sourceLemma = "city",
-  targetLemma = "ciudad"
+  targetLemma = "ciudad",
+  languagePair: LanguagePairId = "en-es"
 ): AssetPack {
   return {
     schemaVersion: "1.0.0",
     assetVersion,
-    languagePair: "en-es",
+    languagePair,
     bandId,
-    renderUnits: [createRenderUnit(0, bandId, sourceLemma, targetLemma)],
-    lexemes: [createLexeme(0, sourceLemma, targetLemma)]
+    renderUnits: [
+      createRenderUnit(0, bandId, sourceLemma, targetLemma, languagePair)
+    ],
+    lexemes: [createLexeme(0, sourceLemma, targetLemma, languagePair)]
   };
 }
 
@@ -327,8 +401,10 @@ function createRenderUnit(
   index: number,
   bandId: string,
   sourceLemma: string,
-  targetLemma: string
+  targetLemma: string,
+  languagePair: LanguagePairId = "en-es"
 ): RenderUnitEntry {
+  const targetLanguage = languagePair === "en-fr" ? "fr" : "es";
   return {
     renderUnitId: `ru:${sourceLemma}:noun:exact`,
     lexemeIds: [`lx:${sourceLemma}:noun`],
@@ -353,15 +429,17 @@ function createRenderUnit(
     confidence: 0.95,
     provenance: { source: "manual" },
     sourceLanguage: "en",
-    targetLanguage: "es"
+    targetLanguage
   };
 }
 
 function createLexeme(
   index: number,
   sourceLemma: string,
-  targetLemma: string
+  targetLemma: string,
+  languagePair: LanguagePairId = "en-es"
 ): LexemeEntry {
+  const targetLanguage = languagePair === "en-fr" ? "fr" : "es";
   return {
     lexemeId: `lx:${sourceLemma}:noun`,
     sourceLemma,
@@ -370,7 +448,7 @@ function createLexeme(
     frequencyRank: index + 1,
     confidence: 0.95,
     sourceLanguage: "en",
-    targetLanguage: "es"
+    targetLanguage
   };
 }
 

@@ -5,6 +5,7 @@ import type {
   VocabStatus
 } from "../domain/models";
 import type { WordRenderEntry } from "../replacement/render-units";
+import type { BeginnerCognatePolicy } from "../text/cognates";
 import { beginnerCognateDiscoveryRateFloor } from "../text/cognates";
 import {
   evaluatePhraseCurriculumContentInventory,
@@ -31,6 +32,7 @@ export type WordRuntimeActivationInput = {
   config: Partial<CurriculumConfig> | null | undefined;
   profile?: CurriculumRuntimeProfileInput | null;
   activeContent?: ActiveCurriculumContent;
+  beginnerCognatePolicy?: BeginnerCognatePolicy | null;
   wordEntry: WordRenderEntry;
   learningItem: LearningItem | null;
   status: VocabStatus;
@@ -64,7 +66,8 @@ export function evaluateWordRuntimeActivation(
   if (input.wordEntry.renderUnitMinBand) {
     const renderUnitBandDecision = evaluateWordCurriculumContentInventory({
       wordEntry: input.wordEntry,
-      activeContent
+      activeContent,
+      beginnerCognatePolicy: input.beginnerCognatePolicy
     });
     if (!renderUnitBandDecision.eligible) {
       return {
@@ -92,7 +95,8 @@ export function evaluateWordRuntimeActivation(
 
   const inventoryDecision = evaluateWordCurriculumContentInventory({
     wordEntry: input.wordEntry,
-    activeContent
+    activeContent,
+    beginnerCognatePolicy: input.beginnerCognatePolicy
   });
   if (!inventoryDecision.eligible) {
     return {
@@ -103,9 +107,14 @@ export function evaluateWordRuntimeActivation(
     };
   }
 
+  const beginnerCognatePolicy =
+    input.beginnerCognatePolicy === undefined
+      ? activeContent.beginnerCognatePolicy
+      : input.beginnerCognatePolicy;
   const cognateDiscoveryRateFloor = beginnerCognateDiscoveryRateFloor(
     input.wordEntry,
-    inventoryDecision.activeBandId
+    inventoryDecision.activeBandId,
+    beginnerCognatePolicy === undefined ? null : beginnerCognatePolicy
   );
 
   return {

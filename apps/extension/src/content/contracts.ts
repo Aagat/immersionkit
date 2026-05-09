@@ -1,5 +1,7 @@
 import type {
   SafeInjectionPos,
+  SupportedSourceLanguage,
+  SupportedTargetLanguage,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
@@ -14,8 +16,8 @@ export type InjectedWordKind = "known" | "discovery";
 export type TokenMetadata = {
   tokenId: string;
   nodeId: string;
-  sourceLanguage: "en";
-  targetLanguage: "es";
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sourceToken: string;
   targetToken: string;
   sourceLemma: string;
@@ -33,8 +35,8 @@ export type TokenMetadata = {
 export type PhraseMetadata = {
   tokenId: string;
   nodeId: string;
-  sourceLanguage: "en";
-  targetLanguage: "es";
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sourceText: string;
   targetText: string;
   phraseId: string;
