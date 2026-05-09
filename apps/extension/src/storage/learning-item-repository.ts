@@ -1,6 +1,6 @@
 import { REVIEW_INTERVALS_MS, type LearningItem } from "@immersionkit/shared";
 
-import { isRecord } from "./storage";
+import { isRecord } from "./serialization";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,

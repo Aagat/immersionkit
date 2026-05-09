@@ -4,19 +4,19 @@ import {
   type PhraseRegistryEntry
 } from "@immersionkit/shared";
 
-import { isRecord, readString } from "./storage";
+import { isRecord, readString } from "../storage/serialization";
 import {
   IndexedDbLearningItemRepository,
   type LearningItemRecord,
   type LearningItemRepository
-} from "./learning-item-repository";
+} from "../storage/learning-item-repository";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,
   isIndexedDbAvailable,
   requestToPromise,
   transactionDone
-} from "./indexeddb";
+} from "../storage/indexeddb";
 
 export type PhraseRegistryRecord = Record<string, PhraseRegistryEntry>;
 

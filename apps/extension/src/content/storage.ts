@@ -1,4 +1,8 @@
-import { RuntimeMessageType, normalizeToken } from "@immersionkit/shared";
+import {
+  RuntimeMessageType,
+  normalizeToken,
+  parseCurriculumRuntimeProfile
+} from "@immersionkit/shared";
 import type {
   ContentAssetContext,
   CurriculumConfig,
@@ -16,6 +20,11 @@ import type {
 import { resolveCurriculumConfig } from "@immersionkit/shared";
 
 import { parseRenderUnitAsset } from "../render-units/render-units";
+import {
+  isRecord,
+  pickFirstDefinedValue,
+  readString
+} from "../storage/serialization";
 
 import {
   DEFAULT_DISCOVERY_RATE,
@@ -207,7 +216,7 @@ export async function loadProcessingContext(
         ? (rawCurriculumConfig as Partial<CurriculumConfig>)
         : null
     ),
-    learningProfile: parseLearningProfile(rawLearningProfile)
+    learningProfile: parseCurriculumRuntimeProfile(rawLearningProfile)
   };
 }
 
@@ -281,14 +290,7 @@ function collectRelevantUnitRefIds(
   };
 }
 
-export function createEmptyRuntimeAnalysisContext(): RuntimeAnalysisContext {
-  return {
-    entryCount: 0,
-    bySentenceHash: new Map()
-  };
-}
-
-export function buildRuntimeAnalysisContext(input: unknown): RuntimeAnalysisContext {
+function buildRuntimeAnalysisContext(input: unknown): RuntimeAnalysisContext {
   const cachedWordRenderDecisions = parseCachedWordRenderDecisions(input);
   const cachedPhraseMatchesBySentenceHash = parseCachedPhraseMatches(input);
   const cachedGrammarFeaturesBySentenceHash = parseCachedGrammarFeatures(input);
@@ -825,29 +827,6 @@ function parseLearningItems(input: unknown): Map<string, LearningItem> {
   return new Map(items.map((item) => [item.unitRefId, item]));
 }
 
-function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
-  if (!isRecord(input)) {
-    return {};
-  }
-
-  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
-  const activePhraseBandId = readString(input.activePhraseBandId);
-  const activeGrammarBandId = readString(input.activeGrammarBandId);
-  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
-    ? input.unlockedBandIds.flatMap((value): string[] => {
-        const bandId = readString(value);
-        return bandId ? [bandId] : [];
-      })
-    : undefined;
-
-  return {
-    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
-    ...(activePhraseBandId ? { activePhraseBandId } : {}),
-    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
-    ...(unlockedBandIds ? { unlockedBandIds } : {})
-  };
-}
-
 function buildRuntimeSentenceAnalysis(input: {
   wordDecisions: readonly CachedWordRenderDecision[];
   phraseMatches: readonly CachedPhraseMatch[];
@@ -1225,29 +1204,8 @@ function clampRate(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function pickFirstDefinedValue(
-  storage: StorageRecord,
-  keys: readonly string[]
-): unknown {
-  for (const key of keys) {
-    if (storage[key] !== undefined) {
-      return storage[key];
-    }
-  }
-
-  return undefined;
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
 function readNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-function isRecord(value: unknown): value is StorageRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function readPhraseSourceKind(value: unknown): CachedPhraseMatch["sourceKind"] | null {

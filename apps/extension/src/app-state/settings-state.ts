@@ -4,6 +4,7 @@ import {
   clampUnitInterval,
   evaluateCurriculumBandTransition,
   getActiveCurriculumContent,
+  parseCurriculumRuntimeProfile,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   resolveExtensionSettings,
@@ -15,13 +16,18 @@ import {
   type ResolvedExtensionSettings,
   type SiteSetting
 } from "@immersionkit/shared";
-import { IndexedDbLearningItemRepository } from "../background/learning-item-repository";
+import { IndexedDbLearningItemRepository } from "../storage/learning-item-repository";
 import {
   IndexedDbUserVocabRepository,
   loadUserDataValues as loadIndexedDbUserDataValues,
   removeUserDataValues as removeIndexedDbUserDataValues,
   setUserDataValues as setIndexedDbUserDataValues
-} from "../background/user-data-repository";
+} from "../storage/user-data-repository";
+import {
+  isRecord,
+  pickFirstDefinedValue,
+  readString
+} from "../storage/serialization";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 type StorageRecord = Record<string, unknown>;
@@ -280,7 +286,7 @@ export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics
     ...LEARNING_PROFILE_STORAGE_KEYS,
     ...CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS
   ]);
-  const profile = parseLearningProfile(
+  const profile = parseCurriculumRuntimeProfile(
     pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS)
   );
 
@@ -641,29 +647,6 @@ function normalizeSiteSetting(hostname: string, input: StorageRecord): StoredSit
   };
 }
 
-function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
-  if (!isRecord(input)) {
-    return {};
-  }
-
-  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
-  const activePhraseBandId = readString(input.activePhraseBandId);
-  const activeGrammarBandId = readString(input.activeGrammarBandId);
-  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
-    ? input.unlockedBandIds.flatMap((value): string[] => {
-        const bandId = readString(value);
-        return bandId ? [bandId] : [];
-      })
-    : undefined;
-
-  return {
-    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
-    ...(activePhraseBandId ? { activePhraseBandId } : {}),
-    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
-    ...(unlockedBandIds ? { unlockedBandIds } : {})
-  };
-}
-
 function parseCurriculumProgressionDiagnostics(
   input: unknown
 ): CurriculumProgressionDiagnostics | null {
@@ -777,25 +760,4 @@ async function sendTabMessage<TResponse>(
       resolve(response ?? null);
     });
   });
-}
-
-function pickFirstDefinedValue(
-  values: StorageRecord,
-  keys: readonly string[]
-): unknown {
-  for (const key of keys) {
-    if (values[key] !== undefined) {
-      return values[key];
-    }
-  }
-
-  return undefined;
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function isRecord(value: unknown): value is StorageRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

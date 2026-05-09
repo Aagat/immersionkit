@@ -26,7 +26,7 @@ import {
   IndexedDbLearningItemRepository,
   type LearningItemRecord,
   type LearningItemRepository
-} from "./learning-item-repository";
+} from "../storage/learning-item-repository";
 import { loadBackgroundRuntimeConfig } from "./settings";
 
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;

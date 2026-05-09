@@ -12,14 +12,14 @@ import {
 import {
   readString,
   isRecord
-} from "./storage";
+} from "../storage/serialization";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,
   isIndexedDbAvailable,
   requestToPromise,
   transactionDone
-} from "./indexeddb";
+} from "../storage/indexeddb";
 
 export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository {
   async getByHash(hash: string): Promise<SentenceCacheEntry | null> {

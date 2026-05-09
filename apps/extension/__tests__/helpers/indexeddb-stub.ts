@@ -1,4 +1,4 @@
-import { resetIndexedDbConnectionForTests } from "../../src/background/indexeddb";
+import { resetIndexedDbConnectionForTests } from "../../src/storage/indexeddb";
 
 type StoreState = {
   keyPath: string | string[];

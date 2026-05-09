@@ -120,7 +120,9 @@
       "path": "packages/shared",
       "followMonorepoPackages": true,
       "prodEntryPoints": [
-        "src/index.ts"
+        "src/index.ts",
+        "src/runtime.ts",
+        "src/validation/index.ts"
       ],
       "devEntryPoints": [
         "tests/*.ts"
@@ -133,9 +135,11 @@
         "enabled": true,
         "validEntryPoints": [
           "src/index.ts",
+          "src/runtime.ts",
+          "src/validation/index.ts",
           "tests/*.ts"
         ],
-        "ignoreTypeImports": true,
+        "ignoreTypeImports": false,
         "graphExclude": [
           "src/**/*.d.ts"
         ]
@@ -144,6 +148,8 @@
         "enabled": true,
         "validEntryPoints": [
           "src/index.ts",
+          "src/runtime.ts",
+          "src/validation/index.ts",
           "tests/*.ts"
         ],
         "ignoreTypeExports": true,

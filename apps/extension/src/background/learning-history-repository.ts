@@ -1,13 +1,13 @@
 import type { ReviewEvent } from "@immersionkit/shared";
 
-import { isRecord } from "./storage";
+import { isRecord } from "../storage/serialization";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,
   isIndexedDbAvailable,
   requestToPromise,
   transactionDone
-} from "./indexeddb";
+} from "../storage/indexeddb";
 
 const MAX_REVIEW_EVENTS = 500;
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;

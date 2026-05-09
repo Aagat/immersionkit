@@ -19,7 +19,7 @@ import {
   type VocabStats,
   type CheckpointEligibilityPreview,
   type ProficiencySeed
-} from "./state";
+} from "../app-state/settings-state";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,

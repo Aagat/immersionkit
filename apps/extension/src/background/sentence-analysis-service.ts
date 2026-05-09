@@ -4,10 +4,8 @@ import {
   buildRenderUnitRuntimeIndex,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
-  evaluateContextAwareDecision,
   findRenderUnitTokenSpans,
   findWordRenderEntriesForAnalyzerToken,
-  getV1AmbiguityGroupForWord,
   hashSentence,
   normalizeToken,
   scorePrototypeSuitability,
@@ -28,6 +26,10 @@ import {
   type VocabStatus,
   type WordRenderEntry
 } from "@immersionkit/shared";
+import {
+  evaluateContextAwareDecision,
+  getV1AmbiguityGroupForWord
+} from "@immersionkit/shared/runtime";
 import { detectPhraseCandidatesFromAnalyzerOutput } from "@immersionkit/shared/phrases/detection";
 
 import {
@@ -47,7 +49,7 @@ import {
   getDefaultSentenceAnalyzer,
   type SentenceAnalyzer
 } from "./sentence-analyzers";
-import { IndexedDbUserVocabRepository } from "./user-data-repository";
+import { IndexedDbUserVocabRepository } from "../storage/user-data-repository";
 
 const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
 

@@ -9,7 +9,7 @@ import type {
 import type {
   LearningItemRecord,
   LearningItemRepository
-} from "../src/background/learning-item-repository";
+} from "../src/storage/learning-item-repository";
 
 describe("background phrase registry", () => {
   it("creates phrase learning items after registry identity exists", async () => {

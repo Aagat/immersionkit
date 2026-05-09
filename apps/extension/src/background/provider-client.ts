@@ -10,7 +10,7 @@ import {
 } from "@immersionkit/shared";
 
 import type { ProviderCredentials } from "./settings";
-import { isRecord, readString } from "./storage";
+import { isRecord, readString } from "../storage/serialization";
 
 const OPENAI_CHAT_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 export const OPENAI_SENTENCE_PROMPT_VERSION = "openai-sentence-v4";

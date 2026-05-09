@@ -11,7 +11,7 @@ import { BackgroundLearningItemService } from "../src/background/learning-items"
 import type {
   LearningItemRecord,
   LearningItemRepository
-} from "../src/background/learning-item-repository";
+} from "../src/storage/learning-item-repository";
 import type {
   LearningHistoryRepository,
   LearningItemContextHistoryRecord

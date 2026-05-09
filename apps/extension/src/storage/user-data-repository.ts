@@ -7,7 +7,7 @@ import {
   requestToPromise,
   transactionDone
 } from "./indexeddb";
-import { isRecord } from "./storage";
+import { isRecord } from "./serialization";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 export { USER_DATA_KEYS } from "../shared/user-data-keys";

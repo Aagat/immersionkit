@@ -17,7 +17,7 @@ import {
   type SettingsState,
   type SiteSettingsMap,
   type VocabStats
-} from "../options/state";
+} from "../app-state/settings-state";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,

@@ -9,8 +9,8 @@ import {
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
-} from "../src/options/state";
-import { setUserDataValues } from "../src/background/user-data-repository";
+} from "../src/app-state/settings-state";
+import { setUserDataValues } from "../src/storage/user-data-repository";
 import { installChromeStub } from "./helpers/chrome-stub";
 import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 

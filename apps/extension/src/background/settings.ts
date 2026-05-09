@@ -1,4 +1,5 @@
 import {
+  parseCurriculumRuntimeProfile,
   resolveCurriculumConfig,
   type ExtensionSettings,
   type CurriculumConfig,
@@ -7,8 +8,8 @@ import {
   resolveExtensionSettings
 } from "@immersionkit/shared";
 
-import { isRecord, pickFirstDefinedValue, readString } from "./storage";
-import { loadUserDataValues } from "./user-data-repository";
+import { isRecord, pickFirstDefinedValue, readString } from "../storage/serialization";
+import { loadUserDataValues } from "../storage/user-data-repository";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 const SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.settings] as const;
@@ -64,30 +65,7 @@ export async function loadBackgroundRuntimeConfig(): Promise<BackgroundRuntimeCo
           ? (rawCurriculumConfig as Partial<CurriculumConfig>)
           : null
       ),
-      profile: parseLearningProfile(rawLearningProfile)
+      profile: parseCurriculumRuntimeProfile(rawLearningProfile)
     }
-  };
-}
-
-function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
-  if (!isRecord(input)) {
-    return {};
-  }
-
-  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
-  const activePhraseBandId = readString(input.activePhraseBandId);
-  const activeGrammarBandId = readString(input.activeGrammarBandId);
-  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
-    ? input.unlockedBandIds.flatMap((value): string[] => {
-        const bandId = readString(value);
-        return bandId ? [bandId] : [];
-      })
-    : undefined;
-
-  return {
-    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
-    ...(activePhraseBandId ? { activePhraseBandId } : {}),
-    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
-    ...(unlockedBandIds ? { unlockedBandIds } : {})
   };
 }

@@ -31,7 +31,7 @@ import {
   type SentenceTranslationDelivery
 } from "./sentence-queue";
 import { loadBackgroundRuntimeConfig } from "./settings";
-import { isRecord } from "./storage";
+import { isRecord } from "../storage/serialization";
 import {
   IndexedDbUserDataRepository,
   IndexedDbUserVocabRepository,
@@ -39,7 +39,7 @@ import {
   removeUserDataValues,
   setUserDataValues,
   USER_DATA_KEYS
-} from "./user-data-repository";
+} from "../storage/user-data-repository";
 
 type RefreshActiveTabResponse =
   | {
@@ -63,6 +63,25 @@ type PingResponse = {
 type ErrorResponse = {
   ok: false;
   error: string;
+};
+
+type BackgroundHandledRuntimeMessage = Exclude<
+  RuntimeMessage,
+  SentenceTranslationResultMessage
+>;
+
+type RuntimeResponseSender = (response: unknown) => void;
+
+type RuntimeMessageHandler<TMessage extends BackgroundHandledRuntimeMessage> = (
+  message: TMessage,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: RuntimeResponseSender
+) => boolean;
+
+type RuntimeMessageHandlerMap = {
+  [Type in BackgroundHandledRuntimeMessage["type"]]: RuntimeMessageHandler<
+    Extract<BackgroundHandledRuntimeMessage, { type: Type }>
+  >;
 };
 
 export type GetLearningItemsResponse =
@@ -133,6 +152,80 @@ export class BackgroundRuntimeCoordinator {
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
   private readonly userVocab: IndexedDbUserVocabRepository;
   private readonly assetPacks = getBackgroundAssetPackService();
+  private readonly runtimeMessageHandlers: RuntimeMessageHandlerMap = {
+    [RuntimeMessageType.Ping]: (_message, _sender, sendResponse) => {
+      sendResponse({
+        ok: true,
+        source: "background",
+        timestamp: new Date().toISOString()
+      } satisfies PingResponse);
+      return false;
+    },
+    [RuntimeMessageType.RefreshActiveTab]: (_message, _sender, sendResponse) => {
+      void this.handleRefreshActiveTab(sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetLearningItems]: (message, _sender, sendResponse) => {
+      void this.handleGetLearningItems(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetUserData]: (message, _sender, sendResponse) => {
+      void this.handleGetUserData(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.SetUserData]: (message, sender, sendResponse) => {
+      void this.handleSetUserData(message, sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.RemoveUserData]: (message, sender, sendResponse) => {
+      void this.handleRemoveUserData(message, sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetUserVocab]: (message, _sender, sendResponse) => {
+      void this.handleGetUserVocab(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.SetVocabStatus]: (message, _sender, sendResponse) => {
+      void this.handleSetVocabStatus(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetAssetContext]: (message, _sender, sendResponse) => {
+      void this.handleGetAssetContext(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetSentenceAnalysisCache]: (
+      message,
+      _sender,
+      sendResponse
+    ) => {
+      void this.handleGetSentenceAnalysisCache(message.sentenceHashes, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GraduateCheckpoint]: (_message, _sender, sendResponse) => {
+      void this.handleGraduateCheckpoint(sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.QueueSentenceCandidates]: (
+      message,
+      sender,
+      sendResponse
+    ) => {
+      void this.handleQueueSentenceCandidates(message, sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.AssistEvent]: (message, _sender, sendResponse) => {
+      void this.handleAssistEvent(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.QualifiedExposureEvent]: (
+      message,
+      sender,
+      sendResponse
+    ) => {
+      void this.handleQualifiedExposureEvent(message, sender, sendResponse);
+      return true;
+    }
+  };
   private isBooted = false;
 
   constructor() {
@@ -167,88 +260,33 @@ export class BackgroundRuntimeCoordinator {
       void this.cleanupLegacyPhraseIdentities();
     });
 
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (!isRuntimeMessage(message)) {
-        return false;
-      }
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) =>
+      this.dispatchRuntimeMessage(message, sender, sendResponse)
+    );
+  }
 
-      if (message.type === RuntimeMessageType.Ping) {
-        const response: PingResponse = {
-          ok: true,
-          source: "background",
-          timestamp: new Date().toISOString()
-        };
-        sendResponse(response);
-        return false;
-      }
-
-      if (message.type === RuntimeMessageType.RefreshActiveTab) {
-        void this.handleRefreshActiveTab(sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.GetLearningItems) {
-        void this.handleGetLearningItems(message, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.GetUserData) {
-        void this.handleGetUserData(message, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.SetUserData) {
-        void this.handleSetUserData(message, sender, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.RemoveUserData) {
-        void this.handleRemoveUserData(message, sender, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.GetUserVocab) {
-        void this.handleGetUserVocab(message, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.SetVocabStatus) {
-        void this.handleSetVocabStatus(message, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.GetAssetContext) {
-        void this.handleGetAssetContext(message, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.GetSentenceAnalysisCache) {
-        void this.handleGetSentenceAnalysisCache(message.sentenceHashes, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.GraduateCheckpoint) {
-        void this.handleGraduateCheckpoint(sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.QueueSentenceCandidates) {
-        void this.handleQueueSentenceCandidates(message, sender, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.AssistEvent) {
-        void this.handleAssistEvent(message, sendResponse);
-        return true;
-      }
-
-      if (message.type === RuntimeMessageType.QualifiedExposureEvent) {
-        void this.handleQualifiedExposureEvent(message, sender, sendResponse);
-        return true;
-      }
-
+  private dispatchRuntimeMessage(
+    message: unknown,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: RuntimeResponseSender
+  ): boolean {
+    if (!isRuntimeMessage(message)) {
       return false;
-    });
+    }
+
+    const handler = this.runtimeMessageHandlers[
+      message.type as BackgroundHandledRuntimeMessage["type"]
+    ] as RuntimeMessageHandler<BackgroundHandledRuntimeMessage> | undefined;
+
+    if (!handler) {
+      return false;
+    }
+
+    return handler(
+      message as BackgroundHandledRuntimeMessage,
+      sender,
+      sendResponse
+    );
   }
 
   private async handleRefreshActiveTab(

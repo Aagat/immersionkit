@@ -1,110 +1,17 @@
-import { SAFE_INJECTION_POS_VALUES } from "../../domain/models";
-import type { ContextualWordCandidate as DomainContextualWordCandidate } from "../../domain/models";
-import { CONTEXTUAL_AMBIGUITY_RULES } from "./rules";
+import {
+  evaluateContentBaselineDecision,
+  evaluateContextAwareDecision
+} from "../../scoring/word-injection";
 import type {
   ContextualWordCandidate,
   WordInjectionCaseEvaluation,
   WordInjectionDecision,
-  WordInjectionDecisionResult,
   WordInjectionEvaluationSummary,
   WordInjectionExpectedOutcome,
   WordInjectionStrategyMetrics
 } from "./types";
 
-const SAFE_INJECTABLE_POS = new Set(SAFE_INJECTION_POS_VALUES);
-
-export function evaluateContentBaselineDecision(
-  candidate: DomainContextualWordCandidate
-): WordInjectionDecisionResult {
-  if (!SAFE_INJECTABLE_POS.has(candidate.candidatePos)) {
-    return {
-      decision: "skip",
-      code: "content-baseline-unsafe-pos",
-      reason: `Content baseline rejects ${candidate.candidatePos} outside the safe POS set.`
-    };
-  }
-
-  return {
-    decision: "inject",
-    code: "content-baseline-safe-pos",
-    reason: `Content baseline injects ${candidate.candidateLemma} because ${candidate.candidatePos} is in the safe POS set.`
-  };
-}
-
-export function evaluateContextAwareDecision(
-  candidate: DomainContextualWordCandidate
-): WordInjectionDecisionResult {
-  const rule = CONTEXTUAL_AMBIGUITY_RULES.get(candidate.ambiguityGroup);
-  if (!rule) {
-    return {
-      decision: "skip",
-      code: "group-not-in-inventory",
-      reason: `No ambiguity rule exists for ${candidate.ambiguityGroup}, so the candidate is skipped by default.`
-    };
-  }
-
-  const confidence = clampUnitInterval(candidate.confidence);
-  if (confidence < rule.minimumConfidence) {
-    return {
-      decision: "skip",
-      code: "low-confidence",
-      reason: `Confidence ${confidence.toFixed(2)} is below ${rule.minimumConfidence.toFixed(2)}.`
-    };
-  }
-
-  if (rule.blockedObservedPos.has(candidate.observedPos)) {
-    return {
-      decision: "skip",
-      code: "blocked-observed-pos",
-      reason: `Observed POS ${candidate.observedPos} is blocked for ${candidate.ambiguityGroup}.`
-    };
-  }
-
-  const blockedSignature = candidate.nearbyContextSignature.find((signature) =>
-    rule.blockedContextEvidence.has(signature)
-  );
-  if (blockedSignature) {
-    return {
-      decision: "skip",
-      code: "blocked-context-signature",
-      reason: `Context signature ${blockedSignature} is blocked for ${candidate.ambiguityGroup}.`
-    };
-  }
-
-  if (!rule.allowedObservedPos.has(candidate.observedPos)) {
-    return {
-      decision: "skip",
-      code: "insufficient-context-evidence",
-      reason: `Observed POS ${candidate.observedPos} is not in the allowed set for ${candidate.ambiguityGroup}.`
-    };
-  }
-
-  if (!rule.allowedChunkTypes.has(candidate.chunkType)) {
-    return {
-      decision: "skip",
-      code: "insufficient-context-evidence",
-      reason: `Chunk type ${candidate.chunkType} is not allowed for ${candidate.ambiguityGroup}.`
-    };
-  }
-
-  const hasRequiredEvidence = candidate.nearbyContextSignature.some((signature) =>
-    rule.requiredContextEvidence.has(signature)
-  );
-
-  if (!hasRequiredEvidence) {
-    return {
-      decision: "skip",
-      code: "insufficient-context-evidence",
-      reason: `No required context signature was present for ${candidate.ambiguityGroup}.`
-    };
-  }
-
-  return {
-    decision: "inject",
-    code: "context-evidence-accepted",
-    reason: `Context evidence and confidence meet the ${candidate.ambiguityGroup} injection rule.`
-  };
-}
+export { evaluateContentBaselineDecision, evaluateContextAwareDecision };
 
 export function evaluateWordInjectionCorpus(
   candidates: ContextualWordCandidate[]
@@ -252,20 +159,4 @@ function safeDivide(numerator: number, denominator: number): number {
   }
 
   return numerator / denominator;
-}
-
-function clampUnitInterval(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-
-  if (value < 0) {
-    return 0;
-  }
-
-  if (value > 1) {
-    return 1;
-  }
-
-  return value;
 }

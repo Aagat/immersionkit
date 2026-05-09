@@ -1,7 +1,6 @@
-import { normalizeToken, splitTextIntoWindows } from "@immersionkit/shared";
+import { splitTextIntoWindows } from "@immersionkit/shared";
 import type {
   LearningItem,
-  SentenceAnalysisEntry,
   TextWindow,
   UserVocabEntry,
   VocabStatus
@@ -467,55 +466,6 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   return true;
 }
 
-export function applySentenceAnalysisDecisions(
-  entries: readonly SentenceAnalysisEntry[],
-  root: ParentNode = document
-): number {
-  const queryRoot = isQueryRoot(root) ? root : document;
-  let suppressedCount = 0;
-
-  for (const entry of entries) {
-    for (const candidate of entry.contextualWordCandidates) {
-      if (candidate.decision !== "skip" || !candidate.lexemeId) {
-        continue;
-      }
-
-      const selector = [
-        `[data-ik-sentence-hash='${escapeSelector(entry.sentenceHash)}']`,
-        `[data-ik-lexeme-id='${escapeSelector(candidate.lexemeId)}']`,
-        candidate.renderUnitId
-          ? `[data-ik-render-unit-id='${escapeSelector(candidate.renderUnitId)}']`
-          : ""
-      ].join("");
-      const tokens = queryRoot.querySelectorAll<HTMLElement>(selector);
-
-      for (const token of tokens) {
-        if (token.getAttribute("data-ik-context-decision") === "skip") {
-          continue;
-        }
-
-        const sourceToken = token.getAttribute("data-ik-source-token");
-        const candidateToken = candidate.normalizedText ?? normalizeToken(candidate.tokenText);
-        if (!sourceToken || normalizeToken(sourceToken) !== candidateToken) {
-          continue;
-        }
-
-        token.textContent = sourceToken;
-        token.setAttribute("data-status", "muted");
-        token.setAttribute("data-ik-context-decision", "skip");
-        token.setAttribute("data-ik-context-rationale", candidate.rationale ?? "");
-        token.setAttribute(
-          "aria-label",
-          `${sourceToken} kept in English because the local meaning is ambiguous`
-        );
-        suppressedCount += 1;
-      }
-    }
-  }
-
-  return suppressedCount;
-}
-
 function createTokenElement(input: {
   tokenId: string;
   nodeId: string;
@@ -699,12 +649,6 @@ function normalizeStatus(status: string): VocabStatus {
   }
 
   return "new";
-}
-
-function escapeSelector(value: string): string {
-  return globalThis.CSS?.escape
-    ? globalThis.CSS.escape(value)
-    : value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
 function isQueryRoot(

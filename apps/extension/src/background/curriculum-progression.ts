@@ -2,6 +2,7 @@ import {
   type CurriculumBand,
   type CurriculumTransitionDecision,
   evaluateCurriculumBandTransition,
+  parseCurriculumRuntimeProfile,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   type CurriculumConfig,
@@ -9,16 +10,12 @@ import {
   type LearningItem
 } from "@immersionkit/shared";
 
-import {
-  isRecord,
-  pickFirstDefinedValue,
-  readString
-} from "./storage";
+import { pickFirstDefinedValue } from "../storage/serialization";
 import {
   loadUserDataValues,
   setUserDataValues,
   USER_DATA_KEYS
-} from "./user-data-repository";
+} from "../storage/user-data-repository";
 
 const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
 
@@ -51,7 +48,7 @@ class ChromeLearningProfileStore implements LearningProfileStore {
   async load(): Promise<CurriculumRuntimeProfileInput> {
     const storage = await loadUserDataValues(LEARNING_PROFILE_STORAGE_KEYS);
     const rawProfile = pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS);
-    return parseLearningProfile(rawProfile);
+    return parseCurriculumRuntimeProfile(rawProfile);
   }
 
   async persist(profile: CurriculumRuntimeProfileInput): Promise<void> {
@@ -282,27 +279,4 @@ function estimateRecentLapseRate(
     (item) => item.lapses > 0
   ).length;
   return lapses / denominator;
-}
-
-function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
-  if (!isRecord(input)) {
-    return {};
-  }
-
-  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
-  const activePhraseBandId = readString(input.activePhraseBandId);
-  const activeGrammarBandId = readString(input.activeGrammarBandId);
-  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
-    ? input.unlockedBandIds.flatMap((value): string[] => {
-        const bandId = readString(value);
-        return bandId ? [bandId] : [];
-      })
-    : undefined;
-
-  return {
-    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
-    ...(activePhraseBandId ? { activePhraseBandId } : {}),
-    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
-    ...(unlockedBandIds ? { unlockedBandIds } : {})
-  };
 }

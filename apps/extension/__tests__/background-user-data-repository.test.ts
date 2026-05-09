@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   IndexedDbLearningItemRepository,
   type LearningItemRecord
-} from "../src/background/learning-item-repository";
+} from "../src/storage/learning-item-repository";
 import { IndexedDbLearningHistoryRepository } from "../src/background/learning-history-repository";
 import {
   IndexedDbUserVocabRepository,
   loadUserDataValues,
   setUserDataValues
-} from "../src/background/user-data-repository";
+} from "../src/storage/user-data-repository";
 import { installChromeStub } from "./helpers/chrome-stub";
 import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 

@@ -16,15 +16,11 @@ import type {
   QueuedSentenceCandidate,
   LearningItem,
   SentenceAnalysisEntry,
-  SentenceLearningNote,
   SentenceTranslationResult,
-  UserVocabEntry,
-  VocabStatus
+  UserVocabEntry
 } from "@immersionkit/shared";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
-import type { PageDiagnosticsPhraseSample } from "../diagnostics/page-diagnostics";
 import type { PageDiagnosticsSentenceRankingReason } from "../diagnostics/page-diagnostics";
-import type { PageDiagnosticsTokenSample } from "../diagnostics/page-diagnostics";
 import {
   isPageDiagnosticsMessage
 } from "../diagnostics/page-diagnostics";
@@ -32,11 +28,8 @@ import {
 import {
   applyTokenStatusUpdate,
   processTextNode,
-  type PhraseRenderRejection,
-  readAnnotatedNodeOriginalText,
   readPhraseMetadata,
   readTokenMetadata,
-  restoreAnnotatedElement,
   restoreAnnotatedNodes
 } from "./annotate";
 import type {
@@ -55,21 +48,25 @@ import type {
   TokenStatusUpdatedDetail
 } from "./contracts";
 import {
-  IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE,
   IMMERSIONKIT_ROOT_ATTRIBUTE,
   IMMERSIONKIT_TOKEN_ATTRIBUTE,
-  IMMERSIONKIT_NODE_ATTRIBUTE,
   IMMERSIONKIT_WORD_SELECTOR
 } from "./constants";
 import {
   collectEligibleTextNodes,
-  isInImmersionNode,
-  nodeToProcessRoot,
-  shouldSkipDocument,
-  visitEligibleTextNodes
+  shouldSkipDocument
 } from "./dom";
-import { segmentSentences } from "./sentences";
 import { ContentEvidenceTracker } from "./evidence";
+import {
+  createDefaultDiagnostics,
+  createDiagnosticsSnapshot,
+  PHRASE_DIAGNOSTICS_SAMPLE_LIMIT,
+  readPageDiagnostics as readContentPageDiagnostics,
+  type ContentDiagnosticsProcessingState,
+  updateCurriculumDiagnosticsFromRanking,
+  updateDiagnostics as updateContentDiagnostics
+} from "./diagnostics";
+import { applyUiTheme } from "./theme";
 import { buildWordRenderIndex, type WordRenderIndex } from "./word-render-index";
 import type { WordRenderEntry } from "../render-units/render-units";
 import {
@@ -82,9 +79,34 @@ import {
 import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { SentenceAnchorRegistry } from "./sentence-anchor-registry";
 import {
-  loadCachedSentenceAnalysisContext,
+  collectRootsSentenceHashes,
+  setupMutationObserver
+} from "./mutations";
+import {
+  findRenderedWrapperForCandidates,
+  registerRenderedWrappersForRoot,
+  rerenderAnnotatedNodesForSentenceHashes,
+  type ContentWrapperRegistryState
+} from "./wrapper-registry";
+import {
+  POPOVER_ACTION_ATTRIBUTE,
+  POPOVER_SENTENCE_ACTION_ATTRIBUTE,
+  closePopover,
+  handlePopoverCloseClick,
+  isWithinPopover,
+  mountPopover,
+  readInteractiveStatus,
+  readSentencePopoverAction,
+  renderPhrasePopover,
+  renderSentencePopover,
+  renderWordPopover,
+  setActiveToken,
+  syncSentencePopoverActions,
+  type ContentPopoverRuntimeState,
+  type InteractiveVocabStatus
+} from "./popover";
+import {
   loadProcessingContext,
-  mergeRuntimeAnalysisContext,
   persistVocabStatus,
   refreshLearningItemsByUnitRefIds,
   upsertRuntimeSentenceAnalysis
@@ -98,121 +120,52 @@ import type { CachedGrammarFeature } from "./storage";
 import "@immersionkit/ui/styles.css";
 import "./styles.css";
 
+type ProcessingAnalysisCacheState = {
+  analysisContext: RuntimeAnalysisContext;
+  cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
+  cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
+  cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
+};
+
+type ProcessingCurriculumState = {
+  config: CurriculumConfig;
+  profile: CurriculumRuntimeProfileInput;
+  activeWordContent: ReturnType<typeof getActiveCurriculumContent>;
+  activePhraseContent: ReturnType<typeof getActiveCurriculumContent>;
+};
+
+type ProcessingMutationState = {
+  pendingRoots: Set<ParentNode>;
+  flushHandle: number | null;
+  observer: MutationObserver | null;
+};
+
+type ProcessingRenderRegistryState = ContentWrapperRegistryState & {
+  sentenceAnchorRegistry: SentenceAnchorRegistry;
+};
+
 type ProcessingState = {
   discoveryRate: number;
   samplingSeed: string;
   wordRenderIndex: WordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
-  analysisContext: RuntimeAnalysisContext;
-  cachedWordRenderDecisions: Map<string, CachedWordRenderDecision[]>;
-  cachedPhraseMatchesBySentenceHash: Map<string, CachedPhraseMatch[]>;
   sentenceHintPhrases: string[];
-  cachedGrammarFeaturesBySentenceHash: Map<string, CachedGrammarFeature[]>;
-  seenSentenceHashes: Set<string>;
-  processedTextNodes: number;
-  injectedTokens: number;
-  injectedPhrases: number;
-  rejectedPhrases: number;
-  contextSkippedTokens: number;
-  analysisSuppressedTokens: number;
-  sentenceCandidatesQueued: number;
-  sentenceNotesRendered: number;
-  mutationCacheRefreshes: number;
-  mutationCacheRefreshHits: number;
-  freshPhraseAnalysisHits: number;
-  freshPhraseRerenders: number;
-  curriculumConfigId: string | null;
-  activeCurriculumBandId: string | null;
-  curriculumSkippedSentences: number;
-  curriculumSkippedWords: number;
-  curriculumSkippedPhrases: number;
-  curriculumConfig: CurriculumConfig;
-  learningProfile: CurriculumRuntimeProfileInput;
-  activeWordCurriculumContent: ReturnType<typeof getActiveCurriculumContent>;
-  activePhraseCurriculumContent: ReturnType<typeof getActiveCurriculumContent>;
-  sentenceRankingReasons: PageDiagnosticsSentenceRankingReason[];
-  unrenderedPhraseRejections: PhraseRenderRejection[];
-  pendingRoots: Set<ParentNode>;
-  flushHandle: number | null;
-  observer: MutationObserver | null;
-  nodeSequence: number;
-  wrappersBySentenceHash: Map<string, Set<HTMLElement>>;
-  wrapperMetadataByNodeId: Map<string, RenderedWrapperMetadata>;
-  sentenceAnchorRegistry: SentenceAnchorRegistry;
+  analysisCache: ProcessingAnalysisCacheState;
+  diagnostics: ContentDiagnosticsProcessingState;
+  curriculum: ProcessingCurriculumState;
+  mutation: ProcessingMutationState;
+  renderRegistry: ProcessingRenderRegistryState;
   sentenceTranslationEnabled: boolean;
   evidenceTracker: ContentEvidenceTracker;
   isActive: boolean;
 };
 
-type RenderedWrapperMetadata = {
-  nodeId: string;
-  wrapper: HTMLElement;
-  originalText: string;
-  sentenceHashes: Set<string>;
-};
-
-type RuntimeState = {
+type RuntimeState = ContentPopoverRuntimeState & {
   processing: ProcessingState | null;
   refreshPromise: Promise<void> | null;
-  activeToken: HTMLElement | null;
-  popover: HTMLDivElement | null;
-  popoverCleanup: (() => void) | null;
   diagnostics: PageDiagnosticsSnapshot;
 };
-
-type InteractiveVocabStatus = Exclude<VocabStatus, "new">;
-type UiTheme = "light" | "dark";
-type SentencePopoverAction = "show-translation" | "toggle-source" | "details" | "close";
-type PopoverIconName =
-  | "book"
-  | "check"
-  | "chevron"
-  | "close"
-  | "document"
-  | "eyeOff"
-  | "info"
-  | "link"
-  | "lock"
-  | "message"
-  | "spark"
-  | "translate"
-  | "volume";
-type PopoverPlacement = "right" | "left" | "top" | "bottom";
-type PopoverAnchorRect = {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-  width: number;
-  height: number;
-};
-type PopoverViewportMonitor = ((event?: Event) => void) & {
-  cancel: () => void;
-};
-type TopLayerPopoverElement = HTMLDivElement & {
-  showPopover?: () => void;
-  hidePopover?: () => void;
-};
-
-const POPOVER_ATTRIBUTE = "data-ik-popover";
-const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
-const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
-const POPOVER_CLOSE_ATTRIBUTE = "data-ik-popover-close";
-const POPOVER_VIEWPORT_MARGIN = 10;
-const POPOVER_ANCHOR_OFFSET = 12;
-const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
-const UI_THEME_ATTRIBUTE = "data-ik-ui-theme";
-const TOKEN_DIAGNOSTICS_SAMPLE_LIMIT = 8;
-const PHRASE_DIAGNOSTICS_SAMPLE_LIMIT = 8;
-const FRESH_PHRASE_RERENDER_LIMIT = 20;
-const STATUS_BUTTONS: readonly {
-  status: InteractiveVocabStatus;
-  label: string;
-}[] = [
-  { status: "learning", label: "Practicing" },
-  { status: "known", label: "Comfortable" }
-] as const;
 
 void boot();
 
@@ -357,10 +310,10 @@ function setupRefreshHook(runtimeState: RuntimeState) {
       if (results.length > 0) {
         const renderedCount = renderSentenceTranslations(
           results,
-          runtimeState.processing?.sentenceAnchorRegistry
+          runtimeState.processing?.renderRegistry.sentenceAnchorRegistry
         );
         if (runtimeState.processing) {
-          runtimeState.processing.sentenceNotesRendered += renderedCount;
+          runtimeState.processing.diagnostics.sentenceNotesRendered += renderedCount;
         }
         updateDiagnostics(runtimeState);
       }
@@ -397,41 +350,14 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       processingContext.settings.provider
     );
 
-    runtimeState.diagnostics = {
-      pageUrl: window.location.href,
-      pageHostname: window.location.hostname,
-      pagePathname: window.location.pathname,
+    runtimeState.diagnostics = createDiagnosticsSnapshot({
       siteEnabled: processingContext.siteEnabled,
       sentenceTranslationEnabled,
       assetSource: processingContext.renderAssetInfo.source,
       renderUnitCount: processingContext.renderAssetInfo.entryCount,
       renderAssetVersion: processingContext.renderAssetInfo.assetVersion,
-      fallbackAsset: processingContext.renderAssetInfo.isFallback,
-      processedTextNodes: 0,
-      injectedTokens: 0,
-      injectedPhrases: 0,
-      rejectedPhrases: 0,
-      contextSkippedTokens: 0,
-      analysisSuppressedTokens: 0,
-      sentenceCandidatesSeen: 0,
-      sentenceCandidatesQueued: 0,
-      sentenceNotesRendered: 0,
-      mutationCacheRefreshes: 0,
-      mutationCacheRefreshHits: 0,
-      freshPhraseAnalysisHits: 0,
-      freshPhraseRerenders: 0,
-      sentenceNotesVisible: countSentenceNotes(),
-      curriculumConfigId: null,
-      activeCurriculumBandId: null,
-      curriculumSkippedSentences: 0,
-      curriculumSkippedWords: 0,
-      curriculumSkippedPhrases: 0,
-      grammarDueSentenceCount: 0,
-      sentenceRankingReasons: [],
-      phraseDecisionSamples: collectPhraseDecisionSamples(),
-      tokenDecisionSamples: collectTokenDecisionSamples(),
-      updatedAt: new Date().toISOString()
-    };
+      fallbackAsset: processingContext.renderAssetInfo.isFallback
+    });
 
     console.info("ImmersionKit render units loaded for page.", {
       source: processingContext.renderAssetInfo.source,
@@ -469,57 +395,67 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       wordRenderIndex,
       vocabByLexemeId: processingContext.vocabByLexemeId,
       learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
-      analysisContext: processingContext.analysisContext,
-      cachedWordRenderDecisions: processingContext.cachedWordRenderDecisions,
-      cachedPhraseMatchesBySentenceHash:
-        processingContext.cachedPhraseMatchesBySentenceHash,
       sentenceHintPhrases: processingContext.sentenceHintPhrases,
-      cachedGrammarFeaturesBySentenceHash:
-        processingContext.cachedGrammarFeaturesBySentenceHash,
-      seenSentenceHashes: new Set<string>(),
-      processedTextNodes: 0,
-      injectedTokens: 0,
-      injectedPhrases: 0,
-      rejectedPhrases: 0,
-      contextSkippedTokens: 0,
-      analysisSuppressedTokens: 0,
-      sentenceCandidatesQueued: 0,
-      sentenceNotesRendered: 0,
-      mutationCacheRefreshes: 0,
-      mutationCacheRefreshHits: 0,
-      freshPhraseAnalysisHits: 0,
-      freshPhraseRerenders: 0,
-      curriculumConfigId: processingContext.curriculumConfig.configId,
-      activeCurriculumBandId:
-        resolveActiveCurriculumBand(
-          processingContext.curriculumConfig,
-          "word",
-          processingContext.learningProfile
-        )?.bandId ?? null,
-      curriculumSkippedSentences: 0,
-      curriculumSkippedWords: 0,
-      curriculumSkippedPhrases: 0,
-      curriculumConfig: processingContext.curriculumConfig,
-      learningProfile: processingContext.learningProfile,
-      activeWordCurriculumContent: getActiveCurriculumContent({
+      analysisCache: {
+        analysisContext: processingContext.analysisContext,
+        cachedWordRenderDecisions: processingContext.cachedWordRenderDecisions,
+        cachedPhraseMatchesBySentenceHash:
+          processingContext.cachedPhraseMatchesBySentenceHash,
+        cachedGrammarFeaturesBySentenceHash:
+          processingContext.cachedGrammarFeaturesBySentenceHash
+      },
+      diagnostics: {
+        seenSentenceHashes: new Set<string>(),
+        processedTextNodes: 0,
+        injectedTokens: 0,
+        injectedPhrases: 0,
+        rejectedPhrases: 0,
+        contextSkippedTokens: 0,
+        analysisSuppressedTokens: 0,
+        sentenceCandidatesQueued: 0,
+        sentenceNotesRendered: 0,
+        mutationCacheRefreshes: 0,
+        mutationCacheRefreshHits: 0,
+        freshPhraseAnalysisHits: 0,
+        freshPhraseRerenders: 0,
+        curriculumConfigId: processingContext.curriculumConfig.configId,
+        activeCurriculumBandId:
+          resolveActiveCurriculumBand(
+            processingContext.curriculumConfig,
+            "word",
+            processingContext.learningProfile
+          )?.bandId ?? null,
+        curriculumSkippedSentences: 0,
+        curriculumSkippedWords: 0,
+        curriculumSkippedPhrases: 0,
+        sentenceRankingReasons: [],
+        unrenderedPhraseRejections: []
+      },
+      curriculum: {
         config: processingContext.curriculumConfig,
         profile: processingContext.learningProfile,
-        unitType: "word"
-      }),
-      activePhraseCurriculumContent: getActiveCurriculumContent({
-        config: processingContext.curriculumConfig,
-        profile: processingContext.learningProfile,
-        unitType: "phrase"
-      }),
-      sentenceRankingReasons: [],
-      unrenderedPhraseRejections: [],
-      pendingRoots: new Set<ParentNode>(),
-      flushHandle: null,
-      observer: null,
-      nodeSequence: 0,
-      wrappersBySentenceHash: new Map(),
-      wrapperMetadataByNodeId: new Map(),
-      sentenceAnchorRegistry: new SentenceAnchorRegistry(),
+        activeWordContent: getActiveCurriculumContent({
+          config: processingContext.curriculumConfig,
+          profile: processingContext.learningProfile,
+          unitType: "word"
+        }),
+        activePhraseContent: getActiveCurriculumContent({
+          config: processingContext.curriculumConfig,
+          profile: processingContext.learningProfile,
+          unitType: "phrase"
+        })
+      },
+      mutation: {
+        pendingRoots: new Set<ParentNode>(),
+        flushHandle: null,
+        observer: null
+      },
+      renderRegistry: {
+        nodeSequence: 0,
+        wrappersBySentenceHash: new Map(),
+        wrapperMetadataByNodeId: new Map(),
+        sentenceAnchorRegistry: new SentenceAnchorRegistry()
+      },
       sentenceTranslationEnabled,
       evidenceTracker: new ContentEvidenceTracker(),
       isActive: true
@@ -532,7 +468,7 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     }
 
     processRoots(state, [document.body]);
-    setupMutationObserver(state);
+    setupMutationObserver(state, processRoots);
     updateDiagnostics(runtimeState);
   })().finally(() => {
     runtimeState.refreshPromise = null;
@@ -544,158 +480,32 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 function stopProcessing(runtimeState: RuntimeState) {
   const state = runtimeState.processing;
   clearSentenceTranslations(document);
-  runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
-  runtimeState.diagnostics.updatedAt = new Date().toISOString();
+  updateDiagnostics(runtimeState);
 
   if (!state) {
     closePopover(runtimeState);
     return;
   }
 
-  state.observer?.disconnect();
-  state.observer = null;
+  state.mutation.observer?.disconnect();
+  state.mutation.observer = null;
   state.evidenceTracker.stop();
   state.isActive = false;
 
-  if (state.flushHandle !== null) {
-    window.clearTimeout(state.flushHandle);
+  if (state.mutation.flushHandle !== null) {
+    window.clearTimeout(state.mutation.flushHandle);
   }
 
-  state.flushHandle = null;
-  state.pendingRoots.clear();
-  state.wrappersBySentenceHash.clear();
-  state.wrapperMetadataByNodeId.clear();
-  state.sentenceAnchorRegistry.clear();
+  state.mutation.flushHandle = null;
+  state.mutation.pendingRoots.clear();
+  state.renderRegistry.wrappersBySentenceHash.clear();
+  state.renderRegistry.wrapperMetadataByNodeId.clear();
+  state.renderRegistry.sentenceAnchorRegistry.clear();
   runtimeState.processing = null;
 
   closePopover(runtimeState);
   restoreAnnotatedNodes(document);
   updateDiagnostics(runtimeState);
-}
-
-function setupMutationObserver(state: ProcessingState) {
-  if (!document.body) {
-    return;
-  }
-
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "characterData") {
-        const target = mutation.target;
-        if (!(target instanceof Text) || isInImmersionNode(target)) {
-          continue;
-        }
-
-        enqueueRootForProcessing(state, target.parentElement);
-        continue;
-      }
-
-      for (const addedNode of mutation.addedNodes) {
-        if (isInImmersionNode(addedNode)) {
-          continue;
-        }
-
-        enqueueRootForProcessing(state, nodeToProcessRoot(addedNode));
-      }
-    }
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    characterData: true,
-    subtree: true
-  });
-
-  state.observer = observer;
-}
-
-function enqueueRootForProcessing(state: ProcessingState, root: ParentNode | null) {
-  if (!root || !document.body?.contains(root as Node)) {
-    return;
-  }
-
-  if (root === document.body || state.pendingRoots.size > 40) {
-    state.pendingRoots.clear();
-    state.pendingRoots.add(document.body);
-  } else {
-    state.pendingRoots.add(root);
-  }
-
-  scheduleRootFlush(state);
-}
-
-function scheduleRootFlush(state: ProcessingState) {
-  if (state.flushHandle !== null) {
-    return;
-  }
-
-  state.flushHandle = window.setTimeout(() => {
-    state.flushHandle = null;
-
-    const roots =
-      state.pendingRoots.size > 0
-        ? Array.from(state.pendingRoots)
-        : [document.body as ParentNode];
-
-    state.pendingRoots.clear();
-    void processMutationRoots(state, roots);
-  }, 140);
-}
-
-async function processMutationRoots(state: ProcessingState, roots: ParentNode[]) {
-  if (!state.isActive) {
-    return;
-  }
-
-  await refreshScopedAnalysisCacheForRoots(state, roots);
-
-  if (!state.isActive) {
-    return;
-  }
-
-  processRoots(state, roots);
-}
-
-async function refreshScopedAnalysisCacheForRoots(
-  state: ProcessingState,
-  roots: readonly ParentNode[]
-) {
-  const sentenceHashes = collectRootsSentenceHashes(roots).filter(
-    (hash) =>
-      !state.analysisContext.bySentenceHash.has(hash) &&
-      !state.cachedWordRenderDecisions.has(hash) &&
-      !state.cachedPhraseMatchesBySentenceHash.has(hash) &&
-      !state.cachedGrammarFeaturesBySentenceHash.has(hash)
-  );
-
-  if (sentenceHashes.length === 0) {
-    return;
-  }
-
-  state.mutationCacheRefreshes += 1;
-
-  try {
-    const context = await loadCachedSentenceAnalysisContext(sentenceHashes.slice(0, 100));
-    state.mutationCacheRefreshHits += context.entryCount;
-    mergeRuntimeAnalysisContext(state.analysisContext, context.analysisContext);
-    mergeCachedAnalysisMap(
-      state.cachedWordRenderDecisions,
-      context.cachedWordRenderDecisions
-    );
-    mergeCachedAnalysisMap(
-      state.cachedPhraseMatchesBySentenceHash,
-      context.cachedPhraseMatchesBySentenceHash
-    );
-    mergeCachedAnalysisMap(
-      state.cachedGrammarFeaturesBySentenceHash,
-      context.cachedGrammarFeaturesBySentenceHash
-    );
-  } catch (error) {
-    console.warn("ImmersionKit failed to refresh scoped sentence analysis cache.", {
-      error,
-      requestedSentenceHashes: sentenceHashes.length
-    });
-  }
 }
 
 function processRoots(state: ProcessingState, roots: ParentNode[]) {
@@ -722,9 +532,9 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         createNodeId: () => createNodeId(state),
         wordRenderIndex: state.wordRenderIndex,
         vocabByLexemeId: state.vocabByLexemeId,
-        analysisContext: state.analysisContext,
-        cachedWordRenderDecisions: state.cachedWordRenderDecisions,
-        cachedPhraseMatchesBySentenceHash: state.cachedPhraseMatchesBySentenceHash,
+        analysisContext: state.analysisCache.analysisContext,
+        cachedWordRenderDecisions: state.analysisCache.cachedWordRenderDecisions,
+        cachedPhraseMatchesBySentenceHash: state.analysisCache.cachedPhraseMatchesBySentenceHash,
         sentenceHintPhrases: state.sentenceHintPhrases,
         learningItemsByUnitRefId: state.learningItemsByUnitRefId,
         shouldActivateWord: (input) => shouldActivateWordByCurriculum(state, input),
@@ -744,8 +554,8 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
       curriculumSkippedWords += result.curriculumSkippedWordCount;
       curriculumSkippedPhrases += result.curriculumSkippedPhraseCount;
       if (result.unrenderedPhraseRejections.length > 0) {
-        state.unrenderedPhraseRejections = [
-          ...state.unrenderedPhraseRejections,
+        state.diagnostics.unrenderedPhraseRejections = [
+          ...state.diagnostics.unrenderedPhraseRejections,
           ...result.unrenderedPhraseRejections
         ].slice(-PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
       }
@@ -754,18 +564,18 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
         ? findRenderedWrapperForCandidates(result.sentenceCandidates)
         : node;
       if (sentenceAnchorNode) {
-        state.sentenceAnchorRegistry.registerCandidates(
+        state.renderRegistry.sentenceAnchorRegistry.registerCandidates(
           result.sentenceCandidates,
           sentenceAnchorNode
         );
       }
 
       for (const candidate of result.sentenceCandidates) {
-        if (state.seenSentenceHashes.has(candidate.sentenceHash)) {
+        if (state.diagnostics.seenSentenceHashes.has(candidate.sentenceHash)) {
           continue;
         }
 
-        state.seenSentenceHashes.add(candidate.sentenceHash);
+        state.diagnostics.seenSentenceHashes.add(candidate.sentenceHash);
         queuedCandidates.push(candidate);
 
         if (queuedCandidates.length >= 12) {
@@ -774,16 +584,16 @@ function processRoots(state: ProcessingState, roots: ParentNode[]) {
       }
     }
 
-    registerRenderedWrappersForRoot(state, root);
+    registerRenderedWrappersForRoot(state.renderRegistry, root);
   }
 
-  state.processedTextNodes += processedNodes;
-  state.injectedTokens += injectedTokens;
-  state.injectedPhrases += injectedPhrases;
-  state.rejectedPhrases += rejectedPhrases;
-  state.contextSkippedTokens += contextSkippedTokens;
-  state.curriculumSkippedWords += curriculumSkippedWords;
-  state.curriculumSkippedPhrases += curriculumSkippedPhrases;
+  state.diagnostics.processedTextNodes += processedNodes;
+  state.diagnostics.injectedTokens += injectedTokens;
+  state.diagnostics.injectedPhrases += injectedPhrases;
+  state.diagnostics.rejectedPhrases += rejectedPhrases;
+  state.diagnostics.contextSkippedTokens += contextSkippedTokens;
+  state.diagnostics.curriculumSkippedWords += curriculumSkippedWords;
+  state.diagnostics.curriculumSkippedPhrases += curriculumSkippedPhrases;
   for (const root of roots) {
     state.evidenceTracker.registerRenderedTokens(root);
   }
@@ -803,7 +613,7 @@ function queueSentenceCandidates(
     return;
   }
 
-  state.sentenceCandidatesQueued += compactCandidates.length;
+  state.diagnostics.sentenceCandidatesQueued += compactCandidates.length;
   const legacySentences = compactCandidates.map((candidate) => candidate.sourceText);
 
   chrome.runtime.sendMessage(
@@ -819,17 +629,17 @@ function queueSentenceCandidates(
 
       const cachedResults = readCachedResultsFromQueueResponse(response);
       const analysisEntries = readAnalysisEntriesFromQueueResponse(response);
-      state.sentenceRankingReasons =
+      state.diagnostics.sentenceRankingReasons =
         readRankingReasonsFromQueueResponse(response).slice(0, 8);
-      updateCurriculumDiagnosticsFromRanking(state);
+      updateCurriculumDiagnosticsFromRanking(state.diagnostics);
       if (analysisEntries.length > 0) {
         void refreshFreshPhraseMatches(state, analysisEntries);
       }
 
       if (state.sentenceTranslationEnabled && cachedResults.length > 0) {
-        state.sentenceNotesRendered += renderSentenceTranslations(
+        state.diagnostics.sentenceNotesRendered += renderSentenceTranslations(
           cachedResults,
-          state.sentenceAnchorRegistry
+          state.renderRegistry.sentenceAnchorRegistry
         );
       }
     }
@@ -838,47 +648,6 @@ function queueSentenceCandidates(
 
 function collectPageSentenceHashes(root: ParentNode): string[] {
   return collectRootsSentenceHashes([root], 500);
-}
-
-function collectRootsSentenceHashes(
-  roots: readonly ParentNode[],
-  limit = 100
-): string[] {
-  const hashes = new Set<string>();
-
-  for (const root of roots) {
-    let reachedLimit = false;
-    visitEligibleTextNodes(root, (node) => {
-      for (const sentence of segmentSentences(node.nodeValue ?? "")) {
-        hashes.add(sentence.hash);
-        if (hashes.size >= limit) {
-          reachedLimit = true;
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    if (reachedLimit) {
-      return [...hashes];
-    }
-  }
-
-  return [...hashes];
-}
-
-function mergeCachedAnalysisMap<T>(
-  target: Map<string, T[]>,
-  source: Map<string, T[]>
-) {
-  for (const [sentenceHash, values] of source) {
-    if (values.length === 0) {
-      continue;
-    }
-
-    target.set(sentenceHash, values);
-  }
 }
 
 function getCurriculumBandPreference(config: CurriculumConfig): string[] {
@@ -941,7 +710,7 @@ async function refreshFreshPhraseMatches(
       }
     );
     if (wordDecisions.length > 0) {
-      state.cachedWordRenderDecisions.set(entry.sentenceHash, wordDecisions);
+      state.analysisCache.cachedWordRenderDecisions.set(entry.sentenceHash, wordDecisions);
       sentenceHashesWithWordDecisions.add(entry.sentenceHash);
     }
 
@@ -969,7 +738,7 @@ async function refreshFreshPhraseMatches(
       }
     );
     if (grammarFeatures.length > 0) {
-      state.cachedGrammarFeaturesBySentenceHash.set(
+      state.analysisCache.cachedGrammarFeaturesBySentenceHash.set(
         entry.sentenceHash,
         grammarFeatures
       );
@@ -999,7 +768,7 @@ async function refreshFreshPhraseMatches(
       ];
     });
 
-    upsertRuntimeSentenceAnalysis(state.analysisContext, entry.sentenceHash, {
+    upsertRuntimeSentenceAnalysis(state.analysisCache.analysisContext, entry.sentenceHash, {
       wordDecisions,
       phraseMatches,
       grammarFeatures
@@ -1009,7 +778,7 @@ async function refreshFreshPhraseMatches(
       continue;
     }
 
-    state.cachedPhraseMatchesBySentenceHash.set(entry.sentenceHash, phraseMatches);
+    state.analysisCache.cachedPhraseMatchesBySentenceHash.set(entry.sentenceHash, phraseMatches);
     sentenceHashesWithPhrases.add(entry.sentenceHash);
   }
 
@@ -1022,11 +791,15 @@ async function refreshFreshPhraseMatches(
     return;
   }
 
-  state.freshPhraseAnalysisHits += sentenceHashesWithPhrases.size;
-  state.freshPhraseRerenders += rerenderAnnotatedNodesForSentenceHashes(state, new Set([
-    ...sentenceHashesWithPhrases,
-    ...sentenceHashesWithWordDecisions
-  ]));
+  state.diagnostics.freshPhraseAnalysisHits += sentenceHashesWithPhrases.size;
+  state.diagnostics.freshPhraseRerenders += rerenderAnnotatedNodesForSentenceHashes(
+    state,
+    new Set([
+      ...sentenceHashesWithPhrases,
+      ...sentenceHashesWithWordDecisions
+    ]),
+    processRoots
+  );
 }
 
 async function refreshPhraseLearningItemsForFreshMatches(
@@ -1059,193 +832,6 @@ async function refreshPhraseLearningItemsForFreshMatches(
       requestedPhraseIds: phraseIds.size
     });
   }
-}
-
-function registerRenderedWrappersForRoot(state: ProcessingState, root: ParentNode) {
-  const wrappers = collectRenderedWrappers(root);
-  for (const wrapper of wrappers) {
-    const nodeId = wrapper.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
-    const originalText = readAnnotatedNodeOriginalText(wrapper);
-    if (!nodeId || originalText === null) {
-      continue;
-    }
-
-    unregisterRenderedWrapper(state, nodeId);
-    const sentenceHashes = new Set(
-      segmentSentences(originalText).map((sentence) => sentence.hash)
-    );
-    if (sentenceHashes.size === 0) {
-      continue;
-    }
-
-    state.wrapperMetadataByNodeId.set(nodeId, {
-      nodeId,
-      wrapper,
-      originalText,
-      sentenceHashes
-    });
-    for (const sentenceHash of sentenceHashes) {
-      let wrappersForSentence = state.wrappersBySentenceHash.get(sentenceHash);
-      if (!wrappersForSentence) {
-        wrappersForSentence = new Set();
-        state.wrappersBySentenceHash.set(sentenceHash, wrappersForSentence);
-      }
-      wrappersForSentence.add(wrapper);
-    }
-  }
-}
-
-function unregisterRenderedWrapper(state: ProcessingState, nodeId: string) {
-  const metadata = state.wrapperMetadataByNodeId.get(nodeId);
-  if (!metadata) {
-    return;
-  }
-
-  state.wrapperMetadataByNodeId.delete(nodeId);
-  for (const sentenceHash of metadata.sentenceHashes) {
-    const wrappers = state.wrappersBySentenceHash.get(sentenceHash);
-    if (!wrappers) {
-      continue;
-    }
-
-    wrappers.delete(metadata.wrapper);
-    if (wrappers.size === 0) {
-      state.wrappersBySentenceHash.delete(sentenceHash);
-    }
-  }
-}
-
-function collectRenderedWrappers(root: ParentNode): HTMLElement[] {
-  const selector = `[${IMMERSIONKIT_NODE_ATTRIBUTE}][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`;
-  const wrappers: HTMLElement[] = [];
-
-  if (root instanceof HTMLElement && root.matches(selector)) {
-    wrappers.push(root);
-  }
-
-  if (typeof (root as { querySelectorAll?: unknown }).querySelectorAll === "function") {
-    wrappers.push(
-      ...Array.from(
-        (root as ParentNode & Pick<Document, "querySelectorAll">)
-          .querySelectorAll<HTMLElement>(selector)
-      )
-    );
-  }
-
-  return wrappers;
-}
-
-function findRenderedWrapperForCandidates(
-  candidates: readonly SentenceCandidateMetadata[]
-): HTMLElement | null {
-  const nodeId = candidates[0]?.nodeId;
-  if (!nodeId) {
-    return null;
-  }
-
-  return document.querySelector<HTMLElement>(
-    `[${IMMERSIONKIT_NODE_ATTRIBUTE}="${escapeSelectorValue(nodeId)}"][${IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE}]`
-  );
-}
-
-function escapeSelectorValue(value: string): string {
-  return globalThis.CSS?.escape
-    ? globalThis.CSS.escape(value)
-    : value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-}
-
-function collectIndexedWrappersForSentenceHashes(
-  state: ProcessingState,
-  sentenceHashes: ReadonlySet<string>
-): HTMLElement[] {
-  const wrappers = new Set<HTMLElement>();
-  for (const sentenceHash of sentenceHashes) {
-    const indexedWrappers = state.wrappersBySentenceHash.get(sentenceHash);
-    if (!indexedWrappers) {
-      continue;
-    }
-
-    for (const wrapper of indexedWrappers) {
-      if (wrapper.isConnected) {
-        wrappers.add(wrapper);
-        continue;
-      }
-
-      const nodeId = wrapper.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
-      if (nodeId) {
-        unregisterRenderedWrapper(state, nodeId);
-      }
-    }
-  }
-
-  return [...wrappers];
-}
-
-function rerenderAnnotatedNodesForSentenceHashes(
-  state: ProcessingState,
-  sentenceHashes: ReadonlySet<string>
-): number {
-  if (!document.body || !state.isActive) {
-    return 0;
-  }
-
-  const wrappers = collectIndexedWrappersForSentenceHashes(state, sentenceHashes);
-  const roots = new Set<ParentNode>();
-  let rerendered = 0;
-  const observer = state.observer;
-
-  observer?.disconnect();
-
-  for (const wrapper of wrappers) {
-    if (rerendered >= FRESH_PHRASE_RERENDER_LIMIT) {
-      break;
-    }
-
-    const originalText = readAnnotatedNodeOriginalText(wrapper);
-    if (
-      originalText === null ||
-      !segmentSentences(originalText).some((sentence) =>
-        sentenceHashes.has(sentence.hash)
-      )
-    ) {
-      continue;
-    }
-
-    const parent = wrapper.parentNode;
-    const nodeId = wrapper.getAttribute(IMMERSIONKIT_NODE_ATTRIBUTE);
-    if (nodeId) {
-      unregisterRenderedWrapper(state, nodeId);
-    }
-    const restoredText = restoreAnnotatedElement(wrapper);
-    if (!restoredText || !parent) {
-      continue;
-    }
-
-    roots.add(parent);
-    rerendered += 1;
-  }
-
-  if (roots.size === 0) {
-    if (state.isActive && observer && document.body) {
-      observer.observe(document.body, {
-        childList: true,
-        characterData: true,
-        subtree: true
-      });
-    }
-    return rerendered;
-  }
-
-  processRoots(state, [...roots]);
-  if (state.isActive && observer && document.body) {
-    observer.observe(document.body, {
-      childList: true,
-      characterData: true,
-      subtree: true
-    });
-  }
-
-  return rerendered;
 }
 
 function dedupeSentenceCandidates(
@@ -1334,10 +920,10 @@ function emitSentenceNoteActivated(
 }
 
 function createNodeId(state: ProcessingState): string {
-  state.nodeSequence += 1;
+  state.renderRegistry.nodeSequence += 1;
 
-  const seed = `${state.samplingSeed}:${state.nodeSequence}`;
-  return `ikn-${state.nodeSequence.toString(36)}-${hashString(seed).slice(0, 7)}`;
+  const seed = `${state.samplingSeed}:${state.renderRegistry.nodeSequence}`;
+  return `ikn-${state.renderRegistry.nodeSequence.toString(36)}-${hashString(seed).slice(0, 7)}`;
 }
 
 function isKnownWord(state: ProcessingState, normalizedWord: string): boolean {
@@ -1362,7 +948,7 @@ function shouldActivateWordByCurriculum(
   if (input.wordEntry.renderUnitMinBand) {
     const renderUnitBandDecision = evaluateWordCurriculumContentInventory({
       wordEntry: input.wordEntry,
-      activeContent: state.activeWordCurriculumContent
+      activeContent: state.curriculum.activeWordContent
     });
     if (!renderUnitBandDecision.eligible) {
       return {
@@ -1377,23 +963,23 @@ function shouldActivateWordByCurriculum(
     return { eligible: true };
   }
 
-  const decision = evaluateCurriculumEligibility(state.curriculumConfig, {
+  const decision = evaluateCurriculumEligibility(state.curriculum.config, {
     unitType: "word",
     itemId: input.wordEntry.lexemeId,
     bandId: input.learningItem?.bandId ?? null,
     score: scoreWordRenderDifficulty(input.wordEntry),
-    profile: state.learningProfile
+    profile: state.curriculum.profile
   });
 
-  state.curriculumConfigId = decision.configId;
-  state.activeCurriculumBandId = decision.activeBandId;
+  state.diagnostics.curriculumConfigId = decision.configId;
+  state.diagnostics.activeCurriculumBandId = decision.activeBandId;
   if (!decision.eligible) {
     return decision;
   }
 
   const inventoryDecision = evaluateWordCurriculumContentInventory({
     wordEntry: input.wordEntry,
-    activeContent: state.activeWordCurriculumContent
+    activeContent: state.curriculum.activeWordContent
   });
   if (!inventoryDecision.eligible) {
     return {
@@ -1430,7 +1016,7 @@ function shouldActivatePhraseByCurriculum(
       sourceKind: input.sourceKind,
       category: input.category,
       renderUnitMinBand: input.renderUnitMinBand,
-      activeContent: state.activePhraseCurriculumContent
+      activeContent: state.curriculum.activePhraseContent
     });
     if (!renderUnitBandDecision.eligible) {
       return {
@@ -1445,15 +1031,15 @@ function shouldActivatePhraseByCurriculum(
     return { eligible: true };
   }
 
-  const decision = evaluateCurriculumEligibility(state.curriculumConfig, {
+  const decision = evaluateCurriculumEligibility(state.curriculum.config, {
     unitType: "phrase",
     itemId: input.phraseId,
     bandId: input.learningItem.bandId ?? null,
-    profile: state.learningProfile
+    profile: state.curriculum.profile
   });
 
-  state.curriculumConfigId = decision.configId;
-  state.activeCurriculumBandId = decision.activeBandId;
+  state.diagnostics.curriculumConfigId = decision.configId;
+  state.diagnostics.activeCurriculumBandId = decision.activeBandId;
   if (!decision.eligible) {
     return decision;
   }
@@ -1463,7 +1049,7 @@ function shouldActivatePhraseByCurriculum(
     sourceKind: input.sourceKind,
     category: input.category,
     renderUnitMinBand: input.renderUnitMinBand,
-    activeContent: state.activePhraseCurriculumContent
+    activeContent: state.curriculum.activePhraseContent
   });
   if (!inventoryDecision.eligible) {
     return {
@@ -1498,7 +1084,7 @@ function openPopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, tokenElement);
 
-  const popover = renderPopover(detail);
+  const popover = renderWordPopover(detail);
   popover.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) {
       return;
@@ -1542,7 +1128,7 @@ function openSentencePopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, noteElement);
   const grammarFeatures =
-    runtimeState.processing?.cachedGrammarFeaturesBySentenceHash.get(
+    runtimeState.processing?.analysisCache.cachedGrammarFeaturesBySentenceHash.get(
       detail.sentenceHash
     ) ?? [];
   runtimeState.processing?.evidenceTracker.recordGrammarAssist(
@@ -1666,543 +1252,6 @@ async function handlePopoverStatusAction(
   closePopover(runtimeState);
 }
 
-function handlePopoverCloseClick(
-  runtimeState: RuntimeState,
-  event: MouseEvent
-): boolean {
-  if (!(event.target instanceof Element)) {
-    return false;
-  }
-
-  if (!event.target.closest(`[${POPOVER_CLOSE_ATTRIBUTE}]`)) {
-    return false;
-  }
-
-  event.preventDefault();
-  closePopover(runtimeState);
-  return true;
-}
-
-function renderPopover(detail: TokenActivatedDetail): HTMLDivElement {
-  const popover = createUiPopover("word");
-  popover.append(
-    createPopoverHeading({
-      title: detail.targetToken,
-      badge: wordStatusLabel(detail.status),
-      icon: "volume"
-    })
-  );
-
-  const pair = document.createElement("div");
-  pair.className = "ik-ui-token-pair";
-  pair.append(createTokenBox(detail.sourceToken));
-  pair.append(createTokenArrow());
-  pair.append(createTokenBox(detail.targetToken));
-  popover.append(pair);
-
-  const nativeExample = readNonEmptyString(detail.exampleSentenceNative);
-  const englishExample = readNonEmptyString(detail.exampleSentenceEnglish);
-  const pageSentence = readNonEmptyString(detail.sentence);
-
-  if (nativeExample) {
-    const sentence = document.createElement("div");
-    sentence.className = "ik-ui-example-line";
-    sentence.append(createSvgIcon("message"));
-    const text = document.createElement("span");
-    text.textContent = nativeExample;
-    sentence.append(text);
-    popover.append(sentence);
-  }
-
-  if (englishExample) {
-    const sentence = document.createElement("p");
-    sentence.className = nativeExample ? "ik-content-popover-muted" : "";
-    sentence.textContent = englishExample;
-    popover.append(sentence);
-  } else if (pageSentence) {
-    const sentence = document.createElement("p");
-    sentence.textContent = pageSentence;
-    popover.append(sentence);
-  }
-
-  const info = document.createElement("div");
-  info.className = "ik-ui-info-line";
-  info.append(createSvgIcon("info"));
-  const infoText = document.createElement("span");
-  infoText.textContent = "Opening this helps ImmersionKit adapt.";
-  info.append(infoText);
-  popover.append(info);
-
-  const actions = document.createElement("div");
-  actions.className = "ik-ui-quiet-actions";
-
-  const stillNew = document.createElement("button");
-  stillNew.type = "button";
-  stillNew.className = "ik-ui-button ik-ui-button--secondary ik-ui-button--sm";
-  stillNew.textContent = "Still new";
-  stillNew.disabled = detail.status === "new";
-  actions.append(stillNew);
-
-  for (const action of STATUS_BUTTONS) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "ik-ui-button ik-ui-button--secondary ik-ui-button--sm";
-    button.setAttribute(POPOVER_ACTION_ATTRIBUTE, action.status);
-    button.setAttribute(
-      "aria-pressed",
-      action.status === detail.status ? "true" : "false"
-    );
-    button.textContent = action.label;
-
-    if (action.status === detail.status) {
-      button.classList.add("is-active");
-    }
-
-    actions.append(button);
-  }
-
-  popover.append(actions);
-  popover.append(createWordPopoverFooter());
-  return popover;
-}
-
-function renderSentencePopover(
-  noteElement: HTMLElement,
-  detail: SentenceNoteMetadata
-): HTMLDivElement {
-  const popover = createUiPopover("sentence");
-  popover.append(
-    createPopoverHeading({
-      title: "Sentence help",
-      badge: "optional",
-      icon: "book"
-    })
-  );
-
-  const summary = document.createElement("p");
-  summary.textContent = "Uses OpenAI only when enabled.";
-  popover.append(summary);
-
-  popover.append(createSentenceBlock("Original", [detail.sourceText]));
-  popover.append(createSentenceBlock("Translation", [detail.translatedText]));
-  popover.append(
-    createSentenceBlock("Why this helps", [
-      sentenceHelpDetail(detail.learningNote)
-    ])
-  );
-
-  const actions = document.createElement("div");
-  actions.className = "ik-ui-sentence-actions";
-  actions.append(createSentencePopoverActionButton("show-translation"));
-  actions.append(createSentencePopoverActionButton("toggle-source"));
-  actions.append(createSentencePopoverActionButton("details"));
-  popover.append(actions);
-  popover.append(createLocalFooter("Selected sentence only"));
-
-  syncSentencePopoverActions(popover, noteElement);
-
-  return popover;
-}
-
-function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
-  const popover = createUiPopover("phrase");
-  popover.append(
-    createPopoverHeading({
-      title: detail.targetText,
-      badge: "phrase",
-      icon: "link"
-    })
-  );
-
-  const pair = document.createElement("div");
-  pair.className = "ik-ui-token-pair";
-  pair.append(createTokenBox(detail.sourceText));
-  pair.append(createTokenArrow());
-  pair.append(createTokenBox(detail.targetText));
-  popover.append(pair);
-
-  const help = document.createElement("p");
-  help.textContent =
-    "A reusable phrase you may see again when it fits the page.";
-  popover.append(help);
-
-  popover.append(createRule());
-
-  const pageSentence = readNonEmptyString(detail.sentence);
-  if (pageSentence) {
-    const heading = document.createElement("h4");
-    heading.append(createSvgIcon("spark"));
-    heading.append("Example");
-    popover.append(heading);
-
-    const sentence = document.createElement("p");
-    sentence.textContent = pageSentence;
-    popover.append(sentence);
-  }
-
-  const info = document.createElement("div");
-  info.className = "ik-ui-info-line";
-  info.append(createSvgIcon("info"));
-  const infoText = document.createElement("span");
-  infoText.textContent = "You may see this again when it fits the page.";
-  info.append(infoText);
-  popover.append(info);
-
-  const footer = document.createElement("footer");
-  footer.className = "ik-ui-popover-actions";
-  const hidePhrase = document.createElement("button");
-  hidePhrase.type = "button";
-  hidePhrase.className = "ik-ui-popover-link";
-  hidePhrase.setAttribute(POPOVER_CLOSE_ATTRIBUTE, "true");
-  hidePhrase.textContent = "Hide phrase";
-  footer.append(hidePhrase);
-
-  const gotIt = document.createElement("button");
-  gotIt.type = "button";
-  gotIt.className = "ik-ui-button ik-ui-button--secondary ik-ui-button--sm";
-  gotIt.setAttribute(POPOVER_CLOSE_ATTRIBUTE, "true");
-  gotIt.textContent = "Got it";
-  footer.append(gotIt);
-  popover.append(footer);
-
-  return popover;
-}
-
-function createSentenceBlock(labelText: string, lines: string[]): HTMLDivElement {
-  const block = document.createElement("div");
-  block.className = "ik-ui-sentence-block";
-
-  const label = document.createElement("p");
-  label.textContent = labelText;
-  block.append(label);
-
-  for (const line of lines) {
-    const text = document.createElement("span");
-    text.textContent = line;
-    block.append(text);
-  }
-
-  return block;
-}
-
-function sentenceHelpDetail(note: SentenceLearningNote): string {
-  return (
-    readNonEmptyString(note.grammarFocus) ??
-    readNonEmptyString(note.summary) ??
-    readNonEmptyString(note.canonicalUsage) ??
-    readNonEmptyString(note.keyPhrase) ??
-    "This sentence note gives selected context for the sentence you opened."
-  );
-}
-
-function createRule(): HTMLDivElement {
-  const rule = document.createElement("div");
-  rule.className = "ik-ui-popover-rule";
-  return rule;
-}
-
-function createLocalFooter(text: string): HTMLElement {
-  const footer = document.createElement("footer");
-  footer.className = "ik-ui-local-footer ik-ui-local-footer--compact";
-  footer.append(createSvgIcon("lock"));
-  const copy = document.createElement("span");
-  copy.textContent = text;
-  footer.append(copy);
-  return footer;
-}
-
-function createWordPopoverFooter(): HTMLElement {
-  const footer = document.createElement("footer");
-  footer.className = "ik-ui-popover-footer";
-
-  const hide = document.createElement("button");
-  hide.type = "button";
-  hide.className = "ik-ui-popover-link";
-  hide.setAttribute(POPOVER_ACTION_ATTRIBUTE, "ignored");
-  hide.append(createSvgIcon("eyeOff"));
-  hide.append("Hide word");
-  footer.append(hide);
-
-  const brand = document.createElement("span");
-  brand.append(createMiniLogo());
-  brand.append("ImmersionKit");
-  footer.append(brand);
-
-  return footer;
-}
-
-function mountPopover(
-  runtimeState: RuntimeState,
-  popover: HTMLDivElement,
-  anchorElement: HTMLElement,
-  extraCleanup?: () => void
-) {
-  document.body.append(popover);
-  showPopoverInTopLayer(popover);
-
-  const monitorPopover = createPopoverViewportMonitor(
-    runtimeState,
-    popover,
-    anchorElement
-  );
-
-  runtimeState.popover = popover;
-  runtimeState.popoverCleanup = () => {
-    monitorPopover.cancel();
-    window.removeEventListener("scroll", monitorPopover, true);
-    window.removeEventListener("resize", monitorPopover);
-    extraCleanup?.();
-    hidePopoverFromTopLayer(popover);
-  };
-
-  if (!positionPopover(popover, anchorElement)) {
-    closePopover(runtimeState);
-    return;
-  }
-
-  window.addEventListener("scroll", monitorPopover, true);
-  window.addEventListener("resize", monitorPopover);
-}
-
-function createPopoverViewportMonitor(
-  runtimeState: RuntimeState,
-  popover: HTMLDivElement,
-  anchorElement: HTMLElement
-): PopoverViewportMonitor {
-  let frameId: number | null = null;
-
-  const monitorPopover = (() => {
-    if (frameId !== null) {
-      return;
-    }
-
-    frameId = window.requestAnimationFrame(() => {
-      frameId = null;
-      if (runtimeState.popover !== popover || !popover.isConnected) {
-        return;
-      }
-
-      if (!anchorElement.isConnected || !positionPopover(popover, anchorElement)) {
-        closePopover(runtimeState);
-      }
-    });
-  }) as PopoverViewportMonitor;
-
-  monitorPopover.cancel = () => {
-    if (frameId === null) {
-      return;
-    }
-
-    window.cancelAnimationFrame(frameId);
-    frameId = null;
-  };
-
-  return monitorPopover;
-}
-
-function positionPopover(
-  popover: HTMLDivElement,
-  anchorElement: HTMLElement
-): boolean {
-  const viewportWidth = Math.max(
-    window.innerWidth,
-    document.documentElement.clientWidth
-  );
-  const viewportHeight = Math.max(
-    window.innerHeight,
-    document.documentElement.clientHeight
-  );
-  const maxLeft = viewportWidth - POPOVER_VIEWPORT_MARGIN;
-  const maxTop = viewportHeight - POPOVER_VIEWPORT_MARGIN;
-  const anchorRect = getPopoverAnchorRect(anchorElement);
-
-  if (
-    !anchorRect ||
-    !isAnchorVisibleInViewport(anchorRect, viewportWidth, viewportHeight)
-  ) {
-    return false;
-  }
-
-  const popoverRect = popover.getBoundingClientRect();
-  const popoverWidth = Math.ceil(popoverRect.width || popover.offsetWidth || 280);
-  const popoverHeight = Math.ceil(popoverRect.height || popover.offsetHeight || 160);
-
-  if (
-    popoverWidth > viewportWidth - POPOVER_VIEWPORT_MARGIN * 2 ||
-    popoverHeight > viewportHeight - POPOVER_VIEWPORT_MARGIN * 2
-  ) {
-    return false;
-  }
-
-  const anchorMiddleX = anchorRect.left + anchorRect.width / 2;
-  const anchorMiddleY = anchorRect.top + anchorRect.height / 2;
-  const candidates: Array<{
-    placement: PopoverPlacement;
-    left: number;
-    top: number;
-  }> = [
-    {
-      placement: "right",
-      left: anchorRect.right + POPOVER_ANCHOR_OFFSET,
-      top: anchorMiddleY - popoverHeight / 2
-    },
-    {
-      placement: "left",
-      left: anchorRect.left - POPOVER_ANCHOR_OFFSET - popoverWidth,
-      top: anchorMiddleY - popoverHeight / 2
-    },
-    {
-      placement: "bottom",
-      left: anchorMiddleX - popoverWidth / 2,
-      top: anchorRect.bottom + POPOVER_ANCHOR_OFFSET
-    },
-    {
-      placement: "top",
-      left: anchorMiddleX - popoverWidth / 2,
-      top: anchorRect.top - POPOVER_ANCHOR_OFFSET - popoverHeight
-    }
-  ];
-
-  for (const candidate of candidates) {
-    const left =
-      candidate.placement === "top" || candidate.placement === "bottom"
-        ? clamp(
-            candidate.left,
-            POPOVER_VIEWPORT_MARGIN,
-            maxLeft - popoverWidth
-          )
-        : candidate.left;
-    const top =
-      candidate.placement === "left" || candidate.placement === "right"
-        ? clamp(
-            candidate.top,
-            POPOVER_VIEWPORT_MARGIN,
-            maxTop - popoverHeight
-          )
-        : candidate.top;
-
-    if (
-      left < POPOVER_VIEWPORT_MARGIN ||
-      top < POPOVER_VIEWPORT_MARGIN ||
-      left + popoverWidth > maxLeft ||
-      top + popoverHeight > maxTop
-    ) {
-      continue;
-    }
-
-    popover.style.position = "fixed";
-    popover.style.left = `${Math.round(left)}px`;
-    popover.style.top = `${Math.round(top)}px`;
-    popover.setAttribute("data-ik-placement", candidate.placement);
-    return true;
-  }
-
-  return false;
-}
-
-function getPopoverAnchorRect(anchorElement: HTMLElement): PopoverAnchorRect | null {
-  const rect = anchorElement.getBoundingClientRect();
-  const hasLayoutRect =
-    rect.width > 0 ||
-    rect.height > 0 ||
-    rect.left !== 0 ||
-    rect.top !== 0 ||
-    rect.right !== 0 ||
-    rect.bottom !== 0;
-
-  if (hasLayoutRect) {
-    return rect;
-  }
-
-  const style = window.getComputedStyle(anchorElement);
-  if (style.display === "none" || style.visibility === "hidden") {
-    return null;
-  }
-
-  return {
-    left: POPOVER_VIEWPORT_MARGIN,
-    top: POPOVER_VIEWPORT_MARGIN,
-    right: POPOVER_VIEWPORT_MARGIN,
-    bottom: POPOVER_VIEWPORT_MARGIN,
-    width: 0,
-    height: 0
-  };
-}
-
-function isAnchorVisibleInViewport(
-  rect: PopoverAnchorRect,
-  viewportWidth: number,
-  viewportHeight: number
-): boolean {
-  return (
-    rect.right >= 0 &&
-    rect.bottom >= 0 &&
-    rect.left <= viewportWidth &&
-    rect.top <= viewportHeight
-  );
-}
-
-function showPopoverInTopLayer(popover: HTMLDivElement) {
-  const topLayerPopover = popover as TopLayerPopoverElement;
-  if (typeof topLayerPopover.showPopover !== "function") {
-    return;
-  }
-
-  try {
-    topLayerPopover.showPopover();
-    popover.setAttribute("data-ik-top-layer", "true");
-  } catch {
-    popover.removeAttribute("popover");
-  }
-}
-
-function hidePopoverFromTopLayer(popover: HTMLDivElement) {
-  const topLayerPopover = popover as TopLayerPopoverElement;
-  if (typeof topLayerPopover.hidePopover !== "function") {
-    return;
-  }
-
-  try {
-    topLayerPopover.hidePopover();
-  } catch {
-    // The popover may already have been removed by the page or browser.
-  }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  if (max < min) {
-    return min;
-  }
-
-  return Math.min(Math.max(value, min), max);
-}
-
-function closePopover(runtimeState: RuntimeState) {
-  if (runtimeState.popoverCleanup) {
-    runtimeState.popoverCleanup();
-  }
-
-  runtimeState.popoverCleanup = null;
-  runtimeState.popover?.remove();
-  runtimeState.popover = null;
-  clearActiveToken(runtimeState);
-}
-
-function setActiveToken(runtimeState: RuntimeState, token: HTMLElement) {
-  clearActiveToken(runtimeState);
-  runtimeState.activeToken = token;
-  token.setAttribute("data-ik-active", "true");
-}
-
-function clearActiveToken(runtimeState: RuntimeState) {
-  if (!runtimeState.activeToken) {
-    return;
-  }
-
-  runtimeState.activeToken.removeAttribute("data-ik-active");
-  runtimeState.activeToken = null;
-}
-
 function applyStatusToLexemeTokens(update: TokenStatusUpdatedDetail) {
   const tokens = document.querySelectorAll<HTMLElement>(IMMERSIONKIT_WORD_SELECTOR);
   let anyUpdated = false;
@@ -2264,289 +1313,8 @@ function findTokenElement(tokenId: string): HTMLElement | null {
   return null;
 }
 
-function createUiPopover(kind: "word" | "phrase" | "sentence"): HTMLDivElement {
-  const popover = document.createElement("div");
-  popover.className = "ik-ui-popover ik-content-popover";
-  popover.setAttribute(POPOVER_ATTRIBUTE, "true");
-  popover.setAttribute("data-ik-popover-kind", kind);
-  popover.setAttribute("data-immersionkit-ignore", "true");
-  popover.setAttribute("popover", "manual");
-  popover.setAttribute("role", "dialog");
-  popover.setAttribute("aria-live", "polite");
-  if (kind !== "sentence") {
-    const arrow = document.createElement("span");
-    arrow.className = "ik-ui-popover-arrow";
-    popover.append(arrow);
-  }
-  return popover;
-}
-
-function createPopoverHeading(input: {
-  title: string;
-  badge: string;
-  icon: PopoverIconName;
-}): HTMLElement {
-  const heading = document.createElement("header");
-  heading.className = "ik-ui-popover-heading";
-  heading.append(createSvgIcon(input.icon));
-
-  const headingText = document.createElement("h3");
-  headingText.textContent = input.title;
-  heading.append(headingText);
-
-  const badgeElement = document.createElement("span");
-  badgeElement.className = "ik-ui-badge ik-ui-badge--accent";
-  badgeElement.textContent = input.badge;
-  heading.append(badgeElement);
-
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.className = "ik-ui-popover-close";
-  closeButton.setAttribute("aria-label", "Close help");
-  closeButton.setAttribute(POPOVER_CLOSE_ATTRIBUTE, "true");
-  closeButton.append(createSvgIcon("close"));
-  heading.append(closeButton);
-
-  return heading;
-}
-
-function createTokenBox(text: string): HTMLSpanElement {
-  const element = document.createElement("span");
-  element.textContent = text;
-  return element;
-}
-
-function createTokenArrow(): HTMLSpanElement {
-  const element = document.createElement("span");
-  element.textContent = "→";
-  return element;
-}
-
-function createMiniLogo(): HTMLSpanElement {
-  const logo = document.createElement("span");
-  logo.className = "ik-ui-logo ik-ui-logo--sm";
-  logo.setAttribute("aria-hidden", "true");
-  for (let index = 0; index < 3; index += 1) {
-    logo.append(document.createElement("span"));
-  }
-
-  return logo;
-}
-
-function createSvgIcon(name: PopoverIconName): SVGSVGElement {
-  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  icon.classList.add("ik-ui-icon", `ik-ui-icon--${name}`);
-  icon.setAttribute("aria-hidden", "true");
-  icon.setAttribute("viewBox", "0 0 24 24");
-  icon.setAttribute("fill", "none");
-  icon.setAttribute("stroke", "currentColor");
-  icon.setAttribute("stroke-width", "2");
-  icon.setAttribute("stroke-linecap", "round");
-  icon.setAttribute("stroke-linejoin", "round");
-
-  for (const pathData of iconPaths(name)) {
-    if (pathData.startsWith("circle:")) {
-      const [, cx, cy, r] = pathData.split(":");
-      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      circle.setAttribute("cx", cx ?? "12");
-      circle.setAttribute("cy", cy ?? "12");
-      circle.setAttribute("r", r ?? "10");
-      icon.append(circle);
-      continue;
-    }
-
-    if (pathData.startsWith("rect:")) {
-      const [, x, y, width, height, rx] = pathData.split(":");
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", x ?? "0");
-      rect.setAttribute("y", y ?? "0");
-      rect.setAttribute("width", width ?? "0");
-      rect.setAttribute("height", height ?? "0");
-      if (rx) {
-        rect.setAttribute("rx", rx);
-      }
-      icon.append(rect);
-      continue;
-    }
-
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", pathData);
-    icon.append(path);
-  }
-
-  return icon;
-}
-
-function iconPaths(name: PopoverIconName): string[] {
-  switch (name) {
-    case "book":
-      return [
-        "M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H7a3 3 0 0 0-3 3V5.5Z",
-        "M4 19.5A2.5 2.5 0 0 1 6.5 17H20",
-        "M9 7h6"
-      ];
-    case "check":
-      return ["m5 12 4 4L19 6"];
-    case "chevron":
-      return ["m9 18 6-6-6-6"];
-    case "close":
-      return ["M18 6 6 18", "m6 6 12 12"];
-    case "document":
-      return [
-        "M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z",
-        "M14 2v5h5",
-        "M9 13h6",
-        "M9 17h4"
-      ];
-    case "eyeOff":
-      return [
-        "m2 2 20 20",
-        "M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58",
-        "M9.88 5.09A10.8 10.8 0 0 1 12 5c5 0 8 4 9 7a11.5 11.5 0 0 1-2.12 3.19",
-        "M6.61 6.61C3.98 8.08 2.55 10.42 2 12c1 3 4 7 10 7a10.6 10.6 0 0 0 4.39-.91"
-      ];
-    case "info":
-      return ["circle:12:12:10", "M12 16v-4", "M12 8h.01"];
-    case "link":
-      return [
-        "M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 4.93",
-        "M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 0 0 7.07 7.07L13 19.07"
-      ];
-    case "lock":
-      return ["rect:4:10:16:10:2", "M8 10V7a4 4 0 0 1 8 0v3"];
-    case "message":
-      return ["M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"];
-    case "spark":
-      return [
-        "M12 2v5",
-        "M12 17v5",
-        "M4.93 4.93 8.46 8.46",
-        "m15.54 15.54 3.53 3.53",
-        "M2 12h5",
-        "M17 12h5",
-        "m4.93 19.07 3.53-3.53",
-        "m15.54 8.46 3.53-3.53"
-      ];
-    case "translate":
-      return [
-        "m5 8 6 6",
-        "m4 14 6-6 2-3",
-        "M2 5h12",
-        "M7 2h1",
-        "m22 22-5-10-5 10",
-        "M14 18h6"
-      ];
-    case "volume":
-      return [
-        "M11 5 6 9H3v6h3l5 4V5Z",
-        "M16 9.5a4 4 0 0 1 0 5",
-        "M19 7a8 8 0 0 1 0 10"
-      ];
-  }
-}
-
-function wordStatusLabel(status: VocabStatus): string {
-  if (status === "known") {
-    return "comfortable";
-  }
-
-  if (status === "learning") {
-    return "practicing";
-  }
-
-  if (status === "ignored") {
-    return "hidden";
-  }
-
-  return "new";
-}
-
-function readInteractiveStatus(value: string | null): InteractiveVocabStatus | null {
-  if (value === "known" || value === "learning" || value === "ignored") {
-    return value;
-  }
-
-  return null;
-}
-
-function createSentencePopoverActionButton(
-  action: SentencePopoverAction
-): HTMLButtonElement {
-  const metadata = {
-    "show-translation": { label: "Translation", icon: "translate" },
-    "toggle-source": { label: "Original", icon: "document" },
-    details: { label: "Details", icon: "info" },
-    close: { label: "Close", icon: "close" }
-  } satisfies Record<SentencePopoverAction, { label: string; icon: PopoverIconName }>;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "ik-ui-button ik-ui-button--secondary ik-ui-button--sm";
-  button.setAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE, action);
-  button.append(createSvgIcon(metadata[action].icon));
-  button.append(metadata[action].label);
-  return button;
-}
-
-function syncSentencePopoverActions(
-  popover: HTMLElement,
-  noteElement: HTMLElement
-) {
-  const sourceVisible = noteElement.getAttribute("data-ik-source-visible") === "true";
-  const translationButton = popover.querySelector<HTMLButtonElement>(
-    `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}="show-translation"]`
-  );
-  if (translationButton) {
-    translationButton.setAttribute("aria-pressed", sourceVisible ? "false" : "true");
-    translationButton.classList.toggle("is-active", !sourceVisible);
-  }
-
-  const toggleButton = popover.querySelector<HTMLButtonElement>(
-    `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}="toggle-source"]`
-  );
-  if (toggleButton) {
-    toggleButton.setAttribute("aria-pressed", sourceVisible ? "true" : "false");
-    toggleButton.classList.toggle("is-active", sourceVisible);
-  }
-
-  const detailsButton = popover.querySelector<HTMLButtonElement>(
-    `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}="details"]`
-  );
-  if (detailsButton) {
-    const detailsActive = popover.getAttribute("data-ik-details-active") === "true";
-    detailsButton.setAttribute("aria-pressed", detailsActive ? "true" : "false");
-    detailsButton.classList.toggle("is-active", detailsActive);
-  }
-
-  const closeButton = popover.querySelector<HTMLButtonElement>(
-    `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}="close"]`
-  );
-  if (closeButton) {
-    closeButton.textContent = "Close";
-    closeButton.removeAttribute("aria-pressed");
-  }
-}
-
-function readSentencePopoverAction(
-  value: string | null
-): SentencePopoverAction | null {
-  if (
-    value === "show-translation" ||
-    value === "toggle-source" ||
-    value === "details" ||
-    value === "close"
-  ) {
-    return value;
-  }
-
-  return null;
-}
-
 function readNonEmptyString(value: string | null | undefined): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function isWithinPopover(target: EventTarget | null): boolean {
-  return target instanceof Element && Boolean(target.closest(`[${POPOVER_ATTRIBUTE}]`));
 }
 
 function pingBackground() {
@@ -2776,390 +1544,20 @@ function isSentenceTranslationEnabled(
   return sentenceTranslationEnabled && provider === "openai";
 }
 
-function createDefaultDiagnostics(): PageDiagnosticsSnapshot {
-  return {
-    pageUrl: window.location.href,
-    pageHostname: window.location.hostname,
-    pagePathname: window.location.pathname,
-    siteEnabled: true,
-    sentenceTranslationEnabled: false,
-    assetSource: "unknown",
-    renderUnitCount: 0,
-    renderAssetVersion: null,
-    fallbackAsset: true,
-    processedTextNodes: 0,
-    injectedTokens: 0,
-    injectedPhrases: 0,
-    rejectedPhrases: 0,
-    contextSkippedTokens: 0,
-    analysisSuppressedTokens: 0,
-    sentenceCandidatesSeen: 0,
-    sentenceCandidatesQueued: 0,
-    sentenceNotesRendered: 0,
-    sentenceNotesVisible: countSentenceNotes(),
-    mutationCacheRefreshes: 0,
-    mutationCacheRefreshHits: 0,
-    freshPhraseAnalysisHits: 0,
-    freshPhraseRerenders: 0,
-    curriculumConfigId: null,
-    activeCurriculumBandId: null,
-    curriculumSkippedSentences: 0,
-    curriculumSkippedWords: 0,
-    curriculumSkippedPhrases: 0,
-    grammarDueSentenceCount: 0,
-    sentenceRankingReasons: [],
-    phraseDecisionSamples: collectPhraseDecisionSamples(),
-    tokenDecisionSamples: collectTokenDecisionSamples(),
-    updatedAt: new Date().toISOString()
-  };
-}
-
 function readPageDiagnostics(runtimeState: RuntimeState): PageDiagnosticsSnapshot {
-  updateDiagnostics(runtimeState);
-  return { ...runtimeState.diagnostics };
+  return readContentPageDiagnostics({
+    diagnostics: runtimeState.diagnostics,
+    processing: runtimeState.processing?.diagnostics ?? null
+  });
 }
 
-function updateDiagnostics(runtimeState: RuntimeState) {
-  const processing = runtimeState.processing;
-  if (processing) {
-    runtimeState.diagnostics.processedTextNodes = processing.processedTextNodes;
-    runtimeState.diagnostics.injectedTokens = processing.injectedTokens;
-    runtimeState.diagnostics.injectedPhrases = processing.injectedPhrases;
-    runtimeState.diagnostics.rejectedPhrases = processing.rejectedPhrases;
-    runtimeState.diagnostics.contextSkippedTokens = processing.contextSkippedTokens;
-    runtimeState.diagnostics.analysisSuppressedTokens =
-      processing.analysisSuppressedTokens;
-    runtimeState.diagnostics.sentenceCandidatesSeen = processing.seenSentenceHashes.size;
-    runtimeState.diagnostics.sentenceCandidatesQueued =
-      processing.sentenceCandidatesQueued;
-    runtimeState.diagnostics.sentenceNotesRendered = processing.sentenceNotesRendered;
-    runtimeState.diagnostics.mutationCacheRefreshes =
-      processing.mutationCacheRefreshes;
-    runtimeState.diagnostics.mutationCacheRefreshHits =
-      processing.mutationCacheRefreshHits;
-    runtimeState.diagnostics.freshPhraseAnalysisHits =
-      processing.freshPhraseAnalysisHits;
-    runtimeState.diagnostics.freshPhraseRerenders =
-      processing.freshPhraseRerenders;
-    runtimeState.diagnostics.curriculumConfigId = processing.curriculumConfigId;
-    runtimeState.diagnostics.activeCurriculumBandId =
-      processing.activeCurriculumBandId;
-    runtimeState.diagnostics.curriculumSkippedSentences =
-      processing.curriculumSkippedSentences;
-    runtimeState.diagnostics.curriculumSkippedWords =
-      processing.curriculumSkippedWords;
-    runtimeState.diagnostics.curriculumSkippedPhrases =
-      processing.curriculumSkippedPhrases;
-    runtimeState.diagnostics.grammarDueSentenceCount =
-      countGrammarDueSentenceReasons(processing.sentenceRankingReasons);
-    runtimeState.diagnostics.sentenceRankingReasons =
-      processing.sentenceRankingReasons;
-  }
-
-  runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
-  runtimeState.diagnostics.phraseDecisionSamples = collectPhraseDecisionSamples(
-    runtimeState.processing
-  );
-  runtimeState.diagnostics.tokenDecisionSamples = collectTokenDecisionSamples();
-  runtimeState.diagnostics.updatedAt = new Date().toISOString();
-}
-
-function updateCurriculumDiagnosticsFromRanking(state: ProcessingState) {
-  const curriculumReasons = state.sentenceRankingReasons.flatMap((reason) =>
-    reason.curriculum ? [reason.curriculum] : []
-  );
-  const first = curriculumReasons[0];
-
-  state.curriculumConfigId = first?.configId ?? state.curriculumConfigId;
-  state.activeCurriculumBandId =
-    first?.activeBandId ?? state.activeCurriculumBandId;
-  state.curriculumSkippedSentences = curriculumReasons.filter(
-    (reason) => !reason.eligible
-  ).length;
-}
-
-function countGrammarDueSentenceReasons(
-  reasons: readonly PageDiagnosticsSentenceRankingReason[]
-): number {
-  return reasons.filter(
-    (reason) => (reason.signals?.grammarDueValue ?? 0) > 0
-  ).length;
-}
-
-function countSentenceNotes(): number {
-  return document.querySelectorAll(SENTENCE_NOTE_SELECTOR).length;
-}
-
-function collectTokenDecisionSamples(): PageDiagnosticsTokenSample[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>(
-      `[${IMMERSIONKIT_TOKEN_ATTRIBUTE}]`
-    )
-  )
-    .slice(0, TOKEN_DIAGNOSTICS_SAMPLE_LIMIT)
-    .map((token) => ({
-      sourceToken: token.getAttribute("data-ik-source-token"),
-      targetToken: token.getAttribute("data-ik-target-token"),
-      lexemeId: token.getAttribute("data-ik-lexeme-id"),
-      unitKind: token.getAttribute("data-ik-unit-kind"),
-      wordKind: token.getAttribute("data-ik-word-kind"),
-      contextDecision: token.getAttribute("data-ik-context-decision"),
-      contextRationale: token.getAttribute("data-ik-context-rationale"),
-      dueStatus: token.getAttribute("data-ik-due-status"),
-      schedulerReason: token.getAttribute("data-ik-scheduler-reason"),
-      sentenceHash: token.getAttribute("data-ik-sentence-hash")
-    }));
-}
-
-function collectPhraseDecisionSamples(
-  state: ProcessingState | null = null
-): PageDiagnosticsPhraseSample[] {
-  const selected = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-ik-unit-kind='phrase']")
-  ).map((phrase): PageDiagnosticsPhraseSample => ({
-    phraseId: phrase.getAttribute("data-ik-phrase-id"),
-    sourceText: phrase.getAttribute("data-ik-source-token"),
-    targetText: phrase.getAttribute("data-ik-target-token"),
-    selected: true,
-    rejectedReason: null,
-    sourceKind: phrase.getAttribute("data-ik-phrase-source-kind"),
-    category: phrase.getAttribute("data-ik-phrase-category"),
-    dueStatus: phrase.getAttribute("data-ik-due-status"),
-    schedulerReason: phrase.getAttribute("data-ik-scheduler-reason"),
-    sentenceHash: phrase.getAttribute("data-ik-sentence-hash"),
-    exposureEligible: Boolean(phrase.getAttribute("data-ik-sentence-hash"))
-  }));
-
-  const rejected = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-ik-phrase-rejection-details]")
-  ).flatMap(readPhraseRejectionDetails);
-
-  return [
-    ...selected,
-    ...rejected,
-    ...(state?.unrenderedPhraseRejections.map(toRejectedPhraseDecisionSample) ?? [])
-  ].slice(0, PHRASE_DIAGNOSTICS_SAMPLE_LIMIT);
-}
-
-function toRejectedPhraseDecisionSample(
-  entry: PhraseRenderRejection
-): PageDiagnosticsPhraseSample {
-  return {
-    phraseId: entry.phraseId,
-    sourceText: entry.sourceText,
-    targetText: entry.targetText,
-    selected: false,
-    rejectedReason: entry.reason,
-    sourceKind: entry.sourceKind,
-    category: entry.category,
-    dueStatus: null,
-    schedulerReason: null,
-    sentenceHash: entry.sentenceHash,
-    exposureEligible: false
-  };
-}
-
-function readPhraseRejectionDetails(
-  wrapper: HTMLElement
-): PageDiagnosticsPhraseSample[] {
-  const rawDetails = wrapper.getAttribute("data-ik-phrase-rejection-details");
-  if (!rawDetails) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(rawDetails);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.flatMap((entry): PageDiagnosticsPhraseSample[] => {
-      if (!isRecord(entry)) {
-        return [];
-      }
-
-      const phraseId = readNullableString(entry.phraseId);
-      const rejectedReason = readNullableString(entry.reason);
-      if (!phraseId || !rejectedReason) {
-        return [];
-      }
-
-      return [
-        {
-          phraseId,
-          sourceText: readNullableString(entry.sourceText),
-          targetText: readNullableString(entry.targetText),
-          selected: false,
-          rejectedReason,
-          sourceKind: readNullableString(entry.sourceKind),
-          category: readNullableString(entry.category),
-          dueStatus: null,
-          schedulerReason: null,
-          sentenceHash: readNullableString(entry.sentenceHash),
-          exposureEligible: false
-        }
-      ];
-    });
-  } catch {
-    return [];
-  }
-}
-
-function readNullableString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
+function updateDiagnostics(runtimeState: RuntimeState): void {
+  updateContentDiagnostics({
+    diagnostics: runtimeState.diagnostics,
+    processing: runtimeState.processing?.diagnostics ?? null
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function applyUiTheme() {
-  const theme = detectUiTheme();
-  document.documentElement.setAttribute(UI_THEME_ATTRIBUTE, theme);
-}
-
-function detectUiTheme(): UiTheme {
-  const bodyColor = readCssColor(
-    document.body ? window.getComputedStyle(document.body).backgroundColor : null
-  );
-  const rootColor = readCssColor(window.getComputedStyle(document.documentElement).backgroundColor);
-  const resolved = chooseBackgroundColor(bodyColor, rootColor);
-  const luminance = getRelativeLuminance(resolved.r, resolved.g, resolved.b);
-  return luminance < 0.42 ? "dark" : "light";
-}
-
-function chooseBackgroundColor(
-  bodyColor: RgbaColor | null,
-  rootColor: RgbaColor | null
-): RgbaColor {
-  if (bodyColor && bodyColor.a > 0.99) {
-    return bodyColor;
-  }
-
-  if (rootColor && rootColor.a > 0.99) {
-    return rootColor;
-  }
-
-  if (bodyColor && rootColor) {
-    return blendRgba(bodyColor, rootColor);
-  }
-
-  if (bodyColor) {
-    return bodyColor;
-  }
-
-  if (rootColor) {
-    return rootColor;
-  }
-
-  return { r: 255, g: 255, b: 255, a: 1 };
-}
-
-type RgbaColor = {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-};
-
-function readCssColor(input: string | null): RgbaColor | null {
-  if (!input || input === "transparent") {
-    return null;
-  }
-
-  const rgbaMatch = input
-    .trim()
-    .match(
-      /^rgba?\(\s*([0-9]{1,3}(?:\.[0-9]+)?)\s*,\s*([0-9]{1,3}(?:\.[0-9]+)?)\s*,\s*([0-9]{1,3}(?:\.[0-9]+)?)(?:\s*,\s*([01](?:\.[0-9]+)?|0?\.[0-9]+))?\s*\)$/i
-    );
-
-  if (rgbaMatch) {
-    const r = clampChannel(Number(rgbaMatch[1]));
-    const g = clampChannel(Number(rgbaMatch[2]));
-    const b = clampChannel(Number(rgbaMatch[3]));
-    const a = clampAlpha(rgbaMatch[4] ? Number(rgbaMatch[4]) : 1);
-
-    return { r, g, b, a };
-  }
-
-  const hexMatch = input.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (!hexMatch) {
-    return null;
-  }
-
-  const hex = hexMatch[1];
-  if (hex.length === 3) {
-    return {
-      r: Number.parseInt(hex[0] + hex[0], 16),
-      g: Number.parseInt(hex[1] + hex[1], 16),
-      b: Number.parseInt(hex[2] + hex[2], 16),
-      a: 1
-    };
-  }
-
-  return {
-    r: Number.parseInt(hex.slice(0, 2), 16),
-    g: Number.parseInt(hex.slice(2, 4), 16),
-    b: Number.parseInt(hex.slice(4, 6), 16),
-    a: 1
-  };
-}
-
-function clampChannel(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-
-  return Math.min(255, Math.max(0, Math.round(value)));
-}
-
-function clampAlpha(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 1;
-  }
-
-  return Math.min(1, Math.max(0, value));
-}
-
-function blendRgba(foreground: RgbaColor, background: RgbaColor): RgbaColor {
-  const alpha = foreground.a + background.a * (1 - foreground.a);
-  if (alpha <= 0) {
-    return { r: 255, g: 255, b: 255, a: 1 };
-  }
-
-  const r =
-    (foreground.r * foreground.a +
-      background.r * background.a * (1 - foreground.a)) /
-    alpha;
-  const g =
-    (foreground.g * foreground.a +
-      background.g * background.a * (1 - foreground.a)) /
-    alpha;
-  const b =
-    (foreground.b * foreground.a +
-      background.b * background.a * (1 - foreground.a)) /
-    alpha;
-
-  return {
-    r: clampChannel(r),
-    g: clampChannel(g),
-    b: clampChannel(b),
-    a: clampAlpha(alpha)
-  };
-}
-
-function getRelativeLuminance(r: number, g: number, b: number): number {
-  const red = normalizeSrgbChannel(r);
-  const green = normalizeSrgbChannel(g);
-  const blue = normalizeSrgbChannel(b);
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-}
-
-function normalizeSrgbChannel(value: number): number {
-  const channel = value / 255;
-  if (channel <= 0.04045) {
-    return channel / 12.92;
-  }
-
-  return ((channel + 0.055) / 1.055) ** 2.4;
 }

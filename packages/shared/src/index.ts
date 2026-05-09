@@ -2,10 +2,27 @@ export * from "./domain/analysis";
 export * from "./domain/models";
 export * from "./curriculum/config";
 export * from "./curriculum/content";
+export * from "./curriculum/profile";
 export * from "./messaging/contracts";
 export * from "./scoring/difficulty";
 export * from "./scoring/scheduler";
 export * from "./scoring/sentence";
+export {
+  CONTEXTUAL_AMBIGUITY_RULES,
+  INITIAL_AMBIGUOUS_WORD_INVENTORY,
+  V1_AMBIGUOUS_WORD_GROUPS,
+  WORD_INJECTION_DECISIONS,
+  evaluateContextAwareDecision,
+  evaluateContentBaselineDecision,
+  getV1AmbiguityGroupForWord,
+  isV1AmbiguousWord
+} from "./scoring/word-injection";
+export type {
+  ContextualAmbiguityRule,
+  WordInjectionDecision,
+  WordInjectionDecisionCode,
+  WordInjectionDecisionResult
+} from "./scoring/word-injection";
 export * from "./storage/adapter";
 export * from "./storage/repositories";
 export * from "./text/hash";
@@ -65,25 +82,13 @@ export type {
 } from "./validation/phrases";
 export * from "./validation/suitability";
 export {
-  CONTEXTUAL_AMBIGUITY_RULES,
-  INITIAL_AMBIGUOUS_WORD_INVENTORY,
-  V1_AMBIGUOUS_WORD_GROUPS,
-  WORD_INJECTION_DECISIONS,
   WORD_INJECTION_EXPECTED_OUTCOMES,
-  evaluateContextAwareDecision,
-  evaluateContentBaselineDecision,
   evaluateWordInjectionCorpus,
-  getV1AmbiguityGroupForWord,
-  isV1AmbiguousWord,
   mapExpectedOutcomeToDecision,
   runWordInjectionLibraryComparisons
 } from "./validation/word-injection";
 export type {
-  ContextualAmbiguityRule,
   WordInjectionCaseEvaluation,
-  WordInjectionDecision,
-  WordInjectionDecisionCode,
-  WordInjectionDecisionResult,
   WordInjectionEvaluationSummary,
   WordInjectionExpectedOutcome,
   WordInjectionLibraryComparison,

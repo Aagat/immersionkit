@@ -15,19 +15,7 @@ import {
   type SupportedPos
 } from "@immersionkit/shared";
 
-export {
-  buildRenderUnitRuntimeIndex,
-  findRenderUnitTokenSpans,
-  findWordRenderEntriesForAnalyzerToken,
-  getRenderUnitSentenceHints,
-  isAnalyzerPatternWordRenderUnit,
-  isImmediateWordRenderUnit,
-  isSingleTokenInlineWordRenderUnit,
-  matchesRenderUnitPatternToken,
-  renderUnitToWordRenderEntry,
-  resolveRenderUnitPhraseTarget,
-  uniqueWordRenderEntries
-} from "@immersionkit/shared";
+export { getRenderUnitSentenceHints } from "@immersionkit/shared";
 export type {
   RenderUnitPhraseTarget,
   RenderUnitRuntimeIndex,

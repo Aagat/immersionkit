@@ -21,8 +21,8 @@ import {
   isIndexedDbAvailable,
   requestToPromise,
   transactionDone
-} from "./indexeddb";
-import { isRecord, readString } from "./storage";
+} from "../storage/indexeddb";
+import { isRecord, readString } from "../storage/serialization";
 import {
   loadBackgroundRuntimeConfig,
   type BackgroundRuntimeConfig
