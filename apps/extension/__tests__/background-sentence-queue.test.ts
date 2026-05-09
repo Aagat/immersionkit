@@ -70,8 +70,7 @@ describe("sentence queue orchestration", () => {
         sentenceHash,
         sourceText,
         translatedText: "La estacion abre temprano por la manana.",
-        learningNote,
-        grammarNote: learningNote.summary
+        learningNote
       }
     ]);
     expect(providerCalls).not.toHaveBeenCalled();
@@ -140,8 +139,7 @@ describe("sentence queue orchestration", () => {
             sentenceHash,
             sourceText,
             translatedText,
-            learningNote,
-            grammarNote: learningNote.summary
+            learningNote
           }
         ]
       }
@@ -876,7 +874,6 @@ function createCacheEntry(
 ): SentenceCacheEntry {
   return {
     ...input,
-    grammarNote: input.learningNote.summary,
     targetLanguage: "es",
     sourceLanguage: "en",
     model: "cached-model",

@@ -10,9 +10,13 @@ import {
 } from "@immersionkit/shared";
 import type {
   QueueSentenceCandidatesMessage,
+  QueueSentenceCandidatesOkResponse,
   SentenceCacheEntry,
   SentenceCacheRepository,
-  SentenceTranslationResult
+  SentenceRankingPrimaryReason,
+  SentenceRankingReason,
+  SentenceTranslationResult,
+  TranslationAvailability
 } from "@immersionkit/shared";
 
 import {
@@ -42,56 +46,7 @@ type QueuedSentenceCandidate = ProviderSentenceCandidate & {
   senderTabIds: Set<number>;
 };
 
-export type TranslationAvailability =
-  | "ready"
-  | "feature-disabled"
-  | "provider-disabled"
-  | "missing-credentials";
-
 export type CachedSentenceResult = SentenceTranslationResult;
-
-export type SentenceRankingPrimaryReason =
-  | "difficulty-score"
-  | "vocab-fit"
-  | "due-target-value"
-  | "grammar-due-value"
-  | "phrase-value"
-  | "ambiguity-penalty"
-  | "curriculum-sentence-policy"
-  | "curriculum-gate"
-  | "fallback-original-order";
-
-export type SentenceRankingReason = {
-  sentenceHash: string;
-  rank: number;
-  score: number;
-  primaryReason: SentenceRankingPrimaryReason;
-  curriculum?: {
-    configId: string;
-    activeBandId: string | null;
-    eligible: boolean;
-    skipReason: string | null;
-  };
-  signals?: {
-    vocabularyFit: number;
-    grammarFit: number;
-    dueTargetValue: number;
-    grammarDueValue?: number;
-    chunkUsefulness: number;
-    ambiguityPenalty: number;
-    sentencePolicyFit?: number;
-  };
-  sentencePolicy?: {
-    activeBandId: string;
-    tokenCount: number;
-    tokenRange: readonly [number, number];
-    fit: number;
-    penalty: number;
-    outsideRange: boolean;
-    clausePolicy: string;
-    targetPolicy: string;
-  };
-};
 
 type CurriculumRuntimePolicy = {
   config: CurriculumConfig;
@@ -113,20 +68,6 @@ type SentenceQueueOrchestratorOptions = {
     deliveries: SentenceTranslationDelivery[]
   ) => Promise<void> | void;
   flushDelayMs?: number;
-};
-
-export type QueueSentenceCandidatesResponse = {
-  ok: boolean;
-  accepted: number;
-  analyzed: number;
-  analysisCacheHits: number;
-  queued: number;
-  skipped: number;
-  cacheHits: number;
-  translationAvailability: TranslationAvailability;
-  analysisResults: AnalyzedSentenceCandidate[];
-  cachedResults: CachedSentenceResult[];
-  rankingReasons: SentenceRankingReason[];
 };
 
 export class SentenceQueueOrchestrator {
@@ -166,7 +107,7 @@ export class SentenceQueueOrchestrator {
   async queueMessage(
     message: QueueSentenceCandidatesMessage,
     senderTabId?: number
-  ): Promise<QueueSentenceCandidatesResponse> {
+  ): Promise<QueueSentenceCandidatesOkResponse> {
     const candidates = normalizeSentenceCandidates(message);
     if (candidates.length === 0) {
       const config = await this.loadRuntimeConfig();
@@ -387,7 +328,6 @@ export class SentenceQueueOrchestrator {
         sourceText: translation.sourceText,
         translatedText: translation.translatedText,
         learningNote: translation.learningNote,
-        grammarNote: translation.learningNote.summary,
         targetLanguage: config.settings.targetLanguage,
         sourceLanguage: config.settings.sourceLanguage,
         model: translation.model,
@@ -884,8 +824,7 @@ function toCachedSentenceResult(entry: SentenceCacheEntry): CachedSentenceResult
     sentenceHash: entry.sentenceHash,
     sourceText: entry.sourceText,
     translatedText: entry.translatedText,
-    learningNote: entry.learningNote,
-    grammarNote: entry.learningNote.summary
+    learningNote: entry.learningNote
   };
 }
 

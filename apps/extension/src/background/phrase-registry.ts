@@ -27,18 +27,11 @@ export interface PhraseRegistryStore {
 
 export interface PhraseRegistryRepository {
   get(phraseId: string): Promise<PhraseRegistryEntry | null>;
-  cleanupLegacyBlankTargetDuplicates(): Promise<LegacyPhraseCleanupResult>;
   upsertOccurrences(
     occurrences: readonly PhraseOccurrence[],
     now: string
   ): Promise<PhraseRegistryEntry[]>;
 }
-
-export type LegacyPhraseCleanupResult = {
-  scanned: number;
-  removedRegistryEntries: number;
-  removedLearningItems: number;
-};
 
 export class IndexedDbPhraseRegistryRepository
   implements PhraseRegistryRepository
@@ -57,47 +50,6 @@ export class IndexedDbPhraseRegistryRepository
 
     const registry = await this.loadRegistry();
     return registry[phraseId] ?? null;
-  }
-
-  async cleanupLegacyBlankTargetDuplicates(): Promise<LegacyPhraseCleanupResult> {
-    const registry = await this.loadRegistry();
-    const learningItems = await this.loadLearningItems();
-    const canonicalTargets = new Set(
-      Object.values(registry)
-        .filter((entry) => hasPhraseTarget(entry))
-        .map(buildLegacyCleanupKey)
-    );
-    let removedRegistryEntries = 0;
-    let removedLearningItems = 0;
-
-    for (const entry of Object.values(registry)) {
-      if (hasPhraseTarget(entry) || !canonicalTargets.has(buildLegacyCleanupKey(entry))) {
-        continue;
-      }
-
-      delete registry[entry.phraseId];
-      removedRegistryEntries += 1;
-
-      const itemId = `phrase:${entry.phraseId}`;
-      if (learningItems[itemId]?.unitType === "phrase") {
-        delete learningItems[itemId];
-        removedLearningItems += 1;
-      }
-    }
-
-    if (removedRegistryEntries > 0) {
-      await this.persistRegistry(registry);
-    }
-
-    if (removedLearningItems > 0) {
-      await this.learningItems.persistAll(learningItems);
-    }
-
-    return {
-      scanned: Object.keys(registry).length + removedRegistryEntries,
-      removedRegistryEntries,
-      removedLearningItems
-    };
   }
 
   async upsertOccurrences(
@@ -305,18 +257,6 @@ function ensurePhraseLearningItem(
     distinctContextCount: 0,
     suspended: false
   };
-}
-
-function hasPhraseTarget(entry: PhraseRegistryEntry): boolean {
-  return (
-    entry.canonicalTargetText.trim().length > 0 &&
-    entry.normalizedTargetText.trim().length > 0 &&
-    !entry.phraseId.endsWith(":empty")
-  );
-}
-
-function buildLegacyCleanupKey(entry: PhraseRegistryEntry): string {
-  return `${entry.sourceKind}:${entry.category}:${entry.normalizedSourceText}`;
 }
 
 function readPhraseSourceKind(value: unknown): PhraseRegistryEntry["sourceKind"] | null {

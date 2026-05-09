@@ -20,6 +20,7 @@ import type {
   GraduateCheckpointResponse,
   PingResponse,
   QueueSentenceCandidatesMessage,
+  QueueSentenceCandidatesResponse,
   RefreshActiveTabMessage,
   RefreshActiveTabResponse,
   RuntimeMessage,
@@ -35,11 +36,9 @@ import type {
 import { getBackgroundAssetPackService } from "./asset-packs";
 import { BackgroundLearningItemService } from "./learning-items";
 import { CurriculumProgressionService } from "./curriculum-progression";
-import { IndexedDbPhraseRegistryRepository } from "./phrase-registry";
 import { IndexedDbSentenceAnalysisCacheRepository } from "./sentence-analysis-cache";
 import {
   SentenceQueueOrchestrator,
-  type QueueSentenceCandidatesResponse,
   type SentenceTranslationDelivery
 } from "./sentence-queue";
 import { loadBackgroundRuntimeConfig } from "./settings";
@@ -78,7 +77,6 @@ export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
   private readonly learningItems: BackgroundLearningItemService;
   private readonly curriculumProgression: CurriculumProgressionService;
-  private readonly phraseRegistry: IndexedDbPhraseRegistryRepository;
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
   private readonly userVocab: IndexedDbUserVocabRepository;
   private readonly contentContext: ContentContextService;
@@ -178,7 +176,6 @@ export class BackgroundRuntimeCoordinator {
     });
     this.learningItems = new BackgroundLearningItemService();
     this.curriculumProgression = new CurriculumProgressionService();
-    this.phraseRegistry = new IndexedDbPhraseRegistryRepository();
     this.sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
     this.userVocab = new IndexedDbUserVocabRepository();
     this.contentContext = new ContentContextService();
@@ -192,7 +189,6 @@ export class BackgroundRuntimeCoordinator {
     this.isBooted = true;
     void this.prepareAssetPacks();
     void this.backfillLearningItemBands();
-    void this.cleanupLegacyPhraseIdentities();
 
     chrome.runtime.onInstalled.addListener((details) => {
       console.info("ImmersionKit background service worker installed.");
@@ -201,7 +197,6 @@ export class BackgroundRuntimeCoordinator {
       }
       void this.prepareAssetPacks();
       void this.backfillLearningItemBands();
-      void this.cleanupLegacyPhraseIdentities();
     });
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) =>
@@ -275,23 +270,10 @@ export class BackgroundRuntimeCoordinator {
     }
   }
 
-  private async cleanupLegacyPhraseIdentities(): Promise<void> {
-    try {
-      const result = await this.phraseRegistry.cleanupLegacyBlankTargetDuplicates();
-      if (result.removedRegistryEntries > 0 || result.removedLearningItems > 0) {
-        console.info("ImmersionKit cleaned legacy phrase identities.", result);
-      }
-    } catch (error) {
-      console.warn("ImmersionKit legacy phrase cleanup failed.", error);
-    }
-  }
-
   private async handleQueueSentenceCandidates(
     message: QueueSentenceCandidatesMessage,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (
-      response: QueueSentenceCandidatesResponse | RuntimeErrorResponse
-    ) => void
+    sendResponse: (response: QueueSentenceCandidatesResponse) => void
   ) {
     try {
       const response = await this.sentenceQueue.queueMessage(message, sender.tab?.id);

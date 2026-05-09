@@ -146,6 +146,10 @@ export type QueuedSentenceCandidate = {
   hostname?: string;
   nodeId?: string;
   documentUrl?: string;
+  reason?: string;
+  knownWordCount?: number;
+  totalWordCount?: number;
+  phraseHints?: string[];
 };
 
 export type QueueSentenceCandidatesMessage = {
@@ -158,16 +162,11 @@ export type SentenceTranslationResult = {
   sourceText: string;
   translatedText: string;
   learningNote: SentenceLearningNote;
-  grammarNote?: string;
 };
 
 export type SentenceTranslationResultMessage = {
   type: RuntimeMessageType.SentenceTranslationResult;
   results: SentenceTranslationResult[];
-};
-
-export type SentenceAnalysisResult = {
-  entry: SentenceAnalysisEntry;
 };
 
 export type AssistEventMessage = AssistEvent & {
@@ -297,6 +296,89 @@ export type GraduateCheckpointResponse =
     }
   | RuntimeErrorResponse;
 
+export type TranslationAvailability =
+  | "ready"
+  | "feature-disabled"
+  | "provider-disabled"
+  | "missing-credentials";
+
+export type SentenceSuitabilitySignals = {
+  vocabularyFit: number;
+  grammarFit: number;
+  structuralSimplicity: number;
+  dueTargetValue: number;
+  chunkUsefulness: number;
+  ambiguityPenalty: number;
+  stretchDemand: number;
+};
+
+export type SentenceAnalysisResult = {
+  entry: SentenceAnalysisEntry;
+  cacheHit: boolean;
+  suitabilitySignals: SentenceSuitabilitySignals;
+};
+
+export type SentenceRankingPrimaryReason =
+  | "difficulty-score"
+  | "vocab-fit"
+  | "due-target-value"
+  | "grammar-due-value"
+  | "phrase-value"
+  | "ambiguity-penalty"
+  | "curriculum-sentence-policy"
+  | "curriculum-gate"
+  | "fallback-original-order";
+
+export type SentenceRankingReason = {
+  sentenceHash: string;
+  rank: number;
+  score: number;
+  primaryReason: SentenceRankingPrimaryReason;
+  curriculum?: {
+    configId: string;
+    activeBandId: string | null;
+    eligible: boolean;
+    skipReason: string | null;
+  };
+  signals?: {
+    vocabularyFit: number;
+    grammarFit: number;
+    dueTargetValue: number;
+    grammarDueValue?: number;
+    chunkUsefulness: number;
+    ambiguityPenalty: number;
+    sentencePolicyFit?: number;
+  };
+  sentencePolicy?: {
+    activeBandId: string;
+    tokenCount: number;
+    tokenRange: readonly [number, number];
+    fit: number;
+    penalty: number;
+    outsideRange: boolean;
+    clausePolicy: string;
+    targetPolicy: string;
+  };
+};
+
+export type QueueSentenceCandidatesOkResponse = {
+  ok: true;
+  accepted: number;
+  analyzed: number;
+  analysisCacheHits: number;
+  queued: number;
+  skipped: number;
+  cacheHits: number;
+  translationAvailability: TranslationAvailability;
+  analysisResults: SentenceAnalysisResult[];
+  cachedResults: SentenceTranslationResult[];
+  rankingReasons: SentenceRankingReason[];
+};
+
+export type QueueSentenceCandidatesResponse =
+  | QueueSentenceCandidatesOkResponse
+  | RuntimeErrorResponse;
+
 export type EvidenceEventResponse =
   | {
       ok: true;
@@ -318,7 +400,7 @@ export type RuntimeResponseByType = {
   [RuntimeMessageType.LoadContentContext]: LoadContentContextResponse;
   [RuntimeMessageType.GetContentAnalysisContext]: GetContentAnalysisContextResponse;
   [RuntimeMessageType.GraduateCheckpoint]: GraduateCheckpointResponse;
-  [RuntimeMessageType.QueueSentenceCandidates]: unknown;
+  [RuntimeMessageType.QueueSentenceCandidates]: QueueSentenceCandidatesResponse;
   [RuntimeMessageType.SentenceTranslationResult]: RuntimeOkResponse | RuntimeErrorResponse;
   [RuntimeMessageType.AssistEvent]: EvidenceEventResponse;
   [RuntimeMessageType.QualifiedExposureEvent]: EvidenceEventResponse;

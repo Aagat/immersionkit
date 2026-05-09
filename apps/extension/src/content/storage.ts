@@ -11,7 +11,6 @@ export {
 export {
   findRuntimeWordDecision,
   mergeRuntimeAnalysisContext,
-  upsertRuntimeSentenceAnalysis,
   type CachedContextSkipDecision,
   type CachedGrammarFeature,
   type CachedPhraseMatch,

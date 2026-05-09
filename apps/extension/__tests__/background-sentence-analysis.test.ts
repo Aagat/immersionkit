@@ -796,14 +796,6 @@ class InMemoryPhraseRegistry implements PhraseRegistryRepository {
     return this.entries.get(phraseId) ?? null;
   }
 
-  async cleanupLegacyBlankTargetDuplicates() {
-    return {
-      scanned: this.entries.size,
-      removedRegistryEntries: 0,
-      removedLearningItems: 0
-    };
-  }
-
   async upsertOccurrences(
     occurrences: readonly PhraseOccurrence[],
     now: string

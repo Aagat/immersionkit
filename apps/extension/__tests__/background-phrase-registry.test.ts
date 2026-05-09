@@ -84,64 +84,6 @@ describe("background phrase registry", () => {
     });
   });
 
-  it("removes legacy blank-target duplicates when a canonical phrase exists", async () => {
-    const learningItems = new InMemoryLearningItemRepository();
-    const registryStore = new InMemoryPhraseRegistryStore();
-    const registry = new IndexedDbPhraseRegistryRepository(
-      learningItems,
-      registryStore
-    );
-    const blankPhraseId = "phrase:chunk:public-health-care-system:empty";
-    const canonicalPhraseId =
-      "phrase:chunk:public-health-care-system:sistema-de-salud-publica";
-    registryStore.registry = {
-      [blankPhraseId]: {
-        phraseId: blankPhraseId,
-        normalizedSourceText: "public health care system",
-        canonicalTargetText: "",
-        normalizedTargetText: "",
-        sourceKind: "chunk",
-        category: "noun-chunk",
-        provenance: "runtime",
-        confidence: 0.82,
-        firstSeenAt: "2026-04-24T10:00:00.000Z",
-        lastSeenAt: "2026-04-24T10:00:00.000Z",
-        exposureCount: 1
-      },
-      [canonicalPhraseId]: {
-        phraseId: canonicalPhraseId,
-        normalizedSourceText: "public health care system",
-        canonicalTargetText: "sistema de salud publica",
-        normalizedTargetText: "sistema de salud publica",
-        sourceKind: "chunk",
-        category: "noun-chunk",
-        provenance: "runtime",
-        confidence: 0.93,
-        firstSeenAt: "2026-04-25T10:00:00.000Z",
-        lastSeenAt: "2026-04-25T10:00:00.000Z",
-        exposureCount: 1
-      }
-    };
-    learningItems.items[`phrase:${blankPhraseId}`] = createPhraseLearningItem(
-      blankPhraseId,
-      ""
-    );
-    learningItems.items[`phrase:${canonicalPhraseId}`] = createPhraseLearningItem(
-      canonicalPhraseId,
-      "sistema de salud publica"
-    );
-
-    await expect(registry.cleanupLegacyBlankTargetDuplicates()).resolves.toEqual({
-      scanned: 2,
-      removedRegistryEntries: 1,
-      removedLearningItems: 1
-    });
-
-    expect(registryStore.registry[blankPhraseId]).toBeUndefined();
-    expect(registryStore.registry[canonicalPhraseId]).toBeDefined();
-    expect(learningItems.items[`phrase:${blankPhraseId}`]).toBeUndefined();
-    expect(learningItems.items[`phrase:${canonicalPhraseId}`]).toBeDefined();
-  });
 });
 
 class InMemoryLearningItemRepository implements LearningItemRepository {
@@ -188,26 +130,5 @@ function createPhraseOccurrence(phraseId: string): PhraseOccurrence {
       endChar: 12
     },
     confidence: 0.94
-  };
-}
-
-function createPhraseLearningItem(unitRefId: string, targetText: string) {
-  return {
-    itemId: `phrase:${unitRefId}`,
-    unitRefId,
-    unitType: "phrase" as const,
-    sourceText: "public health care system",
-    targetText,
-    status: "new" as const,
-    introducedAt: "2026-04-25T09:00:00.000Z",
-    nextReviewAt: "2026-04-25T09:00:00.000Z",
-    interval: 600000,
-    ease: 2.3,
-    lapses: 0,
-    assistCount: 0,
-    qualifiedExposureCount: 0,
-    consecutiveUnassistedCount: 0,
-    distinctContextCount: 0,
-    suspended: false
   };
 }

@@ -4,7 +4,6 @@ import type {
   SentenceLearningNote
 } from "@immersionkit/shared";
 import {
-  createLegacySentenceLearningNote,
   createSentenceLearningNote,
   hasSentenceLearningNoteContent
 } from "@immersionkit/shared";
@@ -156,8 +155,7 @@ function normalizeSentenceCacheEntry(
   const sentenceHash = readString(value.sentenceHash) ?? readString(fallbackHash);
   const sourceText = readString(value.sourceText);
   const translatedText = readString(value.translatedText);
-  const grammarNote = readString(value.grammarNote);
-  const learningNote = normalizeSentenceLearningNote(value.learningNote, grammarNote);
+  const learningNote = normalizeSentenceLearningNote(value.learningNote);
   const model = readString(value.model);
   const promptVersion = readString(value.promptVersion);
   const createdAt = readString(value.createdAt);
@@ -188,7 +186,6 @@ function normalizeSentenceCacheEntry(
     promptVersion,
     createdAt,
     targetLanguage,
-    grammarNote: learningNote.summary,
     sourceLanguage: value.sourceLanguage === "en" ? "en" : undefined,
     provider:
       value.provider === "openai" || value.provider === "none"
@@ -199,8 +196,7 @@ function normalizeSentenceCacheEntry(
 }
 
 function normalizeSentenceLearningNote(
-  value: unknown,
-  legacyGrammarNote: string | undefined | null
+  value: unknown
 ): SentenceLearningNote | null {
   if (isRecord(value)) {
     const learningNote = createSentenceLearningNote({
@@ -214,10 +210,6 @@ function normalizeSentenceLearningNote(
     if (hasSentenceLearningNoteContent(learningNote)) {
       return learningNote;
     }
-  }
-
-  if (legacyGrammarNote) {
-    return createLegacySentenceLearningNote(legacyGrammarNote);
   }
 
   return null;

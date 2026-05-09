@@ -3,7 +3,6 @@ import type {
   SentenceTranslationResult
 } from "@immersionkit/shared";
 import {
-  createLegacySentenceLearningNote,
   createSentenceLearningNote,
   hasSentenceLearningNoteContent
 } from "@immersionkit/shared";
@@ -21,7 +20,6 @@ const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
 const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
 const SENTENCE_LEARNING_NOTE_ATTRIBUTE = "data-ik-sentence-learning-note";
-const SENTENCE_GRAMMAR_NOTE_ATTRIBUTE = "data-ik-sentence-grammar-note";
 const SENTENCE_KIND_ATTRIBUTE = "data-ik-sentence-kind";
 const MIN_SENTENCE_NOTE_CHAR_GAP = 180;
 
@@ -259,19 +257,12 @@ function updateSentenceNote(
     SENTENCE_LEARNING_NOTE_ATTRIBUTE,
     JSON.stringify(result.learningNote)
   );
-  note.setAttribute(
-    SENTENCE_GRAMMAR_NOTE_ATTRIBUTE,
-    result.learningNote.summary || result.grammarNote || ""
-  );
 
   const translated = ensureChild(note, "ik-sentence-note__translated");
   translated.textContent = result.translatedText;
 
   const source = ensureChild(note, "ik-sentence-note__source");
   source.textContent = result.sourceText;
-
-  const legacyGrammar = note.querySelector<HTMLElement>(".ik-sentence-note__grammar");
-  legacyGrammar?.remove();
 }
 
 function ensureChild(note: HTMLElement, className: string): HTMLElement {
@@ -390,10 +381,7 @@ function normalizeSentenceTranslationResult(
   const sentenceHash = readNonEmptyString(value.sentenceHash);
   const sourceText = readNonEmptyString(value.sourceText);
   const translatedText = readNonEmptyString(value.translatedText);
-  const learningNote = normalizeSentenceLearningNote(
-    value.learningNote,
-    readNonEmptyString(value.grammarNote)
-  );
+  const learningNote = normalizeSentenceLearningNote(value.learningNote);
 
   if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
@@ -403,8 +391,7 @@ function normalizeSentenceTranslationResult(
     sentenceHash,
     sourceText,
     translatedText,
-    learningNote,
-    grammarNote: learningNote.summary
+    learningNote
   };
 }
 
@@ -435,29 +422,23 @@ function readNonEmptyString(value: unknown): string | null {
 
 function readSentenceLearningNote(note: HTMLElement): SentenceLearningNote | null {
   const encodedLearningNote = note.getAttribute(SENTENCE_LEARNING_NOTE_ATTRIBUTE);
-  const legacyGrammarNote = readNonEmptyString(
-    note.getAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE)
-  );
 
   if (encodedLearningNote) {
     try {
       const parsed = JSON.parse(encodedLearningNote) as unknown;
-      const learningNote = normalizeSentenceLearningNote(parsed, legacyGrammarNote);
+      const learningNote = normalizeSentenceLearningNote(parsed);
       if (learningNote) {
         return learningNote;
       }
     } catch {
-      // Ignore malformed legacy attributes and fall through to the summary fallback.
+      return null;
     }
   }
 
-  return legacyGrammarNote ? createLegacySentenceLearningNote(legacyGrammarNote) : null;
+  return null;
 }
 
-function normalizeSentenceLearningNote(
-  value: unknown,
-  legacyGrammarNote?: string | null
-): SentenceLearningNote | null {
+function normalizeSentenceLearningNote(value: unknown): SentenceLearningNote | null {
   if (isRecord(value)) {
     const learningNote = createSentenceLearningNote({
       summary: readNonEmptyString(value.summary) ?? undefined,
@@ -472,7 +453,7 @@ function normalizeSentenceLearningNote(
     }
   }
 
-  return legacyGrammarNote ? createLegacySentenceLearningNote(legacyGrammarNote) : null;
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

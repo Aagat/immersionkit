@@ -531,7 +531,6 @@ export type SentenceCacheEntry = {
   model: string;
   promptVersion: string;
   createdAt: IsoTimestamp;
-  grammarNote?: string;
   sourceLanguage?: SupportedSourceLanguage;
   provider?: ProviderName;
   lastAccessedAt?: IsoTimestamp;
@@ -613,12 +612,6 @@ export function createSentenceLearningNote(
   }
 
   return note;
-}
-
-export function createLegacySentenceLearningNote(summary: string): SentenceLearningNote {
-  return createSentenceLearningNote({
-    summary
-  });
 }
 
 export function hasSentenceLearningNoteContent(note: SentenceLearningNote): boolean {
