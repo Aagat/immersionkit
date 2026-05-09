@@ -17,6 +17,7 @@ import { USER_DATA_KEYS } from "../shared/user-data-keys";
 import { IndexedDbUserVocabRepository } from "../storage/user-data-repository";
 
 const SITE_SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.siteSettings] as const;
+const MAX_CONTENT_CONTEXT_LEARNING_UNIT_REF_IDS = 500;
 
 export class ContentContextService {
   private readonly assetPacks = getBackgroundAssetPackService();
@@ -49,7 +50,10 @@ export class ContentContextService {
     const [vocabEntries, learningItems] = await Promise.all([
       this.loadVocabEntries(relevantUnitRefIds.lexemeIds),
       this.learningItems.listItemsByUnitRefIds(
-        relevantUnitRefIds.learningUnitRefIds.slice(0, 500)
+        relevantUnitRefIds.learningUnitRefIds.slice(
+          0,
+          MAX_CONTENT_CONTEXT_LEARNING_UNIT_REF_IDS
+        )
       )
     ]);
 
@@ -104,7 +108,7 @@ export class ContentContextService {
   }
 }
 
-function collectRelevantUnitRefIds(
+export function collectRelevantUnitRefIds(
   renderUnits: readonly RenderUnitEntry[],
   analysisEntries: readonly SentenceAnalysisEntry[]
 ): {
@@ -112,13 +116,14 @@ function collectRelevantUnitRefIds(
   learningUnitRefIds: string[];
 } {
   const lexemeIds = new Set<string>();
-  const learningUnitRefIds = new Set<string>();
+  const pageLearningUnitRefIds = new Set<string>();
+  const assetLearningUnitRefIds = new Set<string>();
 
   for (const renderUnit of renderUnits) {
     for (const lexemeId of renderUnit.lexemeIds) {
       if (lexemeId.trim()) {
         lexemeIds.add(lexemeId);
-        learningUnitRefIds.add(lexemeId);
+        assetLearningUnitRefIds.add(lexemeId);
       }
     }
   }
@@ -128,26 +133,30 @@ function collectRelevantUnitRefIds(
       const lexemeId = candidate.lexemeId?.trim();
       if (lexemeId) {
         lexemeIds.add(lexemeId);
-        learningUnitRefIds.add(lexemeId);
+        pageLearningUnitRefIds.add(lexemeId);
       }
     }
 
     for (const phraseMatch of entry.phraseMatches) {
       if (phraseMatch.phraseId.trim()) {
-        learningUnitRefIds.add(phraseMatch.phraseId);
+        pageLearningUnitRefIds.add(phraseMatch.phraseId);
       }
     }
 
     for (const grammarFeature of entry.grammarFeatures) {
       if (grammarFeature.featureId.trim()) {
-        learningUnitRefIds.add(grammarFeature.featureId);
+        pageLearningUnitRefIds.add(grammarFeature.featureId);
       }
     }
   }
 
+  for (const unitRefId of pageLearningUnitRefIds) {
+    assetLearningUnitRefIds.delete(unitRefId);
+  }
+
   return {
     lexemeIds: [...lexemeIds],
-    learningUnitRefIds: [...learningUnitRefIds]
+    learningUnitRefIds: [...pageLearningUnitRefIds, ...assetLearningUnitRefIds]
   };
 }
 

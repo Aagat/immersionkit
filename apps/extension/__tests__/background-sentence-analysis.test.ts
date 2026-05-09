@@ -285,6 +285,52 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("preserves shared fixed-phrase targets before registry persistence", async () => {
+    const sourceText = "We stay at home today.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["We", "we", "pronoun", ["PRON", "pronoun"]],
+        ["stay", "stay", "verb", ["VERB", "verb"]],
+        ["at", "at", "preposition", ["ADP", "preposition"]],
+        ["home", "home", "noun", ["NOUN", "noun"]],
+        ["today", "today", "adverb", ["ADV", "adverb"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [],
+      grammarFeatures: []
+    }));
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadRenderUnits: () => Promise.resolve([]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const fixedPhrase = analysis?.entry.phraseMatches.find(
+      (match) => match.normalizedSourceText === "at home"
+    );
+
+    expect(fixedPhrase).toMatchObject({
+      sourceKind: "fixed-phrase",
+      category: "function-phrase",
+      targetText: "en casa",
+      normalizedTargetText: "en casa",
+      phraseId: "phrase:fixed-phrase:at-home:en-casa"
+    });
+    await expect(phraseRegistry.get(fixedPhrase?.phraseId ?? "")).resolves.toMatchObject({
+      canonicalTargetText: "en casa",
+      normalizedTargetText: "en casa"
+    });
+  });
+
   it("lets approved custom render units own fixed phrase identity over legacy detections", async () => {
     const sourceText = "By the way, we read today.";
     const sentenceHash = hashSentence(sourceText);

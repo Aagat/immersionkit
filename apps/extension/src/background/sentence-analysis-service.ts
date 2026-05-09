@@ -87,6 +87,10 @@ type SentenceAnalysisServiceOptions = {
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
 };
 
+type DetectedPhraseCandidate = ReturnType<
+  typeof detectPhraseCandidatesFromAnalyzerOutput
+>["selectedCandidates"][number];
+
 type WordRenderLookup = RenderUnitRuntimeIndex;
 
 type ResolvedPhraseTarget = {
@@ -419,12 +423,7 @@ function buildPhraseOccurrences(
   );
 
   const detectedOccurrences = detection.selectedCandidates.map((candidate) => {
-    const resolvedTarget = resolvePhraseTarget({
-      sourceText: candidate.sourceText,
-      normalizedSourceText: candidate.normalizedSourceText,
-      sourceKind: candidate.sourceKind,
-      category: candidate.category
-    });
+    const resolvedTarget = resolveDetectedPhraseTarget(candidate, resolvePhraseTarget);
     const normalizedTargetText = resolvedTarget?.normalizedTargetText ?? "";
 
     return {
@@ -457,6 +456,27 @@ function buildPhraseOccurrences(
     ...renderUnitOccurrences,
     ...detectedOccurrences
   ];
+}
+
+function resolveDetectedPhraseTarget(
+  candidate: DetectedPhraseCandidate,
+  resolvePhraseTarget: PhraseTargetResolver
+): ResolvedPhraseTarget | null {
+  const candidateTargetText = readString(candidate.targetText);
+  const candidateNormalizedTargetText = readString(candidate.normalizedTargetText);
+  if (candidateTargetText && candidateNormalizedTargetText) {
+    return {
+      targetText: candidateTargetText,
+      normalizedTargetText: candidateNormalizedTargetText
+    };
+  }
+
+  return resolvePhraseTarget({
+    sourceText: candidate.sourceText,
+    normalizedSourceText: candidate.normalizedSourceText,
+    sourceKind: candidate.sourceKind,
+    category: candidate.category
+  });
 }
 
 function buildRenderUnitAnalysisVersion(
