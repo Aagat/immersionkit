@@ -586,35 +586,8 @@ async function persistProviderApiKey(apiKey: string): Promise<void> {
 }
 
 function normalizeSiteSettingsMap(input: unknown): SiteSettingsMap {
-  if (Array.isArray(input)) {
-    return input.reduce<SiteSettingsMap>((accumulator, entry) => {
-      if (!isRecord(entry)) {
-        return accumulator;
-      }
-
-      const hostname = readString(entry.hostname);
-      if (!hostname) {
-        return accumulator;
-      }
-
-      accumulator[hostname] = normalizeSiteSetting(hostname, entry);
-      return accumulator;
-    }, {});
-  }
-
   if (!isRecord(input)) {
     return {};
-  }
-
-  if (readString(input.hostname)) {
-    const hostname = readString(input.hostname);
-    if (!hostname) {
-      return {};
-    }
-
-    return {
-      [hostname]: normalizeSiteSetting(hostname, input)
-    };
   }
 
   const map: SiteSettingsMap = {};

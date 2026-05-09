@@ -156,7 +156,7 @@ function parseSiteSetting(input: unknown, hostname: string): SiteSetting | null 
     return null;
   }
 
-  const candidate = isRecord(input[hostname]) ? input[hostname] : input;
+  const candidate = input[hostname];
   if (!isRecord(candidate)) {
     return null;
   }

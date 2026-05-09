@@ -331,7 +331,7 @@ function readSiteSetting(input: unknown, hostname: string) {
     return null;
   }
 
-  const candidate = isRecord(input[hostname]) ? input[hostname] : input;
+  const candidate = input[hostname];
   if (!isRecord(candidate)) {
     return null;
   }

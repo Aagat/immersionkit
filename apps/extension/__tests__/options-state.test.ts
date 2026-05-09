@@ -5,6 +5,7 @@ import {
   graduateCheckpoint,
   loadFirstRunIntroVisible,
   loadCurriculumDiagnostics,
+  loadSiteSettingsMap,
   markFirstRunIntroSeen,
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
@@ -15,6 +16,45 @@ import { installChromeStub } from "./helpers/chrome-stub";
 import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 
 describe("options state", () => {
+  it("loads site settings only from the canonical hostname-keyed map", async () => {
+    const indexedDbStub = installIndexedDbStub();
+
+    try {
+      await setUserDataValues({
+        "site-settings": [
+          {
+            hostname: "legacy.example",
+            enabled: false,
+            discoveryRate: 0.5,
+            updatedAt: "2026-05-08T10:00:00.000Z"
+          }
+        ]
+      });
+      await expect(loadSiteSettingsMap()).resolves.toEqual({});
+
+      await setUserDataValues({
+        "site-settings": {
+          "canonical.example": {
+            hostname: "canonical.example",
+            enabled: false,
+            discoveryRate: 0.25,
+            updatedAt: "2026-05-08T11:00:00.000Z"
+          }
+        }
+      });
+
+      await expect(loadSiteSettingsMap()).resolves.toMatchObject({
+        "canonical.example": {
+          hostname: "canonical.example",
+          enabled: false,
+          discoveryRate: 0.25
+        }
+      });
+    } finally {
+      indexedDbStub.restore();
+    }
+  });
+
   it("parses curriculum profile and last progression diagnostics", async () => {
     const indexedDbStub = installIndexedDbStub();
     await setUserDataValues({
