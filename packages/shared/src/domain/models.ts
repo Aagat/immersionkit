@@ -686,11 +686,10 @@ function resolveSettingsLanguagePair(
     return settings.languagePair;
   }
 
-  if (settings.sourceLanguage && settings.targetLanguage) {
-    return buildLanguagePairId(settings.sourceLanguage, settings.targetLanguage);
-  }
-
-  return DEFAULT_EXTENSION_SETTINGS.languagePair;
+  return buildLanguagePairId(
+    settings.sourceLanguage ?? DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
+    settings.targetLanguage ?? DEFAULT_EXTENSION_SETTINGS.targetLanguage
+  );
 }
 
 function normalizeLearningNoteField(value: string | undefined): string {

@@ -329,10 +329,46 @@ describe("curriculum configuration", () => {
 
     expect(activeContent).toMatchObject({
       band: expect.objectContaining({ bandId: "test-1" }),
+      config: expect.objectContaining({
+        bands: [expect.objectContaining({ bandId: "test-1" })]
+      }),
       content: expect.objectContaining({
         vocabularyDomains: ["synthetic"],
         vocabularyMaxFrequencyRank: 10
       })
+    });
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        wordEntry: {
+          lexemeId: "en:synthetic:noun",
+          sourceLemma: "synthetic",
+          targetLemma: "sintetico",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91,
+          renderUnitMinBand: "test-1"
+        }
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "test-1",
+      matchReason: "render-unit-band",
+      skipReason: null
+    });
+    expect(
+      evaluatePhraseCurriculumContentInventory({
+        activeContent,
+        sourceText: "unknown synthetic chunk",
+        sourceKind: "chunk",
+        category: "noun-chunk",
+        renderUnitMinBand: "test-1"
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "test-1",
+      matchReason: "render-unit-band",
+      skipReason: null
     });
     expect(
       evaluateWordCurriculumContentInventory({

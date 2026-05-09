@@ -62,6 +62,19 @@ describe("settings model helpers", () => {
     });
   });
 
+  it("keeps language pair fields consistent when only target language is stored", () => {
+    expect(
+      resolveExtensionSettings({
+        targetLanguage: "fr"
+      })
+    ).toEqual({
+      ...DEFAULT_EXTENSION_SETTINGS,
+      languagePair: "en-fr",
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+  });
+
   it("retains explicit flags while clamping noisy numeric inputs", () => {
     expect(
       resolveExtensionSettings({

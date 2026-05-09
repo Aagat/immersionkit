@@ -67,6 +67,23 @@ describe("background asset packs", () => {
       "level-1a"
     );
     expect(
+      validateAssetPackManifest(
+        {
+          schemaVersion: "1.0.0",
+          assetVersion: "asset-v1",
+          languagePair: "en-fr",
+          packs: [
+            {
+              bandId: "level-1a",
+              url: "packs/asset-v1/level-1a.json",
+              languagePair: "en-es"
+            }
+          ]
+        },
+        "en-fr"
+      )
+    ).toBeNull();
+    expect(
       validateAssetPack({
         ...createPack("level-1a", "asset-v1"),
         lexemes: []
@@ -137,6 +154,52 @@ describe("background asset packs", () => {
     });
     expect(repository.packs.map((pack) => pack.languagePair).sort()).toEqual([
       "en-fr"
+    ]);
+  });
+
+  it("rejects remote manifests that point a requested pair at another pair", async () => {
+    const requestedUrls: string[] = [];
+    const repository = new InMemoryAssetPackRepository();
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createRuntimeConfig(DEFAULT_CURRICULUM_CONFIG, {
+            languagePair: "en-fr",
+            sourceLanguage: "en",
+            targetLanguage: "fr"
+          })
+        ),
+      fetchJson: async (url) => {
+        requestedUrls.push(url);
+        if (url.endsWith("/manifest.json")) {
+          return {
+            schemaVersion: "1.0.0",
+            assetVersion: "asset-fr",
+            languagePair: "en-fr",
+            packs: [
+              {
+                bandId: "level-1a",
+                url: "packs/asset-es/level-1a.json",
+                languagePair: "en-es"
+              }
+            ]
+          };
+        }
+
+        return createPack("level-1a", "asset-es", "city", "ciudad", "en-es");
+      }
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.languagePair).toBe("en-fr");
+    expect(context.source).toBe("empty");
+    expect(context.renderUnits).toEqual([]);
+    expect(repository.packs).toEqual([]);
+    expect(requestedUrls).toEqual([
+      "https://cdn.example/assets/en-fr/manifest.json"
     ]);
   });
 

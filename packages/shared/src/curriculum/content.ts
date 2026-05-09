@@ -57,6 +57,7 @@ export type CurriculumBandContent = {
 export type ActiveCurriculumContent = {
   band: CurriculumBand | null;
   content: CurriculumBandContent | null;
+  config: CurriculumConfig;
   definition?: CurriculumDefinition | null;
   beginnerCognatePolicy?: BeginnerCognatePolicy | null;
 };
@@ -422,6 +423,7 @@ export function getActiveCurriculumContent(input?: {
       band?.bandId,
       input?.content ?? definition?.content
     ),
+    config,
     definition,
     beginnerCognatePolicy:
       input && "beginnerCognatePolicy" in input
@@ -578,7 +580,7 @@ function isRenderUnitBandEligible(
   activeContent: ActiveCurriculumContent
 ): boolean {
   const activeOrder = activeContent.band?.order;
-  const minOrder = DEFAULT_CURRICULUM_CONFIG.bands.find(
+  const minOrder = activeContent.config.bands.find(
     (band) => band.bandId === minBandId
   )?.order;
 

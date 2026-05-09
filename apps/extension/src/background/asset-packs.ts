@@ -304,7 +304,7 @@ export class BackgroundAssetPackService {
           return validateAssetPack(await this.fetchJson(packUrl), {
             bandId: entry.bandId,
             assetVersion: entry.assetVersion ?? manifest.assetVersion,
-            languagePair: entry.languagePair ?? manifest.languagePair
+            languagePair: manifest.languagePair
           });
         })
       );
@@ -553,7 +553,11 @@ export function validateAssetPackManifest(
 
     const bandId = readString(entry.bandId);
     const url = readString(entry.url);
+    const entryLanguagePair = readLanguagePair(entry.languagePair);
     if (!bandId || !url) {
+      return [];
+    }
+    if (entryLanguagePair && entryLanguagePair !== languagePair) {
       return [];
     }
 
@@ -562,7 +566,7 @@ export function validateAssetPackManifest(
         bandId,
         url,
         assetVersion: readString(entry.assetVersion) ?? undefined,
-        languagePair: readLanguagePair(entry.languagePair) ?? undefined
+        languagePair: entryLanguagePair ?? undefined
       }
     ];
   });
