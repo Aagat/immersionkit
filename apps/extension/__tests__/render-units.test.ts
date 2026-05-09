@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import {
+  buildRenderUnitRuntimeIndex,
+  resolveRenderUnitPhraseTarget
+} from "@immersionkit/shared";
 
 import {
   getRenderUnitSentenceHints,
@@ -98,6 +102,29 @@ describe("render unit assets", () => {
       renderUnits?.entries.find((entry) => entry.renderUnitId === "ru:no:adverb:exact")
         ?.lexemeIds
     ).toContain("lx:no:adverb");
+  });
+
+  it("models time as duration by default with occurrence-specific vez phrases", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const bareTime = runtimeIndex.preferredWordByNormalizedForm.get("time");
+
+    expect(bareTime).toMatchObject({
+      renderUnitId: "ru:time-tiempo:noun:exact",
+      lexemeId: "lx:time-tiempo:noun",
+      targetText: "tiempo"
+    });
+    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "first time")).toMatchObject({
+      targetText: "primera vez",
+      normalizedTargetText: "primera vez"
+    });
+    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "one more time")).toMatchObject({
+      targetText: "una vez mas",
+      normalizedTargetText: "una vez mas"
+    });
+    expect(getRenderUnitSentenceHints(renderUnits)).toEqual(
+      expect.arrayContaining(["first time", "one more time", "every time"])
+    );
   });
 
   it("does not keep unsafe bare conjugated grammar frames renderable", () => {

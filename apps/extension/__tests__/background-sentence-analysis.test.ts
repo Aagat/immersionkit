@@ -228,6 +228,126 @@ describe("background sentence analysis service", () => {
     );
   });
 
+  it("uses the duration sense for bare time render units", async () => {
+    const sourceText =
+      "The time you must contribute depends on the specific benefit.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["The", "the", "determiner", ["DET", "determiner"]],
+        ["time", "time", "noun", ["NOUN", "noun"]],
+        ["you", "you", "pronoun", ["PRON", "pronoun"]],
+        ["must", "must", "modal", ["AUX", "modal"]],
+        ["contribute", "contribute", "verb", ["VERB", "verb"]],
+        ["depends", "depend", "verb", ["VERB", "verb"]],
+        ["on", "on", "preposition", ["ADP", "preposition"]],
+        ["the", "the", "determiner", ["DET", "determiner"]],
+        ["specific", "specific", "adjective", ["ADJ", "adjective"]],
+        ["benefit", "benefit", "noun", ["NOUN", "noun"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [
+        {
+          text: "The time",
+          normalized: "the time",
+          type: "noun-phrase",
+          tokenStart: 0,
+          tokenEnd: 2,
+          confidence: 0.86
+        },
+        {
+          text: "the specific benefit",
+          normalized: "the specific benefit",
+          type: "noun-phrase",
+          tokenStart: 7,
+          tokenEnd: 10,
+          confidence: 0.88
+        }
+      ],
+      grammarFeatures: []
+    }));
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadRenderUnits: () => Promise.resolve(renderUnits),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const timeCandidate = analysis?.entry.contextualWordCandidates.find(
+      (candidate) => candidate.normalizedText === "time"
+    );
+
+    expect(timeCandidate).toMatchObject({
+      renderUnitId: "ru:time-tiempo:noun:exact",
+      lexemeId: "lx:time-tiempo:noun",
+      targetText: "tiempo",
+      decision: "inject"
+    });
+  });
+
+  it("uses vez for occurrence-oriented time phrases", async () => {
+    const sourceText = "This is my first time here.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["This", "this", "pronoun", ["PRON", "pronoun"]],
+        ["is", "be", "auxiliary", ["AUX", "auxiliary"]],
+        ["my", "my", "determiner", ["DET", "determiner"]],
+        ["first", "first", "adjective", ["ADJ", "adjective"]],
+        ["time", "time", "noun", ["NOUN", "noun"]],
+        ["here", "here", "adverb", ["ADV", "adverb"]],
+        [".", ".", "other", ["PUNCT", "other"]]
+      ]),
+      chunks: [
+        {
+          text: "my first time",
+          normalized: "my first time",
+          type: "noun-phrase",
+          tokenStart: 2,
+          tokenEnd: 5,
+          confidence: 0.9
+        }
+      ],
+      grammarFeatures: []
+    }));
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const phraseRegistry = new InMemoryPhraseRegistry();
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      phraseRegistry,
+      loadRenderUnits: () => Promise.resolve(renderUnits),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+    const firstTime = analysis?.entry.phraseMatches.find(
+      (match) => match.renderUnitId === "ru:first-time:fixed-phrase"
+    );
+
+    expect(firstTime).toMatchObject({
+      phraseId: "ru:first-time:fixed-phrase",
+      sourceText: "first time",
+      targetText: "primera vez",
+      normalizedTargetText: "primera vez",
+      renderPolicy: "inline"
+    });
+    await expect(phraseRegistry.get("ru:first-time:fixed-phrase")).resolves.toMatchObject({
+      canonicalTargetText: "primera vez",
+      normalizedTargetText: "primera vez"
+    });
+  });
+
   it("resolves approved render-unit fixed phrase targets before registry persistence", async () => {
     const sourceText = "We take care of the old city.";
     const sentenceHash = hashSentence(sourceText);
