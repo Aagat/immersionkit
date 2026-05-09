@@ -2,7 +2,11 @@ const EPSILON = 1e-9;
 
 const TASK_02_THRESHOLDS = {
   prototypeMustSkipPrecision: 1,
-  prototypeMustInjectCoverage: 13 / 14
+  prototypeMustInjectCoverage: 13 / 14,
+  productionQualityDecisionAccuracy: 1,
+  productionQualityWrongSenseRenderedCount: 0,
+  productionQualityMissedExpectedInjectCount: 0,
+  productionQualityWrongTargetCount: 0
 };
 
 const TASK_03_THRESHOLDS = {
@@ -73,6 +77,47 @@ function validateTask02Payload(payload) {
       minimum: TASK_02_THRESHOLDS.prototypeMustInjectCoverage,
       message:
         "Task 02 prototype must-inject coverage must stay at or above the current 92.9% rounded target unless an approval is documented."
+    })
+  );
+
+  checks.push(
+    atLeastCheck({
+      id: "task-02-production-quality-decision-accuracy",
+      actual: payload?.result?.productionQuality?.decisionAccuracy,
+      minimum: TASK_02_THRESHOLDS.productionQualityDecisionAccuracy,
+      message:
+        "Task 02 production quality decisions must stay exact on the refactor-aligned corpus."
+    })
+  );
+
+  const productionQuality = payload?.result?.productionQuality;
+  checks.push(
+    atMostCheck({
+      id: "task-02-production-quality-wrong-sense-rendered",
+      actual: productionQuality?.wrongSenseRenderedCaseIds?.length,
+      maximum: TASK_02_THRESHOLDS.productionQualityWrongSenseRenderedCount,
+      message:
+        "Task 02 production quality rendering must not render known wrong-sense replacements."
+    })
+  );
+
+  checks.push(
+    atMostCheck({
+      id: "task-02-production-quality-missed-expected-inject",
+      actual: productionQuality?.missedExpectedInjectCaseIds?.length,
+      maximum: TASK_02_THRESHOLDS.productionQualityMissedExpectedInjectCount,
+      message:
+        "Task 02 production quality rendering must keep safe positive injections renderable."
+    })
+  );
+
+  checks.push(
+    atMostCheck({
+      id: "task-02-production-quality-wrong-target",
+      actual: productionQuality?.wrongTargetCaseIds?.length,
+      maximum: TASK_02_THRESHOLDS.productionQualityWrongTargetCount,
+      message:
+        "Task 02 production quality rendering must keep expected target senses aligned."
     })
   );
 
@@ -220,6 +265,19 @@ function atLeastCheck({ id, actual, minimum, message }) {
     actual: Number.isFinite(numericActual) ? numericActual : null,
     minimum,
     message: `${message} Actual ${formatMetric(numericActual)}, minimum ${formatMetric(minimum)}.`
+  };
+}
+
+function atMostCheck({ id, actual, maximum, message }) {
+  const numericActual = typeof actual === "number" ? actual : Number.NaN;
+  const passed = Number.isFinite(numericActual) && numericActual <= maximum + EPSILON;
+
+  return {
+    id,
+    passed,
+    actual: Number.isFinite(numericActual) ? numericActual : null,
+    maximum,
+    message: `${message} Actual ${formatMetric(numericActual)}, maximum ${formatMetric(maximum)}.`
   };
 }
 

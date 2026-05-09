@@ -53,6 +53,16 @@ try {
     );
   }
 
+  if (runPayload.result?.productionQuality) {
+    const productionQuality = runPayload.result.productionQuality;
+    console.log(
+      `Production quality cases: ${productionQuality.totalCases} (decision accuracy ${formatPercent(productionQuality.decisionAccuracy)})`
+    );
+    console.log(
+      `Production wrong-sense renders: ${productionQuality.wrongSenseRenderedCaseIds.length}; missed safe renders: ${productionQuality.missedExpectedInjectCaseIds.length}`
+    );
+  }
+
   if (Array.isArray(runPayload.result?.comparisons) && runPayload.result.comparisons.length > 0) {
     console.log("Parser-backed comparison lanes:");
     for (const comparison of runPayload.result.comparisons) {

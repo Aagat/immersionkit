@@ -1094,6 +1094,132 @@
         ]
       }
     },
+    "productionQuality": {
+      "scenarioVersion": "1.0.0",
+      "totalScenarios": 5,
+      "totalCases": 7,
+      "expectedInjectCount": 2,
+      "expectedSkipCount": 5,
+      "correctDecisionCount": 7,
+      "decisionAccuracy": 1,
+      "renderedExpectedInjectCount": 2,
+      "renderedExpectedSkipCount": 0,
+      "wrongSenseRenderedCaseIds": [],
+      "missedExpectedInjectCaseIds": [],
+      "wrongTargetCaseIds": [],
+      "perCase": [
+        {
+          "id": "need-noun-vs-verb",
+          "scenarioId": "need-verb-frame",
+          "sentence": "You might not need to write specs.",
+          "lexemeId": "lexeme-need-noun",
+          "normalizedText": "need",
+          "expectedDecision": "skip",
+          "actualDecision": "skip",
+          "expectedRendered": false,
+          "rendered": false,
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "The render unit is the noun sense, but the analyzer observes verb use.",
+          "actualRationale": "Observed POS verb does not match render-unit POS noun."
+        },
+        {
+          "id": "this-adjective-vs-pronoun",
+          "scenarioId": "pronoun-number-frame",
+          "sentence": "This creates zero friction for readers.",
+          "lexemeId": "lexeme-this-adjective",
+          "normalizedText": "this",
+          "expectedDecision": "skip",
+          "actualDecision": "skip",
+          "expectedRendered": false,
+          "rendered": false,
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "Demonstrative pronoun use should not render the adjective-side entry.",
+          "actualRationale": "Observed POS pronoun does not match render-unit POS adjective."
+        },
+        {
+          "id": "zero-noun-vs-number",
+          "scenarioId": "pronoun-number-frame",
+          "sentence": "This creates zero friction for readers.",
+          "lexemeId": "lexeme-zero-noun",
+          "normalizedText": "zero",
+          "expectedDecision": "skip",
+          "actualDecision": "skip",
+          "expectedRendered": false,
+          "rendered": false,
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "Numeric use should not render a noun-sense replacement.",
+          "actualRationale": "Observed POS number does not match render-unit POS noun."
+        },
+        {
+          "id": "on-adverb-vs-preposition",
+          "scenarioId": "preposition-and-adjective-frame",
+          "sentence": "ACIDs rely on stable numbering.",
+          "lexemeId": "lexeme-on-adverb",
+          "normalizedText": "on",
+          "expectedDecision": "skip",
+          "actualDecision": "skip",
+          "expectedRendered": false,
+          "rendered": false,
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "Preposition use should not render the adverb-side entry.",
+          "actualRationale": "Observed POS preposition does not match render-unit POS adverb."
+        },
+        {
+          "id": "stable-adjective-safe",
+          "scenarioId": "preposition-and-adjective-frame",
+          "sentence": "ACIDs rely on stable numbering.",
+          "lexemeId": "lexeme-stable-adjective",
+          "normalizedText": "stable",
+          "expectedDecision": "inject",
+          "actualDecision": "inject",
+          "expectedRendered": true,
+          "rendered": true,
+          "expectedTargetText": "estable",
+          "renderedTargetText": "estable",
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "Attributive adjective evidence should stay renderable.",
+          "actualRationale": "Analyzer evidence is compatible with the render unit."
+        },
+        {
+          "id": "up-adverb-vs-preposition",
+          "scenarioId": "prepositional-up-frame",
+          "sentence": "The boundary is up to you.",
+          "lexemeId": "lexeme-up-adverb",
+          "normalizedText": "up",
+          "expectedDecision": "skip",
+          "actualDecision": "skip",
+          "expectedRendered": false,
+          "rendered": false,
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "Prepositional phrase use should not render the adverb-side entry.",
+          "actualRationale": "Observed POS preposition does not match render-unit POS adverb."
+        },
+        {
+          "id": "time-duration-tiempo",
+          "scenarioId": "duration-time-sense",
+          "sentence": "The time you must contribute depends on the specific benefit.",
+          "lexemeId": "lx:time-tiempo:noun",
+          "renderUnitId": "ru:time-tiempo:noun:exact",
+          "normalizedText": "time",
+          "expectedDecision": "inject",
+          "actualDecision": "inject",
+          "expectedRendered": true,
+          "rendered": true,
+          "expectedTargetText": "tiempo",
+          "renderedTargetText": "tiempo",
+          "correctDecision": true,
+          "correctRender": true,
+          "rationale": "Bare duration/amount time should use tiempo after the sense-aware render-unit refactor.",
+          "actualRationale": "Analyzer evidence is compatible with the render unit."
+        }
+      ]
+    },
     "checks": {
       "pass": true,
       "mismatches": []
@@ -4301,6 +4427,34 @@
         "actual": 0.9285714285714286,
         "minimum": 0.9285714285714286,
         "message": "Task 02 prototype must-inject coverage must stay at or above the current 92.9% rounded target unless an approval is documented. Actual 0.928571, minimum 0.928571."
+      },
+      {
+        "id": "task-02-production-quality-decision-accuracy",
+        "passed": true,
+        "actual": 1,
+        "minimum": 1,
+        "message": "Task 02 production quality decisions must stay exact on the refactor-aligned corpus. Actual 1.000000, minimum 1.000000."
+      },
+      {
+        "id": "task-02-production-quality-wrong-sense-rendered",
+        "passed": true,
+        "actual": 0,
+        "maximum": 0,
+        "message": "Task 02 production quality rendering must not render known wrong-sense replacements. Actual 0.000000, maximum 0.000000."
+      },
+      {
+        "id": "task-02-production-quality-missed-expected-inject",
+        "passed": true,
+        "actual": 0,
+        "maximum": 0,
+        "message": "Task 02 production quality rendering must keep safe positive injections renderable. Actual 0.000000, maximum 0.000000."
+      },
+      {
+        "id": "task-02-production-quality-wrong-target",
+        "passed": true,
+        "actual": 0,
+        "maximum": 0,
+        "message": "Task 02 production quality rendering must keep expected target senses aligned. Actual 0.000000, maximum 0.000000."
       }
     ],
     "failures": []

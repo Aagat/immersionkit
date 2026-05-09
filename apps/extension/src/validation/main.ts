@@ -178,7 +178,7 @@ function renderDashboard(): string {
         </article>
         <article class="task-card">
           <h2>Task 02: Contextual Word Injection</h2>
-          <p>Accuracy and decision-quality metrics for ambiguity suppression in browser context.</p>
+          <p>Accuracy and decision-quality metrics for ambiguity suppression and production injection quality in browser context.</p>
           <a class="task-link" href="/validation.html?task=contextual-word-injection&amp;autorun=1">Open Task 02</a>
         </article>
         <article class="task-card">
@@ -403,7 +403,7 @@ function renderWordInjectionLayout(): string {
       <header class="validation-header">
         <h1>Task 02: Contextual Word Injection Validation</h1>
         <p>
-          Browser-run validation for ambiguity suppression in inline word injection decisions.
+          Browser-run validation for ambiguity suppression and production inline injection quality.
         </p>
       </header>
 
@@ -492,6 +492,21 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
       `;
     })
     .join("\n");
+  const productionRows = result.productionQuality.perCase
+    .map(
+      (entry) => `
+        <tr>
+          <th>${escapeHtml(entry.id)}</th>
+          <td>${escapeHtml(entry.scenarioId)}</td>
+          <td>${escapeHtml(entry.expectedDecision)}</td>
+          <td>${escapeHtml(entry.actualDecision)}</td>
+          <td>${entry.expectedRendered ? "yes" : "no"}</td>
+          <td>${entry.rendered ? "yes" : "no"}</td>
+          <td>${escapeHtml(entry.renderedTargetText ?? "")}</td>
+        </tr>
+      `
+    )
+    .join("\n");
   const mismatches = result.checks.mismatches
     .map((mismatch) => `<li class="assertion-fail">${escapeHtml(mismatch)}</li>`)
     .join("\n");
@@ -523,6 +538,34 @@ function renderWordInjectionResults(result: BrowserWordInjectionValidationResult
           <tr><th>Must-skip precision</th><td>${formatPercent(baseline.mustSkipPrecision)}</td><td>${formatPercent(prototype.mustSkipPrecision)}</td></tr>
           <tr><th>Uncertain-skip rate</th><td>${formatPercent(baseline.uncertainSkipRate)}</td><td>${formatPercent(prototype.uncertainSkipRate)}</td></tr>
           <tr><th>Low-confidence skips</th><td>${baseline.lowConfidenceSkipCount}</td><td>${prototype.lowConfidenceSkipCount}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Production Injection Quality</h2>
+      <ul>
+        <li>Scenarios: ${result.productionQuality.totalScenarios}</li>
+        <li>Cases: ${result.productionQuality.totalCases}</li>
+        <li>Decision accuracy: ${formatPercent(result.productionQuality.decisionAccuracy)}</li>
+        <li>Wrong-sense rendered: ${result.productionQuality.wrongSenseRenderedCaseIds.length}</li>
+        <li>Missed expected injects: ${result.productionQuality.missedExpectedInjectCaseIds.length}</li>
+        <li>Wrong targets: ${result.productionQuality.wrongTargetCaseIds.length}</li>
+      </ul>
+      <table>
+        <thead>
+          <tr>
+            <th>Case</th>
+            <th>Scenario</th>
+            <th>Expected decision</th>
+            <th>Actual decision</th>
+            <th>Expected render</th>
+            <th>Rendered</th>
+            <th>Rendered target</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productionRows}
         </tbody>
       </table>
     </section>
