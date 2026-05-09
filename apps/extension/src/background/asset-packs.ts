@@ -30,6 +30,7 @@ import {
   loadBackgroundRuntimeConfig,
   type BackgroundRuntimeConfig
 } from "./settings";
+import { diagnosticInfo } from "../shared/logger";
 
 const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
 const FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS = 2500;
@@ -214,7 +215,7 @@ export class BackgroundAssetPackService {
 
     const refresh = this.refreshRemotePacksNow(languagePair, bandIds)
       .catch((error) => {
-        console.info("ImmersionKit asset pack refresh skipped.", error);
+        diagnosticInfo("ImmersionKit asset pack refresh skipped.", error);
         return null;
       })
       .finally(() => {
@@ -321,7 +322,7 @@ export class BackgroundAssetPackService {
         sourceUrlByBandId
       };
     } catch (error) {
-      console.info("ImmersionKit asset pack fetch skipped.", error);
+      diagnosticInfo("ImmersionKit asset pack fetch skipped.", error);
       return { status: "failure" };
     }
   }

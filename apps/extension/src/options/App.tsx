@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { ExtensionOptions, type OptionsSection } from "@immersionkit/ui";
+import {
+  ExtensionOptions,
+  type OptionsAdvancedDiagnostics,
+  type OptionsSection
+} from "@immersionkit/ui";
 import type { ProviderName } from "@immersionkit/shared";
 import {
+  loadActivePageDiagnostics,
   isProviderKeyValid,
   loadCheckpointEligibilityPreview,
+  loadCurriculumDiagnostics,
   loadFirstRunIntroVisible,
   loadSettingsState,
   loadSiteSettingsMap,
@@ -18,8 +24,15 @@ import {
   type SiteSettingsMap,
   type VocabStats,
   type CheckpointEligibilityPreview,
-  type ProficiencySeed
+  type ProficiencySeed,
+  type CurriculumDiagnostics,
+  type ActivePageDiagnostics,
+  type StoredSiteSetting
 } from "../app-state/settings-state";
+import {
+  DIAGNOSTICS_ENABLED,
+  EXTENSION_BUILD_PROFILE
+} from "../build-profile";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -48,8 +61,12 @@ export function OptionsApp() {
   const [checkpointPreview, setCheckpointPreview] =
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
   const showAdvancedTab = shouldShowAdvancedTab();
+  const [curriculumDiagnostics, setCurriculumDiagnostics] =
+    useState<CurriculumDiagnostics | null>(null);
+  const [activePageDiagnostics, setActivePageDiagnostics] =
+    useState<ActivePageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>(
-    showAdvancedTab && window.location.hash === "#advanced" ? "advanced" : "general"
+    showAdvancedTab ? "advanced" : "general"
   );
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,14 +87,18 @@ export function OptionsApp() {
         loadedVocabStats,
         loadedSiteSettings,
         loadedCheckpointPreview,
-        loadedFirstRunIntroVisible
+        loadedFirstRunIntroVisible,
+        loadedCurriculumDiagnostics,
+        loadedActivePageDiagnostics
       ] =
         await Promise.all([
           loadSettingsState(),
           loadVocabStats(),
           loadSiteSettingsMap(),
           loadCheckpointEligibilityPreview(),
-          loadFirstRunIntroVisible()
+          loadFirstRunIntroVisible(),
+          showAdvancedTab ? loadCurriculumDiagnostics() : Promise.resolve(null),
+          showAdvancedTab ? loadActivePageDiagnostics() : Promise.resolve(null)
         ]);
 
       setSettingsState(loadedSettings);
@@ -85,12 +106,14 @@ export function OptionsApp() {
       setSiteSettings(loadedSiteSettings);
       setCheckpointPreview(loadedCheckpointPreview);
       setShowFirstRunIntro(loadedFirstRunIntroVisible);
+      setCurriculumDiagnostics(loadedCurriculumDiagnostics);
+      setActivePageDiagnostics(loadedActivePageDiagnostics);
     } catch {
       setErrorMessage("Could not load extension settings.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showAdvancedTab]);
 
   useEffect(() => {
     void loadState();
@@ -314,6 +337,12 @@ export function OptionsApp() {
     providerKeyValid
   });
   const checkpointStatus = getCheckpointStatus(checkpointPreview);
+  const advancedDiagnostics = createAdvancedDiagnostics({
+    vocabStats,
+    siteEntries,
+    activePageDiagnostics,
+    curriculumDiagnostics
+  });
 
   return (
     <ExtensionOptions
@@ -353,6 +382,7 @@ export function OptionsApp() {
       translationSummary={translationSummary.description}
       savedSiteCount={formatCount(siteEntries.length)}
       pausedSiteCount={formatCount(disabledSiteCount)}
+      advancedDiagnostics={advancedDiagnostics}
       siteSummary={
         siteEntries.length > 0
           ? `Recent site choices: ${siteEntries.slice(0, 3).map((entry) => entry.hostname).join(", ")}.`
@@ -516,12 +546,81 @@ function shouldShowAdvancedTab(): boolean {
     return false;
   }
 
-  const params = new URLSearchParams(window.location.search);
+  return shouldShowAdvancedTabForLocation({
+    diagnosticsEnabled: DIAGNOSTICS_ENABLED,
+    hash: window.location.hash,
+    search: window.location.search
+  });
+}
+
+export function shouldShowAdvancedTabForLocation(input: {
+  diagnosticsEnabled: boolean;
+  hash: string;
+  search: string;
+}): boolean {
+  if (!input.diagnosticsEnabled) {
+    return false;
+  }
+
+  const params = new URLSearchParams(input.search);
   return (
-    window.location.hash === "#advanced" ||
+    input.hash === "#advanced" ||
     params.get("debug") === "1" ||
     params.get("advanced") === "1"
   );
+}
+
+function createAdvancedDiagnostics(input: {
+  vocabStats: VocabStats;
+  siteEntries: StoredSiteSetting[];
+  activePageDiagnostics: ActivePageDiagnostics | null;
+  curriculumDiagnostics: CurriculumDiagnostics | null;
+}): OptionsAdvancedDiagnostics | null {
+  if (!DIAGNOSTICS_ENABLED) {
+    return null;
+  }
+
+  const page = input.activePageDiagnostics?.diagnostics ?? null;
+  const activeContent = input.curriculumDiagnostics?.activeContent ?? null;
+  const progression =
+    input.curriculumDiagnostics?.lastProgressionDecision ?? null;
+  const pausedSiteCount = input.siteEntries.filter((entry) => !entry.enabled).length;
+
+  return {
+    buildProfile: EXTENSION_BUILD_PROFILE,
+    diagnosticsEnabled: DIAGNOSTICS_ENABLED,
+    activePageMessage:
+      input.activePageDiagnostics?.message ??
+      "Open a supported page, then reload diagnostics.",
+    activePageUrl: input.activePageDiagnostics?.url ?? page?.pageUrl ?? null,
+    activePageUpdatedAt: page?.updatedAt ?? null,
+    activePageMetrics: page
+      ? [
+          { label: "Injected words", value: page.injectedTokens },
+          { label: "Injected phrases", value: page.injectedPhrases },
+          { label: "Context skips", value: page.contextSkippedTokens },
+          { label: "Sentence candidates", value: page.sentenceCandidatesQueued },
+          { label: "Sentence notes", value: page.sentenceNotesVisible },
+          {
+            label: "Decision samples",
+            value: page.tokenDecisionSamples.length + page.phraseDecisionSamples.length
+          }
+        ]
+      : [],
+    curriculumSummary: activeContent
+      ? `${activeContent.bandLabel} (${activeContent.bandId}) using ${input.curriculumDiagnostics?.profile.activeVocabularyBandId ?? "default"} vocabulary band.`
+      : "Default curriculum profile is active.",
+    progressionSummary: progression
+      ? `${progression.reason}; next ${progression.nextBandId ?? "none"}; unmet ${progression.unmetRequirements.length}.`
+      : "No progression decision recorded.",
+    storageMetrics: [
+      { label: "Vocab records", value: input.vocabStats.total },
+      { label: "Known", value: input.vocabStats.known },
+      { label: "Learning", value: input.vocabStats.learning },
+      { label: "Site choices", value: input.siteEntries.length },
+      { label: "Paused sites", value: pausedSiteCount }
+    ]
+  };
 }
 
 function getTranslationSummary(input: {

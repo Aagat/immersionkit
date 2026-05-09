@@ -12,6 +12,7 @@ import type {
   VocabStatus
 } from "@immersionkit/shared";
 import type { WordRenderEntry } from "../render-units/render-units";
+import { DIAGNOSTICS_ENABLED } from "../build-profile";
 
 import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
@@ -215,16 +216,18 @@ function renderTextWindow(input: {
   const wrapper = renderReplacementPlan(plan);
   const phraseHints = collectCandidatePhraseHints(plan.sentenceCandidates);
   if (phraseHints.length > 0) {
-    wrapper.setAttribute("data-ik-render-layer", "word phrase-candidate");
-    wrapper.setAttribute("data-ik-phrase-hints", phraseHints.join("|"));
+    setDiagnosticAttribute(wrapper, "data-ik-render-layer", "word phrase-candidate");
+    setDiagnosticAttribute(wrapper, "data-ik-phrase-hints", phraseHints.join("|"));
   }
 
   if (plan.diagnostics.phraseInjectedCount > 0) {
-    wrapper.setAttribute(
+    setDiagnosticAttribute(
+      wrapper,
       "data-ik-render-layer",
       phraseHints.length > 0 ? "word phrase phrase-candidate" : "word phrase"
     );
-    wrapper.setAttribute(
+    setDiagnosticAttribute(
+      wrapper,
       "data-ik-phrase-selected",
       plan.spans
         .flatMap((span) => (span.kind === "phrase" ? [span.phraseId] : []))
@@ -233,14 +236,16 @@ function renderTextWindow(input: {
   }
 
   if (plan.phraseRejections.length > 0) {
-    wrapper.setAttribute(
+    setDiagnosticAttribute(
+      wrapper,
       "data-ik-phrase-rejection-details",
       JSON.stringify(plan.phraseRejections.slice(0, 8))
     );
   }
 
   if (plan.sentenceCandidates.length > 0) {
-    wrapper.setAttribute(
+    setDiagnosticAttribute(
+      wrapper,
       "data-ik-sentence-candidate-hashes",
       plan.sentenceCandidates.map((candidate) => candidate.sentenceHash).join("|")
     );
@@ -279,7 +284,7 @@ function renderReplacementPlan(plan: {
     IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE,
     encodeOriginalText(plan.sourceText)
   );
-  wrapper.setAttribute("data-ik-render-layer", "word");
+  setDiagnosticAttribute(wrapper, "data-ik-render-layer", "word");
 
   for (const span of plan.spans) {
     if (cursor < span.start) {
@@ -415,10 +420,7 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
     !sourceText ||
     !targetText ||
     !phraseId ||
-    !itemId ||
-    !category ||
-    !sourceKind ||
-    !ruleId
+    !itemId
   ) {
     return null;
   }
@@ -531,9 +533,14 @@ function createTokenElement(input: {
   element.setAttribute("data-ik-status", input.status);
   element.setAttribute("data-ik-pos", input.wordEntry.pos);
   element.setAttribute("data-ik-word-kind", input.wordKind);
-  element.setAttribute("data-ik-context-decision", "inject");
-  element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
-  element.setAttribute(
+  setDiagnosticAttribute(element, "data-ik-context-decision", "inject");
+  setDiagnosticAttribute(
+    element,
+    "data-ik-due-status",
+    input.isDueForReview ? "due" : "not-due"
+  );
+  setDiagnosticAttribute(
+    element,
     "data-ik-scheduler-reason",
     input.isDueForReview
       ? "due-review"
@@ -609,13 +616,22 @@ function createPhraseElement(input: {
   element.setAttribute("data-ik-target-token", input.targetText);
   element.setAttribute("data-ik-phrase-id", input.phraseId);
   element.setAttribute("data-ik-item-id", input.itemId);
-  element.setAttribute("data-ik-phrase-category", input.category);
-  element.setAttribute("data-ik-phrase-source-kind", input.sourceKind);
-  element.setAttribute("data-ik-phrase-rule-id", input.ruleId);
-  element.setAttribute("data-ik-phrase-confidence", input.confidence.toFixed(3));
-  element.setAttribute("data-ik-context-decision", "inject");
-  element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
-  element.setAttribute(
+  setDiagnosticAttribute(element, "data-ik-phrase-category", input.category);
+  setDiagnosticAttribute(element, "data-ik-phrase-source-kind", input.sourceKind);
+  setDiagnosticAttribute(element, "data-ik-phrase-rule-id", input.ruleId);
+  setDiagnosticAttribute(
+    element,
+    "data-ik-phrase-confidence",
+    input.confidence.toFixed(3)
+  );
+  setDiagnosticAttribute(element, "data-ik-context-decision", "inject");
+  setDiagnosticAttribute(
+    element,
+    "data-ik-due-status",
+    input.isDueForReview ? "due" : "not-due"
+  );
+  setDiagnosticAttribute(
+    element,
     "data-ik-scheduler-reason",
     input.isDueForReview ? "phrase-due-review" : "phrase-learning-item"
   );
@@ -627,6 +643,16 @@ function createPhraseElement(input: {
   );
 
   return element;
+}
+
+function setDiagnosticAttribute(
+  element: HTMLElement,
+  name: string,
+  value: string
+): void {
+  if (DIAGNOSTICS_ENABLED) {
+    element.setAttribute(name, value);
+  }
 }
 
 function toUiTokenStatus(status: VocabStatus): "new" | "learning" | "known" | "muted" {

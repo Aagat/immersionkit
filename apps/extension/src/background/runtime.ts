@@ -44,6 +44,7 @@ import {
 import { loadBackgroundRuntimeConfig } from "./settings";
 import { ContentContextService } from "./content-context";
 import { isRecord } from "../storage/serialization";
+import { diagnosticInfo } from "../shared/logger";
 import {
   IndexedDbUserDataRepository,
   IndexedDbUserVocabRepository,
@@ -191,7 +192,7 @@ export class BackgroundRuntimeCoordinator {
     void this.backfillLearningItemBands();
 
     chrome.runtime.onInstalled.addListener((details) => {
-      console.info("ImmersionKit background service worker installed.");
+      diagnosticInfo("ImmersionKit background service worker installed.");
       if (details.reason === "install") {
         void showFirstRunGuidance();
       }
@@ -613,7 +614,7 @@ export class BackgroundRuntimeCoordinator {
         });
 
         if (!sent) {
-          console.info("ImmersionKit sentence translation delivery skipped.", {
+          diagnosticInfo("ImmersionKit sentence translation delivery skipped.", {
             tabId: delivery.tabId
           });
         }
@@ -624,7 +625,7 @@ export class BackgroundRuntimeCoordinator {
   private async prepareAssetPacks() {
     try {
       const context = await this.assetPacks.loadActiveContext();
-      console.info("ImmersionKit asset packs ready.", {
+      diagnosticInfo("ImmersionKit asset packs ready.", {
         source: context.source,
         renderUnitCount: context.renderUnits.length,
         assetVersion: context.assetVersion,
@@ -640,7 +641,7 @@ export class BackgroundRuntimeCoordinator {
     try {
       const result = await this.learningItems.backfillMissingBands();
       if (result.updated > 0 || result.remaining > 0) {
-        console.info("ImmersionKit learning item band backfill checked.", result);
+        diagnosticInfo("ImmersionKit learning item band backfill checked.", result);
       }
     } catch (error) {
       console.warn("ImmersionKit learning item band backfill failed.", error);

@@ -15,6 +15,8 @@ const extensionPath = join(repoRoot, "apps/extension/dist");
 const require = createRequire(join(repoRoot, "apps/extension/package.json"));
 const { chromium } = require("playwright");
 const userDataDir = await mkdtemp(join(tmpdir(), "ik-extension-smoke-"));
+const expectProductionBuild =
+  process.env.IMMERSIONKIT_EXPECT_PRODUCTION_BUILD === "1";
 
 if (!existsSync(join(extensionPath, "manifest.json"))) {
   throw new Error(
@@ -441,6 +443,16 @@ async function runSmokeFixture(page, baseUrl, fixture) {
       "[data-ik-sentence-candidate-hashes]"
     ).length,
     phraseHintWrappers: document.querySelectorAll("[data-ik-phrase-hints]").length,
+    diagnosticAttributeNodes: document.querySelectorAll(
+      [
+        "[data-ik-context-decision]",
+        "[data-ik-due-status]",
+        "[data-ik-render-layer]",
+        "[data-ik-scheduler-reason]",
+        "[data-ik-phrase-rejection-details]",
+        "[data-ik-phrase-selected]"
+      ].join(",")
+    ).length,
     rootBooted: document.documentElement.hasAttribute("data-immersionkit-root"),
     textContent: document.body.textContent ?? "",
     codeBlockText: document.querySelector("pre code")?.textContent ?? ""
@@ -452,8 +464,23 @@ async function runSmokeFixture(page, baseUrl, fixture) {
   if (contentSnapshot.injectedTokens < 1) {
     throw new Error(`No injected tokens rendered for ${fixture.label}.`);
   }
-  if (contentSnapshot.sentenceCandidateWrappers < 1) {
+  if (!expectProductionBuild && contentSnapshot.sentenceCandidateWrappers < 1) {
     throw new Error(`No sentence candidates were marked for ${fixture.label}.`);
+  }
+  if (expectProductionBuild && contentSnapshot.sentenceCandidateWrappers !== 0) {
+    throw new Error(
+      `Production build exposed sentence candidate diagnostics for ${fixture.label}.`
+    );
+  }
+  if (expectProductionBuild && contentSnapshot.phraseHintWrappers !== 0) {
+    throw new Error(
+      `Production build exposed phrase hint diagnostics for ${fixture.label}.`
+    );
+  }
+  if (expectProductionBuild && contentSnapshot.diagnosticAttributeNodes !== 0) {
+    throw new Error(
+      `Production build exposed diagnostic DOM attributes for ${fixture.label}.`
+    );
   }
 
   assertFixtureReplacementQuality(fixture, contentSnapshot);

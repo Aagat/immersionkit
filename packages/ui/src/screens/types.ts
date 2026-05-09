@@ -32,6 +32,23 @@ export type OptionsCheckpoint = {
   onWiden?: () => void;
 };
 
+export type OptionsAdvancedDiagnosticsMetric = {
+  label: string;
+  value: string | number;
+};
+
+export type OptionsAdvancedDiagnostics = {
+  buildProfile: string;
+  diagnosticsEnabled: boolean;
+  activePageMessage: string;
+  activePageUrl?: string | null;
+  activePageUpdatedAt?: string | null;
+  activePageMetrics: OptionsAdvancedDiagnosticsMetric[];
+  curriculumSummary: string;
+  progressionSummary: string;
+  storageMetrics: OptionsAdvancedDiagnosticsMetric[];
+};
+
 export type ExtensionOptionsProps = {
   initialSection?: OptionsSection;
   activeSection?: OptionsSection;
@@ -55,6 +72,7 @@ export type ExtensionOptionsProps = {
   siteSummary?: string;
   pausedSiteCount?: string | number;
   savedSiteCount?: string | number;
+  advancedDiagnostics?: OptionsAdvancedDiagnostics | null;
   onSectionChange?: (section: OptionsSection) => void;
   onSave?: () => void;
   onReload?: () => void;

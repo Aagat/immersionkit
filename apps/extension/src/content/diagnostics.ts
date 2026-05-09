@@ -4,6 +4,7 @@ import type {
   PageDiagnosticsSnapshot,
   PageDiagnosticsTokenSample
 } from "../diagnostics/page-diagnostics";
+import { DIAGNOSTICS_ENABLED } from "../build-profile";
 import { isRecord } from "../storage/serialization";
 import type { PhraseRenderRejection } from "./annotate";
 import { IMMERSIONKIT_TOKEN_ATTRIBUTE } from "./constants";
@@ -95,8 +96,8 @@ export function createDiagnosticsSnapshot(
     curriculumSkippedPhrases: 0,
     grammarDueSentenceCount: 0,
     sentenceRankingReasons: [],
-    phraseDecisionSamples: collectPhraseDecisionSamples(),
-    tokenDecisionSamples: collectTokenDecisionSamples(),
+    phraseDecisionSamples: DIAGNOSTICS_ENABLED ? collectPhraseDecisionSamples() : [],
+    tokenDecisionSamples: DIAGNOSTICS_ENABLED ? collectTokenDecisionSamples() : [],
     updatedAt: new Date().toISOString()
   };
 }
@@ -145,15 +146,18 @@ export function updateDiagnostics(
       processing.curriculumSkippedPhrases;
     runtimeState.diagnostics.grammarDueSentenceCount =
       countGrammarDueSentenceReasons(processing.sentenceRankingReasons);
-    runtimeState.diagnostics.sentenceRankingReasons =
-      processing.sentenceRankingReasons;
+    runtimeState.diagnostics.sentenceRankingReasons = DIAGNOSTICS_ENABLED
+      ? processing.sentenceRankingReasons
+      : [];
   }
 
   runtimeState.diagnostics.sentenceNotesVisible = countSentenceNotes();
-  runtimeState.diagnostics.phraseDecisionSamples = collectPhraseDecisionSamples(
-    runtimeState.processing
-  );
-  runtimeState.diagnostics.tokenDecisionSamples = collectTokenDecisionSamples();
+  runtimeState.diagnostics.phraseDecisionSamples = DIAGNOSTICS_ENABLED
+    ? collectPhraseDecisionSamples(runtimeState.processing)
+    : [];
+  runtimeState.diagnostics.tokenDecisionSamples = DIAGNOSTICS_ENABLED
+    ? collectTokenDecisionSamples()
+    : [];
   runtimeState.diagnostics.updatedAt = new Date().toISOString();
 }
 

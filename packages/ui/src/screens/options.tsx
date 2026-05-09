@@ -44,6 +44,7 @@ export function ExtensionOptions({
   siteSummary,
   pausedSiteCount = 0,
   savedSiteCount = 0,
+  advancedDiagnostics,
   onSectionChange,
   onSave,
   onReload,
@@ -143,7 +144,9 @@ export function ExtensionOptions({
             onClearApiKey={onClearApiKey}
           />
         ) : null}
-        {active === "Advanced" ? <OptionsAdvancedPanel /> : null}
+        {active === "Advanced" ? (
+          <OptionsAdvancedPanel diagnostics={advancedDiagnostics ?? null} />
+        ) : null}
       </main>
     </div>
   );
@@ -195,11 +198,10 @@ function OptionsSidebar({
       </nav>
       {active === "Advanced" ? (
         <div className="ik-ui-subnav">
-          <strong>Saved choices</strong>
-          <span>Learning modes</span>
-          <span>Reading band</span>
-          <span>Pace & display</span>
-          <span>Keyboard shortcuts</span>
+          <strong>Build profile</strong>
+          <span>Active page</span>
+          <span>Curriculum state</span>
+          <span>Local data</span>
         </div>
       ) : null}
       <div className="ik-ui-sidebar-note">
@@ -233,8 +235,8 @@ function OptionsHeader({
       "Vocabulary help works locally. Sentence notes can use a provider only after setup."
     ],
     Advanced: [
-      "Every intervention is reversible.",
-      "Manage paused sites, hidden words, and local reading choices."
+      "Diagnostics for release validation.",
+      "Inspect build profile, active-page signals, and local state snapshots."
     ]
   }[active];
 
@@ -533,55 +535,84 @@ function OptionsTranslationPanel({
   );
 }
 
-function OptionsAdvancedPanel() {
+function OptionsAdvancedPanel({
+  diagnostics
+}: {
+  diagnostics: ExtensionOptionsProps["advancedDiagnostics"];
+}) {
+  const activePageMetrics = diagnostics?.activePageMetrics ?? [];
+  const storageMetrics = diagnostics?.storageMetrics ?? [];
+
   return (
     <div className="ik-ui-options-panel">
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <Card>
-          <h2>Saved site decisions</h2>
-          <p>Choose where ImmersionKit is on or paused.</p>
-          <SavedRow title="example.com" status="On" action="Adjust" />
-          <SavedRow title="news.example" status="Paused" action="Resume" />
-          <SavedRow title="docs.example" status="Paused" action="Resume" />
-          <div className="ik-ui-card-actions">
-            <button type="button">Add site rule</button>
-            <button type="button">View all sites</button>
-          </div>
+          <h2>Build diagnostics</h2>
+          <p>{diagnostics?.diagnosticsEnabled ? "Diagnostics are available in this build." : "Diagnostics are disabled in this build."}</p>
+          <DiagnosticRow
+            title="Build profile"
+            status={diagnostics?.buildProfile ?? "unknown"}
+          />
+          <DiagnosticRow
+            title="Advanced access"
+            status={diagnostics?.diagnosticsEnabled ? "On" : "Off"}
+          />
+          <DiagnosticRow
+            title="Active page updated"
+            detail={diagnostics?.activePageUpdatedAt ?? "not available"}
+          />
         </Card>
         <Card>
-          <h2>Hidden words</h2>
-          <p>Words you've hidden while reading.</p>
-          <SavedRow title="lectura" detail={'hidden from "reading"'} action="Restore" />
-          <SavedRow title="mantiene" detail={'hidden from "keeps"'} action="Restore" />
-          <button type="button" className="ik-ui-wide-row">View all hidden words</button>
+          <h2>Active page</h2>
+          <p>{diagnostics?.activePageMessage ?? "No active-page diagnostics loaded."}</p>
+          {diagnostics?.activePageUrl ? (
+            <div className="ik-ui-info-box">{diagnostics.activePageUrl}</div>
+          ) : null}
+          <div className="ik-ui-metric-grid">
+            {activePageMetrics.map((metric) => (
+              <MetricStat
+                key={metric.label}
+                label={metric.label}
+                value={metric.value}
+                icon="spark"
+              />
+            ))}
+          </div>
         </Card>
       </div>
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <Card className="ik-ui-note-card">
-          <Icon name="shield" />
+          <Icon name="book" />
           <div>
-            <h2>Sensitive pages</h2>
-            <p>ImmersionKit skips private, browser, form-heavy, and sensitive pages.</p>
-            <div className="ik-ui-info-box">You're always in control. Nothing is changed on these pages.</div>
+            <h2>Curriculum state</h2>
+            <p>{diagnostics?.curriculumSummary ?? "No curriculum diagnostics loaded."}</p>
+            <div className="ik-ui-info-box">
+              {diagnostics?.progressionSummary ?? "No progression decision recorded."}
+            </div>
           </div>
         </Card>
         <Card className="ik-ui-note-card">
           <Icon name="lock" />
           <div>
-            <h2>Local data</h2>
+            <h2>Local data snapshot</h2>
             <p>Settings, site choices, vocabulary state, phrases, and review history stay on this device.</p>
-            <div className="ik-ui-quiet-actions">
-              <Button variant="secondary" size="sm">Export backup</Button>
-              <Button variant="secondary" size="sm">Reset preview data</Button>
+            <div className="ik-ui-metric-grid">
+              {storageMetrics.map((metric) => (
+                <MetricStat
+                  key={metric.label}
+                  label={metric.label}
+                  value={metric.value}
+                  icon="shield"
+                />
+              ))}
             </div>
-            <span className="ik-ui-small-note">No account. No cloud. Yours only.</span>
           </div>
         </Card>
       </div>
       <Card className="ik-ui-collapsed">
         <div>
           <h2>Advanced diagnostics <Badge tone="accent">Optional</Badge></h2>
-          <p>For support and release validation.</p>
+          <p>Use #advanced, ?debug=1, or ?advanced=1 in diagnostic builds.</p>
         </div>
         <Icon name="chevron" />
       </Card>
@@ -616,16 +647,14 @@ function Choice({
   );
 }
 
-function SavedRow({
+function DiagnosticRow({
   title,
   detail,
-  status,
-  action
+  status
 }: {
   title: string;
   detail?: string;
   status?: string;
-  action: string;
 }) {
   return (
     <div className="ik-ui-saved-row">
@@ -634,7 +663,6 @@ function SavedRow({
         {detail ? <span>{detail}</span> : null}
       </div>
       {status ? <Badge tone={status === "On" ? "accent" : "warning"}>{status}</Badge> : null}
-      <Button variant="secondary" size="sm">{action}</Button>
     </div>
   );
 }

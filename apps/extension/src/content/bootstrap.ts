@@ -1,6 +1,8 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import { sendRuntimeMessage } from "../runtime-client";
 import { isPageDiagnosticsMessage } from "../diagnostics/page-diagnostics";
+import { DIAGNOSTICS_ENABLED } from "../build-profile";
+import { diagnosticInfo } from "../shared/logger";
 import { IMMERSIONKIT_ROOT_ATTRIBUTE } from "./constants";
 import {
   readRuntimePageDiagnostics,
@@ -23,7 +25,7 @@ export async function bootContentRuntime() {
 
   const pageDecision = shouldSkipDocument(new URL(window.location.href), document);
   if (pageDecision.shouldSkip) {
-    console.info("ImmersionKit skipped page.", {
+    diagnosticInfo("ImmersionKit skipped page.", {
       reason: pageDecision.reason,
       url: window.location.href
     });
@@ -46,7 +48,7 @@ function setupRuntimeMessageHook(runtimeState: RuntimeState) {
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (isPageDiagnosticsMessage(message)) {
+    if (DIAGNOSTICS_ENABLED && isPageDiagnosticsMessage(message)) {
       sendResponse(readRuntimePageDiagnostics(runtimeState));
       return false;
     }

@@ -41,9 +41,9 @@ export type PhraseMetadata = {
   targetText: string;
   phraseId: string;
   itemId: string;
-  category: string;
-  sourceKind: string;
-  ruleId: string;
+  category: string | null;
+  sourceKind: string | null;
+  ruleId: string | null;
   confidence: number | null;
   dueStatus: string | null;
   schedulerReason: string | null;

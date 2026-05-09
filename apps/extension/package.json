@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:production": "VITE_IMMERSIONKIT_BUILD_PROFILE=production vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "benchmark:nlp:browser": "node ./src/validation/run-nlp-performance-browser.mjs"

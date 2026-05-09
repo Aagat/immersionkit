@@ -4,6 +4,7 @@ import { clearSentenceTranslations } from "./sentence-renderer";
 import { loadProcessingContext } from "./storage";
 import { buildWordRenderIndex } from "./word-render-index";
 import { restoreAnnotatedNodes } from "./annotate";
+import { diagnosticInfo } from "../shared/logger";
 import {
   createProcessingState,
   getCurriculumBandPreference,
@@ -54,7 +55,7 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       fallbackAsset: processingContext.renderAssetInfo.isFallback
     });
 
-    console.info("ImmersionKit render units loaded for page.", {
+    diagnosticInfo("ImmersionKit render units loaded for page.", {
       source: processingContext.renderAssetInfo.source,
       entryCount: processingContext.renderAssetInfo.entryCount,
       assetVersion: processingContext.renderAssetInfo.assetVersion,
@@ -68,7 +69,7 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 
     if (!processingContext.siteEnabled) {
       stopProcessing(runtimeState);
-      console.info("ImmersionKit disabled for site.", {
+      diagnosticInfo("ImmersionKit disabled for site.", {
         hostname: window.location.hostname
       });
       return;
@@ -79,7 +80,7 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     });
     if (wordRenderIndex.size === 0 && processingContext.sentenceHintPhrases.length === 0) {
       stopProcessing(runtimeState);
-      console.info("ImmersionKit has no approved render units to process.");
+      diagnosticInfo("ImmersionKit has no approved render units to process.");
       return;
     }
 

@@ -29,6 +29,11 @@ import {
 } from "../storage/serialization";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 import { sendRuntimeMessage, sendTabMessage } from "../runtime-client";
+import {
+  PAGE_DIAGNOSTICS_MESSAGE_TYPE,
+  type PageDiagnosticsSnapshot
+} from "../diagnostics/page-diagnostics";
+import { DIAGNOSTICS_ENABLED } from "../build-profile";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -143,6 +148,13 @@ export type GrammarEvidenceStats = {
   assistCount: number;
   qualifiedExposureCount: number;
   dueCount: number;
+};
+
+export type ActivePageDiagnostics = {
+  tabId: number;
+  url: string;
+  diagnostics: PageDiagnosticsSnapshot | null;
+  message: string;
 };
 
 export type CheckpointEligibilityPreview = CheckpointEligibilitySummary;
@@ -401,6 +413,43 @@ function toActiveCurriculumContentSummary(
   };
 }
 
+export async function loadActivePageDiagnostics(): Promise<ActivePageDiagnostics | null> {
+  if (!DIAGNOSTICS_ENABLED || typeof chrome === "undefined" || !chrome.tabs?.query) {
+    return null;
+  }
+
+  const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+    chrome.tabs.query({ currentWindow: true }, (result) => {
+      if (chrome.runtime.lastError) {
+        resolve([]);
+        return;
+      }
+
+      resolve(result ?? []);
+    });
+  });
+
+  const tab = selectDiagnosticsTab(tabs);
+  if (!tab?.id || !tab.url) {
+    return {
+      tabId: 0,
+      url: "",
+      diagnostics: null,
+      message: "Open a supported HTTP(S) page to read active-page diagnostics."
+    };
+  }
+
+  const diagnostics = await sendPageDiagnosticsMessage(tab.id);
+  return {
+    tabId: tab.id,
+    url: tab.url,
+    diagnostics,
+    message: diagnostics
+      ? "Active-page diagnostics loaded."
+      : "No diagnostics response from the selected page."
+  };
+}
+
 export async function loadActiveTabContext(): Promise<ActiveTabContext> {
   if (typeof chrome === "undefined" || !chrome.tabs?.query) {
     return {
@@ -467,6 +516,67 @@ export async function loadActiveTabContext(): Promise<ActiveTabContext> {
     isSupportedPage: true,
     supportMessage: parsedUrl.hostname
   };
+}
+
+function selectDiagnosticsTab(tabs: readonly chrome.tabs.Tab[]): chrome.tabs.Tab | null {
+  const supportedTabs = tabs
+    .filter((tab) => isSupportedHttpUrl(tab.url))
+    .sort((left, right) => {
+      if (left.active !== right.active) {
+        return left.active ? -1 : 1;
+      }
+
+      return (right.lastAccessed ?? 0) - (left.lastAccessed ?? 0);
+    });
+
+  return supportedTabs[0] ?? null;
+}
+
+function isSupportedHttpUrl(url: string | undefined): boolean {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function sendPageDiagnosticsMessage(
+  tabId: number
+): Promise<PageDiagnosticsSnapshot | null> {
+  if (!chrome.tabs?.sendMessage) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      { type: PAGE_DIAGNOSTICS_MESSAGE_TYPE },
+      (response?: unknown) => {
+        if (chrome.runtime.lastError || !isPageDiagnosticsSnapshot(response)) {
+          resolve(null);
+          return;
+        }
+
+        resolve(response);
+      }
+    );
+  });
+}
+
+function isPageDiagnosticsSnapshot(
+  value: unknown
+): value is PageDiagnosticsSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value.pageUrl === "string" &&
+    typeof value.pageHostname === "string" &&
+    typeof value.updatedAt === "string"
+  );
 }
 
 export async function notifySettingsRefresh(tabId?: number | null): Promise<void> {
