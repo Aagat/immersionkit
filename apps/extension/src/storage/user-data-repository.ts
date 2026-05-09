@@ -8,12 +8,13 @@ import {
   transactionDone
 } from "./indexeddb";
 import { isRecord } from "./serialization";
+import { STORAGE_SCHEMA } from "./storage-schema";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 export { USER_DATA_KEYS } from "../shared/user-data-keys";
 
-const USER_DATA_SCHEMA_VERSION = 1;
-const USER_VOCAB_SCHEMA_VERSION = 1;
+const USER_DATA_SCHEMA_VERSION = STORAGE_SCHEMA.recordVersions.userData;
+const USER_VOCAB_SCHEMA_VERSION = STORAGE_SCHEMA.recordVersions.userVocab;
 
 type StorageRecord = Record<string, unknown>;
 

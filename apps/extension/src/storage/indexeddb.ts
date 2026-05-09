@@ -1,22 +1,19 @@
-const DATABASE_NAME = "immersionkit-extension";
-const DATABASE_VERSION = 7;
+import { STORAGE_SCHEMA, type IndexedDbStoreName } from "./storage-schema";
 
-export const INDEXEDDB_STORES = {
-  sentenceCache: "sentence-cache",
-  sentenceAnalysisCache: "sentence-analysis-cache",
-  learningItems: "learning-items",
-  phraseRegistry: "phrase-registry",
-  reviewEvents: "review-events",
-  learningItemContextHistory: "learning-item-context-history",
-  userData: "user-data",
-  userVocab: "user-vocab",
-  assetPacks: "asset-packs",
-  assetPackRenderUnits: "asset-pack-render-units",
-  assetPackLexemes: "asset-pack-lexemes"
-} as const;
+export const DATABASE_NAME = STORAGE_SCHEMA.database.name;
+export const DATABASE_VERSION = STORAGE_SCHEMA.database.version;
 
-type IndexedDbStoreName =
-  (typeof INDEXEDDB_STORES)[keyof typeof INDEXEDDB_STORES];
+type StorageStores = typeof STORAGE_SCHEMA.stores;
+type IndexedDbStoreNameMap = {
+  readonly [StoreId in keyof StorageStores]: StorageStores[StoreId]["name"];
+};
+
+export const INDEXEDDB_STORES = Object.fromEntries(
+  Object.entries(STORAGE_SCHEMA.stores).map(([storeId, store]) => [
+    storeId,
+    store.name
+  ])
+) as IndexedDbStoreNameMap;
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 
@@ -79,123 +76,7 @@ async function openDatabase(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = () => {
       const database = request.result;
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.sentenceCache)) {
-        database.createObjectStore(INDEXEDDB_STORES.sentenceCache, {
-          keyPath: "sentenceHash"
-        });
-      }
-
-      if (
-        !database.objectStoreNames.contains(
-          INDEXEDDB_STORES.sentenceAnalysisCache
-        )
-      ) {
-        const store = database.createObjectStore(INDEXEDDB_STORES.sentenceAnalysisCache, {
-          keyPath: "identity"
-        });
-        store.createIndex("sentenceHash", "sentenceHash", { unique: false });
-      } else {
-        const transaction = request.transaction;
-        const store = transaction?.objectStore(INDEXEDDB_STORES.sentenceAnalysisCache);
-        if (store && !store.indexNames.contains("sentenceHash")) {
-          store.createIndex("sentenceHash", "sentenceHash", { unique: false });
-        }
-      }
-
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.reviewEvents)) {
-        database.createObjectStore(INDEXEDDB_STORES.reviewEvents, {
-          keyPath: "eventId"
-        });
-      }
-
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.learningItems)) {
-        database.createObjectStore(INDEXEDDB_STORES.learningItems, {
-          keyPath: "itemId"
-        });
-      }
-
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.phraseRegistry)) {
-        database.createObjectStore(INDEXEDDB_STORES.phraseRegistry, {
-          keyPath: "phraseId"
-        });
-      }
-
-      if (
-        !database.objectStoreNames.contains(
-          INDEXEDDB_STORES.learningItemContextHistory
-        )
-      ) {
-        database.createObjectStore(INDEXEDDB_STORES.learningItemContextHistory, {
-          keyPath: "itemId"
-        });
-      }
-
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.userData)) {
-        database.createObjectStore(INDEXEDDB_STORES.userData, {
-          keyPath: "key"
-        });
-      }
-
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.userVocab)) {
-        database.createObjectStore(INDEXEDDB_STORES.userVocab, {
-          keyPath: "lexemeId"
-        });
-      }
-
-      if (!database.objectStoreNames.contains(INDEXEDDB_STORES.assetPacks)) {
-        const store = database.createObjectStore(INDEXEDDB_STORES.assetPacks, {
-          keyPath: "identity"
-        });
-        store.createIndex("languagePair", "languagePair", { unique: false });
-        store.createIndex("bandId", "bandId", { unique: false });
-        store.createIndex("assetVersion", "assetVersion", { unique: false });
-      } else {
-        const transaction = request.transaction;
-        const store = transaction?.objectStore(INDEXEDDB_STORES.assetPacks);
-        if (store) {
-          ensureIndex(store, "languagePair", "languagePair");
-          ensureIndex(store, "bandId", "bandId");
-          ensureIndex(store, "assetVersion", "assetVersion");
-        }
-      }
-
-      if (
-        !database.objectStoreNames.contains(
-          INDEXEDDB_STORES.assetPackRenderUnits
-        )
-      ) {
-        const store = database.createObjectStore(
-          INDEXEDDB_STORES.assetPackRenderUnits,
-          {
-            keyPath: "identity"
-          }
-        );
-        store.createIndex("packIdentity", "packIdentity", { unique: false });
-        store.createIndex("bandId", "bandId", { unique: false });
-        store.createIndex("languagePairBandId", ["languagePair", "bandId"], {
-          unique: false
-        });
-        store.createIndex("assetVersion", "assetVersion", { unique: false });
-        store.createIndex("renderUnitId", "renderUnitId", { unique: false });
-      }
-
-      if (
-        !database.objectStoreNames.contains(INDEXEDDB_STORES.assetPackLexemes)
-      ) {
-        const store = database.createObjectStore(
-          INDEXEDDB_STORES.assetPackLexemes,
-          {
-            keyPath: "identity"
-          }
-        );
-        store.createIndex("packIdentity", "packIdentity", { unique: false });
-        store.createIndex("bandId", "bandId", { unique: false });
-        store.createIndex("languagePairBandId", ["languagePair", "bandId"], {
-          unique: false
-        });
-        store.createIndex("assetVersion", "assetVersion", { unique: false });
-        store.createIndex("lexemeId", "lexemeId", { unique: false });
-      }
+      ensureObjectStores(database, request.transaction);
     };
 
     request.onsuccess = () => {
@@ -209,12 +90,39 @@ async function openDatabase(): Promise<IDBDatabase> {
   return databasePromise;
 }
 
+function ensureObjectStores(
+  database: IDBDatabase,
+  transaction: IDBTransaction | null
+): void {
+  for (const storeSchema of Object.values(STORAGE_SCHEMA.stores)) {
+    let store: IDBObjectStore | null = null;
+    if (!database.objectStoreNames.contains(storeSchema.name)) {
+      store = database.createObjectStore(storeSchema.name, {
+        keyPath: storeSchema.keyPath
+      });
+    } else {
+      store = transaction?.objectStore(storeSchema.name) ?? null;
+    }
+
+    if (store) {
+      for (const index of storeSchema.indexes) {
+        ensureIndex(store, index.name, index.keyPath, index.unique);
+      }
+    }
+  }
+}
+
 function ensureIndex(
   store: IDBObjectStore,
   indexName: string,
-  keyPath: string | string[]
+  keyPath: string | readonly string[],
+  unique: boolean
 ): void {
   if (!store.indexNames.contains(indexName)) {
-    store.createIndex(indexName, keyPath, { unique: false });
+    store.createIndex(indexName, normalizeKeyPath(keyPath), { unique });
   }
+}
+
+function normalizeKeyPath(keyPath: string | readonly string[]): string | string[] {
+  return typeof keyPath === "string" ? keyPath : [...keyPath];
 }
