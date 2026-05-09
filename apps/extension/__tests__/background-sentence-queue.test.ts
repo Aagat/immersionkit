@@ -55,7 +55,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       12
     );
@@ -120,7 +120,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       27
     );
@@ -195,7 +195,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       44
     );
@@ -213,6 +213,7 @@ describe("sentence queue orchestration", () => {
 
   it("skips sentence translation work when the feature is disabled", async () => {
     const sourceText = "Neighbors gather in the square each evening.";
+    const sentenceHash = hashSentence(sourceText);
     const cache = new InMemorySentenceCache();
     const providerCalls = vi.fn();
     const notifyCalls = vi.fn();
@@ -236,7 +237,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       9
     );
@@ -298,7 +299,10 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [ordinarySentence, dueTargetSentence]
+        candidates: [
+          { sentenceHash: ordinaryHash, sourceText: ordinarySentence },
+          { sentenceHash: dueTargetHash, sourceText: dueTargetSentence }
+        ]
       },
       31
     );

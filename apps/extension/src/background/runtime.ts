@@ -2,22 +2,34 @@ import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   ActiveAssetContext,
   ContentAssetContext,
+  GetContentAnalysisContextMessage,
+  GetContentAnalysisContextResponse,
   GetAssetContextMessage,
-  LearningItem,
+  GetAssetContextResponse,
+  GetLearningItemsResponse,
   GetLearningItemsMessage,
   GetUserDataMessage,
+  GetUserDataResponse,
+  GetSentenceAnalysisCacheResponse,
   RemoveUserDataMessage,
   SetUserDataMessage,
   GetUserVocabMessage,
+  GetUserVocabResponse,
   SetVocabStatusMessage,
+  SetVocabStatusResponse,
+  GraduateCheckpointResponse,
+  PingResponse,
   QueueSentenceCandidatesMessage,
   RefreshActiveTabMessage,
+  RefreshActiveTabResponse,
   RuntimeMessage,
+  RuntimeErrorResponse,
   AssistEventMessage,
   QualifiedExposureEventMessage,
-  SentenceAnalysisEntry,
-  SentenceTranslationResultMessage,
-  UserVocabEntry
+  LoadContentContextMessage,
+  LoadContentContextResponse,
+  MutateUserDataResponse,
+  SentenceTranslationResultMessage
 } from "@immersionkit/shared";
 
 import { getBackgroundAssetPackService } from "./asset-packs";
@@ -31,6 +43,7 @@ import {
   type SentenceTranslationDelivery
 } from "./sentence-queue";
 import { loadBackgroundRuntimeConfig } from "./settings";
+import { ContentContextService } from "./content-context";
 import { isRecord } from "../storage/serialization";
 import {
   IndexedDbUserDataRepository,
@@ -40,30 +53,6 @@ import {
   setUserDataValues,
   USER_DATA_KEYS
 } from "../storage/user-data-repository";
-
-type RefreshActiveTabResponse =
-  | {
-      ok: true;
-      refreshed: true;
-      tabId: number;
-    }
-  | {
-      ok: false;
-      refreshed: false;
-      reason: string;
-      tabId: number | null;
-    };
-
-type PingResponse = {
-  ok: true;
-  source: "background";
-  timestamp: string;
-};
-
-type ErrorResponse = {
-  ok: false;
-  error: string;
-};
 
 type BackgroundHandledRuntimeMessage = Exclude<
   RuntimeMessage,
@@ -84,65 +73,6 @@ type RuntimeMessageHandlerMap = {
   >;
 };
 
-export type GetLearningItemsResponse =
-  | {
-      ok: true;
-      items: LearningItem[];
-    }
-  | ErrorResponse;
-
-export type GetAssetContextResponse =
-  | {
-      ok: true;
-      context: ActiveAssetContext | ContentAssetContext;
-    }
-  | ErrorResponse;
-
-export type GetSentenceAnalysisCacheResponse =
-  | {
-      ok: true;
-      entries: SentenceAnalysisEntry[];
-    }
-  | ErrorResponse;
-
-export type GetUserDataResponse =
-  | {
-      ok: true;
-      values: Record<string, unknown>;
-    }
-  | ErrorResponse;
-
-export type MutateUserDataResponse =
-  | {
-      ok: true;
-    }
-  | ErrorResponse;
-
-export type GetUserVocabResponse =
-  | {
-      ok: true;
-      entries: UserVocabEntry[];
-    }
-  | ErrorResponse;
-
-export type SetVocabStatusResponse =
-  | {
-      ok: true;
-      entry: UserVocabEntry | null;
-    }
-  | ErrorResponse;
-
-export type GraduateCheckpointResponse =
-  | {
-      ok: true;
-      advanced: boolean;
-      previousBandId: string | null;
-      nextBandId: string | null;
-      reason: string;
-      unmetRequirements: string[];
-    }
-  | ErrorResponse;
-
 const RUNTIME_MESSAGE_TYPES = new Set<string>(Object.values(RuntimeMessageType));
 export class BackgroundRuntimeCoordinator {
   private readonly sentenceQueue: SentenceQueueOrchestrator;
@@ -151,6 +81,7 @@ export class BackgroundRuntimeCoordinator {
   private readonly phraseRegistry: IndexedDbPhraseRegistryRepository;
   private readonly sentenceAnalysisCache: IndexedDbSentenceAnalysisCacheRepository;
   private readonly userVocab: IndexedDbUserVocabRepository;
+  private readonly contentContext: ContentContextService;
   private readonly assetPacks = getBackgroundAssetPackService();
   private readonly runtimeMessageHandlers: RuntimeMessageHandlerMap = {
     [RuntimeMessageType.Ping]: (_message, _sender, sendResponse) => {
@@ -201,6 +132,18 @@ export class BackgroundRuntimeCoordinator {
       void this.handleGetSentenceAnalysisCache(message.sentenceHashes, sendResponse);
       return true;
     },
+    [RuntimeMessageType.LoadContentContext]: (message, _sender, sendResponse) => {
+      void this.handleLoadContentContext(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetContentAnalysisContext]: (
+      message,
+      _sender,
+      sendResponse
+    ) => {
+      void this.handleGetContentAnalysisContext(message, sendResponse);
+      return true;
+    },
     [RuntimeMessageType.GraduateCheckpoint]: (_message, _sender, sendResponse) => {
       void this.handleGraduateCheckpoint(sendResponse);
       return true;
@@ -238,6 +181,7 @@ export class BackgroundRuntimeCoordinator {
     this.phraseRegistry = new IndexedDbPhraseRegistryRepository();
     this.sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
     this.userVocab = new IndexedDbUserVocabRepository();
+    this.contentContext = new ContentContextService();
   }
 
   boot() {
@@ -290,7 +234,7 @@ export class BackgroundRuntimeCoordinator {
   }
 
   private async handleRefreshActiveTab(
-    sendResponse: (response: RefreshActiveTabResponse | ErrorResponse) => void
+    sendResponse: (response: RefreshActiveTabResponse | RuntimeErrorResponse) => void
   ) {
     try {
       const activeTabId = await getActiveTabId();
@@ -345,7 +289,9 @@ export class BackgroundRuntimeCoordinator {
   private async handleQueueSentenceCandidates(
     message: QueueSentenceCandidatesMessage,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (response: QueueSentenceCandidatesResponse | ErrorResponse) => void
+    sendResponse: (
+      response: QueueSentenceCandidatesResponse | RuntimeErrorResponse
+    ) => void
   ) {
     try {
       const response = await this.sentenceQueue.queueMessage(message, sender.tab?.id);
@@ -543,6 +489,45 @@ export class BackgroundRuntimeCoordinator {
     }
   }
 
+  private async handleLoadContentContext(
+    message: LoadContentContextMessage,
+    sendResponse: (response: LoadContentContextResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        context: await this.contentContext.loadContext({
+          hostname: message.hostname,
+          sentenceHashes: message.sentenceHashes
+        })
+      });
+    } catch (error) {
+      console.warn("ImmersionKit content context load failed.", error);
+      sendResponse({
+        ok: false,
+        error: "content-context-load-failed"
+      });
+    }
+  }
+
+  private async handleGetContentAnalysisContext(
+    message: GetContentAnalysisContextMessage,
+    sendResponse: (response: GetContentAnalysisContextResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        context: await this.contentContext.loadAnalysisContext(message.sentenceHashes)
+      });
+    } catch (error) {
+      console.warn("ImmersionKit content analysis context load failed.", error);
+      sendResponse({
+        ok: false,
+        error: "content-analysis-context-load-failed"
+      });
+    }
+  }
+
   private async handleGraduateCheckpoint(
     sendResponse: (response: GraduateCheckpointResponse) => void
   ) {
@@ -575,7 +560,9 @@ export class BackgroundRuntimeCoordinator {
 
   private async handleAssistEvent(
     message: AssistEventMessage,
-    sendResponse: (response: { ok: true; stored: boolean } | ErrorResponse) => void
+    sendResponse: (
+      response: { ok: true; stored: boolean } | RuntimeErrorResponse
+    ) => void
   ) {
     try {
       const item = await this.learningItems.recordAssist(message);
@@ -595,7 +582,9 @@ export class BackgroundRuntimeCoordinator {
   private async handleQualifiedExposureEvent(
     message: QualifiedExposureEventMessage,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (response: { ok: true; stored: boolean } | ErrorResponse) => void
+    sendResponse: (
+      response: { ok: true; stored: boolean } | RuntimeErrorResponse
+    ) => void
   ) {
     try {
       const item = await this.learningItems.recordQualifiedExposure(message);

@@ -1,12 +1,19 @@
 import type {
   AssistEvent,
+  ExtensionSettings,
   QualifiedExposureEvent,
+  LearningItem,
   RenderUnitEntry,
   SentenceAnalysisEntry,
   SentenceLearningNote,
+  SiteSetting,
   UserVocabEntry,
   VocabStatus
 } from "../domain/models";
+import type {
+  CurriculumConfig,
+  CurriculumRuntimeProfileInput
+} from "../curriculum/config";
 
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
@@ -19,6 +26,8 @@ export enum RuntimeMessageType {
   GetUserVocab = "user-vocab/get",
   SetVocabStatus = "user-vocab/set-status",
   GetSentenceAnalysisCache = "sentence-analysis-cache/get",
+  LoadContentContext = "content/context/load",
+  GetContentAnalysisContext = "content/analysis-context/get",
   GraduateCheckpoint = "curriculum/graduate-checkpoint",
   QueueSentenceCandidates = "sentence/queue-candidates",
   SentenceTranslationResult = "sentence/translation-result",
@@ -98,6 +107,35 @@ export type GetSentenceAnalysisCacheMessage = {
   sentenceHashes?: string[];
 };
 
+export type LoadContentContextMessage = {
+  type: RuntimeMessageType.LoadContentContext;
+  hostname: string;
+  sentenceHashes?: string[];
+};
+
+export type GetContentAnalysisContextMessage = {
+  type: RuntimeMessageType.GetContentAnalysisContext;
+  sentenceHashes: string[];
+};
+
+export type ContentContextSnapshot = {
+  settings: ExtensionSettings;
+  discoveryRate: number;
+  siteSetting: SiteSetting | null;
+  siteEnabled: boolean;
+  assetContext: ContentAssetContext;
+  vocabEntries: UserVocabEntry[];
+  learningItems: LearningItem[];
+  sentenceAnalysisEntries: SentenceAnalysisEntry[];
+  curriculumConfig: CurriculumConfig;
+  learningProfile: CurriculumRuntimeProfileInput;
+};
+
+export type ContentAnalysisContextSnapshot = {
+  entryCount: number;
+  entries: SentenceAnalysisEntry[];
+};
+
 export type GraduateCheckpointMessage = {
   type: RuntimeMessageType.GraduateCheckpoint;
 };
@@ -112,8 +150,7 @@ export type QueuedSentenceCandidate = {
 
 export type QueueSentenceCandidatesMessage = {
   type: RuntimeMessageType.QueueSentenceCandidates;
-  sentences: string[];
-  candidates?: QueuedSentenceCandidate[];
+  candidates: QueuedSentenceCandidate[];
 };
 
 export type SentenceTranslationResult = {
@@ -155,8 +192,137 @@ export type RuntimeMessage =
   | GetUserVocabMessage
   | SetVocabStatusMessage
   | GetSentenceAnalysisCacheMessage
+  | LoadContentContextMessage
+  | GetContentAnalysisContextMessage
   | GraduateCheckpointMessage
   | QueueSentenceCandidatesMessage
   | SentenceTranslationResultMessage
   | AssistEventMessage
   | QualifiedExposureEventMessage;
+
+export type RuntimeErrorResponse = {
+  ok: false;
+  error: string;
+};
+
+export type RuntimeOkResponse = {
+  ok: true;
+};
+
+export type PingResponse = {
+  ok: true;
+  source: "background";
+  timestamp: string;
+};
+
+export type RefreshActiveTabResponse =
+  | {
+      ok: true;
+      refreshed: true;
+      tabId: number;
+    }
+  | {
+      ok: false;
+      refreshed: false;
+      reason: string;
+      tabId: number | null;
+    };
+
+export type GetAssetContextResponse =
+  | {
+      ok: true;
+      context: ActiveAssetContext | ContentAssetContext;
+    }
+  | RuntimeErrorResponse;
+
+export type GetLearningItemsResponse =
+  | {
+      ok: true;
+      items: LearningItem[];
+    }
+  | RuntimeErrorResponse;
+
+export type GetUserDataResponse =
+  | {
+      ok: true;
+      values: Record<string, unknown>;
+    }
+  | RuntimeErrorResponse;
+
+export type MutateUserDataResponse = RuntimeOkResponse | RuntimeErrorResponse;
+
+export type GetUserVocabResponse =
+  | {
+      ok: true;
+      entries: UserVocabEntry[];
+    }
+  | RuntimeErrorResponse;
+
+export type SetVocabStatusResponse =
+  | {
+      ok: true;
+      entry: UserVocabEntry | null;
+    }
+  | RuntimeErrorResponse;
+
+export type GetSentenceAnalysisCacheResponse =
+  | {
+      ok: true;
+      entries: SentenceAnalysisEntry[];
+    }
+  | RuntimeErrorResponse;
+
+export type LoadContentContextResponse =
+  | {
+      ok: true;
+      context: ContentContextSnapshot;
+    }
+  | RuntimeErrorResponse;
+
+export type GetContentAnalysisContextResponse =
+  | {
+      ok: true;
+      context: ContentAnalysisContextSnapshot;
+    }
+  | RuntimeErrorResponse;
+
+export type GraduateCheckpointResponse =
+  | {
+      ok: true;
+      advanced: boolean;
+      previousBandId: string | null;
+      nextBandId: string | null;
+      reason: string;
+      unmetRequirements: string[];
+    }
+  | RuntimeErrorResponse;
+
+export type EvidenceEventResponse =
+  | {
+      ok: true;
+      stored: boolean;
+    }
+  | RuntimeErrorResponse;
+
+export type RuntimeResponseByType = {
+  [RuntimeMessageType.Ping]: PingResponse;
+  [RuntimeMessageType.RefreshActiveTab]: RefreshActiveTabResponse | RuntimeErrorResponse;
+  [RuntimeMessageType.GetAssetContext]: GetAssetContextResponse;
+  [RuntimeMessageType.GetLearningItems]: GetLearningItemsResponse;
+  [RuntimeMessageType.GetUserData]: GetUserDataResponse;
+  [RuntimeMessageType.SetUserData]: MutateUserDataResponse;
+  [RuntimeMessageType.RemoveUserData]: MutateUserDataResponse;
+  [RuntimeMessageType.GetUserVocab]: GetUserVocabResponse;
+  [RuntimeMessageType.SetVocabStatus]: SetVocabStatusResponse;
+  [RuntimeMessageType.GetSentenceAnalysisCache]: GetSentenceAnalysisCacheResponse;
+  [RuntimeMessageType.LoadContentContext]: LoadContentContextResponse;
+  [RuntimeMessageType.GetContentAnalysisContext]: GetContentAnalysisContextResponse;
+  [RuntimeMessageType.GraduateCheckpoint]: GraduateCheckpointResponse;
+  [RuntimeMessageType.QueueSentenceCandidates]: unknown;
+  [RuntimeMessageType.SentenceTranslationResult]: RuntimeOkResponse | RuntimeErrorResponse;
+  [RuntimeMessageType.AssistEvent]: EvidenceEventResponse;
+  [RuntimeMessageType.QualifiedExposureEvent]: EvidenceEventResponse;
+};
+
+export type RuntimeResponseFor<TMessage extends RuntimeMessage> =
+  RuntimeResponseByType[TMessage["type"]];

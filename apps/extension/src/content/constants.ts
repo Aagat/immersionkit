@@ -1,5 +1,4 @@
 import { DEFAULT_EXTENSION_SETTINGS, type ExtensionSettings } from "@immersionkit/shared";
-import { USER_DATA_KEYS } from "../shared/user-data-keys";
 
 export const IMMERSIONKIT_ROOT_ATTRIBUTE = "data-immersionkit-root";
 export const IMMERSIONKIT_NODE_ATTRIBUTE = "data-ik-node-id";
@@ -39,11 +38,4 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   targetLanguage: "es",
   sentenceTranslationEnabled: false,
   provider: "none"
-};
-
-export const STORAGE_KEYS = {
-  settings: [USER_DATA_KEYS.settings] as const,
-  siteSettings: [USER_DATA_KEYS.siteSettings] as const,
-  curriculumConfig: [USER_DATA_KEYS.curriculumConfig] as const,
-  learningProfile: [USER_DATA_KEYS.learningProfile] as const
 };

@@ -11,13 +11,13 @@ describe("extension test scaffolding", () => {
         sentenceTranslationEnabled: true,
         provider: "openai"
       },
-      "site-settings": [
-        {
+      "site-settings": {
+        "fixtures.immersionkit.test": {
           hostname: "fixtures.immersionkit.test",
           enabled: false,
           discoveryRate: 2
         }
-      ],
+      },
       "asset-render-units": {
         schemaVersion: "1.0.0",
         assetVersion: "test-render-units",
@@ -54,7 +54,9 @@ describe("extension test scaffolding", () => {
       expect(context.renderAssetInfo.isFallback).toBe(false);
       expect(context.vocabByLexemeId.get("lexeme-safe")?.status).toBe("known");
       expect(chromeStub.sentMessages).toContainEqual({
-        type: "assets/get-context"
+        type: "content/context/load",
+        hostname: "fixtures.immersionkit.test",
+        sentenceHashes: []
       });
     } finally {
       chromeStub.restore();

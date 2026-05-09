@@ -364,7 +364,6 @@ describe("content inline learning loop", () => {
           const queueMessage = chromeStub.sentMessages.find(
             (message): message is {
               type: RuntimeMessageType.QueueSentenceCandidates;
-              sentences: string[];
               candidates: Array<{
                 sourceText: string;
                 sentenceHash: string;
@@ -378,7 +377,6 @@ describe("content inline learning loop", () => {
                 RuntimeMessageType.QueueSentenceCandidates
           );
 
-          expect(queueMessage?.sentences).toEqual([sourceSentence]);
           expect(queueMessage?.candidates[0]).toMatchObject({
             sourceText: sourceSentence,
             sentenceHash: hashSentence(sourceSentence),
@@ -522,7 +520,61 @@ describe("content inline learning loop", () => {
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:14:15.000Z"
             }
-          }
+          },
+          "learning-items": [
+            {
+              itemId: `phrase:${phraseId}`,
+              unitRefId: phraseId,
+              unitType: "phrase",
+              sourceText: "used to visit",
+              targetText: "solia visitar",
+              status: "learning",
+              introducedAt: "2026-04-18T10:00:00.000Z",
+              nextReviewAt: "2026-04-19T10:00:00.000Z",
+              interval: 600000,
+              ease: 2.3,
+              lapses: 0,
+              assistCount: 0,
+              qualifiedExposureCount: 0,
+              consecutiveUnassistedCount: 0,
+              distinctContextCount: 0,
+              suspended: false
+            }
+          ],
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              tokens: [{ text: "I", normalized: "i", tags: [], startOffset: 0, endOffset: 1 }],
+              chunks: [],
+              grammarFeatures: [],
+              phraseMatches: [
+                {
+                  occurrenceId: "occurrence-used-to-visit",
+                  phraseId,
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  sourceText: "used to visit",
+                  normalizedSourceText: "used to visit",
+                  sourceKind: "pattern-match",
+                  category: "grammar-carrier",
+                  ruleId: "used-to-verb",
+                  span: {
+                    startToken: 1,
+                    endToken: 4,
+                    startChar: 2,
+                    endChar: 15
+                  },
+                  confidence: 0.91
+                }
+              ],
+              contextualWordCandidates: [],
+              createdAt: "2026-04-18T10:00:00.000Z",
+              lastAccessedAt: "2026-04-18T10:00:00.000Z"
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1273,7 +1325,43 @@ describe("content inline learning loop", () => {
               discoveryRate: 0,
               updatedAt: "2026-04-18T10:14:00.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              tokens: [],
+              lemmas: [],
+              posTags: [],
+              chunks: [],
+              grammarFeatures: [],
+              createdAt: "2026-04-18T10:14:00.000Z",
+              lastAccessedAt: "2026-04-18T10:14:00.000Z",
+              contextualWordCandidates: [],
+              phraseMatches: [
+                {
+                  occurrenceId: "occurrence-old-city",
+                  phraseId,
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  sourceText: "old city",
+                  normalizedSourceText: "old city",
+                  sourceKind: "chunk",
+                  category: "noun-chunk",
+                  ruleId: "chunk-noun-coherent-v1",
+                  span: {
+                    startToken: 1,
+                    endToken: 3,
+                    startChar: 4,
+                    endChar: 12
+                  },
+                  confidence: 0.88
+                }
+              ]
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1401,7 +1489,37 @@ describe("content inline learning loop", () => {
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:15:30.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              createdAt: "2026-04-18T10:15:00.000Z",
+              lastAccessedAt: "2026-04-18T10:15:00.000Z",
+              contextualWordCandidates: [
+                {
+                  id: "candidate-can",
+                  sentenceHash,
+                  sentence: sourceSentence,
+                  tokenText: "can",
+                  normalizedText: "can",
+                  targetLemma: "lata",
+                  candidateLemma: "can",
+                  lexemeId: "lexeme-can",
+                  candidatePos: "noun",
+                  observedPos: "modal",
+                  chunkType: "other",
+                  nearbyContextSignature: ["modal-before-base-verb"],
+                  ambiguityGroup: "can_modal_vs_noun",
+                  confidence: 0.41,
+                  decision: "skip",
+                  rationale: "Modal use should not inject the noun sense."
+                }
+              ]
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1497,7 +1615,38 @@ describe("content inline learning loop", () => {
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:15:45.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              createdAt: "2026-04-18T10:15:00.000Z",
+              lastAccessedAt: "2026-04-18T10:15:00.000Z",
+              phraseMatches: [],
+              contextualWordCandidates: [
+                {
+                  id: "candidate-can",
+                  sentenceHash,
+                  sentence: sourceSentence,
+                  tokenText: "can",
+                  normalizedText: "can",
+                  targetLemma: "lata",
+                  candidateLemma: "can",
+                  lexemeId: "lexeme-can",
+                  candidatePos: "noun",
+                  observedPos: "modal",
+                  chunkType: "other",
+                  nearbyContextSignature: ["modal-before-base-verb"],
+                  ambiguityGroup: "can_modal_vs_noun",
+                  confidence: 0.41,
+                  decision: "skip",
+                  rationale: "Modal use should not inject the noun sense."
+                }
+              ]
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1612,7 +1761,27 @@ describe("content inline learning loop", () => {
               discoveryRate: 0,
               updatedAt: "2026-04-18T10:17:00.000Z"
             }
-          }
+          },
+          "learning-items": [
+            {
+              itemId: "word:lexeme-city",
+              unitRefId: "lexeme-city",
+              unitType: "word",
+              sourceText: "city",
+              targetText: "ciudad",
+              status: "reviewing",
+              introducedAt: "2026-04-18T10:00:00.000Z",
+              nextReviewAt: "2020-01-01T00:00:00.000Z",
+              interval: 600000,
+              ease: 2.3,
+              lapses: 0,
+              assistCount: 0,
+              qualifiedExposureCount: 1,
+              consecutiveUnassistedCount: 0,
+              distinctContextCount: 1,
+              suspended: false
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1960,7 +2129,39 @@ describe("content inline learning loop", () => {
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:19:00.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              tokens: [],
+              chunks: [],
+              grammarFeatures: [
+                {
+                  featureId: "grammar:aspect:have-been",
+                  featureKey: "aspect:have-been",
+                  label: "Have been",
+                  category: "tense-aspect",
+                  sourceText: "has been",
+                  normalizedSourceText: "has been",
+                  span: {
+                    startToken: 2,
+                    endToken: 4,
+                    startChar: 9,
+                    endChar: 17
+                  },
+                  evidence: ["fixture"],
+                  confidence: 0.86
+                }
+              ],
+              phraseMatches: [],
+              contextualWordCandidates: [],
+              createdAt: "2026-04-18T10:00:00.000Z",
+              lastAccessedAt: "2026-04-18T10:00:00.000Z"
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (

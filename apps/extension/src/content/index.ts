@@ -341,10 +341,20 @@ function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     const initialSentenceHashes = document.body
       ? collectPageSentenceHashes(document.body)
       : [];
-    const processingContext = await loadProcessingContext(
-      window.location.hostname,
-      initialSentenceHashes
-    );
+    let processingContext: Awaited<ReturnType<typeof loadProcessingContext>>;
+    try {
+      processingContext = await loadProcessingContext(
+        window.location.hostname,
+        initialSentenceHashes
+      );
+    } catch (error) {
+      stopProcessing(runtimeState);
+      console.warn("ImmersionKit content context load failed; page processing is off.", {
+        error,
+        hostname: window.location.hostname
+      });
+      return;
+    }
     const sentenceTranslationEnabled = isSentenceTranslationEnabled(
       processingContext.settings.sentenceTranslationEnabled,
       processingContext.settings.provider
@@ -614,12 +624,10 @@ function queueSentenceCandidates(
   }
 
   state.diagnostics.sentenceCandidatesQueued += compactCandidates.length;
-  const legacySentences = compactCandidates.map((candidate) => candidate.sourceText);
 
   chrome.runtime.sendMessage(
     {
       type: RuntimeMessageType.QueueSentenceCandidates,
-      sentences: legacySentences,
       candidates: compactCandidates
     },
     (response: unknown) => {

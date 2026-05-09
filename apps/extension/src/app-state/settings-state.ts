@@ -29,6 +29,7 @@ import {
   readString
 } from "../storage/serialization";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
+import { sendRuntimeMessage, sendTabMessage } from "../runtime-client";
 
 type StorageRecord = Record<string, unknown>;
 
@@ -323,10 +324,7 @@ export async function markFirstRunIntroSeen(): Promise<void> {
 }
 
 export async function graduateCheckpoint(): Promise<CheckpointGraduationResult> {
-  const response = await sendRuntimeMessage<
-    | ({ ok: true } & CheckpointGraduationResult)
-    | { ok: false; error?: string }
-  >({
+  const response = await sendRuntimeMessage({
     type: RuntimeMessageType.GraduateCheckpoint
   });
 
@@ -687,9 +685,7 @@ function parseCurriculumProgressionDiagnostics(
 }
 
 async function getUserDataValues(keys: readonly string[]): Promise<StorageRecord> {
-  const response = await sendRuntimeMessage<
-    { ok: true; values: StorageRecord } | { ok: false; error?: string }
-  >({
+  const response = await sendRuntimeMessage({
     type: RuntimeMessageType.GetUserData,
     keys: [...new Set(keys)]
   });
@@ -702,7 +698,7 @@ async function getUserDataValues(keys: readonly string[]): Promise<StorageRecord
 }
 
 async function setUserDataRuntimeValues(values: StorageRecord): Promise<void> {
-  const response = await sendRuntimeMessage<{ ok?: boolean }>({
+  const response = await sendRuntimeMessage({
     type: RuntimeMessageType.SetUserData,
     values
   });
@@ -714,7 +710,7 @@ async function setUserDataRuntimeValues(values: StorageRecord): Promise<void> {
 }
 
 async function removeUserDataRuntimeKeys(keys: readonly string[]): Promise<void> {
-  const response = await sendRuntimeMessage<{ ok?: boolean }>({
+  const response = await sendRuntimeMessage({
     type: RuntimeMessageType.RemoveUserData,
     keys: [...new Set(keys)]
   });
@@ -723,41 +719,4 @@ async function removeUserDataRuntimeKeys(keys: readonly string[]): Promise<void>
   }
 
   await removeIndexedDbUserDataValues(keys);
-}
-
-async function sendRuntimeMessage<TResponse>(message: unknown): Promise<TResponse | null> {
-  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
-    return null;
-  }
-
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      if (chrome.runtime.lastError) {
-        resolve(null);
-        return;
-      }
-
-      resolve((response as TResponse | undefined) ?? null);
-    });
-  });
-}
-
-async function sendTabMessage<TResponse>(
-  tabId: number,
-  message: unknown
-): Promise<TResponse | null> {
-  if (typeof chrome === "undefined" || !chrome.tabs?.sendMessage) {
-    return null;
-  }
-
-  return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, message, (response: TResponse | undefined) => {
-      if (chrome.runtime.lastError) {
-        resolve(null);
-        return;
-      }
-
-      resolve(response ?? null);
-    });
-  });
 }

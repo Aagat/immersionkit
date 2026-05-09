@@ -559,17 +559,6 @@ function normalizeSentenceCandidates(
     );
   }
 
-  for (const sentence of (message.sentences ?? []).slice(
-    0,
-    MAX_CANDIDATES_PER_MESSAGE
-  )) {
-    if (typeof sentence !== "string") {
-      continue;
-    }
-
-    addNormalizedSentenceCandidate(candidatesByHash, sentence);
-  }
-
   return [...candidatesByHash.values()];
 }
 
