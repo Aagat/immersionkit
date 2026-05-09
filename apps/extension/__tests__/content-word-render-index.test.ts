@@ -188,7 +188,7 @@ describe("content word render index", () => {
     });
   });
 
-  it("lets due discovery words bypass the active curriculum gate", async () => {
+  it("does not let due discovery words bypass the active curriculum gate", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const textNode = document.createTextNode("The telescope watched the comet.");
       document.body.append(textNode);
@@ -209,9 +209,10 @@ describe("content word render index", () => {
         })
       });
 
-      expect(result.replaced).toBe(true);
-      expect(result.curriculumSkippedWordCount).toBe(0);
-      expect(document.body.textContent).toContain("The telescopio watched the comet.");
+      expect(result.replaced).toBe(false);
+      expect(result.curriculumSkippedWordCount).toBe(1);
+      expect(document.body.textContent).toContain("The telescope watched the comet.");
+      expect(document.body.textContent).not.toContain("telescopio");
     });
   });
 

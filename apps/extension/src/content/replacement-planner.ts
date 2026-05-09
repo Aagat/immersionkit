@@ -1,4 +1,8 @@
-import { hashString, normalizeToken } from "@immersionkit/shared";
+import {
+  evaluateLearningItemDueStatus,
+  hashString,
+  normalizeToken
+} from "@immersionkit/shared";
 import type {
   LearningItem,
   UserVocabEntry,
@@ -242,7 +246,7 @@ export function planTextReplacements(input: {
     const learningItem =
       context.learningItemsByUnitRefId?.get(wordEntry.lexemeId) ?? null;
     let activationDecision: ActivationDecision | null = null;
-    if (status === "new" && !isDueForReview && context.shouldActivateWord) {
+    if (context.shouldActivateWord) {
       activationDecision = context.shouldActivateWord({
         wordEntry,
         learningItem,
@@ -411,9 +415,10 @@ function selectPhraseRenderCandidates(input: {
         continue;
       }
 
-      const isDueForReview =
-        Boolean(learningItem.nextReviewAt) &&
-        Date.parse(learningItem.nextReviewAt ?? "") <= Date.now();
+      const isDueForReview = evaluateLearningItemDueStatus(
+        learningItem,
+        Date.now()
+      ).receivesDueBoost;
       if (input.shouldActivatePhrase) {
         const curriculumDecision = input.shouldActivatePhrase({
           phraseId: match.phraseId,

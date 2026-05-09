@@ -8,9 +8,13 @@ import type {
   ReviewGrade
 } from "@immersionkit/shared";
 import {
+  CONTENT_EVIDENCE_POLICY,
   REVIEW_INTERVALS_MS,
   RuntimeMessageType,
+  buildLearningItemId,
   inferAssistReviewGrade,
+  isSupportedLearningItemId,
+  parseLearningItemId,
   resolveActiveCurriculumBand,
   scheduleAssistReview,
   scheduleQualifiedExposure
@@ -30,7 +34,6 @@ import {
 import { loadBackgroundRuntimeConfig } from "./settings";
 
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
-const EXPOSURE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 const DEFAULT_BAND_BACKFILL_LIMIT = 50;
 
 export class BackgroundLearningItemService {
@@ -74,7 +77,7 @@ export class BackgroundLearningItemService {
     const updatedItems: LearningItem[] = [];
     for (const feature of uniqueFeatures) {
       const item = await this.buildGrammarFeatureLearningItem(
-        items[buildGrammarFeatureItemId(feature.featureKey)],
+        items[buildLearningItemId("grammar-feature", feature.featureKey)],
         feature,
         now
       );
@@ -163,7 +166,7 @@ export class BackgroundLearningItemService {
     feature: GrammarFeatureMatch,
     now: string
   ): Promise<LearningItem> {
-    const itemId = buildGrammarFeatureItemId(feature.featureKey);
+    const itemId = buildLearningItemId("grammar-feature", feature.featureKey);
     const baseItem: LearningItem = existing
       ? {
           ...existing,
@@ -270,7 +273,8 @@ function ensureWordLearningItem(
     return existing;
   }
 
-  const unitRefId = itemId.replace(/^word:/, "");
+  const parsedItemId = parseLearningItemId(itemId);
+  const unitRefId = parsedItemId?.unitType === "word" ? parsedItemId.unitRefId : "";
   return {
     itemId,
     unitRefId,
@@ -300,11 +304,10 @@ function ensureLearningItem(
     return existing;
   }
 
-  return isWordItemId(itemId) ? ensureWordLearningItem(existing, itemId, now) : null;
-}
-
-function buildGrammarFeatureItemId(featureKey: string): string {
-  return `grammar-feature:${featureKey}`;
+  const parsedItemId = parseLearningItemId(itemId);
+  return parsedItemId?.unitType === "word"
+    ? ensureWordLearningItem(existing, itemId, now)
+    : null;
 }
 
 function dedupeGrammarFeatures(
@@ -379,28 +382,8 @@ function isQualifiedExposureMessage(
   return message.type === RuntimeMessageType.QualifiedExposureEvent;
 }
 
-function isWordItemId(itemId: string): boolean {
-  return /^word:[a-zA-Z0-9:_-]+$/.test(itemId);
-}
-
-function isSupportedLearningItemId(itemId: string): boolean {
-  return /^(word|phrase|grammar-feature):[a-zA-Z0-9:_-]+$/.test(itemId);
-}
-
 function readLearningUnitTypeFromItemId(itemId: string): LearningUnitType | undefined {
-  if (itemId.startsWith("word:")) {
-    return "word";
-  }
-
-  if (itemId.startsWith("phrase:")) {
-    return "phrase";
-  }
-
-  if (itemId.startsWith("grammar-feature:")) {
-    return "grammar-feature";
-  }
-
-  return undefined;
+  return parseLearningItemId(itemId)?.unitType;
 }
 
 function readString(value: unknown): string | null {
@@ -445,7 +428,7 @@ function updateContextHistory(input: {
     const isDuplicateWithinWindow =
       Number.isFinite(nowMs) &&
       Number.isFinite(lastSeenMs) &&
-      nowMs - lastSeenMs < EXPOSURE_DEDUPE_WINDOW_MS;
+      nowMs - lastSeenMs < CONTENT_EVIDENCE_POLICY.evidenceDedupeWindowMs;
     if (!isDuplicateWithinWindow) {
       existing.lastSeenAt = input.now;
       existing.exposureCount += 1;

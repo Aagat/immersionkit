@@ -2,6 +2,7 @@ import {
   type CurriculumBand,
   type CurriculumTransitionDecision,
   evaluateCurriculumBandTransition,
+  estimateRecentLearningItemLapseRate,
   parseCurriculumRuntimeProfile,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
@@ -106,7 +107,7 @@ export class CurriculumProgressionService {
     const decision = evaluateCurriculumBandTransition(config, {
       bandId: activeBand.bandId,
       items: input.items,
-      recentLapseRate: estimateRecentLapseRate(input.items, decidedAt),
+      recentLapseRate: estimateRecentLearningItemLapseRate(input.items, decidedAt),
       checkpointPassed: false
     });
 
@@ -164,7 +165,7 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
-    const recentLapseRate = estimateRecentLapseRate(input.items, decidedAt);
+    const recentLapseRate = estimateRecentLearningItemLapseRate(input.items, decidedAt);
     const blockedDecision = evaluateCurriculumBandTransition(config, {
       bandId: activeBand.bandId,
       items: input.items,
@@ -255,28 +256,4 @@ function applyActiveBand(
     activeGrammarBandId: bandId,
     unlockedBandIds: [...new Set([...(profile.unlockedBandIds ?? []), bandId])]
   };
-}
-
-function estimateRecentLapseRate(
-  items: readonly LearningItem[],
-  now: string = new Date().toISOString()
-): number {
-  const nowMs = Date.parse(now);
-  const recentItems = items.filter((item) => {
-    const introducedAt = Date.parse(item.introducedAt);
-    return (
-      Number.isFinite(nowMs) &&
-      Number.isFinite(introducedAt) &&
-      nowMs - introducedAt <= 14 * 24 * 60 * 60 * 1000
-    );
-  });
-  const denominator = recentItems.length > 0 ? recentItems.length : items.length;
-  if (denominator === 0) {
-    return 0;
-  }
-
-  const lapses = (recentItems.length > 0 ? recentItems : items).filter(
-    (item) => item.lapses > 0
-  ).length;
-  return lapses / denominator;
 }

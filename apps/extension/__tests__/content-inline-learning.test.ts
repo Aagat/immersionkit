@@ -1,4 +1,5 @@
 import {
+  CONTENT_EVIDENCE_POLICY,
   RuntimeMessageType,
   type SentenceLearningNote,
   hashSentence
@@ -2273,7 +2274,7 @@ describe("content inline learning loop", () => {
             source: "content-grammar-note"
           });
 
-          await wait(2600);
+          await wait(CONTENT_EVIDENCE_POLICY.grammarDetailDwellMs + 100);
 
           const exposureMessage = chromeStub.sentMessages.find(
             (message): message is {
@@ -2281,6 +2282,7 @@ describe("content inline learning loop", () => {
               itemId: string;
               sentenceHash: string;
               wasAssisted: boolean;
+              dwellMs: number;
               source: string;
             } =>
               Boolean(message) &&
@@ -2296,6 +2298,7 @@ describe("content inline learning loop", () => {
             itemId: "grammar-feature:aspect:have-been",
             sentenceHash,
             wasAssisted: true,
+            dwellMs: CONTENT_EVIDENCE_POLICY.grammarDetailDwellMs,
             source: "content-grammar-detail-dwell"
           });
         } finally {

@@ -1,20 +1,20 @@
 import {
-  beginnerCognateDiscoveryRateFloor,
-  evaluateCurriculumEligibility,
-  evaluatePhraseCurriculumContentInventory,
-  evaluateWordCurriculumContentInventory,
+  evaluateLearningItemDueStatus,
+  evaluatePhraseRuntimeActivation,
+  evaluateWordRuntimeActivation,
   hashString,
-  shouldReceiveDueReviewBoost,
   type SentenceAnalysisEntry
 } from "@immersionkit/shared";
-import type { WordRenderEntry } from "../render-units/render-units";
 import {
   processTextNode,
   type PhraseActivationInput,
   type WordActivationInput
 } from "./annotate";
 import type { SentenceCandidateMetadata } from "./contracts";
-import { PHRASE_DIAGNOSTICS_SAMPLE_LIMIT, updateCurriculumDiagnosticsFromRanking } from "./diagnostics";
+import {
+  PHRASE_DIAGNOSTICS_SAMPLE_LIMIT,
+  updateCurriculumDiagnosticsFromRanking
+} from "./diagnostics";
 import { collectEligibleTextNodes } from "./dom";
 import {
   buildCachedSentenceAnalysisContext,
@@ -262,135 +262,47 @@ function isKnownWord(state: ProcessingState, normalizedWord: string): boolean {
 
 function isDueLearningItem(state: ProcessingState, lexemeId: string): boolean {
   const item = state.learningItemsByUnitRefId.get(lexemeId);
-  return shouldReceiveDueReviewBoost(item, Date.now());
+  return evaluateLearningItemDueStatus(item, Date.now()).receivesDueBoost;
 }
 
 function shouldActivateWordByCurriculum(
   state: ProcessingState,
   input: WordActivationInput
 ) {
-  if (input.wordEntry.renderUnitMinBand) {
-    const renderUnitBandDecision = evaluateWordCurriculumContentInventory({
-      wordEntry: input.wordEntry,
-      activeContent: state.curriculum.activeWordContent
-    });
-    if (!renderUnitBandDecision.eligible) {
-      return {
-        eligible: false,
-        activeBandId: renderUnitBandDecision.activeBandId,
-        skipReason: renderUnitBandDecision.skipReason
-      };
-    }
-  }
-
-  if (input.isDueForReview || input.status !== "new") {
-    return { eligible: true };
-  }
-
-  const decision = evaluateCurriculumEligibility(state.curriculum.config, {
-    unitType: "word",
-    itemId: input.wordEntry.lexemeId,
-    bandId: input.learningItem?.bandId ?? null,
-    score: scoreWordRenderDifficulty(input.wordEntry),
-    profile: state.curriculum.profile
+  const decision = evaluateWordRuntimeActivation({
+    config: state.curriculum.config,
+    profile: state.curriculum.profile,
+    activeContent: state.curriculum.activeWordContent,
+    ...input
   });
 
-  state.diagnostics.curriculumConfigId = decision.configId;
-  state.diagnostics.activeCurriculumBandId = decision.activeBandId;
-  if (!decision.eligible) {
-    return decision;
-  }
-
-  const inventoryDecision = evaluateWordCurriculumContentInventory({
-    wordEntry: input.wordEntry,
-    activeContent: state.curriculum.activeWordContent
-  });
-  if (!inventoryDecision.eligible) {
-    return {
-      eligible: false,
-      configId: decision.configId,
-      activeBandId: inventoryDecision.activeBandId,
-      skipReason: inventoryDecision.skipReason
-    };
-  }
-
-  const cognateDiscoveryRateFloor = beginnerCognateDiscoveryRateFloor(
-    input.wordEntry,
-    inventoryDecision.activeBandId
-  );
-
-  return {
-    ...decision,
-    discoveryRateFloor: cognateDiscoveryRateFloor,
-    activationReason:
-      inventoryDecision.matchReason === "beginner-cognate" ||
-      cognateDiscoveryRateFloor !== null
-        ? "beginner-cognate"
-        : null
-  };
+  updateCurriculumDiagnosticsFromActivation(state, decision);
+  return decision;
 }
 
 function shouldActivatePhraseByCurriculum(
   state: ProcessingState,
   input: PhraseActivationInput
 ) {
-  if (input.renderUnitMinBand) {
-    const renderUnitBandDecision = evaluatePhraseCurriculumContentInventory({
-      sourceText: input.sourceText,
-      sourceKind: input.sourceKind,
-      category: input.category,
-      renderUnitMinBand: input.renderUnitMinBand,
-      activeContent: state.curriculum.activePhraseContent
-    });
-    if (!renderUnitBandDecision.eligible) {
-      return {
-        eligible: false,
-        activeBandId: renderUnitBandDecision.activeBandId,
-        skipReason: renderUnitBandDecision.skipReason
-      };
-    }
-  }
-
-  if (input.isDueForReview) {
-    return { eligible: true };
-  }
-
-  const decision = evaluateCurriculumEligibility(state.curriculum.config, {
-    unitType: "phrase",
-    itemId: input.phraseId,
-    bandId: input.learningItem.bandId ?? null,
-    profile: state.curriculum.profile
+  const decision = evaluatePhraseRuntimeActivation({
+    config: state.curriculum.config,
+    profile: state.curriculum.profile,
+    activeContent: state.curriculum.activePhraseContent,
+    ...input
   });
 
-  state.diagnostics.curriculumConfigId = decision.configId;
-  state.diagnostics.activeCurriculumBandId = decision.activeBandId;
-  if (!decision.eligible) {
-    return decision;
-  }
-
-  const inventoryDecision = evaluatePhraseCurriculumContentInventory({
-    sourceText: input.sourceText,
-    sourceKind: input.sourceKind,
-    category: input.category,
-    renderUnitMinBand: input.renderUnitMinBand,
-    activeContent: state.curriculum.activePhraseContent
-  });
-  if (!inventoryDecision.eligible) {
-    return {
-      eligible: false,
-      configId: decision.configId,
-      activeBandId: inventoryDecision.activeBandId,
-      skipReason: inventoryDecision.skipReason
-    };
-  }
-
+  updateCurriculumDiagnosticsFromActivation(state, decision);
   return decision;
 }
 
-function scoreWordRenderDifficulty(entry: WordRenderEntry): number | null {
-  if (typeof entry.frequencyRank !== "number" || !Number.isFinite(entry.frequencyRank)) {
-    return null;
+function updateCurriculumDiagnosticsFromActivation(
+  state: ProcessingState,
+  decision: { configId?: string; activeBandId?: string | null }
+): void {
+  if (decision.configId) {
+    state.diagnostics.curriculumConfigId = decision.configId;
   }
-
-  return Math.max(0, Math.min(1, entry.frequencyRank / 5000));
+  if (decision.activeBandId !== undefined) {
+    state.diagnostics.activeCurriculumBandId = decision.activeBandId;
+  }
 }

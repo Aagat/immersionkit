@@ -1,10 +1,14 @@
 export * from "./domain/analysis";
+export * from "./domain/learning-items";
 export * from "./domain/models";
+export * from "./curriculum/checkpoint";
 export * from "./curriculum/config";
 export * from "./curriculum/content";
 export * from "./curriculum/profile";
+export * from "./curriculum/runtime-activation";
 export * from "./messaging/contracts";
 export * from "./scoring/difficulty";
+export * from "./scoring/evidence";
 export * from "./scoring/scheduler";
 export * from "./scoring/sentence";
 export {

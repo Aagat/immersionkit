@@ -1,4 +1,9 @@
-import { RuntimeMessageType, hashString } from "@immersionkit/shared";
+import {
+  CONTENT_EVIDENCE_POLICY,
+  RuntimeMessageType,
+  buildLearningItemId,
+  hashString
+} from "@immersionkit/shared";
 
 import { IMMERSIONKIT_WORD_SELECTOR } from "./constants";
 import type { PhraseMetadata, TokenMetadata } from "./contracts";
@@ -7,11 +12,6 @@ import type { CachedGrammarFeature } from "./storage";
 export const CONTENT_ASSIST_EVENT_MESSAGE_TYPE = RuntimeMessageType.AssistEvent;
 const CONTENT_QUALIFIED_EXPOSURE_MESSAGE_TYPE =
   RuntimeMessageType.QualifiedExposureEvent;
-
-const QUALIFIED_DWELL_MS = 1_500;
-const GRAMMAR_DETAIL_DWELL_MS = 2_500;
-const QUALIFIED_INTERSECTION_RATIO = 0.6;
-const EVIDENCE_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 type EvidenceMessage = Record<string, unknown>;
 
@@ -39,7 +39,8 @@ export class ContentEvidenceTracker {
 
         this.updateVisibility(
           entry.target,
-          entry.isIntersecting && entry.intersectionRatio >= QUALIFIED_INTERSECTION_RATIO
+          entry.isIntersecting &&
+            entry.intersectionRatio >= CONTENT_EVIDENCE_POLICY.qualifiedIntersectionRatio
         );
       }
     });
@@ -62,7 +63,7 @@ export class ContentEvidenceTracker {
   }
 
   recordAssist(metadata: TokenMetadata, assistType = "manual-lookup"): void {
-    const itemId = wordItemId(metadata.lexemeId);
+    const itemId = buildLearningItemId("word", metadata.lexemeId);
     const contextSentenceHash = metadata.sentenceHash ?? undefined;
     const key = evidenceDedupeKey(itemId, contextSentenceHash);
     this.assistedAt.set(key, this.now());
@@ -114,7 +115,7 @@ export class ContentEvidenceTracker {
       }
 
       uniqueFeatureKeys.add(featureKey);
-      const itemId = grammarFeatureItemId(featureKey);
+      const itemId = buildLearningItemId("grammar-feature", featureKey);
       const key = evidenceDedupeKey(itemId, sentenceHash);
       this.assistedAt.set(key, this.now());
 
@@ -148,7 +149,7 @@ export class ContentEvidenceTracker {
       }
 
       this.recordGrammarQualifiedExposure(input.sentenceHash, input.features);
-    }, GRAMMAR_DETAIL_DWELL_MS);
+    }, CONTENT_EVIDENCE_POLICY.grammarDetailDwellMs);
 
     return () => {
       cancelled = true;
@@ -201,7 +202,7 @@ export class ContentEvidenceTracker {
     watch.timer = window.setTimeout(() => {
       watch.timer = null;
       this.emitQualifiedExposure(watch.element, watch.visibleSince);
-    }, QUALIFIED_DWELL_MS);
+    }, CONTENT_EVIDENCE_POLICY.qualifiedDwellMs);
   }
 
   private emitQualifiedExposure(
@@ -222,9 +223,9 @@ export class ContentEvidenceTracker {
 
     const itemId =
       unitKind === "phrase" && phraseId
-        ? phraseItemId(phraseId)
+        ? buildLearningItemId("phrase", phraseId)
         : lexemeId
-          ? wordItemId(lexemeId)
+          ? buildLearningItemId("word", lexemeId)
           : null;
     if (!itemId) {
       return;
@@ -235,13 +236,13 @@ export class ContentEvidenceTracker {
     const lastEmittedAt = this.emittedExposureAt.get(key);
     if (
       typeof lastEmittedAt === "number" &&
-      now - lastEmittedAt < EVIDENCE_DEDUPE_WINDOW_MS
+      now - lastEmittedAt < CONTENT_EVIDENCE_POLICY.evidenceDedupeWindowMs
     ) {
       return;
     }
 
     const dwellMs = now - visibleSince;
-    if (dwellMs < QUALIFIED_DWELL_MS) {
+    if (dwellMs < CONTENT_EVIDENCE_POLICY.qualifiedDwellMs) {
       return;
     }
 
@@ -255,10 +256,10 @@ export class ContentEvidenceTracker {
       sessionId: this.sessionId,
       occurredAt: new Date(now).toISOString(),
       wasAssisted: this.wasRecentlyAssisted(key, now),
-      confidence: 0.72,
+      confidence: CONTENT_EVIDENCE_POLICY.viewportDwellConfidence,
       distinctContextKey: `${window.location.hostname}:${sentenceHash}`,
       dwellMs,
-      viewportRatio: QUALIFIED_INTERSECTION_RATIO,
+      viewportRatio: CONTENT_EVIDENCE_POLICY.qualifiedIntersectionRatio,
       source: "content-viewport-dwell"
     });
   }
@@ -276,12 +277,12 @@ export class ContentEvidenceTracker {
       }
 
       uniqueFeatureKeys.add(featureKey);
-      const itemId = grammarFeatureItemId(featureKey);
+      const itemId = buildLearningItemId("grammar-feature", featureKey);
       const key = evidenceDedupeKey(itemId, sentenceHash);
       const lastEmittedAt = this.emittedExposureAt.get(key);
       if (
         typeof lastEmittedAt === "number" &&
-        now - lastEmittedAt < EVIDENCE_DEDUPE_WINDOW_MS
+        now - lastEmittedAt < CONTENT_EVIDENCE_POLICY.evidenceDedupeWindowMs
       ) {
         continue;
       }
@@ -296,9 +297,12 @@ export class ContentEvidenceTracker {
         sessionId: this.sessionId,
         occurredAt: new Date(now).toISOString(),
         wasAssisted: this.wasRecentlyAssisted(key, now),
-        confidence: Math.max(0.6, Math.min(0.92, feature.confidence)),
+        confidence: Math.max(
+          CONTENT_EVIDENCE_POLICY.grammarDetailMinimumConfidence,
+          Math.min(CONTENT_EVIDENCE_POLICY.grammarDetailMaximumConfidence, feature.confidence)
+        ),
         distinctContextKey: `${window.location.hostname}:${sentenceHash}:grammar:${featureKey}`,
-        dwellMs: GRAMMAR_DETAIL_DWELL_MS,
+        dwellMs: CONTENT_EVIDENCE_POLICY.grammarDetailDwellMs,
         viewportRatio: 1,
         source: "content-grammar-detail-dwell"
       });
@@ -309,7 +313,7 @@ export class ContentEvidenceTracker {
     const lastAssistedAt = this.assistedAt.get(key);
     return (
       typeof lastAssistedAt === "number" &&
-      now - lastAssistedAt < EVIDENCE_DEDUPE_WINDOW_MS
+      now - lastAssistedAt < CONTENT_EVIDENCE_POLICY.evidenceDedupeWindowMs
     );
   }
 
@@ -329,7 +333,7 @@ function createIntersectionObserver(
   }
 
   return new IntersectionObserver(callback, {
-    threshold: [QUALIFIED_INTERSECTION_RATIO]
+    threshold: [CONTENT_EVIDENCE_POLICY.qualifiedIntersectionRatio]
   });
 }
 
@@ -339,18 +343,6 @@ function isActiveSession(): boolean {
 
 function isDocumentVisible(): boolean {
   return document.visibilityState === "visible";
-}
-
-function wordItemId(lexemeId: string): string {
-  return `word:${lexemeId}`;
-}
-
-function phraseItemId(phraseId: string): string {
-  return `phrase:${phraseId}`;
-}
-
-function grammarFeatureItemId(featureKey: string): string {
-  return `grammar-feature:${featureKey}`;
 }
 
 function evidenceDedupeKey(itemId: string, sentenceHash?: string): string {
