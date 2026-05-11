@@ -187,6 +187,40 @@ describe("curriculum configuration", () => {
     ]);
   });
 
+  it("lets external curriculum data tune percentage breadth requirements", () => {
+    const percentageConfig: CurriculumConfig = {
+      ...DEFAULT_CURRICULUM_CONFIG,
+      bands: DEFAULT_CURRICULUM_CONFIG.bands.map((band) =>
+        band.bandId === "level-1a"
+          ? {
+              ...band,
+              unlockRequirements: {
+                ...band.unlockRequirements,
+                minimumDistinctContextItemRatio: 1,
+                minimumUnassistedItemRatio: 0.75
+              }
+            }
+          : band
+      )
+    };
+
+    const decision = evaluateCurriculumBandTransition(percentageConfig, {
+      bandId: "level-1a",
+      items: createTransitionItems(4, (index) => ({
+        consecutiveUnassistedCount: index < 2 ? 2 : 1,
+        distinctContextCount: index < 3 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual([
+      "distinct-context-breadth",
+      "unassisted-breadth"
+    ]);
+  });
+
   it("does not let auto-created no-exposure items block progression", () => {
     const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
       bandId: "level-1a",
@@ -272,11 +306,39 @@ describe("curriculum configuration", () => {
     expect(decision.unmetRequirements).toEqual(["distinct-context-breadth"]);
   });
 
+  it("scales distinct-context readiness by evidence-bearing percentage", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(6, (index) => ({
+        distinctContextCount: index < 4 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["distinct-context-breadth"]);
+  });
+
   it("requires two unassisted-ready items", () => {
     const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
       bandId: "level-1a",
       items: createTransitionItems(4, (_index) => ({
         consecutiveUnassistedCount: _index === 0 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["unassisted-breadth"]);
+  });
+
+  it("scales unassisted readiness by evidence-bearing percentage", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(8, (index) => ({
+        consecutiveUnassistedCount: index < 3 ? 2 : 1
       })),
       recentLapseRate: 0,
       checkpointPassed: false

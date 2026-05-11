@@ -482,7 +482,9 @@ export type CurriculumBand = {
     maximumRecentLapseRate: number;
     minimumEvidenceBearingItems?: number;
     minimumDistinctContextItems?: number;
+    minimumDistinctContextItemRatio?: number;
     minimumUnassistedItems?: number;
+    minimumUnassistedItemRatio?: number;
     checkpointRequired: boolean;
   };
   difficultyLimits: {

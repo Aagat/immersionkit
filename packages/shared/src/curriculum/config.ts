@@ -22,14 +22,18 @@ export type CurriculumTransitionPolicy = {
   maximumRecentLapseRate: number;
   minimumEvidenceBearingItems?: number;
   minimumDistinctContextItems?: number;
+  minimumDistinctContextItemRatio?: number;
   minimumUnassistedItems?: number;
+  minimumUnassistedItemRatio?: number;
   checkpointRequired: boolean;
 };
 
 type ResolvedCurriculumTransitionPolicy = CurriculumTransitionPolicy & {
   minimumEvidenceBearingItems: number;
   minimumDistinctContextItems: number;
+  minimumDistinctContextItemRatio: number;
   minimumUnassistedItems: number;
+  minimumUnassistedItemRatio: number;
 };
 
 export type CurriculumConfig = {
@@ -91,7 +95,9 @@ export type CurriculumEligibilityDecision = {
 
 const DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS = 4;
 const DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS = 3;
+const DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEM_RATIO = 0.75;
 const DEFAULT_MINIMUM_UNASSISTED_ITEMS = 2;
+const DEFAULT_MINIMUM_UNASSISTED_ITEM_RATIO = 0.5;
 const MINIMUM_DISTINCT_CONTEXT_COUNT_FOR_PROGRESSION = 2;
 const MINIMUM_CONSECUTIVE_UNASSISTED_COUNT_FOR_PROGRESSION = 2;
 
@@ -157,7 +163,9 @@ export const DEFAULT_CURRICULUM_CONFIG: CurriculumConfig = {
     maximumRecentLapseRate: 0.18,
     minimumEvidenceBearingItems: DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS,
     minimumDistinctContextItems: DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS,
+    minimumDistinctContextItemRatio: DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEM_RATIO,
     minimumUnassistedItems: DEFAULT_MINIMUM_UNASSISTED_ITEMS,
+    minimumUnassistedItemRatio: DEFAULT_MINIMUM_UNASSISTED_ITEM_RATIO,
     checkpointRequired: false
   }
 };
@@ -219,6 +227,16 @@ export function evaluateCurriculumBandTransition(
   const unassistedReadyItems = evidenceBearingItems.filter(
     hasEnoughUnassistedEvidenceForProgression
   );
+  const requiredDistinctContextItems = resolveRequiredItemCount({
+    totalItems: evidenceBearingItems.length,
+    minimumItems: policy.minimumDistinctContextItems,
+    minimumRatio: policy.minimumDistinctContextItemRatio
+  });
+  const requiredUnassistedItems = resolveRequiredItemCount({
+    totalItems: evidenceBearingItems.length,
+    minimumItems: policy.minimumUnassistedItems,
+    minimumRatio: policy.minimumUnassistedItemRatio
+  });
   const unmetRequirements: string[] = [];
 
   if (stableRatio < policy.minimumStableItemRatio) {
@@ -233,11 +251,11 @@ export function evaluateCurriculumBandTransition(
     unmetRequirements.push("evidence-breadth");
   }
 
-  if (distinctContextReadyItems.length < policy.minimumDistinctContextItems) {
+  if (distinctContextReadyItems.length < requiredDistinctContextItems) {
     unmetRequirements.push("distinct-context-breadth");
   }
 
-  if (unassistedReadyItems.length < policy.minimumUnassistedItems) {
+  if (unassistedReadyItems.length < requiredUnassistedItems) {
     unmetRequirements.push("unassisted-breadth");
   }
 
@@ -371,10 +389,18 @@ function resolveTransitionPolicy(
       band.unlockRequirements.minimumDistinctContextItems ??
       config.defaultTransitionPolicy.minimumDistinctContextItems ??
       DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS,
+    minimumDistinctContextItemRatio:
+      band.unlockRequirements.minimumDistinctContextItemRatio ??
+      config.defaultTransitionPolicy.minimumDistinctContextItemRatio ??
+      DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEM_RATIO,
     minimumUnassistedItems:
       band.unlockRequirements.minimumUnassistedItems ??
       config.defaultTransitionPolicy.minimumUnassistedItems ??
       DEFAULT_MINIMUM_UNASSISTED_ITEMS,
+    minimumUnassistedItemRatio:
+      band.unlockRequirements.minimumUnassistedItemRatio ??
+      config.defaultTransitionPolicy.minimumUnassistedItemRatio ??
+      DEFAULT_MINIMUM_UNASSISTED_ITEM_RATIO,
     checkpointRequired: band.unlockRequirements.checkpointRequired
   };
 }
@@ -434,6 +460,15 @@ function hasEnoughUnassistedEvidenceForProgression(item: LearningItem): boolean 
   );
 }
 
+function resolveRequiredItemCount(input: {
+  totalItems: number;
+  minimumItems: number;
+  minimumRatio: number;
+}): number {
+  const ratioCount = Math.ceil(input.totalItems * input.minimumRatio);
+  return Math.max(input.minimumItems, ratioCount);
+}
+
 function createDefaultBand(
   bandId: string,
   label: string,
@@ -455,7 +490,9 @@ function createDefaultBand(
       maximumRecentLapseRate: 0.18,
       minimumEvidenceBearingItems: DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS,
       minimumDistinctContextItems: DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS,
+      minimumDistinctContextItemRatio: DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEM_RATIO,
       minimumUnassistedItems: DEFAULT_MINIMUM_UNASSISTED_ITEMS,
+      minimumUnassistedItemRatio: DEFAULT_MINIMUM_UNASSISTED_ITEM_RATIO,
       checkpointRequired
     },
     difficultyLimits: {
