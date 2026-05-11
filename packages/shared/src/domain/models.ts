@@ -368,6 +368,7 @@ export type ContextualWordCandidate = {
   targetLemma: string;
   candidateLemma: string;
   candidatePos: SafeInjectionPos;
+  frequencyRank?: number | null;
   observedPos: ObservedContextPos;
   chunkType: ContextChunkType;
   chunkText?: string;

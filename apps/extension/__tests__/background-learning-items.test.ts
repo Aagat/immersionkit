@@ -225,7 +225,7 @@ describe("background learning item service", () => {
     expect(items.items["word:lexeme-town"]?.bandId).toBe("level-1b");
   });
 
-  it("creates durable grammar feature learning items with active grammar bands", async () => {
+  it("creates durable grammar feature learning items with concept bands", async () => {
     const items = new InMemoryLearningItemRepository();
     const service = new BackgroundLearningItemService(
       new InMemoryLearningHistoryRepository(),
@@ -258,14 +258,52 @@ describe("background learning item service", () => {
       unitType: "grammar-feature",
       sourceText: "Have been",
       targetText: "",
-      bandId: "level-3a",
+      bandId: "level-4a",
       status: "new"
     });
     expect(items.items["grammar-feature:aspect:have-been"]).toMatchObject({
       itemId: "grammar-feature:aspect:have-been",
       unitRefId: "aspect:have-been",
-      bandId: "level-3a"
+      bandId: "level-4a"
     });
+  });
+
+  it("repairs stale active-band grammar items on concept-backed upsert", async () => {
+    const items = new InMemoryLearningItemRepository({
+      "grammar-feature:aspect:have-been": createLearningItem({
+        itemId: "grammar-feature:aspect:have-been",
+        unitRefId: "aspect:have-been",
+        unitType: "grammar-feature",
+        sourceText: "Have been",
+        targetText: "",
+        bandId: "level-1a"
+      })
+    });
+    const service = new BackgroundLearningItemService(
+      new InMemoryLearningHistoryRepository(),
+      items,
+      createUnitBandResolver({
+        word: "level-1a",
+        phrase: "level-2a",
+        "grammar-feature": "level-1a"
+      })
+    );
+
+    const [updated] = await service.upsertGrammarFeatureItems(
+      [
+        createGrammarFeature({
+          featureKey: "aspect:have-been",
+          label: "Have been"
+        })
+      ],
+      "2026-04-18T10:00:00.000Z"
+    );
+
+    expect(updated).toMatchObject({
+      itemId: "grammar-feature:aspect:have-been",
+      bandId: "level-4a"
+    });
+    expect(items.items["grammar-feature:aspect:have-been"]?.bandId).toBe("level-4a");
   });
 
   it("persists grammar assist evidence for existing grammar feature learning items", async () => {
@@ -297,7 +335,7 @@ describe("background learning item service", () => {
       itemId: "grammar-feature:aspect:have-been",
       unitType: "grammar-feature",
       assistCount: 1,
-      bandId: "level-3a"
+      bandId: "level-4a"
     });
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({
@@ -343,7 +381,7 @@ describe("background learning item service", () => {
       unitType: "grammar-feature",
       qualifiedExposureCount: 2,
       consecutiveUnassistedCount: 0,
-      bandId: "level-3a"
+      bandId: "level-4a"
     });
     expect(history.reviewEvents).toEqual([
       expect.objectContaining({

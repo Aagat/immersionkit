@@ -556,7 +556,11 @@ function createWordEntryFromCachedDecision(
       decision.normalizedText,
     targetLemma: decision.targetText,
     pos: decision.candidatePos,
-    frequencyRank: null,
+    frequencyRank:
+      typeof decision.frequencyRank === "number" &&
+      Number.isFinite(decision.frequencyRank)
+        ? decision.frequencyRank
+        : null,
     confidence: decision.confidence ?? 0.9,
     sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
     targetLanguage: DEFAULT_TARGET_LANGUAGE,

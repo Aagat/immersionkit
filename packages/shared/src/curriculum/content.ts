@@ -140,7 +140,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
     vocabularyExamples: [
       "school -> escuela",
       "city -> ciudad",
-      "morning -> manana",
+      "morning -> mañana",
       "week -> semana",
       "mother -> madre",
       "sometimes -> a veces"
@@ -168,10 +168,10 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
     vocabularyDomains: ["routines", "descriptive contrasts", "common environments", "Level 1 review"],
     vocabularyExamples: [
       "activity -> actividad",
-      "information -> informacion",
-      "action -> accion",
+      "information -> información",
+      "action -> acción",
       "pharmacy -> farmacia",
-      "easy -> facil",
+      "easy -> fácil",
       "much -> mucho/mucha"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
@@ -199,11 +199,11 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
   },
   {
     bandId: "level-2a",
-    vocabularyDomains: ["routine actions", "schedules", "movement", "locations", "errands"],
+    vocabularyDomains: ["routine contexts", "schedules", "movement", "locations", "errands"],
     vocabularyExamples: [
-      "work -> trabajo/trabajar",
-      "study -> estudiar",
-      "visit -> visitar",
+      "work -> trabajo",
+      "routine -> rutina",
+      "schedule -> horario",
       "store -> tienda",
       "appointment -> cita",
       "train -> tren"
@@ -238,9 +238,9 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "plan -> plan",
       "event -> evento",
       "message -> mensaje",
-      "meeting -> reunion",
+      "meeting -> reunión",
       "problem -> problema",
-      "solution -> solucion"
+      "solution -> solución"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
     cognatePatternIds: [
@@ -272,7 +272,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "community -> comunidad",
       "activity -> actividad",
       "responsibility -> responsabilidad",
-      "more -> mas",
+      "more -> más",
       "same -> mismo/misma",
       "hospital -> hospital"
     ],
@@ -305,11 +305,11 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "ongoing activity",
       "movement/change",
       "situations",
-      "descriptive verbs through context"
+      "descriptive language through context"
     ],
     vocabularyExamples: [
-      "situation -> situacion",
-      "change -> cambio/cambiar",
+      "situation -> situación",
+      "change -> cambio",
       "moment -> momento",
       "currently -> actualmente",
       "clearly -> claramente",
@@ -342,11 +342,11 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
     bandId: "level-3b",
     vocabularyDomains: ["short narratives", "cause/effect", "time sequencing", "richer collocations"],
     vocabularyExamples: [
-      "reason -> razon",
+      "reason -> razón",
       "cause -> causa",
       "effect -> efecto",
       "story -> historia",
-      "habit -> habito",
+      "habit -> hábito",
       "experience -> experiencia"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
@@ -376,12 +376,12 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
     bandId: "level-3c",
     vocabularyDomains: ["work", "media", "travel", "daily-life stories", "early abstract description"],
     vocabularyExamples: [
-      "article -> articulo",
+      "article -> artículo",
       "project -> proyecto",
       "specialist -> especialista",
       "tourism -> turismo",
-      "economic -> economico/economica",
-      "purpose -> proposito"
+      "economic -> económico/económica",
+      "purpose -> propósito"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
     cognatePatternIds: [
@@ -419,9 +419,9 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "process -> proceso",
       "system -> sistema",
       "result -> resultado",
-      "analysis -> analisis",
-      "organization -> organizacion",
-      "participate -> participar"
+      "analysis -> análisis",
+      "organization -> organización",
+      "participation -> participación"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
     cognatePatternIds: [
@@ -457,10 +457,10 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
     vocabularyExamples: [
       "opinion -> opinion",
       "argument -> argumento",
-      "condition -> condicion",
+      "condition -> condición",
       "possibility -> posibilidad",
       "responsibility -> responsabilidad",
-      "conclusion -> conclusion"
+      "conclusion -> conclusión"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
     cognatePatternIds: [
@@ -502,11 +502,11 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "academic-adjacent terms"
     ],
     vocabularyExamples: [
-      "institution -> institucion",
+      "institution -> institución",
       "culture -> cultura",
       "perspective -> perspectiva",
-      "phenomenon -> fenomeno",
-      "regulation -> regulacion",
+      "phenomenon -> fenómeno",
+      "regulation -> regulación",
       "tendency -> tendencia"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
@@ -547,11 +547,11 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "long-term weak-point review"
     ],
     vocabularyExamples: [
-      "methodology -> metodologia",
+      "methodology -> metodología",
       "infrastructure -> infraestructura",
       "sustainability -> sostenibilidad",
-      "hypothesis -> hipotesis",
-      "interpretation -> interpretacion",
+      "hypothesis -> hipótesis",
+      "interpretation -> interpretación",
       "criterion -> criterio"
     ],
     allowedPartsOfSpeech: ["noun", "adjective", "adverb"],

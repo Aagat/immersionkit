@@ -16,6 +16,7 @@ import {
   isSupportedLearningItemId,
   parseLearningItemId,
   resolveActiveCurriculumBand,
+  resolveGrammarConcept,
   scheduleAssistReview,
   scheduleQualifiedExposure
 } from "@immersionkit/shared";
@@ -167,6 +168,7 @@ export class BackgroundLearningItemService {
     now: string
   ): Promise<LearningItem> {
     const itemId = buildLearningItemId("grammar-feature", feature.featureKey);
+    const conceptBandId = resolveGrammarConcept(feature.featureKey)?.minBand;
     const baseItem: LearningItem = existing
       ? {
           ...existing,
@@ -192,6 +194,13 @@ export class BackgroundLearningItemService {
           distinctContextCount: 0,
           suspended: false
         };
+
+    if (conceptBandId) {
+      return {
+        ...baseItem,
+        bandId: conceptBandId
+      };
+    }
 
     return assignBandIfMissing(baseItem, this.resolveActiveBandId);
   }
@@ -335,6 +344,16 @@ async function assignBandIfMissing(
   item: LearningItem,
   resolveActiveBandId: (unitType: LearningUnitType) => Promise<string | null>
 ): Promise<LearningItem> {
+  const conceptBandId =
+    item.unitType === "grammar-feature"
+      ? resolveGrammarConcept(item.unitRefId)?.minBand
+      : null;
+  if (conceptBandId) {
+    return item.bandId === conceptBandId
+      ? item
+      : { ...item, bandId: conceptBandId };
+  }
+
   if (item.bandId) {
     return item;
   }

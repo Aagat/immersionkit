@@ -154,7 +154,7 @@ export const DEFAULT_CURRICULUM_CONFIG: CurriculumConfig = {
     createDefaultBand("level-4a", "Level 4A", 10, "mixed", 0.5, 0.84, false),
     createDefaultBand("level-4b", "Level 4B", 11, "mixed", 0.54, 0.9, true),
     createDefaultBand("level-5a", "Level 5A", 12, "mixed", 0.62, 0.96, false),
-    createDefaultBand("level-5b", "Level 5B", 13, "mixed", 0.66, 1, true)
+    createDefaultBand("level-5b", "Level 5B", 13, "mixed", 0.66, 1, false)
   ],
   defaultTransitionPolicy: {
     stableStatuses: ["reviewing", "mastered"],
@@ -197,6 +197,7 @@ export function evaluateCurriculumBandTransition(
   const orderedBands = [...config.bands].sort((left, right) => left.order - right.order);
   const bandIndex = orderedBands.findIndex((band) => band.bandId === input.bandId);
   const band = bandIndex >= 0 ? orderedBands[bandIndex] : null;
+  const nextBand = bandIndex >= 0 ? orderedBands[bandIndex + 1] ?? null : null;
   if (!band) {
     return {
       eligible: false,
@@ -263,14 +264,14 @@ export function evaluateCurriculumBandTransition(
     unmetRequirements.push("recent-lapse-rate");
   }
 
-  if (policy.checkpointRequired && !input.checkpointPassed) {
+  if (nextBand && policy.checkpointRequired && !input.checkpointPassed) {
     unmetRequirements.push("checkpoint");
   }
 
   return {
     eligible: unmetRequirements.length === 0,
     band,
-    nextBand: orderedBands[bandIndex + 1] ?? null,
+    nextBand,
     unmetRequirements
   };
 }

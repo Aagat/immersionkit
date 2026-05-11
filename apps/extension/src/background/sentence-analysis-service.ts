@@ -377,6 +377,7 @@ function buildContextualWordCandidates(
         targetLemma: wordEntry.targetLemma,
         candidateLemma: wordEntry.sourceLemma,
         candidatePos: wordEntry.pos,
+        frequencyRank: wordEntry.frequencyRank,
         observedPos,
         chunkType,
         chunkText: chunk?.text,

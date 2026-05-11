@@ -180,12 +180,12 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     minBand: "level-2b",
     title: "Advice with should",
     learnerSummary:
-      "Should + verb often maps to deberia + infinitive for advice or expectation.",
+      "Should + verb often maps to debería + infinitive for advice or expectation.",
     sourcePatternLabel: "should + verb",
-    targetPatternLabel: "deberia + infinitive",
+    targetPatternLabel: "debería + infinitive",
     examples: [
-      { source: "should rest", target: "deberia descansar" },
-      { source: "should know", target: "deberia saber" }
+      { source: "should rest", target: "debería descansar" },
+      { source: "should know", target: "debería saber" }
     ],
     displayPolicy: { allowStretch: true },
     exposurePolicy: {
@@ -220,12 +220,12 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     minBand: "level-3b",
     title: "Past habits with used to",
     learnerSummary:
-      "English used to describes a past habit. Spanish often uses the imperfect tense or solia + infinitive.",
+      "English used to describes a past habit. Spanish often uses the imperfect tense or solía + infinitive.",
     sourcePatternLabel: "used to + verb",
-    targetPatternLabel: "imperfect tense or solia + infinitive",
+    targetPatternLabel: "imperfect tense or solía + infinitive",
     examples: [
-      { source: "used to live", target: "vivia / solia vivir" },
-      { source: "used to play", target: "jugaba / solia jugar" }
+      { source: "used to live", target: "vivía / solía vivir" },
+      { source: "used to play", target: "jugaba / solía jugar" }
     ],
     displayPolicy: { allowStretch: true },
     exposurePolicy: {
@@ -245,7 +245,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     targetPatternLabel: "porque + clause",
     examples: [
       { source: "because I was tired", target: "porque estaba cansado" },
-      { source: "because it rained", target: "porque llovio" }
+      { source: "because it rained", target: "porque llovió" }
     ],
     displayPolicy: { allowStretch: true },
     exposurePolicy: {
@@ -285,7 +285,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     targetPatternLabel: "haber + participle, or haber estado + gerund",
     examples: [
       { source: "have been working", target: "he estado trabajando" },
-      { source: "has been here", target: "ha estado aqui" }
+      { source: "has been here", target: "ha estado aquí" }
     ],
     displayPolicy: { allowStretch: false, maxCardsPerSentence: 1 },
     exposurePolicy: {
@@ -327,7 +327,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Spanish has more than one common way to translate forms of to be.",
     sourcePatternLabel: "be + description",
     targetPatternLabel: "ser or estar + description",
-    examples: [{ source: "is ready", target: "esta listo" }],
+    examples: [{ source: "is ready", target: "está listo" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -358,10 +358,10 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     minBand: "level-1b",
     title: "Basic question words",
     learnerSummary:
-      "Question words like what, who, where, and when map to Spanish words such as que, quien, donde, and cuando.",
+      "Question words like what, who, where, and when map to Spanish words such as qué, quién, dónde, and cuándo.",
     sourcePatternLabel: "wh-question word",
-    targetPatternLabel: "que/quien/donde/cuando",
-    examples: [{ source: "where is it", target: "donde esta" }]
+    targetPatternLabel: "qué/quién/dónde/cuándo",
+    examples: [{ source: "where is it", target: "dónde está" }]
   }),
   plannedGrammarConcept({
     conceptId: "gr-205-present-routines",
@@ -380,10 +380,10 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     minBand: "level-2a",
     title: "Regular past events",
     learnerSummary:
-      "Spanish regular past forms often use endings like -e, -aste, -o, -amos, and -aron.",
+      "Spanish regular past forms often use endings like -é, -aste, -ó, -amos, and -aron.",
     sourcePatternLabel: "simple past verb",
     targetPatternLabel: "regular preterite ending",
-    examples: [{ source: "visited", target: "visito" }],
+    examples: [{ source: "visited", target: "visitó" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -395,7 +395,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "English will can map to Spanish future forms or an ir a paraphrase.",
     sourcePatternLabel: "will + verb",
     targetPatternLabel: "future form or ir a + infinitive",
-    examples: [{ source: "will call", target: "llamara / va a llamar" }]
+    examples: [{ source: "will call", target: "llamará / va a llamar" }]
   }),
   plannedGrammarConcept({
     conceptId: "gr-208-time-anchors",
@@ -406,7 +406,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Words like yesterday, today, tomorrow, last week, and next week anchor when an event happens.",
     sourcePatternLabel: "time phrase",
     targetPatternLabel: "Spanish time phrase",
-    examples: [{ source: "next week", target: "la proxima semana" }]
+    examples: [{ source: "next week", target: "la próxima semana" }]
   }),
   plannedGrammarConcept({
     conceptId: "gr-209-comparisons",
@@ -414,10 +414,10 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     minBand: "level-2c",
     title: "Basic comparisons",
     learnerSummary:
-      "Spanish comparison chunks include mas que, menos que, and tan...como.",
+      "Spanish comparison chunks include más que, menos que, and tan...como.",
     sourcePatternLabel: "more/less/as + comparison",
-    targetPatternLabel: "mas que / menos que / tan...como",
-    examples: [{ source: "more than", target: "mas que" }]
+    targetPatternLabel: "más que / menos que / tan...como",
+    examples: [{ source: "more than", target: "más que" }]
   }),
   plannedGrammarConcept({
     conceptId: "gr-210-quantity-determiners",
@@ -428,7 +428,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Spanish quantity words include mucho, poco, algunos, and varios.",
     sourcePatternLabel: "quantity word + noun",
     targetPatternLabel: "Spanish quantity word + noun",
-    examples: [{ source: "a few days", target: "unos pocos dias" }]
+    examples: [{ source: "a few days", target: "unos pocos días" }]
   }),
   plannedGrammarConcept({
     conceptId: "gr-305-present-progressive",
@@ -439,7 +439,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Ongoing actions can use estar plus an -ando or -iendo form in Spanish.",
     sourcePatternLabel: "be + verb-ing",
     targetPatternLabel: "estar + gerund",
-    examples: [{ source: "is working", target: "esta trabajando" }],
+    examples: [{ source: "is working", target: "está trabajando" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -463,7 +463,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Spanish imperfect forms often describe background or repeated past actions.",
     sourcePatternLabel: "background or repeated past action",
     targetPatternLabel: "imperfect tense",
-    examples: [{ source: "lived there", target: "vivia alli" }],
+    examples: [{ source: "lived there", target: "vivía allí" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -474,8 +474,8 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     learnerSummary:
       "Sequence words such as before, after, then, and finally help connect events.",
     sourcePatternLabel: "sequence connector",
-    targetPatternLabel: "despues / antes / luego / al final",
-    examples: [{ source: "after that", target: "despues de eso" }]
+    targetPatternLabel: "después / antes / luego / al final",
+    examples: [{ source: "after that", target: "después de eso" }]
   }),
   plannedGrammarConcept({
     conceptId: "gr-309-gerund-infinitive-recognition",
@@ -556,7 +556,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Spanish que can introduce a relative clause that adds information about a noun.",
     sourcePatternLabel: "that/which/who + clause",
     targetPatternLabel: "que + clause",
-    examples: [{ source: "the book that I read", target: "el libro que lei" }],
+    examples: [{ source: "the book that I read", target: "el libro que leí" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -580,7 +580,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Dense native prose often nests clauses inside larger sentence structures.",
     sourcePatternLabel: "embedded clause",
     targetPatternLabel: "embedded Spanish clause",
-    examples: [{ source: "the fact that it changed", target: "el hecho de que cambio" }],
+    examples: [{ source: "the fact that it changed", target: "el hecho de que cambió" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -591,8 +591,8 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
     learnerSummary:
       "Reported speech describes what someone said, thought, or claimed.",
     sourcePatternLabel: "said/thought that + clause",
-    targetPatternLabel: "dijo/penso que + clause",
-    examples: [{ source: "said that it changed", target: "dijo que cambio" }],
+    targetPatternLabel: "dijo/pensó que + clause",
+    examples: [{ source: "said that it changed", target: "dijo que cambió" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -604,7 +604,7 @@ export const DEFAULT_GRAMMAR_CONCEPTS: readonly GrammarConcept[] = [
       "Perfect forms can show different relationships between past events and the present.",
     sourcePatternLabel: "perfect tense contrast",
     targetPatternLabel: "haber forms in context",
-    examples: [{ source: "had changed", target: "habia cambiado" }],
+    examples: [{ source: "had changed", target: "había cambiado" }],
     suppressUntilTranslation: true
   }),
   plannedGrammarConcept({
@@ -741,7 +741,13 @@ export function evaluateGrammarCurriculumDecision(input: {
     unitType: "grammar-feature"
   }).content;
 
-  if (isFeatureInCurrentGrammarFocus(activeContent, featureKey)) {
+  if (
+    isFeatureInCurrentGrammarFocus(activeContent, featureKey, {
+      activeBand,
+      concept,
+      config
+    })
+  ) {
     return grammarDecision({
       eligible: true,
       status: "focus",
@@ -1067,18 +1073,31 @@ function curriculumReasonForStatus(
 
 function isFeatureInCurrentGrammarFocus(
   content: CurriculumBandContent | null,
-  featureKey: string
+  featureKey: string,
+  input: {
+    activeBand: CurriculumBand;
+    concept: GrammarConcept;
+    config: CurriculumConfig;
+  }
 ): boolean {
   if (!content) {
     return false;
   }
 
   return content.currentGrammarKeys.some((key) =>
-    grammarKeyMatchesFeature(key, featureKey)
+    grammarKeyMatchesFeature(key, featureKey, input)
   );
 }
 
-function grammarKeyMatchesFeature(key: string, featureKey: string): boolean {
+function grammarKeyMatchesFeature(
+  key: string,
+  featureKey: string,
+  input: {
+    activeBand: CurriculumBand;
+    concept: GrammarConcept;
+    config: CurriculumConfig;
+  }
+): boolean {
   const normalizedKey = key.trim();
   if (!normalizedKey) {
     return false;
@@ -1092,7 +1111,13 @@ function grammarKeyMatchesFeature(key: string, featureKey: string): boolean {
     return featureKey.startsWith(normalizedKey.slice(0, -1));
   }
 
-  return normalizedKey.startsWith("all current keys");
+  if (normalizedKey.startsWith("all current keys")) {
+    return (
+      getBandOrder(input.config, input.concept.minBand) <= input.activeBand.order
+    );
+  }
+
+  return false;
 }
 
 function getBandOrder(config: CurriculumConfig, bandId: string): number {

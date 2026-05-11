@@ -140,6 +140,35 @@ describe("curriculum configuration", () => {
     });
   });
 
+  it("does not require a checkpoint when there is no next band", () => {
+    const terminalConfig: CurriculumConfig = {
+      ...DEFAULT_CURRICULUM_CONFIG,
+      bands: DEFAULT_CURRICULUM_CONFIG.bands.map((band) =>
+        band.bandId === "level-5b"
+          ? {
+              ...band,
+              unlockRequirements: {
+                ...band.unlockRequirements,
+                checkpointRequired: true
+              }
+            }
+          : band
+      )
+    };
+
+    const decision = evaluateCurriculumBandTransition(terminalConfig, {
+      bandId: "level-5b",
+      items: createTransitionItems(4, { bandId: "level-5b" }),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision).toMatchObject({
+      nextBand: null,
+      unmetRequirements: []
+    });
+  });
+
   it("does not advance from one or two mastered items alone", () => {
     const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
       bandId: "level-1a",

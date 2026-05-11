@@ -16,6 +16,7 @@ export type CachedWordRenderDecision = {
   targetText?: string;
   candidateLemma?: string;
   candidatePos?: ContextualWordCandidate["candidatePos"];
+  frequencyRank?: number | null;
   confidence?: number;
   decision: "inject" | "skip";
   rationale?: string;
@@ -307,6 +308,7 @@ function normalizeCachedWordRenderDecision(
     targetText: candidate.targetText ?? candidate.targetLemma,
     candidateLemma: candidate.candidateLemma,
     candidatePos: candidate.candidatePos,
+    frequencyRank: candidate.frequencyRank,
     confidence: candidate.confidence,
     decision: candidate.decision,
     rationale: candidate.rationale

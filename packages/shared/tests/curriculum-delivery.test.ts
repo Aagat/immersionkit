@@ -63,6 +63,18 @@ describe("curriculum delivery presentation", () => {
     }
   });
 
+  it("does not advertise verb delivery in bands whose word gate excludes verbs", () => {
+    const level2a = getBandPedagogy("level-2a");
+
+    expect(
+      [
+        level2a?.vocabularyFocus,
+        ...(level2a?.wordPatternLabels ?? []),
+        ...(level2a?.vocabularyExamples ?? [])
+      ].join(" ")
+    ).not.toMatch(/\bverbs?\b|estudiar|visitar/);
+  });
+
   it("backs fixed phrase inventory entries with detector targets", () => {
     const backedSourceTexts = new Set([
       ...FIXED_PHRASE_LEXICON.map((entry) => entry.sourceText),
@@ -227,6 +239,34 @@ describe("grammar concept delivery", () => {
     });
   });
 
+  it("keeps Level 5 review wildcards inside already unlocked grammar concepts", () => {
+    expect(
+      evaluateGrammarCurriculumDecision({
+        featureKey: "conditional:advanced",
+        confidence: 0.9,
+        profile: { activeGrammarBandId: "level-5a" },
+        translatedText: "si fuera posible"
+      })
+    ).toMatchObject({
+      eligible: false,
+      status: "suppress",
+      reason: "above-stretch-band"
+    });
+
+    expect(
+      evaluateGrammarCurriculumDecision({
+        featureKey: "conditional:advanced",
+        confidence: 0.9,
+        profile: { activeGrammarBandId: "level-5b" },
+        translatedText: "si fuera posible"
+      })
+    ).toMatchObject({
+      eligible: true,
+      status: "focus",
+      conceptId: "gr-504-advanced-conditionals"
+    });
+  });
+
   it("suppresses target-side grammar concepts until translation evidence is available", () => {
     expect(
       evaluateGrammarCurriculumDecision({
@@ -311,7 +351,7 @@ describe("grammar concept delivery", () => {
     expect(cards[0]).toMatchObject({
       conceptId: "gr-204-should-advice",
       sourceText: "should wait",
-      exampleMapping: "should rest -> deberia descansar"
+      exampleMapping: "should rest -> debería descansar"
     });
   });
 

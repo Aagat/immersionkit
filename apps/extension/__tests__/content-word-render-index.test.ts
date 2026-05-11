@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { hashSentence } from "@immersionkit/shared";
+import {
+  evaluateWordCurriculumContentInventory,
+  getActiveCurriculumContent,
+  hashSentence
+} from "@immersionkit/shared";
 
 import { processTextNode } from "../src/content/annotate";
 import { buildWordRenderIndex } from "../src/content/word-render-index";
@@ -146,14 +150,28 @@ describe("content word render index", () => {
                 lexemeId: "en:need:noun",
                 sourceLemma: "need",
                 targetLemma: "necesidad",
-                pos: "noun"
+                pos: "noun",
+                frequencyRank: 100
               })
             ]
           ]
         ]),
         sentenceHintPhrases: ["great need for"],
         vocabByLexemeId: new Map(),
-        isKnownWordForScoring: () => false
+        isKnownWordForScoring: () => false,
+        shouldActivateWord: ({ wordEntry }) => {
+          const decision = evaluateWordCurriculumContentInventory({
+            wordEntry,
+            activeContent: getActiveCurriculumContent({
+              profile: { activeVocabularyBandId: "level-1a" }
+            })
+          });
+          return {
+            eligible: decision.eligible,
+            activeBandId: decision.activeBandId,
+            skipReason: decision.skipReason
+          };
+        }
       });
 
       expect(result.replaced).toBe(true);
@@ -340,6 +358,7 @@ function cachedInjectDecision(input: {
   sourceLemma: string;
   targetLemma: string;
   pos: WordRenderEntry["pos"];
+  frequencyRank?: number | null;
 }): CachedWordRenderDecision {
   return {
     sentenceHash: input.sentenceHash,
@@ -351,6 +370,7 @@ function cachedInjectDecision(input: {
     targetText: input.targetLemma,
     candidateLemma: input.sourceLemma,
     candidatePos: input.pos,
+    frequencyRank: input.frequencyRank,
     confidence: 0.99,
     decision: "inject",
     rationale: "Analyzer pattern matched the approved render unit."

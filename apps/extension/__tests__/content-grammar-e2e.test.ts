@@ -73,12 +73,12 @@ describe("content grammar delivery e2e", () => {
       name: "Level 2A will future",
       activeBandId: "level-2a",
       sentence: "The city team will call the office tomorrow.",
-      translatedText: "El equipo de la ciudad llamara a la oficina manana.",
+      translatedText: "El equipo de la ciudad llamará a la oficina mañana.",
       featureKey: "future:will",
       title: "Simple future plans",
       sourceSpan: "will call",
       spanishPattern: "future form or ir a + infinitive",
-      exampleMapping: "will call -> llamara / va a llamar"
+      exampleMapping: "will call -> llamará / va a llamar"
     },
     {
       name: "Level 2B going-to plans",
@@ -95,18 +95,18 @@ describe("content grammar delivery e2e", () => {
       name: "Level 2B should advice",
       activeBandId: "level-2b",
       sentence: "Visitors should wait near the city gate today.",
-      translatedText: "Los visitantes deberian esperar cerca de la puerta de la ciudad hoy.",
+      translatedText: "Los visitantes deberían esperar cerca de la puerta de la ciudad hoy.",
       featureKey: "modal:should",
       title: "Advice with should",
       sourceSpan: "should wait",
-      spanishPattern: "deberia + infinitive",
-      exampleMapping: "should rest -> deberia descansar"
+      spanishPattern: "debería + infinitive",
+      exampleMapping: "should rest -> debería descansar"
     },
     {
       name: "Level 3C purpose",
       activeBandId: "level-3c",
       sentence: "The city team met early in order to learn the process.",
-      translatedText: "El equipo de la ciudad se reunio temprano para aprender el proceso.",
+      translatedText: "El equipo de la ciudad se reunió temprano para aprender el proceso.",
       featureKey: "infinitive:purpose",
       title: "Purpose with in order to",
       sourceSpan: "in order to learn",
@@ -117,7 +117,7 @@ describe("content grammar delivery e2e", () => {
       name: "Level 4A have-been aspect",
       activeBandId: "level-4a",
       sentence: "The city has been important for every visitor this year.",
-      translatedText: "La ciudad ha sido importante para cada visitante este ano.",
+      translatedText: "La ciudad ha sido importante para cada visitante este año.",
       featureKey: "aspect:have-been",
       title: "Ongoing result with have been",
       sourceSpan: "has been",
@@ -168,7 +168,7 @@ describe("content grammar delivery e2e", () => {
     await runGrammarPageScenario({
       activeBandId: "level-2a",
       sentence,
-      translatedText: "Puedo visitar la ciudad manana.",
+      translatedText: "Puedo visitar la ciudad mañana.",
       expectedFeatureKeys: ["modal:can"],
       contextualWordCandidates: [canSkipCandidate],
       lexicon: [
@@ -202,7 +202,7 @@ describe("content grammar delivery e2e", () => {
     await runGrammarPageScenario({
       activeBandId: "level-4a",
       sentence: "The city used to open the market early.",
-      translatedText: "La ciudad solia abrir el mercado temprano.",
+      translatedText: "La ciudad solía abrir el mercado temprano.",
       expectedFeatureKeys: ["aspect:used-to"],
       assert({ document }) {
         const card = document.querySelector<HTMLElement>(
@@ -223,7 +223,7 @@ describe("content grammar delivery e2e", () => {
     await runGrammarPageScenario({
       activeBandId: "level-1c",
       sentence: "The city team met early in order to learn the process.",
-      translatedText: "El equipo de la ciudad se reunio temprano para aprender el proceso.",
+      translatedText: "El equipo de la ciudad se reunió temprano para aprender el proceso.",
       expectedFeatureKeys: ["infinitive:purpose"],
       assert({ document }) {
         expect(
