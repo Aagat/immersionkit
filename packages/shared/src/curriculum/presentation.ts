@@ -1,5 +1,6 @@
 import type { LearningItem } from "../domain/models";
 import {
+  DEFAULT_CURRICULUM_CONTENT,
   getActiveCurriculumContent,
   type CurriculumBandContent
 } from "./content";
@@ -19,13 +20,33 @@ export type BandPedagogy = {
   learnerSummary: string;
   canDoStatements: readonly string[];
   vocabularyFocus: string;
+  vocabularyExamples: readonly string[];
+  allowedPartOfSpeechPolicy: string;
+  cognatePatternIds: readonly string[];
   wordPatternLabels: readonly string[];
+  phraseInventory: readonly string[];
   phraseFocusExamples: readonly string[];
+  grammarConceptIds: readonly string[];
+  sourceSideDetectionKeys: readonly string[];
+  targetSpanishPatterns: readonly string[];
   grammarFocusLabels: readonly string[];
   sentenceFocusLabel: string;
   checkpointFocus: readonly string[];
+  progressSignals: readonly string[];
   nextBandPreview: string;
 };
+
+type BandPedagogyBase = Omit<
+  BandPedagogy,
+  | "vocabularyExamples"
+  | "allowedPartOfSpeechPolicy"
+  | "cognatePatternIds"
+  | "phraseInventory"
+  | "grammarConceptIds"
+  | "sourceSideDetectionKeys"
+  | "targetSpanishPatterns"
+  | "progressSignals"
+>;
 
 export type CurrentFocusSummary = {
   levelId: string;
@@ -35,6 +56,8 @@ export type CurrentFocusSummary = {
   learnerTitle: string;
   shortGoal: string;
   wordFocusLabels: readonly string[];
+  wordExampleLabels: readonly string[];
+  allowedPartOfSpeechPolicy: string;
   wordPatternLabels: readonly string[];
   phraseFocusExamples: readonly string[];
   grammarFocusLabels: readonly string[];
@@ -74,7 +97,7 @@ export type CurriculumProgressSummary = {
   checkpointReady: boolean;
 };
 
-export const DEFAULT_BAND_PEDAGOGY: readonly BandPedagogy[] = [
+const BAND_PEDAGOGY_BASE: readonly BandPedagogyBase[] = [
   {
     bandId: "level-1a",
     levelId: "level-1",
@@ -331,6 +354,10 @@ export const DEFAULT_BAND_PEDAGOGY: readonly BandPedagogy[] = [
   }
 ] as const;
 
+export const DEFAULT_BAND_PEDAGOGY: readonly BandPedagogy[] = BAND_PEDAGOGY_BASE.map(
+  enrichBandPedagogy
+);
+
 const BAND_PEDAGOGY_BY_ID = new Map(
   DEFAULT_BAND_PEDAGOGY.map((band) => [band.bandId, band] as const)
 );
@@ -427,6 +454,10 @@ export function createCurrentFocusSummary(input?: {
     learnerTitle: pedagogy?.learnerTitle ?? band.label,
     shortGoal: pedagogy?.learnerSummary ?? content.sentencePolicy.notes,
     wordFocusLabels: [...content.vocabularyDomains],
+    wordExampleLabels: pedagogy?.vocabularyExamples ?? content.vocabularyExamples,
+    allowedPartOfSpeechPolicy:
+      pedagogy?.allowedPartOfSpeechPolicy ??
+      content.allowedPartsOfSpeech.join(", "),
     wordPatternLabels: pedagogy?.wordPatternLabels ?? [],
     phraseFocusExamples:
       pedagogy?.phraseFocusExamples ??
@@ -573,6 +604,40 @@ function resolveGrammarFocusLabels(
   }
 
   return pedagogy?.grammarFocusLabels ?? content.plannedGrammarKeys.map(humanizeGrammarKey);
+}
+
+function enrichBandPedagogy(base: BandPedagogyBase): BandPedagogy {
+  const content = DEFAULT_CURRICULUM_CONTENT.find(
+    (entry) => entry.bandId === base.bandId
+  );
+  const grammarKeys = [
+    ...(content?.currentGrammarKeys ?? []),
+    ...(content?.plannedGrammarKeys ?? [])
+  ];
+  const concepts = grammarKeys.flatMap((featureKey) => {
+    const concept = resolveGrammarConcept(featureKey);
+    return concept ? [concept] : [];
+  });
+
+  return {
+    ...base,
+    vocabularyExamples: content?.vocabularyExamples ?? [],
+    allowedPartOfSpeechPolicy:
+      content?.allowedPartsOfSpeech.join(", ") ?? "safe nouns, adjectives, and adverbs",
+    cognatePatternIds: content?.cognatePatternIds ?? [],
+    phraseInventory: content?.phraseInventory.exactSourceTexts ?? base.phraseFocusExamples,
+    grammarConceptIds: [...new Set(concepts.map((concept) => concept.conceptId))],
+    sourceSideDetectionKeys: grammarKeys.filter((key) => !key.startsWith("all current keys")),
+    targetSpanishPatterns: [
+      ...new Set(concepts.map((concept) => concept.targetPatternLabel))
+    ],
+    progressSignals: [
+      "comfort with current items",
+      "successful real-page sightings",
+      "recent difficulty stays low",
+      ...base.checkpointFocus
+    ]
+  };
 }
 
 function humanizeGrammarKey(key: string): string {

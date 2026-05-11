@@ -581,6 +581,62 @@ describe("sentence queue orchestration", () => {
     });
   });
 
+  it("penalizes overloaded grammar examples in early bands", () => {
+    const cleanSentence = {
+      sentenceHash: "sentence-clean-grammar",
+      sourceText: "She is going to call today."
+    };
+    const denseSentence = {
+      sentenceHash: "sentence-dense-grammar",
+      sourceText: "She is going to call because they should wait."
+    };
+    const cleanAnalysis = createAnalysisResult(cleanSentence.sentenceHash, 0.5);
+    const denseAnalysis = createAnalysisResult(denseSentence.sentenceHash, 0.5);
+
+    const ranked = rankCandidatesByAnalysis(
+      [denseSentence, cleanSentence],
+      [
+        {
+          ...denseAnalysis,
+          entry: {
+            ...denseAnalysis.entry,
+            grammarFeatures: [
+              createGrammarFeature("future:going-to"),
+              createGrammarFeature("modal:should"),
+              createGrammarFeature("modal:have-to")
+            ]
+          }
+        },
+        {
+          ...cleanAnalysis,
+          entry: {
+            ...cleanAnalysis.entry,
+            grammarFeatures: [createGrammarFeature("future:going-to")]
+          }
+        }
+      ],
+      {
+        config: DEFAULT_CURRICULUM_CONFIG,
+        profile: {
+          activeVocabularyBandId: "level-2b",
+          activePhraseBandId: "level-2b",
+          activeGrammarBandId: "level-2b"
+        }
+      }
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      cleanSentence.sentenceHash
+    ]);
+    expect(ranked.reasons.find((reason) => reason.sentenceHash === denseSentence.sentenceHash)).toMatchObject({
+      sentenceHash: denseSentence.sentenceHash,
+      rank: 0,
+      signals: expect.objectContaining({
+        grammarOverloadPenalty: 0.28
+      })
+    });
+  });
+
   it("skips out-of-band sentence candidates through curriculum policy", () => {
     const easier = {
       sentenceHash: "sentence-easy",

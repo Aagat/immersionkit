@@ -99,12 +99,15 @@ describe("options state", () => {
             "family",
             "frequency adverbs"
           ],
-          phraseChunks: [
+          phraseChunks: expect.arrayContaining([
             "in the morning",
             "on Monday",
             "at school",
+            "this week",
+            "sometimes",
+            "every week",
             "literal noun chunks with connectors"
-          ],
+          ]),
           currentGrammarKeys: [],
           plannedGrammarKeys: [
             "question:basic-wh",

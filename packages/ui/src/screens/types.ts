@@ -38,6 +38,8 @@ export type OptionsCurrentFocus = {
   learnerTitle: string;
   shortGoal: string;
   wordFocusLabels: readonly string[];
+  wordExampleLabels?: readonly string[];
+  allowedPartOfSpeechPolicy?: string;
   wordPatternLabels: readonly string[];
   phraseFocusExamples: readonly string[];
   grammarFocusLabels: readonly string[];

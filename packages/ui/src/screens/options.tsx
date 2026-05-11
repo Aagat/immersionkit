@@ -427,6 +427,7 @@ function CurrentFocusCard({
       <p>{focus.shortGoal}</p>
       <div className="ik-ui-focus-grid">
         <FocusList title="Words" items={focus.wordFocusLabels} />
+        <FocusList title="Examples" items={focus.wordExampleLabels ?? []} />
         <FocusList title="Word patterns" items={focus.wordPatternLabels} />
         <FocusList title="Phrases" items={focus.phraseFocusExamples} />
         <FocusList title="Grammar" items={focus.grammarFocusLabels} />

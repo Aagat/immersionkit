@@ -40,6 +40,8 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   activeBandLabel: null,
   nextBandId: null,
   nextBandLabel: null,
+  checkpointBlueprint: null,
+  checkpointScopeLabels: [],
   checkpointRequired: false,
   checkpointIsOnlyBlocker: false,
   unmetRequirements: []

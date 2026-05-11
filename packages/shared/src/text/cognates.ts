@@ -1,4 +1,5 @@
 import type { WordInventoryEntry } from "../domain/models";
+import { isFalseFriendSource } from "../curriculum/cognates";
 import { normalizeToken } from "./normalize";
 
 export type CognateEvaluation = {
@@ -64,6 +65,10 @@ export function evaluateEnglishSpanishCognate(
     target.length < MIN_COGNATE_TOKEN_LENGTH
   ) {
     return lowScore("too-short");
+  }
+
+  if (isFalseFriendSource(source)) {
+    return lowScore("low-similarity");
   }
 
   if (entry.confidence < BEGINNER_COGNATE_MIN_CONFIDENCE) {

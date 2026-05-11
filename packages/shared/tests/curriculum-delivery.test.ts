@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_CURRICULUM_CONFIG,
+  DEFAULT_CURRICULUM_CONTENT,
+  CURATED_PHRASE_TARGET_LEXICON,
+  FIXED_PHRASE_LEXICON,
+  getCheckpointBlueprintForLevel,
+  listCognatePatterns,
+  listGrammarConcepts,
+  matchEnglishSpanishCognatePattern,
   createCurrentFocusSummary,
+  evaluateWordCurriculumContentInventory,
+  getActiveCurriculumContent,
+  getBandPedagogy,
   evaluateGrammarCurriculumDecision,
   resolveGrammarConcept,
   resolveSentenceGrammarCards,
@@ -33,6 +43,75 @@ describe("curriculum delivery presentation", () => {
     expect(summary?.sentenceFocusLabel).not.toMatch(/targetPolicy|tokenRange/);
     expect(summary?.nextFocusPreview).toBeTruthy();
   });
+
+  it("provides complete learner-facing curriculum objects for all 13 bands", () => {
+    for (const content of DEFAULT_CURRICULUM_CONTENT) {
+      const pedagogy = getBandPedagogy(content.bandId);
+
+      expect(pedagogy).toBeTruthy();
+      expect(pedagogy?.vocabularyExamples.length).toBeGreaterThan(0);
+      expect(pedagogy?.allowedPartOfSpeechPolicy).toBeTruthy();
+      expect(pedagogy?.cognatePatternIds.length).toBeGreaterThan(0);
+      expect(pedagogy?.phraseInventory.length).toBeGreaterThanOrEqual(5);
+      expect(content.vocabularyMaxFrequencyRank).toBeGreaterThan(0);
+      expect(pedagogy?.grammarConceptIds.length).toBeGreaterThan(0);
+      expect(pedagogy?.targetSpanishPatterns.length).toBeGreaterThan(0);
+      expect(pedagogy?.sentenceFocusLabel).toBeTruthy();
+      expect(pedagogy?.nextBandPreview).toBeTruthy();
+      expect(pedagogy?.progressSignals.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("backs fixed phrase inventory entries with detector targets", () => {
+    const backedSourceTexts = new Set([
+      ...FIXED_PHRASE_LEXICON.map((entry) => entry.sourceText),
+      ...CURATED_PHRASE_TARGET_LEXICON.map((entry) => entry.sourceText)
+    ]);
+
+    for (const content of DEFAULT_CURRICULUM_CONTENT) {
+      for (const phrase of content.phraseInventory.exactSourceTexts) {
+        expect(backedSourceTexts.has(phrase)).toBe(true);
+      }
+    }
+  });
+
+  it("uses band vocabulary examples as a curriculum-domain eligibility signal", () => {
+    expect(
+      evaluateWordCurriculumContentInventory({
+        wordEntry: {
+          sourceLemma: "information",
+          targetLemma: "información",
+          pos: "noun",
+          confidence: 0.95,
+          frequencyRank: 9000
+        },
+        activeContent: getActiveCurriculumContent({
+          profile: { activeVocabularyBandId: "level-1c" }
+        })
+      })
+    ).toMatchObject({
+      eligible: true,
+      matchReason: "vocabulary-domain"
+    });
+
+    expect(
+      evaluateWordCurriculumContentInventory({
+        wordEntry: {
+          sourceLemma: "run",
+          targetLemma: "correr",
+          pos: "verb",
+          confidence: 0.95,
+          frequencyRank: 10
+        },
+        activeContent: getActiveCurriculumContent({
+          profile: { activeVocabularyBandId: "level-1a" }
+        })
+      })
+    ).toMatchObject({
+      eligible: false,
+      skipReason: "word-pos-outside-content"
+    });
+  });
 });
 
 describe("grammar concept delivery", () => {
@@ -52,6 +131,46 @@ describe("grammar concept delivery", () => {
     expect(concept?.title).not.toContain(":");
     expect(concept?.targetPatternLabel).toBeTruthy();
     expect(concept?.examples.length).toBeGreaterThan(0);
+  });
+
+  it("keeps planned grammar concepts registered without requiring analyzer support", () => {
+    const conceptIds = new Set(listGrammarConcepts().map((concept) => concept.conceptId));
+
+    for (const conceptId of [
+      "gr-101-gender-articles",
+      "gr-102-adjective-agreement",
+      "gr-103-ser-estar-recognition",
+      "gr-104-existence-hay",
+      "gr-105-basic-negation",
+      "gr-106-basic-questions",
+      "gr-205-present-routines",
+      "gr-206-regular-preterite",
+      "gr-207-simple-future",
+      "gr-208-time-anchors",
+      "gr-209-comparisons",
+      "gr-210-quantity-determiners",
+      "gr-304-purpose-in-order-to",
+      "gr-305-present-progressive",
+      "gr-306-past-progressive",
+      "gr-307-imperfect-background",
+      "gr-308-sequence-connectors",
+      "gr-309-gerund-infinitive-recognition",
+      "gr-310-direct-object-pronouns",
+      "gr-402-present-perfect",
+      "gr-403-passive-basics",
+      "gr-404-basic-conditionals",
+      "gr-405-contrast-concession",
+      "gr-406-relative-clauses",
+      "gr-407-subjunctive-recognition",
+      "gr-501-embedded-clauses",
+      "gr-502-reported-speech",
+      "gr-503-perfect-contrasts",
+      "gr-504-advanced-conditionals",
+      "gr-505-broader-subjunctive",
+      "gr-506-discourse-stance"
+    ]) {
+      expect(conceptIds.has(conceptId)).toBe(true);
+    }
   });
 
   it("gates grammar features as focus, review, stretch, or suppress", () => {
@@ -102,6 +221,32 @@ describe("grammar concept delivery", () => {
     });
   });
 
+  it("suppresses target-side grammar concepts until translation evidence is available", () => {
+    expect(
+      evaluateGrammarCurriculumDecision({
+        featureKey: "copula:be",
+        confidence: 0.9,
+        profile: { activeGrammarBandId: "level-1a" }
+      })
+    ).toMatchObject({
+      eligible: false,
+      status: "suppress",
+      reason: "translation-required"
+    });
+
+    expect(
+      evaluateGrammarCurriculumDecision({
+        featureKey: "copula:be",
+        confidence: 0.9,
+        profile: { activeGrammarBandId: "level-1a" },
+        translatedText: "Esta listo."
+      })
+    ).toMatchObject({
+      eligible: true,
+      status: "focus"
+    });
+  });
+
   it("resolves sentence grammar cards with source spans and Spanish target patterns", () => {
     const sentenceHash = "sentence-going-to";
     const cards = resolveSentenceGrammarCards({
@@ -138,6 +283,52 @@ describe("grammar concept delivery", () => {
         exposureItemId: "grammar-feature:future:going-to"
       })
     ]);
+  });
+});
+
+describe("cognate and checkpoint curriculum", () => {
+  it("registers required cognate pattern examples and safe false-friend handling", () => {
+    const patterns = listCognatePatterns();
+    const examplePairs = patterns.flatMap((pattern) =>
+      pattern.examples.map((example) => `${example.source}->${example.target}`)
+    );
+
+    expect(examplePairs).toContain("captain->capitán");
+    expect(examplePairs).toContain("pharmacy->farmacia");
+    expect(examplePairs).toContain("important->importante");
+    expect(examplePairs).toContain("information->información");
+    expect(
+      matchEnglishSpanishCognatePattern({
+        source: "information",
+        target: "información",
+        activeBandId: "level-1c"
+      })?.pattern.patternId
+    ).toBe("cog-03-tion-sion");
+    expect(
+      matchEnglishSpanishCognatePattern({
+        source: "actual",
+        target: "actual",
+        activeBandId: "level-3b"
+      })
+    ).toBeNull();
+  });
+
+  it("backs level-boundary checkpoints with content categories", () => {
+    for (const levelId of ["level-1", "level-2", "level-3", "level-4"]) {
+      const blueprint = getCheckpointBlueprintForLevel(levelId);
+
+      expect(blueprint?.openEndedTypingRequired).toBe(false);
+      expect(blueprint?.validates.length).toBeGreaterThan(0);
+      expect(blueprint?.itemMix.map((item) => item.category)).toEqual(
+        expect.arrayContaining([
+          "word-meaning",
+          "phrase-meaning",
+          "cloze-in-context",
+          "sentence-comprehension",
+          "grammar-discrimination"
+        ])
+      );
+    }
   });
 });
 

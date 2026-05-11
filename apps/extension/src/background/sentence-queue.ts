@@ -589,6 +589,9 @@ function buildRankingReason(
   const grammarCurriculumValue = curriculum
     ? computeGrammarCurriculumValue(result, curriculum)
     : 0;
+  const grammarOverloadPenalty = curriculum
+    ? computeGrammarOverloadPenalty(result, curriculum)
+    : 0;
   const sentencePolicy = curriculum
     ? evaluateSentencePolicyFit(result, curriculum)
     : null;
@@ -603,7 +606,13 @@ function buildRankingReason(
   const grammarBoost = grammarDueValue * 0.05 + grammarCurriculumValue * 0.1;
   const score = Math.max(
     0,
-    Math.min(1, baseScore + grammarBoost - (sentencePolicy?.penalty ?? 0))
+    Math.min(
+      1,
+      baseScore +
+        grammarBoost -
+        grammarOverloadPenalty -
+        (sentencePolicy?.penalty ?? 0)
+    )
   );
   const curriculumDecision = curriculum
     ? evaluateCurriculumEligibility(curriculum.config, {
@@ -635,6 +644,7 @@ function buildRankingReason(
       dueTargetValue: roundSignal(result.suitabilitySignals.dueTargetValue),
       grammarDueValue: roundSignal(grammarDueValue),
       grammarCurriculumValue: roundSignal(grammarCurriculumValue),
+      grammarOverloadPenalty: roundSignal(grammarOverloadPenalty),
       chunkUsefulness: roundSignal(result.suitabilitySignals.chunkUsefulness),
       ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty),
       sentencePolicyFit: sentencePolicy ? roundSignal(sentencePolicy.fit) : undefined
@@ -869,6 +879,26 @@ function computeGrammarCurriculumValue(
     values.reduce((total, value) => total + value, 0) /
       Math.max(1, result.entry.grammarFeatures.length)
   );
+}
+
+function computeGrammarOverloadPenalty(
+  result: AnalyzedSentenceCandidate,
+  curriculum: CurriculumRuntimePolicy
+): number {
+  const featureCount = result.entry.grammarFeatures.length;
+  if (featureCount === 0) {
+    return 0;
+  }
+
+  const activeBand = getActiveCurriculumContent({
+    config: curriculum.config,
+    profile: curriculum.profile,
+    unitType: "grammar-feature"
+  }).band;
+  const allowedFeatureCount = !activeBand || activeBand.order <= 6 ? 1 : 2;
+  const extraFeatureCount = Math.max(0, featureCount - allowedFeatureCount);
+
+  return Math.min(0.28, extraFeatureCount * 0.14);
 }
 
 function resolveTranslationAvailability(

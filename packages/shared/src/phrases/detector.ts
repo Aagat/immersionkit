@@ -296,6 +296,26 @@ export function detectGrammarCarrierPatterns(
 
     if (
       HAVE_FORMS.has(currentToken.normalized) &&
+      nextToken.normalized === "to" &&
+      trailingToken?.pos === "VERB"
+    ) {
+      candidates.push(
+        buildPhraseCandidate({
+          sourceKind: "pattern-match",
+          category: "grammar-carrier",
+          lane: "grammar-chunk",
+          ruleId: "pattern-have-to-v1",
+          confidence: 0.86,
+          startToken: index,
+          endToken: index + 2,
+          sourceText,
+          tokens
+        })
+      );
+    }
+
+    if (
+      HAVE_FORMS.has(currentToken.normalized) &&
       nextToken.normalized === "been" &&
       trailingToken &&
       (trailingToken.pos === "VERB" ||

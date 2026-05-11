@@ -1880,7 +1880,7 @@ describe("content inline learning loop", () => {
           );
           expect(token?.textContent).toBe("información");
           expect(token?.getAttribute("data-ik-curriculum-reason")).toContain(
-            "English -tion often maps to Spanish -cion"
+            "English words ending in -tion often become Spanish -ción"
           );
         } finally {
           chromeStub.restore();

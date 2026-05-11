@@ -48,6 +48,8 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   activeBandLabel: null,
   nextBandId: null,
   nextBandLabel: null,
+  checkpointBlueprint: null,
+  checkpointScopeLabels: [],
   checkpointRequired: false,
   checkpointIsOnlyBlocker: false,
   unmetRequirements: []
@@ -490,10 +492,11 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
   }
 
   if (preview.checkpointIsOnlyBlocker) {
+    const scope = formatCheckpointScope(preview.checkpointScopeLabels);
     return {
       badgeClass: "status-badge status-badge--warning",
       badgeLabel: "Ready",
-      description: `You have enough local reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"}. Widen the reading band when you are ready.`
+      description: `You have enough local reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"}. The readiness check covers ${scope}.`
     };
   }
 
@@ -524,6 +527,14 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
     badgeLabel: "Complete",
     description: "There is no next curriculum band to unlock right now."
   };
+}
+
+function formatCheckpointScope(labels: readonly string[]): string {
+  if (labels.length === 0) {
+    return "words, phrases, grammar recognition, and sentence comprehension";
+  }
+
+  return labels.slice(0, 4).join(", ");
 }
 
 function formatCheckpointGraduationBlock(input: {

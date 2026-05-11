@@ -160,14 +160,23 @@ describe("checkpoint summaries", () => {
       now: "2026-04-28T12:00:00.000Z"
     });
 
-    expect(summary).toEqual({
+    expect(summary).toMatchObject({
       activeBandId: "level-1c",
       activeBandLabel: "Level 1C",
       nextBandId: "level-2a",
       nextBandLabel: "Level 2A",
       checkpointRequired: true,
       checkpointIsOnlyBlocker: true,
-      unmetRequirements: ["checkpoint"]
+      unmetRequirements: ["checkpoint"],
+      checkpointBlueprint: expect.objectContaining({
+        levelId: "level-1",
+        unlocksLevelId: "level-2",
+        openEndedTypingRequired: false
+      }),
+      checkpointScopeLabels: expect.arrayContaining([
+        "Level 1 fixed phrases",
+        "short sentence comprehension"
+      ])
     });
   });
 });

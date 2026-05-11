@@ -351,6 +351,7 @@ export type SentenceRankingReason = {
     dueTargetValue: number;
     grammarDueValue?: number;
     grammarCurriculumValue?: number;
+    grammarOverloadPenalty?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
     sentencePolicyFit?: number;

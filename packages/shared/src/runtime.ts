@@ -4,6 +4,7 @@ export * from "./domain/models";
 export * from "./curriculum/checkpoint";
 export * from "./curriculum/config";
 export * from "./curriculum/content";
+export * from "./curriculum/cognates";
 export * from "./curriculum/grammar";
 export * from "./curriculum/presentation";
 export * from "./curriculum/profile";

@@ -4,18 +4,84 @@ import {
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
   type CurriculumConfig,
+  type CurriculumLevel,
   type CurriculumRuntimeProfileInput
 } from "./config";
+
+export type CheckpointContentCategory =
+  | "word-meaning"
+  | "phrase-meaning"
+  | "cloze-in-context"
+  | "sentence-comprehension"
+  | "grammar-discrimination";
+
+export type CheckpointBlueprint = {
+  levelId: string;
+  validates: readonly string[];
+  unlocksLevelId: string | null;
+  itemMix: readonly {
+    category: CheckpointContentCategory;
+    minimumCount: number;
+    maximumCount: number;
+  }[];
+  openEndedTypingRequired: boolean;
+};
 
 export type CheckpointEligibilitySummary = {
   activeBandId: string | null;
   activeBandLabel: string | null;
   nextBandId: string | null;
   nextBandLabel: string | null;
+  checkpointBlueprint: CheckpointBlueprint | null;
+  checkpointScopeLabels: readonly string[];
   checkpointRequired: boolean;
   checkpointIsOnlyBlocker: boolean;
   unmetRequirements: string[];
 };
+
+export const DEFAULT_CHECKPOINT_BLUEPRINTS: readonly CheckpointBlueprint[] = [
+  checkpointBlueprint("level-1", "level-2", [
+    "concrete nouns, adjectives, and adverbs",
+    "Level 1 cognate patterns",
+    "Level 1 fixed phrases",
+    "articles and gender recognition",
+    "simple negation and question words",
+    "short sentence comprehension"
+  ]),
+  checkpointBlueprint("level-2", "level-3", [
+    "routine and event vocabulary",
+    "comparison and quantity phrases",
+    "can, going to, have to, and should",
+    "simple past and future recognition",
+    "event-based sentence comprehension"
+  ]),
+  checkpointBlueprint("level-3", "level-4", [
+    "narrative vocabulary",
+    "cause, time, and purpose phrases",
+    "used to, because, when, and para + infinitive",
+    "progressive recognition",
+    "short article or story comprehension"
+  ]),
+  checkpointBlueprint("level-4", "level-5", [
+    "abstract explanation, opinion, and evidence terms",
+    "discourse chunks",
+    "present perfect, passive recognition, conditionals, and concession",
+    "medium-length explanation or argument comprehension"
+  ])
+] as const;
+
+export function listCheckpointBlueprints(): readonly CheckpointBlueprint[] {
+  return DEFAULT_CHECKPOINT_BLUEPRINTS;
+}
+
+export function getCheckpointBlueprintForLevel(
+  levelId: string | null | undefined
+): CheckpointBlueprint | null {
+  return levelId
+    ? DEFAULT_CHECKPOINT_BLUEPRINTS.find((blueprint) => blueprint.levelId === levelId) ??
+        null
+    : null;
+}
 
 export function summarizeCheckpointEligibility(input: {
   config?: Partial<CurriculumConfig> | null;
@@ -31,6 +97,8 @@ export function summarizeCheckpointEligibility(input: {
       activeBandLabel: null,
       nextBandId: null,
       nextBandLabel: null,
+      checkpointBlueprint: null,
+      checkpointScopeLabels: [],
       checkpointRequired: false,
       checkpointIsOnlyBlocker: false,
       unmetRequirements: ["unknown-active-band"]
@@ -53,12 +121,16 @@ export function summarizeCheckpointEligibility(input: {
     recentLapseRate,
     checkpointPassed: true
   });
+  const level = findLevelForBand(config.levels, activeBand.bandId);
+  const checkpointBlueprint = getCheckpointBlueprintForLevel(level?.levelId);
 
   return {
     activeBandId: activeBand.bandId,
     activeBandLabel: activeBand.label,
     nextBandId: blockedDecision.nextBand?.bandId ?? null,
     nextBandLabel: blockedDecision.nextBand?.label ?? null,
+    checkpointBlueprint,
+    checkpointScopeLabels: checkpointBlueprint?.validates ?? [],
     checkpointRequired: activeBand.unlockRequirements.checkpointRequired,
     checkpointIsOnlyBlocker:
       blockedDecision.unmetRequirements.includes("checkpoint") &&
@@ -66,6 +138,33 @@ export function summarizeCheckpointEligibility(input: {
       Boolean(afterCheckpointDecision.nextBand),
     unmetRequirements: blockedDecision.unmetRequirements
   };
+}
+
+function checkpointBlueprint(
+  levelId: string,
+  unlocksLevelId: string,
+  validates: readonly string[]
+): CheckpointBlueprint {
+  return {
+    levelId,
+    unlocksLevelId,
+    validates,
+    itemMix: [
+      { category: "word-meaning", minimumCount: 4, maximumCount: 5 },
+      { category: "phrase-meaning", minimumCount: 3, maximumCount: 4 },
+      { category: "cloze-in-context", minimumCount: 5, maximumCount: 7 },
+      { category: "sentence-comprehension", minimumCount: 2, maximumCount: 3 },
+      { category: "grammar-discrimination", minimumCount: 1, maximumCount: 2 }
+    ],
+    openEndedTypingRequired: false
+  };
+}
+
+function findLevelForBand(
+  levels: readonly CurriculumLevel[],
+  bandId: string
+): CurriculumLevel | null {
+  return levels.find((level) => level.bandIds.includes(bandId)) ?? null;
 }
 
 export function estimateRecentLearningItemLapseRate(

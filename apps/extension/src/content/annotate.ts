@@ -1,6 +1,7 @@
 import {
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
+  explainCognatePatternMatch,
   splitTextIntoWindows
 } from "@immersionkit/shared";
 import type {
@@ -694,43 +695,10 @@ function explainWordPatternReason(
   sourceToken: string,
   targetToken: string
 ): string | null {
-  const source = normalizePatternToken(sourceToken);
-  const target = normalizePatternToken(targetToken);
-
-  if (source.endsWith("tion") && target.endsWith("cion")) {
-    return "Pattern: English -tion often maps to Spanish -cion in approved word families.";
-  }
-
-  if (source.endsWith("sion") && target.endsWith("sion")) {
-    return "Pattern: English -sion often has a familiar Spanish -sion form.";
-  }
-
-  if (source.includes("ph") && target.includes("f")) {
-    return "Pattern: English ph often appears as Spanish f in approved word families.";
-  }
-
-  if (source.endsWith("ty") && target.endsWith("dad")) {
-    return "Pattern: many English -ty nouns become Spanish -dad nouns.";
-  }
-
-  if (source.endsWith("ly") && target.endsWith("mente")) {
-    return "Pattern: many English -ly adverbs use Spanish -mente.";
-  }
-
-  if (source === target || source.replace(/e$/, "") === target.replace(/e$/, "")) {
-    return "This is a familiar Spanish-English pair that builds early confidence.";
-  }
-
-  return null;
-}
-
-function normalizePatternToken(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ñ/g, "n")
-    .replace(/Ñ/g, "n")
-    .toLowerCase();
+  return explainCognatePatternMatch({
+    source: sourceToken,
+    target: targetToken
+  });
 }
 
 function explainPhraseCurriculumReason(input: {
