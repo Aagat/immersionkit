@@ -1,4 +1,5 @@
 import type {
+  SentenceGrammarCard,
   SentenceLearningNote,
   SentenceTranslationResult
 } from "@immersionkit/shared";
@@ -20,6 +21,7 @@ const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
 const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
 const SENTENCE_LEARNING_NOTE_ATTRIBUTE = "data-ik-sentence-learning-note";
+const SENTENCE_GRAMMAR_CARDS_ATTRIBUTE = "data-ik-sentence-grammar-cards";
 const SENTENCE_KIND_ATTRIBUTE = "data-ik-sentence-kind";
 const MIN_SENTENCE_NOTE_CHAR_GAP = 180;
 
@@ -29,6 +31,7 @@ export type SentenceNoteMetadata = {
   sourceText: string;
   translatedText: string;
   learningNote: SentenceLearningNote;
+  grammarCards: SentenceGrammarCard[];
 };
 
 export function parseSentenceTranslationResults(
@@ -119,6 +122,7 @@ export function readSentenceNoteMetadata(
     note.getAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE)
   );
   const learningNote = readSentenceLearningNote(note);
+  const grammarCards = readSentenceGrammarCards(note);
 
   if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
@@ -129,7 +133,8 @@ export function readSentenceNoteMetadata(
     sentenceHash,
     sourceText,
     translatedText,
-    learningNote
+    learningNote,
+    grammarCards
   };
 }
 
@@ -257,6 +262,10 @@ function updateSentenceNote(
     SENTENCE_LEARNING_NOTE_ATTRIBUTE,
     JSON.stringify(result.learningNote)
   );
+  note.setAttribute(
+    SENTENCE_GRAMMAR_CARDS_ATTRIBUTE,
+    JSON.stringify(result.grammarCards ?? [])
+  );
 
   const translated = ensureChild(note, "ik-sentence-note__translated");
   translated.textContent = result.translatedText;
@@ -381,7 +390,12 @@ function normalizeSentenceTranslationResult(
   const sentenceHash = readNonEmptyString(value.sentenceHash);
   const sourceText = readNonEmptyString(value.sourceText);
   const translatedText = readNonEmptyString(value.translatedText);
-  const learningNote = normalizeSentenceLearningNote(value.learningNote);
+  const grammarCards = normalizeSentenceGrammarCards(value.grammarCards);
+  const learningNote =
+    normalizeSentenceLearningNote(value.learningNote) ??
+    (grammarCards[0]
+      ? createSentenceLearningNote({ summary: grammarCards[0].explanation })
+      : null);
 
   if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
@@ -391,7 +405,8 @@ function normalizeSentenceTranslationResult(
     sentenceHash,
     sourceText,
     translatedText,
-    learningNote
+    learningNote,
+    grammarCards
   };
 }
 
@@ -436,6 +451,93 @@ function readSentenceLearningNote(note: HTMLElement): SentenceLearningNote | nul
   }
 
   return null;
+}
+
+function readSentenceGrammarCards(note: HTMLElement): SentenceGrammarCard[] {
+  const raw = note.getAttribute(SENTENCE_GRAMMAR_CARDS_ATTRIBUTE);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    return normalizeSentenceGrammarCards(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+function normalizeSentenceGrammarCards(value: unknown): SentenceGrammarCard[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return [];
+    }
+
+    const card = entry as Partial<SentenceGrammarCard>;
+    const conceptId = readNonEmptyString(card.conceptId);
+    const featureKey = readNonEmptyString(card.featureKey);
+    const sentenceHash = readNonEmptyString(card.sentenceHash);
+    const sourceText = readNonEmptyString(card.sourceText);
+    const title = readNonEmptyString(card.title);
+    const explanation = readNonEmptyString(card.explanation);
+    const sourcePatternLabel = readNonEmptyString(card.sourcePatternLabel);
+    const targetPatternLabel = readNonEmptyString(card.targetPatternLabel);
+    const bandId = readNonEmptyString(card.bandId);
+    const exposureItemId = readNonEmptyString(card.exposureItemId);
+    if (
+      !conceptId ||
+      !featureKey ||
+      !sentenceHash ||
+      !sourceText ||
+      !title ||
+      !explanation ||
+      !sourcePatternLabel ||
+      !targetPatternLabel ||
+      !card.sourceSpan ||
+      typeof card.sourceSpan.startChar !== "number" ||
+      typeof card.sourceSpan.endChar !== "number" ||
+      !bandId ||
+      !exposureItemId
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        conceptId,
+        featureKey,
+        sentenceHash,
+        sourceSpan: {
+          startToken: Number(card.sourceSpan.startToken) || 0,
+          endToken: Number(card.sourceSpan.endToken) || 0,
+          startChar: card.sourceSpan.startChar,
+          endChar: card.sourceSpan.endChar
+        },
+        sourceText,
+        title,
+        explanation,
+        sourcePatternLabel,
+        targetPatternLabel,
+        exampleMapping: readNonEmptyString(card.exampleMapping) ?? null,
+        curriculumReason:
+          readNonEmptyString(card.curriculumReason) ??
+          "This pattern fits your current reading focus.",
+        bandId,
+        curriculumStatus:
+          card.curriculumStatus === "review" || card.curriculumStatus === "stretch"
+            ? card.curriculumStatus
+            : "focus",
+        exposureItemId,
+        confidence:
+          typeof card.confidence === "number" && Number.isFinite(card.confidence)
+            ? Math.max(0, Math.min(1, card.confidence))
+            : 0
+      }
+    ];
+  });
 }
 
 function normalizeSentenceLearningNote(value: unknown): SentenceLearningNote | null {

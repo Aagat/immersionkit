@@ -181,7 +181,9 @@ function countGrammarDueSentenceReasons(
   reasons: readonly PageDiagnosticsSentenceRankingReason[]
 ): number {
   return reasons.filter(
-    (reason) => (reason.signals?.grammarDueValue ?? 0) > 0
+    (reason) =>
+      (reason.signals?.grammarDueValue ?? 0) > 0 ||
+      (reason.signals?.grammarCurriculumValue ?? 0) > 0
   ).length;
 }
 

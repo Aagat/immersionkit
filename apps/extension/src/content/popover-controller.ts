@@ -1,4 +1,8 @@
-import type { UserVocabEntry } from "@immersionkit/shared";
+import {
+  resolveSentenceGrammarCards,
+  type SentenceGrammarCard,
+  type UserVocabEntry
+} from "@immersionkit/shared";
 import { applyTokenStatusUpdate } from "./annotate";
 import type {
   PhraseActivatedDetail,
@@ -24,6 +28,7 @@ import {
 } from "./popover";
 import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { persistVocabStatus } from "./storage";
+import type { CachedGrammarFeature } from "./runtime-analysis";
 import type { RuntimeState } from "./state";
 
 export function openWordPopover(
@@ -86,18 +91,30 @@ export function openSentenceNotePopover(
     runtimeState.processing?.analysisCache.cachedGrammarFeaturesBySentenceHash.get(
       detail.sentenceHash
     ) ?? [];
+  const grammarCards = resolveGrammarCardsForPopover(
+    runtimeState,
+    detail,
+    grammarFeatures
+  );
+  const deliveredGrammarFeatures = filterDeliveredGrammarFeatures(
+    grammarFeatures,
+    grammarCards
+  );
   runtimeState.processing?.evidenceTracker.recordGrammarAssist(
     detail.sentenceHash,
-    grammarFeatures
+    deliveredGrammarFeatures
   );
   const stopGrammarDetailDwell =
     runtimeState.processing?.evidenceTracker.watchGrammarDetailDwell({
       anchor: noteElement,
       sentenceHash: detail.sentenceHash,
-      features: grammarFeatures
+      features: deliveredGrammarFeatures
     }) ?? (() => undefined);
 
-  const popover = renderSentencePopover(noteElement, detail);
+  const popover = renderSentencePopover(noteElement, {
+    ...detail,
+    grammarCards
+  });
   popover.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) {
       return;
@@ -145,6 +162,60 @@ export function openSentenceNotePopover(
   });
 
   mountPopover(runtimeState, popover, noteElement, stopGrammarDetailDwell);
+}
+
+function resolveGrammarCardsForPopover(
+  runtimeState: RuntimeState,
+  detail: SentenceNoteMetadata,
+  grammarFeatures: readonly CachedGrammarFeature[]
+): SentenceGrammarCard[] {
+  if (detail.grammarCards.length > 0) {
+    return detail.grammarCards;
+  }
+
+  const processing = runtimeState.processing;
+  if (!processing || grammarFeatures.length === 0) {
+    return [];
+  }
+
+  return resolveSentenceGrammarCards({
+    sentenceHash: detail.sentenceHash,
+    features: grammarFeatures,
+    config: processing.curriculum.config,
+    profile: processing.curriculum.profile,
+    learningItemsByUnitRefId: processing.learningItemsByUnitRefId,
+    translatedText: detail.translatedText
+  });
+}
+
+function filterDeliveredGrammarFeatures(
+  grammarFeatures: readonly CachedGrammarFeature[],
+  grammarCards: readonly SentenceGrammarCard[]
+): CachedGrammarFeature[] {
+  const deliveredFeatureKeys = new Set(
+    grammarCards.map((card) => card.featureKey.trim()).filter(Boolean)
+  );
+  if (deliveredFeatureKeys.size === 0) {
+    return [];
+  }
+
+  const deliveredFeatures = grammarFeatures.filter((feature) =>
+    deliveredFeatureKeys.has(feature.featureKey)
+  );
+  if (deliveredFeatures.length > 0) {
+    return deliveredFeatures;
+  }
+
+  return grammarCards.map((card) => ({
+    featureId: `grammar:${card.featureKey}`,
+    featureKey: card.featureKey,
+    label: card.title,
+    category: "other" as const,
+    sourceText: card.sourceText,
+    normalizedSourceText: card.sourceText.toLowerCase(),
+    span: card.sourceSpan,
+    confidence: card.confidence
+  }));
 }
 
 export function openPhraseTokenPopover(

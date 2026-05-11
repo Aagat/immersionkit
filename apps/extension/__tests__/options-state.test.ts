@@ -81,7 +81,7 @@ describe("options state", () => {
     });
 
     try {
-      await expect(loadCurriculumDiagnostics()).resolves.toEqual({
+      await expect(loadCurriculumDiagnostics()).resolves.toMatchObject({
         profile: {
           activeVocabularyBandId: "level-1b",
           activePhraseBandId: "level-1b",
@@ -116,6 +116,18 @@ describe("options state", () => {
           sentenceTargetPolicy: "0-1 target",
           sentenceNotes: "Low ambiguity with clear time or place anchoring."
         },
+        currentFocus: expect.objectContaining({
+          levelLabel: "Foundations",
+          bandLabel: "Level 1B",
+          learnerTitle: "Time, place, and familiar contexts",
+          grammarFocusLabels: expect.arrayContaining(["basic questions"])
+        }),
+        path: expect.arrayContaining([
+          expect.objectContaining({
+            levelLabel: "Foundations",
+            active: true
+          })
+        ]),
         lastProgressionDecision: {
           decidedAt: "2026-04-28T12:00:00.000Z",
           configId: "en-es-default-v1",
@@ -144,6 +156,13 @@ describe("options state", () => {
     ).toMatchObject({
       bandId: "level-4a",
       bandLabel: "Level 4A",
+      learnerFocus: expect.objectContaining({
+        levelLabel: "Connected Expression",
+        learnerTitle: "Explanation and process",
+        grammarFocusLabels: expect.arrayContaining([
+          "Ongoing result with have been"
+        ])
+      }),
       vocabularyDomains: expect.arrayContaining(["explanation", "systems"]),
       phraseChunks: expect.arrayContaining(["for example"]),
       currentGrammarKeys: ["aspect:have-been"],

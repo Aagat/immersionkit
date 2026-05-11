@@ -690,7 +690,7 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).toContain("used to visit");
           expect(popover?.textContent).toContain("solia visitar");
           expect(popover?.textContent).toContain(
-            "A reusable phrase you may see again"
+            "This phrase is due for review and still fits the current page."
           );
           expect(popover?.textContent).not.toContain("grammar carrier");
           expect(popover?.textContent).not.toContain("review due");
@@ -1841,6 +1841,54 @@ describe("content inline learning loop", () => {
     );
   });
 
+  it("explains accented cognate word-family patterns", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        document.body.innerHTML = "<p>The information is important.</p>";
+
+        const chromeStub = installChromeStub({
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset([
+            ...SEED_LEXICON,
+            {
+              lexemeId: "lexeme-information",
+              sourceLemma: "information",
+              targetLemma: "información",
+              pos: "noun",
+              frequencyRank: 120,
+              confidence: 0.98
+            }
+          ]),
+          "site-settings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:18:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const token = document.querySelector<HTMLElement>(
+            "[data-ik-lexeme-id='lexeme-information']"
+          );
+          expect(token?.textContent).toBe("información");
+          expect(token?.getAttribute("data-ik-curriculum-reason")).toContain(
+            "English -tion often maps to Spanish -cion"
+          );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
   it("removes sentence notes when processing is disabled on refresh", async () => {
     await withFixtureDom(
       "article-basic.html",
@@ -2122,6 +2170,12 @@ describe("content inline learning loop", () => {
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
+          "learning-profile": {
+            activeVocabularyBandId: "level-1a",
+            activePhraseBandId: "level-1a",
+            activeGrammarBandId: "level-4a",
+            unlockedBandIds: ["level-1a", "level-4a"]
+          },
           "asset-render-units": renderUnitAsset(SEED_LEXICON),
           "site-settings": {
             [HOSTNAME]: {
@@ -2251,6 +2305,10 @@ describe("content inline learning loop", () => {
             })
           );
           await wait(20);
+
+          const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
+          expect(popover?.textContent).toContain("Ongoing result with have been");
+          expect(popover?.textContent).toContain("haber");
 
           const assistMessage = chromeStub.sentMessages.find(
             (message): message is {

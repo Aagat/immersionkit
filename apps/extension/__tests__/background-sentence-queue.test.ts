@@ -535,6 +535,52 @@ describe("sentence queue orchestration", () => {
     ]);
   });
 
+  it("boosts sentence ranking for active curriculum grammar features", () => {
+    const grammarSentence = {
+      sentenceHash: "sentence-grammar-focus",
+      sourceText: "She is going to call today."
+    };
+    const ordinarySentence = {
+      sentenceHash: "sentence-ordinary-focus",
+      sourceText: "She calls today."
+    };
+
+    const ranked = rankCandidatesByAnalysis(
+      [ordinarySentence, grammarSentence],
+      [
+        createAnalysisResult(ordinarySentence.sentenceHash, 0.5),
+        {
+          ...createAnalysisResult(grammarSentence.sentenceHash, 0.5),
+          entry: {
+            ...createAnalysisResult(grammarSentence.sentenceHash, 0.5).entry,
+            grammarFeatures: [createGrammarFeature("future:going-to")]
+          }
+        }
+      ],
+      {
+        config: DEFAULT_CURRICULUM_CONFIG,
+        profile: {
+          activeVocabularyBandId: "level-2b",
+          activePhraseBandId: "level-2b",
+          activeGrammarBandId: "level-2b"
+        }
+      }
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      grammarSentence.sentenceHash,
+      ordinarySentence.sentenceHash
+    ]);
+    expect(ranked.reasons[0]).toMatchObject({
+      sentenceHash: grammarSentence.sentenceHash,
+      rank: 1,
+      primaryReason: "curriculum-grammar-focus",
+      signals: expect.objectContaining({
+        grammarCurriculumValue: 0.86
+      })
+    });
+  });
+
   it("skips out-of-band sentence candidates through curriculum policy", () => {
     const easier = {
       sentenceHash: "sentence-easy",

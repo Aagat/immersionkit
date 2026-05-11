@@ -42,7 +42,14 @@ export type CachedPhraseMatch = Pick<
 
 export type CachedGrammarFeature = Pick<
   GrammarFeatureMatch,
-  "featureId" | "featureKey" | "label" | "category" | "sourceText" | "confidence"
+  | "featureId"
+  | "featureKey"
+  | "label"
+  | "category"
+  | "sourceText"
+  | "normalizedSourceText"
+  | "span"
+  | "confidence"
 >;
 
 export type RuntimeSentenceAnalysis = {
@@ -336,6 +343,8 @@ function normalizeCachedGrammarFeature(
     label: value.label,
     category: value.category,
     sourceText: value.sourceText,
+    normalizedSourceText: value.normalizedSourceText,
+    span: { ...value.span },
     confidence: value.confidence
   };
 }

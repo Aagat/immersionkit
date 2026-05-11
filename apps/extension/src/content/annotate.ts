@@ -395,7 +395,8 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
     sentence: tokenElement.getAttribute("data-ik-sentence"),
     sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash"),
     exampleSentenceEnglish: tokenElement.getAttribute("data-ik-example-sentence-english"),
-    exampleSentenceNative: tokenElement.getAttribute("data-ik-example-sentence-native")
+    exampleSentenceNative: tokenElement.getAttribute("data-ik-example-sentence-native"),
+    curriculumReason: tokenElement.getAttribute("data-ik-curriculum-reason")
   };
 }
 
@@ -444,7 +445,8 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
     dueStatus: tokenElement.getAttribute("data-ik-due-status"),
     schedulerReason: tokenElement.getAttribute("data-ik-scheduler-reason"),
     sentence: tokenElement.getAttribute("data-ik-sentence"),
-    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash")
+    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash"),
+    curriculumReason: tokenElement.getAttribute("data-ik-curriculum-reason")
   };
 }
 
@@ -551,6 +553,10 @@ function createTokenElement(input: {
           : "discovery-sampling"
   );
   element.setAttribute(
+    "data-ik-curriculum-reason",
+    explainWordCurriculumReason(input)
+  );
+  element.setAttribute(
     "aria-label",
     `${input.sourceToken} translated to ${input.targetToken}`
   );
@@ -635,6 +641,10 @@ function createPhraseElement(input: {
     "data-ik-scheduler-reason",
     input.isDueForReview ? "phrase-due-review" : "phrase-learning-item"
   );
+  element.setAttribute(
+    "data-ik-curriculum-reason",
+    explainPhraseCurriculumReason(input)
+  );
   element.setAttribute("data-ik-sentence", truncateSentenceMetadata(input.sentence.text));
   element.setAttribute("data-ik-sentence-hash", input.sentence.hash);
   element.setAttribute(
@@ -643,6 +653,105 @@ function createPhraseElement(input: {
   );
 
   return element;
+}
+
+function explainWordCurriculumReason(input: {
+  sourceToken: string;
+  targetToken: string;
+  status: VocabStatus;
+  wordKind: InjectedWordKind;
+  isDueForReview: boolean;
+  activationReason?: string | null;
+}): string {
+  if (input.isDueForReview) {
+    return "This word is due for review and still passed the current reading safety checks.";
+  }
+
+  if (input.status === "known") {
+    return "This word is comfortable enough to appear while you read.";
+  }
+
+  const patternReason = explainWordPatternReason(
+    input.sourceToken,
+    input.targetToken
+  );
+  if (patternReason) {
+    return patternReason;
+  }
+
+  if (input.activationReason === "beginner-cognate") {
+    return "This is a familiar Spanish-English pair that fits your current focus.";
+  }
+
+  if (input.wordKind === "discovery") {
+    return "This word fits your current reading band and appeared in a safe local context.";
+  }
+
+  return "This item fits your current reading path.";
+}
+
+function explainWordPatternReason(
+  sourceToken: string,
+  targetToken: string
+): string | null {
+  const source = normalizePatternToken(sourceToken);
+  const target = normalizePatternToken(targetToken);
+
+  if (source.endsWith("tion") && target.endsWith("cion")) {
+    return "Pattern: English -tion often maps to Spanish -cion in approved word families.";
+  }
+
+  if (source.endsWith("sion") && target.endsWith("sion")) {
+    return "Pattern: English -sion often has a familiar Spanish -sion form.";
+  }
+
+  if (source.includes("ph") && target.includes("f")) {
+    return "Pattern: English ph often appears as Spanish f in approved word families.";
+  }
+
+  if (source.endsWith("ty") && target.endsWith("dad")) {
+    return "Pattern: many English -ty nouns become Spanish -dad nouns.";
+  }
+
+  if (source.endsWith("ly") && target.endsWith("mente")) {
+    return "Pattern: many English -ly adverbs use Spanish -mente.";
+  }
+
+  if (source === target || source.replace(/e$/, "") === target.replace(/e$/, "")) {
+    return "This is a familiar Spanish-English pair that builds early confidence.";
+  }
+
+  return null;
+}
+
+function normalizePatternToken(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ñ/g, "n")
+    .replace(/Ñ/g, "n")
+    .toLowerCase();
+}
+
+function explainPhraseCurriculumReason(input: {
+  sourceText: string;
+  category: string;
+  sourceKind: string;
+  isDueForReview: boolean;
+}): string {
+  if (input.isDueForReview) {
+    return "This phrase is due for review and still fits the current page.";
+  }
+
+  if (input.category === "grammar-carrier") {
+    return "This phrase carries a grammar pattern that is easier to learn as a chunk.";
+  }
+
+  if (input.sourceKind === "fixed-phrase") {
+    return "This phrase is learned as a chunk because it does not map word-for-word cleanly.";
+  }
+
+  return "This phrase fits your current phrase focus and is easier to read as a chunk.";
 }
 
 function setDiagnosticAttribute(

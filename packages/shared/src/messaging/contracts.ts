@@ -15,6 +15,7 @@ import type {
   CurriculumConfig,
   CurriculumRuntimeProfileInput
 } from "../curriculum/config";
+import type { SentenceGrammarCard } from "../curriculum/grammar";
 
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
@@ -164,6 +165,7 @@ export type SentenceTranslationResult = {
   sourceText: string;
   translatedText: string;
   learningNote: SentenceLearningNote;
+  grammarCards?: SentenceGrammarCard[];
 };
 
 export type SentenceTranslationResultMessage = {
@@ -325,6 +327,7 @@ export type SentenceRankingPrimaryReason =
   | "vocab-fit"
   | "due-target-value"
   | "grammar-due-value"
+  | "curriculum-grammar-focus"
   | "phrase-value"
   | "ambiguity-penalty"
   | "curriculum-sentence-policy"
@@ -347,6 +350,7 @@ export type SentenceRankingReason = {
     grammarFit: number;
     dueTargetValue: number;
     grammarDueValue?: number;
+    grammarCurriculumValue?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
     sentencePolicyFit?: number;

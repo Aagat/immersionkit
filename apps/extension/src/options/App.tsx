@@ -15,6 +15,7 @@ import {
   loadSiteSettingsMap,
   loadVocabStats,
   graduateCheckpoint,
+  formatCurriculumProgressRequirement,
   markFirstRunIntroSeen,
   normalizeDiscoveryRate,
   notifySettingsRefresh,
@@ -97,7 +98,7 @@ export function OptionsApp() {
           loadSiteSettingsMap(),
           loadCheckpointEligibilityPreview(),
           loadFirstRunIntroVisible(),
-          showAdvancedTab ? loadCurriculumDiagnostics() : Promise.resolve(null),
+          loadCurriculumDiagnostics(),
           showAdvancedTab ? loadActivePageDiagnostics() : Promise.resolve(null)
         ]);
 
@@ -374,6 +375,8 @@ export function OptionsApp() {
           void handleCheckpointGraduation();
         }
       }}
+      currentFocus={curriculumDiagnostics?.currentFocus ?? null}
+      learningPath={curriculumDiagnostics?.path ?? []}
       sentenceHelpEnabled={Boolean(settingsState?.settings.sentenceTranslationEnabled)}
       provider={settingsState?.settings.provider ?? "none"}
       apiKey={settingsState?.providerApiKey ?? ""}
@@ -497,6 +500,7 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
   if (preview.unmetRequirements.length > 0) {
     const blockers = preview.unmetRequirements
       .filter((requirement) => requirement !== "checkpoint")
+      .map(formatCurriculumProgressRequirement)
       .join(", ");
     return {
       badgeClass: "badge-soft badge-soft--off",
@@ -527,7 +531,7 @@ function formatCheckpointGraduationBlock(input: {
   unmetRequirements: readonly string[];
 }): string {
   if (input.unmetRequirements.length > 0) {
-    return `The next reading band is still waiting on ${input.unmetRequirements.join(", ")}.`;
+    return `The next reading band is still waiting on ${input.unmetRequirements.map(formatCurriculumProgressRequirement).join(", ")}.`;
   }
 
   if (input.reason === "no-checkpoint-boundary") {

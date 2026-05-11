@@ -1565,6 +1565,154 @@ button.ik-ui-mark:active {
   gap: 16px;
 }
 
+.ik-ui-current-focus {
+  gap: 18px;
+}
+
+.ik-ui-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ik-ui-focus-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--ik-ui-line);
+  border-radius: var(--ik-ui-radius);
+  background: #f8fafc;
+}
+
+.ik-ui-focus-list strong,
+.ik-ui-focus-footer strong,
+.ik-ui-path-detail strong {
+  color: var(--ik-ui-ink);
+}
+
+.ik-ui-focus-list span,
+.ik-ui-focus-footer span,
+.ik-ui-path-detail span {
+  color: #40517b;
+  line-height: 1.45;
+}
+
+.ik-ui-focus-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ik-ui-focus-footer div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ik-ui-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.ik-ui-section-heading h2 {
+  color: var(--ik-ui-ink);
+  font-size: 1.2rem;
+}
+
+.ik-ui-section-heading p {
+  margin-top: 8px;
+  color: #40517b;
+  line-height: 1.45;
+}
+
+.ik-ui-learning-path {
+  display: grid;
+  gap: 16px;
+}
+
+.ik-ui-path-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.ik-ui-path-level {
+  border: 1px solid var(--ik-ui-line);
+  border-radius: var(--ik-ui-radius);
+  background: #fff;
+}
+
+.ik-ui-path-level summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+  padding: 16px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ik-ui-path-level summary::-webkit-details-marker {
+  display: none;
+}
+
+.ik-ui-path-level summary span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ik-ui-path-level summary strong {
+  color: var(--ik-ui-ink);
+}
+
+.ik-ui-path-level summary small {
+  color: #53617d;
+}
+
+.ik-ui-path-details {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+
+.ik-ui-path-detail {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ik-ui-band-list {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.ik-ui-band-list div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--ik-ui-line);
+  border-radius: var(--ik-ui-radius);
+  background: #f8fafc;
+}
+
+.ik-ui-band-list div.is-active {
+  border-color: #9fcfd1;
+  background: var(--ik-ui-accent-soft);
+}
+
+.ik-ui-band-list span {
+  color: #53617d;
+  line-height: 1.35;
+}
+
 .ik-ui-card h2 {
   color: var(--ik-ui-ink);
   font-size: 1.18rem;
@@ -1896,7 +2044,11 @@ button.ik-ui-mark:active {
   .ik-ui-travel-grid,
   .ik-ui-options-layout,
   .ik-ui-settings-grid--two,
-  .ik-ui-choice-grid--three {
+  .ik-ui-choice-grid--three,
+  .ik-ui-focus-grid,
+  .ik-ui-focus-footer,
+  .ik-ui-path-details,
+  .ik-ui-band-list {
     grid-template-columns: 1fr;
   }
 

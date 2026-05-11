@@ -2,6 +2,7 @@ import {
   DEFAULT_LANGUAGE_PAIR_ID,
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
+  evaluateGrammarCurriculumDecision,
   evaluateCurriculumEligibility,
   getActiveCurriculumContent,
   hashSentence,
@@ -585,13 +586,25 @@ function buildRankingReason(
   }
 
   const grammarDueValue = computeGrammarDueValue(result, dueGrammarFeatureKeys);
+  const grammarCurriculumValue = curriculum
+    ? computeGrammarCurriculumValue(result, curriculum)
+    : 0;
   const sentencePolicy = curriculum
     ? evaluateSentencePolicyFit(result, curriculum)
     : null;
   const baseScore =
     result.entry.difficultyScore ??
-    scoreFromSuitabilitySignals(result, grammarDueValue, sentencePolicy?.fit);
-  const score = Math.max(0, baseScore - (sentencePolicy?.penalty ?? 0));
+    scoreFromSuitabilitySignals(
+      result,
+      grammarDueValue,
+      grammarCurriculumValue,
+      sentencePolicy?.fit
+    );
+  const grammarBoost = grammarDueValue * 0.05 + grammarCurriculumValue * 0.1;
+  const score = Math.max(
+    0,
+    Math.min(1, baseScore + grammarBoost - (sentencePolicy?.penalty ?? 0))
+  );
   const curriculumDecision = curriculum
     ? evaluateCurriculumEligibility(curriculum.config, {
         unitType: "sentence",
@@ -607,7 +620,12 @@ function buildRankingReason(
     primaryReason:
       curriculumDecision?.eligible === false
         ? "curriculum-gate"
-        : choosePrimaryRankingReason(result, grammarDueValue, sentencePolicy),
+        : choosePrimaryRankingReason(
+            result,
+            grammarDueValue,
+            grammarCurriculumValue,
+            sentencePolicy
+          ),
     curriculum: curriculumDecision
       ? serializeCurriculumDecision(curriculumDecision)
       : undefined,
@@ -616,6 +634,7 @@ function buildRankingReason(
       grammarFit: roundSignal(result.suitabilitySignals.grammarFit),
       dueTargetValue: roundSignal(result.suitabilitySignals.dueTargetValue),
       grammarDueValue: roundSignal(grammarDueValue),
+      grammarCurriculumValue: roundSignal(grammarCurriculumValue),
       chunkUsefulness: roundSignal(result.suitabilitySignals.chunkUsefulness),
       ambiguityPenalty: roundSignal(result.suitabilitySignals.ambiguityPenalty),
       sentencePolicyFit: sentencePolicy ? roundSignal(sentencePolicy.fit) : undefined
@@ -646,10 +665,19 @@ function serializeCurriculumDecision(decision: CurriculumEligibilityDecision) {
 function choosePrimaryRankingReason(
   result: AnalyzedSentenceCandidate,
   grammarDueValue = 0,
+  grammarCurriculumValue = 0,
   sentencePolicy: SentencePolicyFit | null = null
 ): SentenceRankingPrimaryReason {
   if (sentencePolicy?.outsideRange && sentencePolicy.penalty >= 0.05) {
     return "curriculum-sentence-policy";
+  }
+
+  if (grammarDueValue > 0.2) {
+    return "grammar-due-value";
+  }
+
+  if (grammarCurriculumValue > 0.2) {
+    return "curriculum-grammar-focus";
   }
 
   if (typeof result.entry.difficultyScore === "number") {
@@ -664,6 +692,7 @@ function choosePrimaryRankingReason(
     { reason: "vocab-fit", value: signals.vocabularyFit },
     { reason: "due-target-value", value: signals.dueTargetValue },
     { reason: "grammar-due-value", value: grammarDueValue },
+    { reason: "curriculum-grammar-focus", value: grammarCurriculumValue },
     { reason: "phrase-value", value: signals.chunkUsefulness }
   ];
   const bestPositive = positiveSignals.sort((left, right) => right.value - left.value)[0];
@@ -682,6 +711,7 @@ function roundSignal(value: number): number {
 function scoreFromSuitabilitySignals(
   result: AnalyzedSentenceCandidate,
   grammarDueValue = 0,
+  grammarCurriculumValue = 0,
   sentencePolicyFit = 0
 ): number {
   return (
@@ -689,6 +719,7 @@ function scoreFromSuitabilitySignals(
     result.suitabilitySignals.grammarFit * 0.16 +
     result.suitabilitySignals.dueTargetValue * 0.18 +
     grammarDueValue * 0.12 +
+    grammarCurriculumValue * 0.12 +
     result.suitabilitySignals.chunkUsefulness * 0.14 -
     result.suitabilitySignals.ambiguityPenalty * 0.16 -
     result.suitabilitySignals.stretchDemand * 0.08 +
@@ -803,6 +834,41 @@ function computeGrammarDueValue(
     0
   );
   return Math.min(1, confidence / Math.max(1, result.entry.grammarFeatures.length));
+}
+
+function computeGrammarCurriculumValue(
+  result: AnalyzedSentenceCandidate,
+  curriculum: CurriculumRuntimePolicy
+): number {
+  if (result.entry.grammarFeatures.length === 0) {
+    return 0;
+  }
+
+  const values = result.entry.grammarFeatures.flatMap((feature) => {
+    const decision = evaluateGrammarCurriculumDecision({
+      featureKey: feature.featureKey,
+      confidence: feature.confidence,
+      config: curriculum.config,
+      profile: curriculum.profile
+    });
+    if (!decision.eligible || decision.status === "suppress") {
+      return [];
+    }
+
+    const statusWeight =
+      decision.status === "focus" ? 1 : decision.status === "review" ? 0.65 : 0.35;
+    return [statusWeight * Math.max(0, Math.min(1, feature.confidence))];
+  });
+
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return Math.min(
+    1,
+    values.reduce((total, value) => total + value, 0) /
+      Math.max(1, result.entry.grammarFeatures.length)
+  );
 }
 
 function resolveTranslationAvailability(

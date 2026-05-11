@@ -1,4 +1,5 @@
 import type {
+  SentenceGrammarCard,
   SentenceLearningNote,
   VocabStatus
 } from "@immersionkit/shared";
@@ -129,7 +130,9 @@ export function renderWordPopover(detail: TokenActivatedDetail): HTMLDivElement 
   info.className = "ik-ui-info-line";
   info.append(createSvgIcon("info"));
   const infoText = document.createElement("span");
-  infoText.textContent = "Opening this helps ImmersionKit adapt.";
+  infoText.textContent =
+    readNonEmptyString(detail.curriculumReason) ??
+    "Opening this helps ImmersionKit adapt.";
   info.append(infoText);
   popover.append(info);
 
@@ -185,6 +188,9 @@ export function renderSentencePopover(
 
   popover.append(createSentenceBlock("Original", [detail.sourceText]));
   popover.append(createSentenceBlock("Translation", [detail.translatedText]));
+  for (const grammarCard of detail.grammarCards) {
+    popover.append(createGrammarCard(grammarCard));
+  }
   popover.append(
     createSentenceBlock("Why this helps", [
       sentenceHelpDetail(detail.learningNote)
@@ -202,6 +208,60 @@ export function renderSentencePopover(
   syncSentencePopoverActions(popover, noteElement);
 
   return popover;
+}
+
+function createGrammarCard(card: SentenceGrammarCard): HTMLDivElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "ik-ui-grammar-card";
+  wrapper.setAttribute("data-ik-grammar-card", "true");
+  wrapper.setAttribute("data-ik-grammar-feature-key", card.featureKey);
+  wrapper.setAttribute("data-ik-grammar-status", card.curriculumStatus);
+
+  const heading = document.createElement("h4");
+  heading.append(createSvgIcon("spark"));
+  heading.append(card.title);
+  wrapper.append(heading);
+
+  const source = document.createElement("p");
+  source.className = "ik-ui-grammar-card__span";
+  source.textContent = card.sourceText;
+  wrapper.append(source);
+
+  const patterns = document.createElement("div");
+  patterns.className = "ik-ui-grammar-card__patterns";
+  patterns.append(createGrammarPattern("Source", card.sourcePatternLabel));
+  patterns.append(createGrammarPattern("Spanish", card.targetPatternLabel));
+  wrapper.append(patterns);
+
+  const explanation = document.createElement("p");
+  explanation.textContent = card.explanation;
+  wrapper.append(explanation);
+
+  if (card.exampleMapping) {
+    const mapping = document.createElement("p");
+    mapping.className = "ik-content-popover-muted";
+    mapping.textContent = card.exampleMapping;
+    wrapper.append(mapping);
+  }
+
+  const reason = document.createElement("div");
+  reason.className = "ik-ui-info-line";
+  reason.append(createSvgIcon("info"));
+  const reasonText = document.createElement("span");
+  reasonText.textContent = card.curriculumReason;
+  reason.append(reasonText);
+  wrapper.append(reason);
+
+  return wrapper;
+}
+
+function createGrammarPattern(label: string, value: string): HTMLSpanElement {
+  const pattern = document.createElement("span");
+  const labelElement = document.createElement("strong");
+  labelElement.textContent = label;
+  pattern.append(labelElement);
+  pattern.append(value);
+  return pattern;
 }
 
 export function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivElement {
@@ -222,8 +282,7 @@ export function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivEleme
   popover.append(pair);
 
   const help = document.createElement("p");
-  help.textContent =
-    "A reusable phrase you may see again when it fits the page.";
+  help.textContent = "A reusable phrase you may see again when it fits the page.";
   popover.append(help);
 
   popover.append(createRule());
@@ -244,7 +303,9 @@ export function renderPhrasePopover(detail: PhraseActivatedDetail): HTMLDivEleme
   info.className = "ik-ui-info-line";
   info.append(createSvgIcon("info"));
   const infoText = document.createElement("span");
-  infoText.textContent = "You may see this again when it fits the page.";
+  infoText.textContent =
+    readNonEmptyString(detail.curriculumReason) ??
+    "You may see this again when it fits the page.";
   info.append(infoText);
   popover.append(info);
 

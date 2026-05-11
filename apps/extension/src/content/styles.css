@@ -193,6 +193,56 @@
   padding: 10px 12px;
 }
 
+.ik-content-popover .ik-ui-grammar-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #cfe0fb;
+  border-radius: var(--ik-ui-radius);
+  background: #f5f9ff;
+}
+
+.ik-content-popover .ik-ui-grammar-card h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ik-ui-ink);
+}
+
+.ik-content-popover .ik-ui-grammar-card__span {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #1c406f !important;
+  background: #e8f1ff;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.ik-content-popover .ik-ui-grammar-card__patterns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ik-content-popover .ik-ui-grammar-card__patterns span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--ik-ui-line);
+  border-radius: var(--ik-ui-radius);
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.ik-content-popover .ik-ui-grammar-card__patterns strong {
+  color: var(--ik-ui-muted);
+  font-size: 0.76em;
+  text-transform: uppercase;
+}
+
 .ik-content-popover .ik-ui-popover-footer {
   align-items: center;
   padding-top: 2px;

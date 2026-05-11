@@ -32,6 +32,42 @@ export type OptionsCheckpoint = {
   onWiden?: () => void;
 };
 
+export type OptionsCurrentFocus = {
+  levelLabel: string;
+  bandLabel: string;
+  learnerTitle: string;
+  shortGoal: string;
+  wordFocusLabels: readonly string[];
+  wordPatternLabels: readonly string[];
+  phraseFocusExamples: readonly string[];
+  grammarFocusLabels: readonly string[];
+  sentenceFocusLabel: string;
+  nextFocusPreview: string;
+};
+
+export type OptionsLearningPathBand = {
+  bandId: string;
+  bandLabel: string;
+  learnerTitle: string;
+  learnerSummary: string;
+  active: boolean;
+  unlocked: boolean;
+};
+
+export type OptionsLearningPathLevel = {
+  levelId: string;
+  levelLabel: string;
+  active: boolean;
+  unlocked: boolean;
+  stageSummary: string;
+  vocabularySummary: string;
+  phraseSummary: string;
+  grammarSummary: string;
+  sentenceSummary: string;
+  checkpointSummary: string;
+  bands: readonly OptionsLearningPathBand[];
+};
+
 export type OptionsAdvancedDiagnosticsMetric = {
   label: string;
   value: string | number;
@@ -63,6 +99,8 @@ export type ExtensionOptionsProps = {
   readingLevel?: ReadingLevel;
   stats?: OptionsStats;
   checkpoint?: OptionsCheckpoint;
+  currentFocus?: OptionsCurrentFocus | null;
+  learningPath?: readonly OptionsLearningPathLevel[];
   sentenceHelpEnabled?: boolean;
   provider?: "none" | "openai";
   apiKey?: string;

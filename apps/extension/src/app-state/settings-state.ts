@@ -2,11 +2,16 @@ import {
   DEFAULT_EXTENSION_SETTINGS,
   RuntimeMessageType,
   clampUnitInterval,
+  createCurrentFocusSummary,
+  createCurriculumPathSummary,
+  formatProgressRequirement,
   getActiveCurriculumContent,
   parseCurriculumRuntimeProfile,
   resolveExtensionSettings,
   summarizeCheckpointEligibility,
   type CurriculumBandContent,
+  type CurrentFocusSummary,
+  type CurriculumPathLevelSummary,
   type CurriculumRuntimeProfileInput,
   type ExtensionSettings,
   type CheckpointEligibilitySummary,
@@ -127,12 +132,15 @@ export type CurriculumProgressionDiagnostics = {
 export type CurriculumDiagnostics = {
   profile: CurriculumRuntimeProfileInput;
   activeContent: ActiveCurriculumContentSummary | null;
+  currentFocus: CurrentFocusSummary | null;
+  path: CurriculumPathLevelSummary[];
   lastProgressionDecision: CurriculumProgressionDiagnostics | null;
 };
 
 export type ActiveCurriculumContentSummary = {
   bandId: string;
   bandLabel: string;
+  learnerFocus: CurrentFocusSummary | null;
   vocabularyDomains: readonly string[];
   phraseChunks: readonly string[];
   currentGrammarKeys: readonly string[];
@@ -141,6 +149,16 @@ export type ActiveCurriculumContentSummary = {
   sentenceClausePolicy: string;
   sentenceTargetPolicy: string;
   sentenceNotes: string;
+};
+
+export type LearnerProgressSummary = {
+  currentBand: string;
+  nextBand: string;
+  progressValue: number;
+  progressLabel: string;
+  description: string;
+  checkpointLabel: string;
+  blockerLabels: readonly string[];
 };
 
 export type GrammarEvidenceStats = {
@@ -299,6 +317,8 @@ export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics
   return {
     profile,
     activeContent: summarizeActiveCurriculumContent(profile),
+    currentFocus: createCurrentFocusSummary({ profile }),
+    path: createCurriculumPathSummary({ profile }),
     lastProgressionDecision: parseCurriculumProgressionDiagnostics(
       pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
     )
@@ -354,6 +374,10 @@ export function summarizeCheckpointEligibilityPreview(input: {
   return summarizeCheckpointEligibility(input);
 }
 
+export function formatCurriculumProgressRequirement(requirement: string): string {
+  return formatProgressRequirement(requirement);
+}
+
 export function summarizeGrammarEvidenceStats(
   items: readonly LearningItem[],
   nowMs: number = Date.now()
@@ -402,6 +426,13 @@ function toActiveCurriculumContentSummary(
   return {
     bandId,
     bandLabel,
+    learnerFocus: createCurrentFocusSummary({
+      profile: {
+        activeVocabularyBandId: bandId,
+        activePhraseBandId: bandId,
+        activeGrammarBandId: bandId
+      }
+    }),
     vocabularyDomains: content.vocabularyDomains,
     phraseChunks: content.phraseChunks,
     currentGrammarKeys: content.currentGrammarKeys,

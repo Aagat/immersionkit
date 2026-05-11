@@ -35,6 +35,8 @@ export function ExtensionOptions({
   readingLevel,
   stats,
   checkpoint,
+  currentFocus,
+  learningPath = [],
   sentenceHelpEnabled = false,
   provider = "none",
   apiKey = "",
@@ -122,6 +124,8 @@ export function ExtensionOptions({
             readingLevel={readingLevel}
             stats={stats}
             checkpoint={checkpoint}
+            currentFocus={currentFocus}
+            learningPath={learningPath}
             siteSummary={siteSummary}
             pausedSiteCount={pausedSiteCount}
             savedSiteCount={savedSiteCount}
@@ -263,6 +267,8 @@ function OptionsGeneralPanel({
   readingLevel,
   stats,
   checkpoint,
+  currentFocus,
+  learningPath = [],
   siteSummary,
   pausedSiteCount = 0,
   savedSiteCount = 0,
@@ -274,6 +280,8 @@ function OptionsGeneralPanel({
   | "readingLevel"
   | "stats"
   | "checkpoint"
+  | "currentFocus"
+  | "learningPath"
   | "siteSummary"
   | "pausedSiteCount"
   | "savedSiteCount"
@@ -290,6 +298,7 @@ function OptionsGeneralPanel({
 
   return (
     <div className="ik-ui-options-panel">
+      {currentFocus ? <CurrentFocusCard focus={currentFocus} /> : null}
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <Card>
           <div className="ik-ui-card-row">
@@ -377,6 +386,7 @@ function OptionsGeneralPanel({
           <p>{checkpoint?.description}</p>
         </Card>
       </div>
+      <LearningPathView path={learningPath} />
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <Card>
           <h2>Site controls</h2>
@@ -396,6 +406,123 @@ function OptionsGeneralPanel({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CurrentFocusCard({
+  focus
+}: {
+  focus: NonNullable<ExtensionOptionsProps["currentFocus"]>;
+}) {
+  return (
+    <Card className="ik-ui-current-focus">
+      <div className="ik-ui-card-row">
+        <div>
+          <h2>{focus.levelLabel}: {focus.learnerTitle}</h2>
+          <p>{focus.bandLabel}</p>
+        </div>
+        <Badge tone="accent">Current focus</Badge>
+      </div>
+      <p>{focus.shortGoal}</p>
+      <div className="ik-ui-focus-grid">
+        <FocusList title="Words" items={focus.wordFocusLabels} />
+        <FocusList title="Word patterns" items={focus.wordPatternLabels} />
+        <FocusList title="Phrases" items={focus.phraseFocusExamples} />
+        <FocusList title="Grammar" items={focus.grammarFocusLabels} />
+      </div>
+      <div className="ik-ui-focus-footer">
+        <div>
+          <strong>Sentence style</strong>
+          <span>{focus.sentenceFocusLabel}</span>
+        </div>
+        <div>
+          <strong>Next focus</strong>
+          <span>{focus.nextFocusPreview}</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function FocusList({
+  title,
+  items
+}: {
+  title: string;
+  items: readonly string[];
+}) {
+  return (
+    <div className="ik-ui-focus-list">
+      <strong>{title}</strong>
+      <span>{items.length > 0 ? items.slice(0, 5).join(", ") : "Review and consolidation"}</span>
+    </div>
+  );
+}
+
+function LearningPathView({
+  path
+}: {
+  path: NonNullable<ExtensionOptionsProps["learningPath"]>;
+}) {
+  if (path.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="ik-ui-learning-path" aria-label="Learning path">
+      <div className="ik-ui-section-heading">
+        <div>
+          <h2>Learning path</h2>
+          <p>Five reading levels widen vocabulary, phrases, grammar, and sentence complexity.</p>
+        </div>
+      </div>
+      <div className="ik-ui-path-grid">
+        {path.map((level) => (
+          <details
+            key={level.levelId}
+            className="ik-ui-path-level"
+            open={level.active}
+          >
+            <summary>
+              <span>
+                <strong>{level.levelLabel}</strong>
+                <small>{level.stageSummary}</small>
+              </span>
+              <Badge tone={level.active ? "accent" : level.unlocked ? "info" : "muted"}>
+                {level.active ? "Now" : level.unlocked ? "Open" : "Later"}
+              </Badge>
+            </summary>
+            <div className="ik-ui-path-details">
+              <PathDetail label="Words" value={level.vocabularySummary} />
+              <PathDetail label="Phrases" value={level.phraseSummary} />
+              <PathDetail label="Grammar" value={level.grammarSummary} />
+              <PathDetail label="Sentences" value={level.sentenceSummary} />
+              <PathDetail label="Checkpoint" value={level.checkpointSummary} />
+              <div className="ik-ui-band-list">
+                {level.bands.map((band) => (
+                  <div
+                    key={band.bandId}
+                    className={band.active ? "is-active" : ""}
+                  >
+                    <strong>{band.bandLabel}</strong>
+                    <span>{band.learnerTitle}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PathDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="ik-ui-path-detail">
+      <strong>{label}</strong>
+      <span>{value}</span>
     </div>
   );
 }

@@ -30,6 +30,7 @@ export type TokenMetadata = {
   sentenceHash: string | null;
   exampleSentenceEnglish: string | null;
   exampleSentenceNative: string | null;
+  curriculumReason: string | null;
 };
 
 export type PhraseMetadata = {
@@ -49,6 +50,7 @@ export type PhraseMetadata = {
   schedulerReason: string | null;
   sentence: string | null;
   sentenceHash: string | null;
+  curriculumReason: string | null;
 };
 
 export type SentenceCandidateReason = "injected-token" | "fixed-phrase-hint";
