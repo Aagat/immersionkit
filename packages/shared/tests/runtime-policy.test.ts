@@ -6,6 +6,7 @@ import {
   evaluateLearningItemDueStatus,
   evaluatePhraseRuntimeActivation,
   evaluateWordRuntimeActivation,
+  formatProgressRequirement,
   parseLearningItemId,
   summarizeCheckpointEligibility,
   type LearningItem,
@@ -138,6 +139,12 @@ describe("runtime curriculum activation", () => {
 });
 
 describe("checkpoint summaries", () => {
+  it("formats checkpoint requirements as a manual reading-band step", () => {
+    expect(formatProgressRequirement("checkpoint")).toBe(
+      "manual reading-band step"
+    );
+  });
+
   it("summarizes checkpoint eligibility without extension app-state logic", () => {
     const summary = summarizeCheckpointEligibility({
       config: DEFAULT_CURRICULUM_CONFIG,

@@ -219,7 +219,7 @@ function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): strin
   const nextBand = preview.nextBandLabel ?? preview.nextBandId;
 
   if (preview.checkpointIsOnlyBlocker) {
-    return `Next step: ${activeBand} is ready to advance in settings.`;
+    return `Next step: ${activeBand} is ready to widen the reading band in settings.`;
   }
 
   if (preview.unmetRequirements.length > 0) {

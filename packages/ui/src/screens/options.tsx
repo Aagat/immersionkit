@@ -507,7 +507,7 @@ function LearningPathView({
               <PathDetail label="Phrases" value={level.phraseSummary} />
               <PathDetail label="Grammar" value={level.grammarSummary} />
               <PathDetail label="Sentences" value={level.sentenceSummary} />
-              <PathDetail label="Checkpoint" value={level.checkpointSummary} />
+              <PathDetail label="Boundary step" value={level.checkpointSummary} />
               <div className="ik-ui-band-list">
                 {level.bands.map((band) => (
                   <div

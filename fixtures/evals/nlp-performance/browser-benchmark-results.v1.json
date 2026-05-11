@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-05-09T18:15:24.559Z",
+  "generatedAt": "2026-05-11T16:13:12.809Z",
   "runtime": {
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -33,17 +33,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 18.599999994039536,
-      "hotPerSentenceLatencyMs": 0.8264285714498588,
+      "coldStartLatencyMs": 19.199999999254942,
+      "hotPerSentenceLatencyMs": 0.9014285714365542,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 6.5,
-        "perSentenceLatencyMs": 0.65
+        "totalLatencyMs": 9.599999999627471,
+        "perSentenceLatencyMs": 0.9599999999627471
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 32.900000005960464,
-        "perSentenceLatencyMs": 0.685416666790843
+        "totalLatencyMs": 46.40000000037253,
+        "perSentenceLatencyMs": 0.9666666666744277
       },
       "payload": {
         "averageBytesPerSentence": 1075.4583333333333,
@@ -51,8 +51,8 @@
         "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 35100000,
-        "afterUsedHeapBytes": 35100000,
+        "beforeUsedHeapBytes": 37300000,
+        "afterUsedHeapBytes": 37300000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -63,9 +63,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 50.400000005960464,
-        "withCacheLatencyMs": 10.599999994039536,
-        "savedLatencyMs": 39.80000001192093
+        "noCacheLatencyMs": 53.899999998509884,
+        "withCacheLatencyMs": 10.800000000745058,
+        "savedLatencyMs": 43.099999997764826
       },
       "quality": {
         "corpusVersion": "2026-04-21",
@@ -1096,17 +1096,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.2000000029802322,
-      "hotPerSentenceLatencyMs": 0.06928571430700166,
+      "coldStartLatencyMs": 1.099999999627471,
+      "hotPerSentenceLatencyMs": 0.07857142857142857,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 0.29999999701976776,
-        "perSentenceLatencyMs": 0.029999999701976775
+        "totalLatencyMs": 0.40000000037252903,
+        "perSentenceLatencyMs": 0.0400000000372529
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 1.7000000029802322,
-        "perSentenceLatencyMs": 0.03541666672875484
+        "totalLatencyMs": 2,
+        "perSentenceLatencyMs": 0.041666666666666664
       },
       "payload": {
         "averageBytesPerSentence": 918.2708333333334,
@@ -1114,8 +1114,8 @@
         "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 35100000,
-        "afterUsedHeapBytes": 35100000,
+        "beforeUsedHeapBytes": 37300000,
+        "afterUsedHeapBytes": 37300000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -1126,9 +1126,9 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 2,
-        "withCacheLatencyMs": 0.699999988079071,
-        "savedLatencyMs": 1.300000011920929
+        "noCacheLatencyMs": 2.300000000745058,
+        "withCacheLatencyMs": 1,
+        "savedLatencyMs": 1.300000000745058
       },
       "quality": {
         "corpusVersion": "2026-04-21",

@@ -149,7 +149,7 @@ const BAND_PEDAGOGY_BASE: readonly BandPedagogyBase[] = [
   {
     bandId: "level-1c",
     levelId: "level-1",
-    learnerTitle: "Foundation review and checkpoint prep",
+    learnerTitle: "Foundation review before Level 2",
     learnerSummary:
       "Consolidate simple vocabulary and add easy word-family patterns.",
     canDoStatements: [
@@ -260,7 +260,7 @@ const BAND_PEDAGOGY_BASE: readonly BandPedagogyBase[] = [
     grammarFocusLabels: ["past habits with used to", "cause with because", "when review"],
     sentenceFocusLabel: "Short narrative flow with scan-friendly cause and time links.",
     checkpointFocus: ["narrative connectors", "because/when", "used to"],
-    nextBandPreview: "Purpose, sequence, daily-life stories, and Level 3 checkpoint prep."
+    nextBandPreview: "Purpose, sequence, daily-life stories, and Level 3 review."
   },
   {
     bandId: "level-3c",
@@ -371,7 +371,7 @@ const LEVEL_STAGE_SUMMARIES: Record<string, Omit<CurriculumPathLevelSummary, "ac
     phraseSummary: "Very short fixed chunks.",
     grammarSummary: "Articles, simple descriptions, negation, and basic questions.",
     sentenceSummary: "Very short, concrete, mostly one-clause sentences.",
-    checkpointSummary: "Validates starter words, short phrases, grammar recognition, and short sentence meaning."
+    checkpointSummary: "Reading-band step covers starter words, short phrases, grammar recognition, and short sentence meaning."
   },
   "level-2": {
     levelId: "level-2",
@@ -381,7 +381,7 @@ const LEVEL_STAGE_SUMMARIES: Record<string, Omit<CurriculumPathLevelSummary, "ac
     phraseSummary: "Grammar carriers such as going to and have to.",
     grammarSummary: "Can, should, have to, going to, time anchors, and comparison.",
     sentenceSummary: "Clear routine and event sentences with bounded stretch.",
-    checkpointSummary: "Checks everyday patterns before wider connected reading."
+    checkpointSummary: "Reading-band step covers everyday patterns before wider connected reading."
   },
   "level-3": {
     levelId: "level-3",
@@ -391,7 +391,7 @@ const LEVEL_STAGE_SUMMARIES: Record<string, Omit<CurriculumPathLevelSummary, "ac
     phraseSummary: "Connectors, purpose chunks, and narrative phrases.",
     grammarSummary: "When, because, used to, purpose, and progressive recognition.",
     sentenceSummary: "Short connected contexts with light subordination.",
-    checkpointSummary: "Checks narrative links, past habits, purpose, and connected sentence meaning."
+    checkpointSummary: "Reading-band step covers narrative links, past habits, purpose, and connected sentence meaning."
   },
   "level-4": {
     levelId: "level-4",
@@ -401,7 +401,7 @@ const LEVEL_STAGE_SUMMARIES: Record<string, Omit<CurriculumPathLevelSummary, "ac
     phraseSummary: "Argument and explanation markers.",
     grammarSummary: "Have been, present perfect, passive basics, conditionals, and concession.",
     sentenceSummary: "Multi-clause explanation prose with overload controls.",
-    checkpointSummary: "Checks readiness for richer native prose and abstract reasoning."
+    checkpointSummary: "Reading-band step prepares richer native prose and abstract reasoning."
   },
   "level-5": {
     levelId: "level-5",
@@ -411,7 +411,7 @@ const LEVEL_STAGE_SUMMARIES: Record<string, Omit<CurriculumPathLevelSummary, "ac
     phraseSummary: "Discourse markers and dense native chunks.",
     grammarSummary: "Embedded clauses, reported speech, advanced conditionals, and adaptive review.",
     sentenceSummary: "Longer native sentences when ranking keeps them readable.",
-    checkpointSummary: "Uses adaptive review rather than a new broad unlock."
+    checkpointSummary: "Uses adaptive review rather than another broad widening step."
   }
 };
 
@@ -490,7 +490,7 @@ export function createCurriculumPathSummary(input?: {
       phraseSummary: "Phrases expand as context allows.",
       grammarSummary: "Grammar appears in sentence help.",
       sentenceSummary: "Sentence complexity widens gradually.",
-      checkpointSummary: "A local checkpoint validates readiness."
+      checkpointSummary: "A manual reading-band step widens the range when local evidence is ready."
     };
     const bands = level.bandIds.flatMap((bandId) => {
       const band = config.bands.find((entry) => entry.bandId === bandId);
@@ -535,7 +535,7 @@ export function createCurriculumProgressSummary(input: {
       nextBandLabel: null,
       progressLabels: [],
       blockerLabels: ["Reading progress will appear after your starting level is loaded."],
-      checkpointLabel: "Quick readiness checks appear at level boundaries.",
+      checkpointLabel: "Manual reading-band steps appear at level boundaries.",
       checkpointReady: false
     };
   }
@@ -558,8 +558,8 @@ export function createCurriculumProgressSummary(input: {
     ],
     blockerLabels: blockers,
     checkpointLabel: transition.band?.unlockRequirements.checkpointRequired
-      ? "The next level boundary uses a quick readiness check across words, phrases, grammar recognition, and sentence comprehension."
-      : "This band widens through reading evidence; the next major checkpoint is at a level boundary.",
+      ? "The next level boundary uses a manual reading-band step after local reading evidence across words, phrases, grammar recognition, and sentence comprehension."
+      : "This band widens through local reading evidence; larger level boundaries use a manual reading-band step.",
     checkpointReady:
       transition.unmetRequirements.length === 1 &&
       transition.unmetRequirements[0] === "checkpoint"
@@ -592,7 +592,7 @@ export function formatProgressRequirement(requirement: string): string {
   }
 
   if (requirement === "checkpoint") {
-    return "quick readiness check";
+    return "manual reading-band step";
   }
 
   return requirement;

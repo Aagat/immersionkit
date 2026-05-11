@@ -17,6 +17,7 @@ import {
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
 } from "../src/app-state/settings-state";
+import { getCheckpointStatus } from "../src/options/App";
 import { setUserDataValues } from "../src/storage/user-data-repository";
 import { installChromeStub } from "./helpers/chrome-stub";
 import { installIndexedDbStub } from "./helpers/indexeddb-stub";
@@ -333,6 +334,9 @@ describe("options state", () => {
   });
 
   it("formats calibrated progression blockers as learner-facing copy", () => {
+    expect(formatCurriculumProgressRequirement("checkpoint")).toBe(
+      "manual reading-band step"
+    );
     expect(formatCurriculumProgressRequirement("evidence-breadth")).toBe(
       "more real-page learning items"
     );
@@ -342,6 +346,50 @@ describe("options state", () => {
     expect(formatCurriculumProgressRequirement("unassisted-breadth")).toBe(
       "more unassisted successful sightings"
     );
+  });
+
+  it("formats ready reading-band widening without assessment language", () => {
+    const description = getCheckpointStatus({
+      activeBandId: "level-1c",
+      activeBandLabel: "Level 1C",
+      nextBandId: "level-2a",
+      nextBandLabel: "Level 2A",
+      checkpointBlueprint: null,
+      checkpointScopeLabels: ["Level 1 fixed phrases"],
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: true,
+      unmetRequirements: ["checkpoint"]
+    }).description;
+
+    expect(description).toBe(
+      "You have enough local reading evidence for Level 2A. Widen the reading band when you want the next level."
+    );
+    expect(description).not.toMatch(
+      /\b(checkpoint|quiz|assessment|readiness check)\b/i
+    );
+  });
+
+  it("formats blocked reading-band widening around local signals", () => {
+    const description = getCheckpointStatus({
+      activeBandId: "level-1c",
+      activeBandLabel: "Level 1C",
+      nextBandId: "level-2a",
+      nextBandLabel: "Level 2A",
+      checkpointBlueprint: null,
+      checkpointScopeLabels: [],
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: false,
+      unmetRequirements: [
+        "evidence-breadth",
+        "distinct-context-breadth",
+        "checkpoint"
+      ]
+    }).description;
+
+    expect(description).toBe(
+      "Keep reading to build more real-page learning items, more varied real-page contexts; the reading band widens after those signals are ready."
+    );
+    expect(description).not.toContain("next level unlocks");
   });
 
   it("requests explicit checkpoint graduation through the background runtime", async () => {
