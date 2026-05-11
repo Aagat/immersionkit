@@ -3,6 +3,7 @@ import type { LearningItem } from "@immersionkit/shared";
 
 import {
   graduateCheckpoint,
+  loadActiveTabContext,
   loadFirstRunIntroVisible,
   loadCurriculumDiagnostics,
   loadSiteSettingsMap,
@@ -18,7 +19,11 @@ import {
   summarizeGrammarEvidenceStats
 } from "../src/app-state/settings-state";
 import { getCheckpointStatus } from "../src/options/App";
-import { setUserDataValues } from "../src/storage/user-data-repository";
+import { formatPopupProgressCopy } from "../src/popup/App";
+import {
+  loadUserDataValues,
+  setUserDataValues
+} from "../src/storage/user-data-repository";
 import { installChromeStub } from "./helpers/chrome-stub";
 import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 
@@ -59,6 +64,78 @@ describe("options state", () => {
       });
     } finally {
       indexedDbStub.restore();
+    }
+  });
+
+  it("loads supported HTTP(S) active tab context", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      {
+        id: 7,
+        active: true,
+        url: "https://docs.example/guide"
+      } as chrome.tabs.Tab
+    ]);
+
+    try {
+      await expect(loadActiveTabContext()).resolves.toEqual({
+        tabId: 7,
+        hostname: "docs.example",
+        url: "https://docs.example/guide",
+        isSupportedPage: true,
+        supportMessage: "docs.example"
+      });
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("explains unsupported browser or private active tabs", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      {
+        id: 8,
+        active: true,
+        url: "chrome://extensions/"
+      } as chrome.tabs.Tab
+    ]);
+
+    try {
+      const context = await loadActiveTabContext();
+      expect(context).toMatchObject({
+        tabId: 8,
+        hostname: null,
+        url: "chrome://extensions/",
+        isSupportedPage: false
+      });
+      expect(context.supportMessage).toContain("skips browser, private, and extension pages");
+      expect(context.supportMessage).toContain("article, blog, or docs page");
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("explains active tabs without URLs", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      {
+        id: 9,
+        active: true
+      } as chrome.tabs.Tab
+    ]);
+
+    try {
+      const context = await loadActiveTabContext();
+      expect(context).toMatchObject({
+        tabId: 9,
+        hostname: null,
+        url: null,
+        isSupportedPage: false
+      });
+      expect(context.supportMessage).toContain("does not expose a page URL");
+      expect(context.supportMessage).toContain("article, blog, or docs page");
+    } finally {
+      chromeStub.restore();
     }
   });
 
@@ -369,7 +446,7 @@ describe("options state", () => {
     );
   });
 
-  it("formats blocked reading-band widening around local signals", () => {
+  it("formats blocked reading-band widening around local evidence", () => {
     const description = getCheckpointStatus({
       activeBandId: "level-1c",
       activeBandLabel: "Level 1C",
@@ -387,9 +464,39 @@ describe("options state", () => {
     }).description;
 
     expect(description).toBe(
-      "Keep reading to build more real-page learning items, more varied real-page contexts; the reading band widens after those signals are ready."
+      "Keep reading to build more real-page learning items, more varied real-page contexts; the reading band widens after that evidence is ready."
     );
     expect(description).not.toContain("next level unlocks");
+  });
+
+  it("formats zero-history popup progress as local reading evidence", () => {
+    const copy = formatPopupProgressCopy({
+      vocabStats: {
+        total: 0,
+        newCount: 0,
+        learning: 0,
+        known: 0,
+        ignored: 0
+      },
+      checkpointPreview: {
+        activeBandId: null,
+        activeBandLabel: null,
+        nextBandId: null,
+        nextBandLabel: null,
+        checkpointBlueprint: null,
+        checkpointScopeLabels: [],
+        checkpointRequired: false,
+        checkpointIsOnlyBlocker: false,
+        unmetRequirements: []
+      }
+    });
+
+    const combinedCopy = Object.values(copy).join(" ");
+    expect(combinedCopy).not.toMatch(/loading your reading progress/i);
+    expect(combinedCopy).not.toMatch(/\b(diagnostic|debug|checkpoint|signal)\b/i);
+    expect(combinedCopy).toMatch(/reading history/i);
+    expect(combinedCopy).toMatch(/local evidence/i);
+    expect(combinedCopy).toMatch(/supported pages/i);
   });
 
   it("requests explicit checkpoint graduation through the background runtime", async () => {
@@ -431,6 +538,9 @@ describe("options state", () => {
       await expect(loadFirstRunIntroVisible()).resolves.toBe(true);
       await markFirstRunIntroSeen();
       await expect(loadFirstRunIntroVisible()).resolves.toBe(false);
+      await expect(loadUserDataValues(["first-run-intro-visible"])).resolves.toEqual({
+        "first-run-intro-visible": false
+      });
     } finally {
       indexedDbStub.restore();
     }

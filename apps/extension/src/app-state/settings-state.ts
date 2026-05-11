@@ -518,7 +518,8 @@ export async function loadActiveTabContext(): Promise<ActiveTabContext> {
       hostname: null,
       url: null,
       isSupportedPage: false,
-      supportMessage: "Open an HTTP(S) page to configure site controls."
+      supportMessage:
+        "This tab does not expose a page URL. Open a normal HTTP(S) article, blog, or docs page to use reading mode."
     };
   }
 
@@ -531,7 +532,8 @@ export async function loadActiveTabContext(): Promise<ActiveTabContext> {
       hostname: null,
       url: activeTab.url,
       isSupportedPage: false,
-      supportMessage: "The active tab URL could not be parsed."
+      supportMessage:
+        "This tab URL could not be read. Open a normal HTTP(S) article, blog, or docs page to use reading mode."
     };
   }
 
@@ -544,7 +546,8 @@ export async function loadActiveTabContext(): Promise<ActiveTabContext> {
       hostname: null,
       url: activeTab.url,
       isSupportedPage: false,
-      supportMessage: "ImmersionKit controls only apply to HTTP(S) pages."
+      supportMessage:
+        "ImmersionKit skips browser, private, and extension pages. Open a normal HTTP(S) article, blog, or docs page to use reading mode."
     };
   }
 

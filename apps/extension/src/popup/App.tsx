@@ -32,7 +32,8 @@ const DEFAULT_TAB_CONTEXT: ActiveTabContext = {
   hostname: null,
   url: null,
   isSupportedPage: false,
-  supportMessage: "Open an HTTP(S) page to manage this site."
+  supportMessage:
+    "Open a normal HTTP(S) article, blog, or docs page to use reading mode."
 };
 
 const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
@@ -152,7 +153,10 @@ export function PopupApp() {
       ?.label ?? "False beginner";
   const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
-  const progressDetail = formatPopupCheckpointHint(checkpointPreview);
+  const progressCopy = formatPopupProgressCopy({
+    checkpointPreview,
+    vocabStats
+  });
 
   return (
     <>
@@ -163,8 +167,9 @@ export function PopupApp() {
         bandTitle={checkpointPreview.activeBandLabel ?? proficiencyLabel}
         bandSubtitle={`${discoverySummary}. Words + phrases.`}
         progressValue={estimateProgressValue(checkpointPreview)}
-        progressLabel={progressDetail}
-        progressDetail={progressDetail}
+        progressLabel={progressCopy.progressLabel}
+        progressDetail={progressCopy.progressDetail}
+        localFooterText={progressCopy.localFooterText}
         unsupportedMessage={activeTab.supportMessage}
         firstRunIntro={showFirstRunIntro}
         errorMessage={errorMessage}
@@ -210,9 +215,36 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
+export function formatPopupProgressCopy(input: {
+  checkpointPreview: CheckpointEligibilityPreview;
+  vocabStats: VocabStats;
+}): {
+  progressLabel: string;
+  progressDetail: string;
+  localFooterText: string;
+} {
+  if (input.vocabStats.total === 0 || !input.checkpointPreview.activeBandId) {
+    return {
+      progressLabel: "Progress starts as you read",
+      progressDetail:
+        "Reading history and local evidence build on this device while you browse supported pages.",
+      localFooterText:
+        "Stored on this device. Sentence help is off unless you turn it on."
+    };
+  }
+
+  const progressDetail = formatPopupCheckpointHint(input.checkpointPreview);
+  return {
+    progressLabel: progressDetail,
+    progressDetail,
+    localFooterText:
+      "Stored on this device. Sentence help is off unless you turn it on."
+  };
+}
+
 function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): string {
   if (!preview.activeBandId) {
-    return "Next step: loading your reading progress.";
+    return "Next step: build reading history on supported pages.";
   }
 
   const activeBand = preview.activeBandLabel ?? preview.activeBandId;
@@ -226,7 +258,7 @@ function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): strin
     const missingCount = preview.unmetRequirements.filter(
       (requirement) => requirement !== "checkpoint"
     ).length;
-    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading signal${missingCount === 1 ? "" : "s"} left.`;
+    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading evidence item${missingCount === 1 ? "" : "s"} left.`;
   }
 
   if (nextBand) {

@@ -69,6 +69,46 @@ describe("extension E2E harness", () => {
     );
   });
 
+  it("opens Options on fresh install and persists first-run dismissal", async () => {
+    const { context, extensionId } = await launchBuiltExtension();
+    const options = await waitForExtensionOptionsPage(context, extensionId);
+
+    await options.waitForSelector("text=Start with normal reading", {
+      timeout: 10_000
+    });
+    await expect
+      .poll(() => readUserDataValueFromExtensionPage(options, "first-run-intro-visible"))
+      .toBe(true);
+
+    const optionsText = await options.locator("body").innerText();
+    expect(optionsText).toContain("small doses of Spanish");
+    expect(optionsText).toContain("Progress and reading history stay on this device");
+    expect(optionsText).toContain("pause any site");
+    expect(optionsText).toContain("starting point and pace");
+    expect(optionsText).toContain("Sentence help is optional");
+
+    await options.getByRole("button", { name: "Got it" }).click();
+    await expect
+      .poll(() => readUserDataValueFromExtensionPage(options, "first-run-intro-visible"))
+      .toBe(false);
+
+    await options.reload({ waitUntil: "domcontentloaded" });
+    await options.waitForSelector("text=New word pace", { timeout: 10_000 });
+    expect(await options.locator("text=Start with normal reading").count()).toBe(0);
+
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`, {
+      waitUntil: "domcontentloaded"
+    });
+    await popup.waitForSelector("text=This page is not supported", {
+      timeout: 10_000
+    });
+    const popupText = await popup.locator("body").innerText();
+    expect(popupText).toContain("does not expose a page URL");
+    expect(popupText).toContain("article, blog, or docs page");
+    expect(popupText).toContain("Controls unavailable");
+  }, 60_000);
+
   it("loads the built CRXJS extension and exercises content, popup, options, and diagnostics", async () => {
     const fixtureUrl = await startFixtureServer();
     const { context, extensionId, serviceWorker } = await launchBuiltExtension();
@@ -146,6 +186,7 @@ describe("extension E2E harness", () => {
     await popup.waitForSelector("text=ImmersionKit", { timeout: 10_000 });
     const popupText = await popup.locator("body").innerText();
     expect(popupText).toContain("This page is not supported");
+    expect(popupText).toContain("article, blog, or docs page");
     expect(popupText).toContain("Your reading data stays on this device.");
 
     const options = await context.newPage();
@@ -200,6 +241,32 @@ async function buildExtension(assetBaseUrl: string): Promise<void> {
   if (!existsSync(join(extensionPath, "manifest.json"))) {
     throw new Error("Expected CRXJS/Vite build to emit dist/manifest.json.");
   }
+}
+
+async function waitForExtensionOptionsPage(
+  context: BrowserContext,
+  extensionId: string
+): Promise<Page> {
+  const optionsUrl = `chrome-extension://${extensionId}/options.html`;
+  await expect
+    .poll(
+      () =>
+        context
+          .pages()
+          .map((page) => page.url())
+          .find((url) => url.startsWith(optionsUrl)) ?? null,
+      { timeout: 10_000 }
+    )
+    .not.toBeNull();
+
+  const page = context
+    .pages()
+    .find((candidate) => candidate.url().startsWith(optionsUrl));
+  if (!page) {
+    throw new Error("Fresh install did not open the Options page.");
+  }
+  await page.waitForLoadState("domcontentloaded");
+  return page;
 }
 
 async function startFixtureServer(): Promise<string> {
@@ -342,6 +409,36 @@ async function readSettingsFromExtensionPage(
           }
         );
       })
+  );
+}
+
+async function readUserDataValueFromExtensionPage(
+  page: Page,
+  key: string
+): Promise<unknown> {
+  return page.evaluate(
+    (userDataKey) =>
+      new Promise<unknown>((resolveRead, rejectRead) => {
+        chrome.runtime.sendMessage(
+          {
+            type: "user-data/get",
+            keys: [userDataKey]
+          },
+          (response?: unknown) => {
+            if (chrome.runtime.lastError) {
+              rejectRead(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+
+            const values =
+              response && typeof response === "object" && "values" in response
+                ? (response as { values?: Record<string, unknown> }).values
+                : null;
+            resolveRead(values?.[userDataKey]);
+          }
+        );
+      }),
+    key
   );
 }
 

@@ -29,11 +29,11 @@ export function ExtensionPopup({
   bandTitle = "Reading band 1",
   bandSubtitle = "Words + phrases",
   progressValue = 38,
-  progressLabel = "42 / 120 local signals",
-  progressDetail = "A few more reading signals will widen your band.",
+  progressLabel = "42 / 120 reading evidence items",
+  progressDetail = "A few more reading evidence items will widen your band.",
   metrics,
   localFooterText,
-  unsupportedMessage = "Open a normal HTTP(S) page to manage reading mode for that site.",
+  unsupportedMessage = "Open a normal HTTP(S) article, blog, or docs page to use reading mode.",
   firstRunIntro = false,
   errorMessage = null,
   sentenceHelpSummary,
@@ -62,10 +62,12 @@ export function ExtensionPopup({
           <Card className="ik-ui-note-card ik-ui-note-card--blue">
             <Icon name="shield" />
             <div>
-              <h3>Read normally. We add a little Spanish.</h3>
+              <h3>Read normally with small doses of Spanish.</h3>
               <p>
-                A few Spanish words and phrases can appear on supported pages.
-                Progress stays on this device, and sentence help is optional.
+                Words and phrases appear gently on supported pages. Progress
+                and reading history stay on this device. Pause any site, adjust
+                your starting point or pace in settings, and turn sentence help
+                on only when you want it.
               </p>
               <button type="button" className="ik-ui-popover-link" onClick={onDismissIntro}>
                 Got it
@@ -176,7 +178,7 @@ export function ExtensionPopup({
             </div>
             <Card className="ik-ui-note-card">
               <Icon name="shield" />
-              <p>We skip private, browser, form-heavy, and sensitive pages.</p>
+              <p>We skip private, browser, form-heavy, and sensitive pages. Reading mode works on normal articles, blogs, and docs.</p>
             </Card>
             <Card className="ik-ui-progress-card">
               <div className="ik-ui-card-row">

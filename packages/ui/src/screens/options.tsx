@@ -85,11 +85,13 @@ export function ExtensionOptions({
           <Card className="ik-ui-note-card ik-ui-note-card--blue">
             <Icon name="shield" />
             <div>
-              <h2>What happens while you read</h2>
+              <h2>Start with normal reading</h2>
               <p>
-                Spanish appears gently on supported pages, progress stays on
-                this device, and selected sentence text is sent to OpenAI only
-                if sentence help is enabled.
+                ImmersionKit adds small doses of Spanish on supported pages.
+                Progress and reading history stay on this device, you can pause
+                any site, and your starting point and pace stay adjustable.
+                Sentence help is optional and sends selected text only after you
+                turn it on.
               </p>
               <Button variant="secondary" size="sm" onClick={onDismissIntro}>
                 Got it
@@ -361,7 +363,7 @@ function OptionsGeneralPanel({
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <Card>
           <h2>Learning snapshot</h2>
-          <p>Your progress while reading across sites.</p>
+          <p>Progress starts from normal reading on supported pages and builds local history across sites.</p>
           <div className="ik-ui-metric-grid ik-ui-metric-grid--four">
             <MetricStat label="Comfortable" value={stats?.comfortable ?? 0} icon="check" />
             <MetricStat label="In practice" value={stats?.practice ?? 0} icon="spark" />
@@ -373,9 +375,9 @@ function OptionsGeneralPanel({
           <div className="ik-ui-card-row">
             <div>
               <h2>Reading band</h2>
-              <p>Grow your reading range as you see more in context.</p>
+              <p>Normal reading on supported pages builds the local evidence that widens your reading range.</p>
             </div>
-            <span>{checkpoint?.progressLabel ?? "0 local signals"}</span>
+            <span>{checkpoint?.progressLabel ?? "Progress starts as you read"}</span>
           </div>
           <ProgressBar value={checkpoint?.progressValue ?? 0} />
           <div className="ik-ui-band-step">
@@ -398,7 +400,7 @@ function OptionsGeneralPanel({
       <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
         <Card>
           <h2>Site controls</h2>
-          <p>Decide where ImmersionKit is active.</p>
+          <p>Pause or resume ImmersionKit per site from the popup on supported pages.</p>
           <div className="ik-ui-inline-summary">
             <MetricStat label="saved choices" value={savedSiteCount} icon="link" />
             <MetricStat label="paused site" value={pausedSiteCount} icon="pause" />

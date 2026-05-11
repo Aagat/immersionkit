@@ -405,7 +405,7 @@ export function OptionsApp() {
         currentBand: checkpointPreview.activeBandLabel ?? "Starting",
         nextBand: checkpointPreview.nextBandLabel ?? "Next band",
         progressValue: estimateCheckpointProgress(checkpointPreview),
-        progressLabel: `${formatCount(countPublicSignalsLeft(checkpointPreview))} reading signal${countPublicSignalsLeft(checkpointPreview) === 1 ? "" : "s"} left`,
+        progressLabel: `${formatCount(countPublicSignalsLeft(checkpointPreview))} reading evidence item${countPublicSignalsLeft(checkpointPreview) === 1 ? "" : "s"} left`,
         description: checkpointStatus.description,
         canWiden: checkpointPreview.checkpointIsOnlyBlocker,
         isWidening: isGraduatingCheckpoint,
@@ -557,8 +557,8 @@ export function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
       badgeClass: "badge-soft badge-soft--off",
       badgeLabel: "Building",
       description: blockers
-        ? `Keep reading to build ${blockers}; the reading band widens after those signals are ready.`
-        : "Keep reading to build local reading evidence; the reading band widens after those signals are ready."
+        ? `Keep reading to build ${blockers}; the reading band widens after that evidence is ready.`
+        : "Keep reading to build local reading evidence; the reading band widens after that evidence is ready."
     };
   }
 
