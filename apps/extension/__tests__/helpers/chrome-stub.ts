@@ -1,10 +1,10 @@
 import {
   DEFAULT_EXTENSION_SETTINGS,
-  parseCurriculumRuntimeProfile,
   resolveCurriculumConfig,
   getRenderUnitSentenceHints
 } from "@immersionkit/shared";
 import { parseRenderUnitAsset } from "../../src/render-units/render-units";
+import { resolveLearningProfileFromStorage } from "../../src/app-state/proficiency";
 
 type RuntimeListener = (
   message: unknown,
@@ -267,7 +267,10 @@ function createContentContextResponse(
         ? storageValues["curriculum-config"]
         : null
     ),
-    learningProfile: parseCurriculumRuntimeProfile(storageValues["learning-profile"])
+    learningProfile: resolveLearningProfileFromStorage(
+      storageValues["learning-profile"],
+      isRecord(storageValues.settings) ? storageValues.settings.proficiencySeed : undefined
+    )
   };
 }
 

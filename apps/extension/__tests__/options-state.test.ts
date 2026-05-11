@@ -7,6 +7,11 @@ import {
   loadCurriculumDiagnostics,
   loadSiteSettingsMap,
   markFirstRunIntroSeen,
+  parseProficiencySeed,
+  proficiencySeedToBandId,
+  createLearningProfileForProficiencySeed,
+  createLearningProfileForBand,
+  getExactActiveBandId,
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
@@ -53,6 +58,36 @@ describe("options state", () => {
     } finally {
       indexedDbStub.restore();
     }
+  });
+
+  it("parses friendly proficiency seeds and migrates legacy advanced to intermediate", () => {
+    expect(parseProficiencySeed(undefined)).toBe("false-beginner");
+    expect(parseProficiencySeed("beginner")).toBe("beginner");
+    expect(parseProficiencySeed("false-beginner")).toBe("false-beginner");
+    expect(parseProficiencySeed("intermediate")).toBe("intermediate");
+    expect(parseProficiencySeed("advanced")).toBe("intermediate");
+    expect(proficiencySeedToBandId("beginner")).toBe("level-1a");
+    expect(proficiencySeedToBandId("false-beginner")).toBe("level-1b");
+    expect(proficiencySeedToBandId("intermediate")).toBe("level-2a");
+  });
+
+  it("creates placement profiles from friendly seeds and exact diagnostic bands", () => {
+    expect(createLearningProfileForProficiencySeed("false-beginner")).toMatchObject({
+      activeVocabularyBandId: "level-1b",
+      activePhraseBandId: "level-1b",
+      activeGrammarBandId: "level-1b",
+      unlockedBandIds: ["level-1a", "level-1b"]
+    });
+
+    const exactProfile = createLearningProfileForBand("level-5b");
+    expect(exactProfile).toMatchObject({
+      activeVocabularyBandId: "level-5b",
+      activePhraseBandId: "level-5b",
+      activeGrammarBandId: "level-5b"
+    });
+    expect(exactProfile.unlockedBandIds).toContain("level-1a");
+    expect(exactProfile.unlockedBandIds).toContain("level-5b");
+    expect(getExactActiveBandId(exactProfile)).toBe("level-5b");
   });
 
   it("parses curriculum profile and last progression diagnostics", async () => {
@@ -144,6 +179,31 @@ describe("options state", () => {
           activePhraseBandId: "level-1b",
           activeGrammarBandId: "level-1b",
           unlockedBandIds: ["level-1a", "level-1b"]
+        }
+      });
+    } finally {
+      indexedDbStub.restore();
+    }
+  });
+
+  it("derives curriculum diagnostics from the saved proficiency seed when no profile exists", async () => {
+    const indexedDbStub = installIndexedDbStub();
+    await setUserDataValues({
+      settings: {
+        proficiencySeed: "advanced"
+      }
+    });
+
+    try {
+      await expect(loadCurriculumDiagnostics()).resolves.toMatchObject({
+        profile: {
+          activeVocabularyBandId: "level-2a",
+          activePhraseBandId: "level-2a",
+          activeGrammarBandId: "level-2a",
+          unlockedBandIds: ["level-1a", "level-1b", "level-1c", "level-2a"]
+        },
+        activeContent: {
+          bandId: "level-2a"
         }
       });
     } finally {

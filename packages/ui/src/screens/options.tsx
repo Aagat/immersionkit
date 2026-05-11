@@ -47,12 +47,15 @@ export function ExtensionOptions({
   pausedSiteCount = 0,
   savedSiteCount = 0,
   advancedDiagnostics,
+  exactActiveBandId,
+  bandOptions = [],
   onSectionChange,
   onSave,
   onReload,
   onDismissIntro,
   onDiscoveryRateChange,
   onReadingLevelChange,
+  onExactBandChange,
   onSentenceHelpChange,
   onProviderChange,
   onApiKeyChange,
@@ -149,7 +152,12 @@ export function ExtensionOptions({
           />
         ) : null}
         {active === "Advanced" ? (
-          <OptionsAdvancedPanel diagnostics={advancedDiagnostics ?? null} />
+          <OptionsAdvancedPanel
+            diagnostics={advancedDiagnostics ?? null}
+            exactActiveBandId={exactActiveBandId}
+            bandOptions={bandOptions}
+            onExactBandChange={onExactBandChange}
+          />
         ) : null}
       </main>
     </div>
@@ -664,9 +672,15 @@ function OptionsTranslationPanel({
 }
 
 function OptionsAdvancedPanel({
-  diagnostics
+  diagnostics,
+  exactActiveBandId,
+  bandOptions = [],
+  onExactBandChange
 }: {
   diagnostics: ExtensionOptionsProps["advancedDiagnostics"];
+  exactActiveBandId?: ExtensionOptionsProps["exactActiveBandId"];
+  bandOptions?: ExtensionOptionsProps["bandOptions"];
+  onExactBandChange?: ExtensionOptionsProps["onExactBandChange"];
 }) {
   const activePageMetrics = diagnostics?.activePageMetrics ?? [];
   const storageMetrics = diagnostics?.storageMetrics ?? [];
@@ -705,6 +719,42 @@ function OptionsAdvancedPanel({
                 icon="spark"
               />
             ))}
+          </div>
+        </Card>
+      </div>
+      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
+        <Card>
+          <h2>Exact reading band</h2>
+          <p>Diagnostic override for vocabulary, phrase, and grammar placement.</p>
+          <label className="ik-ui-field">
+            <select
+              value={exactActiveBandId ?? ""}
+              onChange={(event) => {
+                if (event.target.value) {
+                  onExactBandChange?.(event.target.value);
+                }
+              }}
+            >
+              <option value="" disabled>
+                Select band
+              </option>
+              {bandOptions.map((band) => (
+                <option key={band.id} value={band.id}>
+                  {band.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </Card>
+        <Card className="ik-ui-note-card">
+          <Icon name="band" />
+          <div>
+            <h2>Placement state</h2>
+            <p>
+              {exactActiveBandId
+                ? `${exactActiveBandId} is active across all curriculum tracks.`
+                : "No exact active band is selected."}
+            </p>
           </div>
         </Card>
       </div>

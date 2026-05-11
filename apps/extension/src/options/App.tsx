@@ -15,12 +15,18 @@ import {
   loadSiteSettingsMap,
   loadVocabStats,
   graduateCheckpoint,
+  createCurriculumDiagnosticsForProfile,
+  createLearningProfileForBand,
+  createLearningProfileForProficiencySeed,
+  getExactActiveBandId,
   formatCurriculumProgressRequirement,
   markFirstRunIntroSeen,
   normalizeDiscoveryRate,
   notifySettingsRefresh,
   parseProficiencySeed,
   saveSettingsState,
+  saveLearningProfile,
+  CURRICULUM_BAND_OPTIONS,
   type SettingsState,
   type SiteSettingsMap,
   type VocabStats,
@@ -141,6 +147,8 @@ export function OptionsApp() {
   }, []);
 
   const handleProficiencySeedChange = useCallback((nextSeed: string) => {
+    const proficiencySeed = parseProficiencySeed(nextSeed);
+    const profile = createLearningProfileForProficiencySeed(proficiencySeed);
     setSettingsState((current) => {
       if (!current) {
         return current;
@@ -148,9 +156,27 @@ export function OptionsApp() {
 
       return {
         ...current,
-        proficiencySeed: parseProficiencySeed(nextSeed)
+        proficiencySeed
       };
     });
+    setCurriculumDiagnostics((current) =>
+      createCurriculumDiagnosticsForProfile(
+        profile,
+        current?.lastProgressionDecision ?? null
+      )
+    );
+    setStatusMessage(null);
+    setErrorMessage(null);
+  }, []);
+
+  const handleExactBandChange = useCallback((bandId: string) => {
+    const profile = createLearningProfileForBand(bandId);
+    setCurriculumDiagnostics((current) =>
+      createCurriculumDiagnosticsForProfile(
+        profile,
+        current?.lastProgressionDecision ?? null
+      )
+    );
     setStatusMessage(null);
     setErrorMessage(null);
   }, []);
@@ -259,8 +285,18 @@ export function OptionsApp() {
     setIsSaving(true);
 
     try {
+      const profileToPersist =
+        curriculumDiagnostics?.profile ??
+        createLearningProfileForProficiencySeed(normalizedState.proficiencySeed);
       const savedState = await saveSettingsState(normalizedState);
+      await saveLearningProfile(profileToPersist);
       setSettingsState(savedState);
+      setCurriculumDiagnostics((current) =>
+        createCurriculumDiagnosticsForProfile(
+          profileToPersist,
+          current?.lastProgressionDecision ?? null
+        )
+      );
       await notifySettingsRefresh();
       setStatusMessage("Settings saved.");
     } catch {
@@ -268,7 +304,7 @@ export function OptionsApp() {
     } finally {
       setIsSaving(false);
     }
-  }, [settingsState]);
+  }, [curriculumDiagnostics?.profile, settingsState]);
 
   const handleClearApiKey = useCallback(() => {
     setSettingsState((current) => {
@@ -388,6 +424,8 @@ export function OptionsApp() {
       savedSiteCount={formatCount(siteEntries.length)}
       pausedSiteCount={formatCount(disabledSiteCount)}
       advancedDiagnostics={advancedDiagnostics}
+      exactActiveBandId={getExactActiveBandId(curriculumDiagnostics?.profile)}
+      bandOptions={CURRICULUM_BAND_OPTIONS}
       siteSummary={
         siteEntries.length > 0
           ? `Recent site choices: ${siteEntries.slice(0, 3).map((entry) => entry.hostname).join(", ")}.`
@@ -409,6 +447,7 @@ export function OptionsApp() {
       onReadingLevelChange={(level) => {
         handleProficiencySeedChange(toProficiencySeed(level));
       }}
+      onExactBandChange={handleExactBandChange}
       onSentenceHelpChange={handleSentenceTranslationChange}
       onProviderChange={handleProviderChange}
       onApiKeyChange={handleApiKeyChange}
@@ -449,19 +488,29 @@ function toLocalOptionsTab(section: OptionsSection): OptionsTab {
 }
 
 function toUiReadingLevel(seed: ProficiencySeed | undefined) {
-  if (seed === "intermediate" || seed === "advanced") {
+  if (seed === "intermediate") {
     return "Intermediate";
   }
 
-  return "Beginner";
+  if (seed === "beginner") {
+    return "Beginner";
+  }
+
+  return "False beginner";
 }
 
-function toProficiencySeed(level: "Beginner" | "False beginner" | "Intermediate"): ProficiencySeed {
+function toProficiencySeed(
+  level: "Beginner" | "False beginner" | "Intermediate"
+): ProficiencySeed {
   if (level === "Intermediate") {
     return "intermediate";
   }
 
-  return "beginner";
+  if (level === "Beginner") {
+    return "beginner";
+  }
+
+  return "false-beginner";
 }
 
 function estimateCheckpointProgress(preview: CheckpointEligibilityPreview): number {

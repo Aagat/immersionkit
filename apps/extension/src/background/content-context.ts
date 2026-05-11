@@ -144,8 +144,8 @@ export function collectRelevantUnitRefIds(
     }
 
     for (const grammarFeature of entry.grammarFeatures) {
-      if (grammarFeature.featureId.trim()) {
-        pageLearningUnitRefIds.add(grammarFeature.featureId);
+      if (grammarFeature.featureKey.trim()) {
+        pageLearningUnitRefIds.add(grammarFeature.featureKey);
       }
     }
   }

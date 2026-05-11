@@ -19,7 +19,7 @@ describe("background content context", () => {
     expect(cappedLearningRefs.slice(0, 3)).toEqual([
       "lx:page-word",
       "phrase:fixed-phrase:at-home:en-casa",
-      "grammar:present-simple"
+      "tense:present-simple"
     ]);
     expect(cappedLearningRefs).toContain("lx:asset-0");
     expect(cappedLearningRefs).not.toContain("lx:asset-649");
@@ -34,7 +34,7 @@ describe("background content context", () => {
     expect(relevantRefs.learningUnitRefIds).toEqual([
       "lx:page-word",
       "phrase:fixed-phrase:at-home:en-casa",
-      "grammar:present-simple",
+      "tense:present-simple",
       "lx:asset-word"
     ]);
   });

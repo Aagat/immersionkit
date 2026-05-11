@@ -5,6 +5,7 @@ import {
   resolveSentenceGrammarCards,
   type AnalyzerOutput,
   type CuratedPhraseTargetEntry,
+  type GrammarFeatureMatch,
   type LanguagePairDefinition,
   type PhraseOccurrence,
   type PhraseRegistryEntry,
@@ -58,6 +59,57 @@ describe("background sentence analysis service", () => {
     expect(second[0]?.cacheHit).toBe(true);
     expect(await cache.get(sentenceHash, "fixture-v1+pair:en-es")).toBeTruthy();
     expect(await cache.get(sentenceHash, "fixture-v2")).toBeNull();
+  });
+
+  it("upserts only concept-backed grammar learning items from analysis", async () => {
+    const sourceText = "You might visit if you can wait.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = createAnalyzer("fixture-v1", () => ({
+      analyzerId: "fixture-annotated",
+      analyzerVersion: "fixture-v1",
+      sentenceHash,
+      sourceText,
+      tokens: tokensFromSpecs(sourceText, [
+        ["You", "you", "pronoun", ["PRON", "pronoun"]],
+        ["might", "might", "modal", ["MD", "modal"]],
+        ["visit", "visit", "verb", ["VB", "verb"]],
+        ["if", "if", "conjunction", ["SCONJ", "conjunction"]],
+        ["you", "you", "pronoun", ["PRON", "pronoun"]],
+        ["can", "can", "modal", ["MD", "modal"]],
+        ["wait", "wait", "verb", ["VB", "verb"]]
+      ]),
+      chunks: [],
+      grammarFeatures: [
+        createGrammarFeatureMatch(sentenceHash, "modal:might"),
+        createGrammarFeatureMatch(sentenceHash, "modal:can"),
+        createGrammarFeatureMatch(sentenceHash, "conditional:if-basic")
+      ]
+    }));
+    const learningItems = {
+      upsertGrammarFeatureItems: vi.fn(async () => [])
+    };
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      learningItems,
+      loadRenderUnits: () => Promise.resolve([]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
+
+    expect(analysis?.entry.grammarFeatures.map((feature) => feature.featureKey)).toEqual([
+      "modal:might",
+      "modal:can",
+      "conditional:if-basic"
+    ]);
+    expect(learningItems.upsertGrammarFeatureItems).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ featureKey: "modal:can" }),
+        expect.objectContaining({ featureKey: "conditional:if-basic" })
+      ],
+      expect.any(String)
+    );
   });
 
   it("fails closed for ambiguous words when analyzer evidence is weak or blocked", async () => {
@@ -1474,6 +1526,28 @@ function createUnresolvedChunkAnalyzerOutput(
       }
     ],
     grammarFeatures: []
+  };
+}
+
+function createGrammarFeatureMatch(
+  sentenceHash: string,
+  featureKey: string
+): GrammarFeatureMatch {
+  return {
+    featureId: `grammar:${featureKey}`,
+    featureKey,
+    label: featureKey,
+    category: "syntax",
+    sourceText: featureKey,
+    normalizedSourceText: featureKey,
+    span: {
+      startToken: 0,
+      endToken: 1,
+      startChar: 0,
+      endChar: featureKey.length
+    },
+    evidence: [`fixture:${sentenceHash}`],
+    confidence: 0.84
   };
 }
 

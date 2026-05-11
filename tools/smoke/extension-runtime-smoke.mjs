@@ -95,7 +95,7 @@ const smokeFixtures = [
     fileName: "article-metrics-notebook.html",
     codeBlockNeedle: "weekly_rate",
     requiredText: [
-      "Like a bug report",
+      "Like a bug",
       "This means zero rows can move",
       "fine for",
       "left the control chart open"

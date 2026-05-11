@@ -70,6 +70,17 @@ describe("content grammar delivery e2e", () => {
 
   it.each([
     {
+      name: "Level 2A will future",
+      activeBandId: "level-2a",
+      sentence: "The city team will call the office tomorrow.",
+      translatedText: "El equipo de la ciudad llamara a la oficina manana.",
+      featureKey: "future:will",
+      title: "Simple future plans",
+      sourceSpan: "will call",
+      spanishPattern: "future form or ir a + infinitive",
+      exampleMapping: "will call -> llamara / va a llamar"
+    },
+    {
       name: "Level 2B going-to plans",
       activeBandId: "level-2b",
       sentence: "The city team is going to call the office today.",

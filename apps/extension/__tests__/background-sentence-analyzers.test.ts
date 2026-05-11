@@ -39,4 +39,40 @@ describe("background sentence analyzers", () => {
       pos: "preposition"
     });
   });
+
+  it.each([
+    ["There is a quiet city nearby.", "existential:there-is"],
+    ["She is not ready today.", "negation:basic-not"],
+    ["No visitors came today.", "negation:basic-no"],
+    ["They do not visit every day.", "negation:do-not"],
+    ["Where is the city office?", "question:basic-wh"],
+    ["She usually visits the office.", "present:routine-verbs"],
+    ["They will visit the city tomorrow.", "future:will"],
+    ["The team arrives tomorrow.", "time:anchor-basic"],
+    ["Before lunch, the team visits the office.", "time:sequence-basic"],
+    ["The city is bigger than the town.", "comparison:comparative"],
+    ["This is the biggest office.", "comparison:superlative"],
+    ["Several visitors waited outside.", "determiner:quantity-basic"],
+    ["Then the team visits the city.", "connector:sequence"],
+    ["If possible, we visit today.", "conditional:if-basic"],
+    ["Although it rained, we visited.", "contrast:although"],
+    ["However, the office stayed open.", "concession:contrast"],
+    ["To some extent, the plan worked.", "discourse:stance-marker"]
+  ])("detects %s as %s", async (sentence, featureKey) => {
+    const analyzer = await createWinkNlpSentenceAnalyzer();
+    const output = await analyzer.analyze(sentence);
+
+    expect(output.grammarFeatures).toContainEqual(
+      expect.objectContaining({ featureKey })
+    );
+  });
+
+  it("maps will to future grammar without emitting an unknown modal feature", async () => {
+    const analyzer = await createWinkNlpSentenceAnalyzer();
+    const output = await analyzer.analyze("They will visit the city tomorrow.");
+    const featureKeys = output.grammarFeatures.map((feature) => feature.featureKey);
+
+    expect(featureKeys).toContain("future:will");
+    expect(featureKeys).not.toContain("modal:will");
+  });
 });

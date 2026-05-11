@@ -149,7 +149,7 @@ export function PopupApp() {
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
-      ?.label ?? "Beginner";
+      ?.label ?? "False beginner";
   const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
   const progressDetail = formatPopupCheckpointHint(checkpointPreview);

@@ -246,6 +246,25 @@ describe("curriculum configuration", () => {
       activeBandId: "level-1a",
       skipReason: "word-rank-outside-content"
     });
+
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        wordEntry: {
+          lexemeId: "en:river:noun",
+          sourceLemma: "river",
+          targetLemma: "rio",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91,
+          renderUnitMinBand: "level-1a"
+        }
+      })
+    ).toMatchObject({
+      eligible: false,
+      activeBandId: "level-1a",
+      skipReason: "word-rank-outside-content"
+    });
   });
 
   it("lets high-confidence beginner cognates through the early inventory gate", () => {
@@ -307,6 +326,7 @@ describe("curriculum configuration", () => {
           ...DEFAULT_CURRICULUM_CONTENT[0]!,
           bandId: "test-1",
           vocabularyDomains: ["synthetic"],
+          vocabularyExamples: ["synthetic -> sintetico"],
           vocabularyMaxFrequencyRank: 10,
           phraseChunks: ["synthetic chunk"],
           phraseInventory: {
@@ -353,7 +373,7 @@ describe("curriculum configuration", () => {
     ).toMatchObject({
       eligible: true,
       activeBandId: "test-1",
-      matchReason: "render-unit-band",
+      matchReason: "vocabulary-domain",
       skipReason: null
     });
     expect(

@@ -660,22 +660,15 @@ export function evaluateWordCurriculumContentInventory(input: {
 
   if (input.wordEntry.renderUnitMinBand) {
     if (
-      isRenderUnitBandEligible(input.wordEntry.renderUnitMinBand, input.activeContent)
+      !isRenderUnitBandEligible(input.wordEntry.renderUnitMinBand, input.activeContent)
     ) {
       return {
-        eligible: true,
+        eligible: false,
         activeBandId,
-        matchReason: "render-unit-band",
-        skipReason: null
+        matchReason: null,
+        skipReason: "render-unit-band-locked"
       };
     }
-
-    return {
-      eligible: false,
-      activeBandId,
-      matchReason: null,
-      skipReason: "render-unit-band-locked"
-    };
   }
 
   if (wordMatchesVocabularyExamples(input.wordEntry, content)) {

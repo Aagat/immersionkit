@@ -15,7 +15,8 @@ import {
   evaluateGrammarCurriculumDecision,
   resolveGrammarConcept,
   resolveSentenceGrammarCards,
-  type GrammarFeatureMatch
+  type GrammarFeatureMatch,
+  type LearningItem
 } from "../src";
 
 describe("curriculum delivery presentation", () => {
@@ -121,9 +122,27 @@ describe("grammar concept delivery", () => {
     "modal:have-to",
     "future:going-to",
     "aspect:used-to",
+    "infinitive:purpose",
     "clause:because-basic",
     "clause:when-basic",
-    "aspect:have-been"
+    "aspect:have-been",
+    "existential:there-is",
+    "negation:basic-not",
+    "negation:basic-no",
+    "negation:do-not",
+    "question:basic-wh",
+    "present:routine-verbs",
+    "future:will",
+    "time:anchor-basic",
+    "time:sequence-basic",
+    "comparison:comparative",
+    "comparison:superlative",
+    "determiner:quantity-basic",
+    "connector:sequence",
+    "conditional:if-basic",
+    "contrast:although",
+    "concession:contrast",
+    "discourse:stance-marker"
   ])("resolves %s to a learner-facing Spanish concept", (featureKey) => {
     const concept = resolveGrammarConcept(featureKey);
 
@@ -133,41 +152,28 @@ describe("grammar concept delivery", () => {
     expect(concept?.examples.length).toBeGreaterThan(0);
   });
 
-  it("keeps planned grammar concepts registered without requiring analyzer support", () => {
+  it("keeps translation-gated grammar concepts registered without source-only analyzer support", () => {
     const conceptIds = new Set(listGrammarConcepts().map((concept) => concept.conceptId));
 
     for (const conceptId of [
       "gr-101-gender-articles",
       "gr-102-adjective-agreement",
       "gr-103-ser-estar-recognition",
-      "gr-104-existence-hay",
-      "gr-105-basic-negation",
-      "gr-106-basic-questions",
-      "gr-205-present-routines",
       "gr-206-regular-preterite",
-      "gr-207-simple-future",
-      "gr-208-time-anchors",
-      "gr-209-comparisons",
-      "gr-210-quantity-determiners",
-      "gr-304-purpose-in-order-to",
       "gr-305-present-progressive",
       "gr-306-past-progressive",
       "gr-307-imperfect-background",
-      "gr-308-sequence-connectors",
       "gr-309-gerund-infinitive-recognition",
       "gr-310-direct-object-pronouns",
       "gr-402-present-perfect",
       "gr-403-passive-basics",
-      "gr-404-basic-conditionals",
-      "gr-405-contrast-concession",
       "gr-406-relative-clauses",
       "gr-407-subjunctive-recognition",
       "gr-501-embedded-clauses",
       "gr-502-reported-speech",
       "gr-503-perfect-contrasts",
       "gr-504-advanced-conditionals",
-      "gr-505-broader-subjunctive",
-      "gr-506-discourse-stance"
+      "gr-505-broader-subjunctive"
     ]) {
       expect(conceptIds.has(conceptId)).toBe(true);
     }
@@ -308,6 +314,40 @@ describe("grammar concept delivery", () => {
       exampleMapping: "should rest -> deberia descansar"
     });
   });
+
+  it("uses grammar feature keys to join due learning items for card copy", () => {
+    const sentenceHash = "sentence-have-been-due";
+    const cards = resolveSentenceGrammarCards({
+      sentenceHash,
+      features: [
+        createGrammarFeature({
+          sentenceHash,
+          featureKey: "aspect:have-been",
+          sourceText: "has been",
+          startChar: 9,
+          endChar: 17
+        })
+      ],
+      profile: { activeGrammarBandId: "level-4a" },
+      learningItemsByUnitRefId: new Map([
+        [
+          "aspect:have-been",
+          createLearningItem({
+            itemId: "grammar-feature:aspect:have-been",
+            unitRefId: "aspect:have-been",
+            unitType: "grammar-feature",
+            nextReviewAt: "2026-04-18T09:00:00.000Z"
+          })
+        ]
+      ])
+    });
+
+    expect(cards[0]).toMatchObject({
+      featureKey: "aspect:have-been",
+      exposureItemId: "grammar-feature:aspect:have-been",
+      curriculumReason: "This pattern is due for review in your reading path."
+    });
+  });
 });
 
 describe("cognate and checkpoint curriculum", () => {
@@ -321,6 +361,13 @@ describe("cognate and checkpoint curriculum", () => {
     expect(examplePairs).toContain("pharmacy->farmacia");
     expect(examplePairs).toContain("important->importante");
     expect(examplePairs).toContain("information->información");
+    expect(
+      matchEnglishSpanishCognatePattern({
+        source: "information",
+        target: "información",
+        activeBandId: "level-1a"
+      })
+    ).toBeNull();
     expect(
       matchEnglishSpanishCognatePattern({
         source: "information",
@@ -383,5 +430,32 @@ function createGrammarFeature(
     },
     evidence: input.evidence ?? ["test"],
     confidence: input.confidence ?? 0.84
+  };
+}
+
+function createLearningItem(
+  input: Pick<LearningItem, "itemId" | "unitRefId" | "unitType"> &
+    Partial<LearningItem>
+): LearningItem {
+  return {
+    itemId: input.itemId,
+    unitRefId: input.unitRefId,
+    unitType: input.unitType,
+    sourceText: input.sourceText ?? input.unitRefId,
+    targetText: input.targetText ?? "",
+    status: input.status ?? "learning",
+    bandId: input.bandId,
+    introducedAt: input.introducedAt ?? "2026-04-18T08:00:00.000Z",
+    lastExposedAt: input.lastExposedAt,
+    lastReviewedAt: input.lastReviewedAt,
+    nextReviewAt: input.nextReviewAt,
+    interval: input.interval ?? 10 * 60 * 1000,
+    ease: input.ease ?? 2.3,
+    lapses: input.lapses ?? 0,
+    assistCount: input.assistCount ?? 0,
+    qualifiedExposureCount: input.qualifiedExposureCount ?? 1,
+    consecutiveUnassistedCount: input.consecutiveUnassistedCount ?? 1,
+    distinctContextCount: input.distinctContextCount ?? 1,
+    suspended: input.suspended ?? false
   };
 }

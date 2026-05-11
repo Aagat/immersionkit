@@ -218,14 +218,14 @@ export function matchEnglishSpanishCognatePattern(input: {
       continue;
     }
 
-    if (
-      input.activeBandId &&
-      !isCognatePatternEligibleForBand(pattern.patternId, input.activeBandId)
-    ) {
-      continue;
-    }
-
     if (matchesCognatePattern(pattern.patternId, source, target)) {
+      if (
+        input.activeBandId &&
+        !isCognatePatternEligibleForBand(pattern.patternId, input.activeBandId)
+      ) {
+        return null;
+      }
+
       return {
         pattern,
         source: input.source,

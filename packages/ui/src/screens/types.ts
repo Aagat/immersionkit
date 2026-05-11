@@ -87,6 +87,11 @@ export type OptionsAdvancedDiagnostics = {
   storageMetrics: OptionsAdvancedDiagnosticsMetric[];
 };
 
+export type OptionsBandOption = {
+  id: string;
+  label: string;
+};
+
 export type ExtensionOptionsProps = {
   initialSection?: OptionsSection;
   activeSection?: OptionsSection;
@@ -113,12 +118,15 @@ export type ExtensionOptionsProps = {
   pausedSiteCount?: string | number;
   savedSiteCount?: string | number;
   advancedDiagnostics?: OptionsAdvancedDiagnostics | null;
+  exactActiveBandId?: string | null;
+  bandOptions?: readonly OptionsBandOption[];
   onSectionChange?: (section: OptionsSection) => void;
   onSave?: () => void;
   onReload?: () => void;
   onDismissIntro?: () => void;
   onDiscoveryRateChange?: (percent: number) => void;
   onReadingLevelChange?: (level: ReadingLevel) => void;
+  onExactBandChange?: (bandId: string) => void;
   onSentenceHelpChange?: (enabled: boolean) => void;
   onProviderChange?: (provider: "none" | "openai") => void;
   onApiKeyChange?: (apiKey: string) => void;

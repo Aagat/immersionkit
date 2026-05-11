@@ -1850,6 +1850,12 @@ describe("content inline learning loop", () => {
 
         const chromeStub = installChromeStub({
           "settings": BASE_SETTINGS,
+          "learning-profile": {
+            activeVocabularyBandId: "level-1c",
+            activePhraseBandId: "level-1c",
+            activeGrammarBandId: "level-1c",
+            unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
+          },
           "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {

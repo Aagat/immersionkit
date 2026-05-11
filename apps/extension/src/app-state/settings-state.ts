@@ -6,7 +6,6 @@ import {
   createCurriculumPathSummary,
   formatProgressRequirement,
   getActiveCurriculumContent,
-  parseCurriculumRuntimeProfile,
   resolveExtensionSettings,
   summarizeCheckpointEligibility,
   type CurriculumBandContent,
@@ -20,6 +19,11 @@ import {
   type ResolvedExtensionSettings,
   type SiteSetting
 } from "@immersionkit/shared";
+import {
+  parseProficiencySeed,
+  resolveLearningProfileFromStorage,
+  type ProficiencySeed
+} from "./proficiency";
 import { IndexedDbLearningItemRepository } from "../storage/learning-item-repository";
 import {
   IndexedDbUserVocabRepository,
@@ -53,33 +57,16 @@ const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS = [
 ] as const;
 const FIRST_RUN_INTRO_STORAGE_KEY = USER_DATA_KEYS.firstRunIntro;
 
-export type ProficiencySeed = "beginner" | "intermediate" | "advanced";
-
-export const PROFICIENCY_SEED_OPTIONS: readonly {
-  id: ProficiencySeed;
-  label: string;
-  description: string;
-}[] = [
-  {
-    id: "beginner",
-    label: "Beginner",
-    description: "Start from the highest-frequency English words first."
-  },
-  {
-    id: "intermediate",
-    label: "Intermediate",
-    description: "Blend frequent words with medium-frequency vocabulary."
-  },
-  {
-    id: "advanced",
-    label: "Advanced",
-    description: "Bias toward less frequent discovery vocabulary."
-  }
-] as const;
-
-const PROFICIENCY_SEED_SET: ReadonlySet<ProficiencySeed> = new Set(
-  PROFICIENCY_SEED_OPTIONS.map((option) => option.id)
-);
+export {
+  createLearningProfileForBand,
+  createLearningProfileForProficiencySeed,
+  getExactActiveBandId,
+  parseProficiencySeed,
+  proficiencySeedToBandId,
+  CURRICULUM_BAND_OPTIONS,
+  PROFICIENCY_SEED_OPTIONS,
+  type ProficiencySeed
+} from "./proficiency";
 
 const CANONICAL_SETTINGS_STORAGE_KEY = SETTINGS_STORAGE_KEYS[0];
 const CANONICAL_SITE_SETTINGS_STORAGE_KEY = SITE_SETTINGS_STORAGE_KEYS[0];
@@ -307,21 +294,42 @@ export async function loadVocabStats(): Promise<VocabStats> {
 
 export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics> {
   const storage = await getUserDataValues([
+    ...SETTINGS_STORAGE_KEYS,
     ...LEARNING_PROFILE_STORAGE_KEYS,
     ...CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS
   ]);
-  const profile = parseCurriculumRuntimeProfile(
-    pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS)
+  const rawSettings = pickFirstDefinedValue(storage, SETTINGS_STORAGE_KEYS);
+  const profile = resolveLearningProfileFromStorage(
+    pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS),
+    isRecord(rawSettings) ? rawSettings.proficiencySeed : undefined
   );
 
+  return createCurriculumDiagnosticsForProfile(
+    profile,
+    parseCurriculumProgressionDiagnostics(
+      pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
+    )
+  );
+}
+
+export async function saveLearningProfile(
+  profile: CurriculumRuntimeProfileInput
+): Promise<void> {
+  await setUserDataRuntimeValues({
+    [USER_DATA_KEYS.learningProfile]: profile
+  });
+}
+
+export function createCurriculumDiagnosticsForProfile(
+  profile: CurriculumRuntimeProfileInput,
+  lastProgressionDecision: CurriculumProgressionDiagnostics | null = null
+): CurriculumDiagnostics {
   return {
     profile,
     activeContent: summarizeActiveCurriculumContent(profile),
     currentFocus: createCurrentFocusSummary({ profile }),
     path: createCurriculumPathSummary({ profile }),
-    lastProgressionDecision: parseCurriculumProgressionDiagnostics(
-      pickFirstDefinedValue(storage, CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEYS)
-    )
+    lastProgressionDecision
   };
 }
 
@@ -618,16 +626,6 @@ export async function notifySettingsRefresh(tabId?: number | null): Promise<void
   }
 
   await sendTabMessage(tabId, { type: RuntimeMessageType.RefreshActiveTab });
-}
-
-export function parseProficiencySeed(value: unknown): ProficiencySeed {
-  if (typeof value !== "string") {
-    return "beginner";
-  }
-
-  return PROFICIENCY_SEED_SET.has(value as ProficiencySeed)
-    ? (value as ProficiencySeed)
-    : "beginner";
 }
 
 export function isProviderKeyValid(provider: ProviderName, apiKey: string): boolean {

@@ -11,6 +11,7 @@ import {
   hashSentence,
   normalizeToken,
   getLanguagePairDefinition,
+  resolveGrammarConcept,
   scoreSentenceSuitability,
   scoreSentenceByVocabStatuses,
   resolveRenderUnitPhraseTarget,
@@ -260,7 +261,9 @@ export class SentenceAnalysisService {
       now
     );
     await this.learningItems.upsertGrammarFeatureItems(
-      results.flatMap((result) => result.entry.grammarFeatures),
+      results
+        .flatMap((result) => result.entry.grammarFeatures)
+        .filter((feature) => resolveGrammarConcept(feature.featureKey)),
       now
     );
     return results;
@@ -434,7 +437,8 @@ function evaluateAnalyzerPatternCandidate(input: {
   const token = input.analyzerOutput.tokens[input.tokenIndex];
   const next = input.analyzerOutput.tokens[input.tokenIndex + 1];
   if (
-    input.wordEntry.sourceLemma === "like" &&
+    (input.wordEntry.sourceLemma === "like" ||
+      input.wordEntry.normalizedSourceText === "like") &&
     token?.normalized === "like" &&
     (next?.pos === "determiner" ||
       next?.pos === "pronoun" ||
