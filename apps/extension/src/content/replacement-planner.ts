@@ -86,6 +86,7 @@ export type WordReplacementSpan = {
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
+  activeBandId?: string | null;
   activationReason?: string | null;
 };
 
@@ -312,6 +313,7 @@ export function planTextReplacements(input: {
       status,
       wordKind,
       isDueForReview,
+      activeBandId: activationDecision?.activeBandId ?? null,
       activationReason: activationDecision?.activationReason ?? null
     });
     tokenIndex += 1;

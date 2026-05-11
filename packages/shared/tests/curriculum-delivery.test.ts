@@ -279,10 +279,34 @@ describe("grammar concept delivery", () => {
         sourceSpan: expect.objectContaining({ startChar: 8, endChar: 24 }),
         title: "Future plans with going to",
         targetPatternLabel: "ir a + infinitive",
+        exampleMapping: "is going to call -> va a llamar",
         curriculumStatus: "focus",
         exposureItemId: "grammar-feature:future:going-to"
       })
     ]);
+  });
+
+  it("keeps canned grammar example mappings paired when the detected span differs", () => {
+    const sentenceHash = "sentence-should-wait";
+    const cards = resolveSentenceGrammarCards({
+      sentenceHash,
+      features: [
+        createGrammarFeature({
+          sentenceHash,
+          featureKey: "modal:should",
+          sourceText: "should wait",
+          startChar: 4,
+          endChar: 15
+        })
+      ],
+      profile: { activeGrammarBandId: "level-2b" }
+    });
+
+    expect(cards[0]).toMatchObject({
+      conceptId: "gr-204-should-advice",
+      sourceText: "should wait",
+      exampleMapping: "should rest -> deberia descansar"
+    });
   });
 });
 

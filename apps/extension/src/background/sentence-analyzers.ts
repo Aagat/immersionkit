@@ -32,7 +32,7 @@ export type SentenceAnalyzer = {
 };
 
 const WINK_NLP_ANALYZER_VERSION =
-  "wink-nlp@2.4.0+immersionkit-background-v4-unified-render-units";
+  "wink-nlp@2.4.0+immersionkit-background-v5-purpose-grammar";
 
 let winkAnalyzerPromise: Promise<SentenceAnalyzer> | null = null;
 
@@ -196,6 +196,7 @@ function detectGrammarFeatures(
     const nextToken = tokens[index + 1];
     const previousToken = tokens[index - 1];
     const trailingToken = tokens[index + 2];
+    const fourthToken = tokens[index + 3];
 
     if (token.pos === "modal") {
       features.push(
@@ -275,6 +276,28 @@ function detectGrammarFeatures(
           category: "tense-aspect",
           evidence: ["used-to-before-verb"],
           confidence: 0.85
+        })
+      );
+    }
+
+    if (
+      token.normalized === "in" &&
+      nextToken?.normalized === "order" &&
+      trailingToken?.normalized === "to" &&
+      fourthToken?.pos === "verb"
+    ) {
+      features.push(
+        buildGrammarFeature({
+          sentenceHash,
+          sentence,
+          tokens,
+          startToken: index,
+          endToken: index + 4,
+          featureKey: "infinitive:purpose",
+          label: "Purpose with in order to",
+          category: "syntax",
+          evidence: ["in-order-to-before-verb"],
+          confidence: 0.86
         })
       );
     }

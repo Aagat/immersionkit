@@ -1020,13 +1020,34 @@ function buildExampleMapping(
   sourceText: string,
   concept: GrammarConcept
 ): string | null {
-  const example = concept.examples[0];
+  const example = findMatchingExample(sourceText, concept.examples);
   if (!example) {
     return null;
   }
 
-  const source = readNonEmptyString(sourceText) ?? example.source;
-  return `${source} -> ${example.target}`;
+  return `${example.source} -> ${example.target}`;
+}
+
+function findMatchingExample(
+  sourceText: string,
+  examples: readonly GrammarConceptExample[]
+): GrammarConceptExample | null {
+  const source = readNonEmptyString(sourceText);
+  if (source) {
+    const normalizedSource = normalizeExampleSource(source);
+    const exactExample = examples.find(
+      (example) => normalizeExampleSource(example.source) === normalizedSource
+    );
+    if (exactExample) {
+      return exactExample;
+    }
+  }
+
+  return examples[0] ?? null;
+}
+
+function normalizeExampleSource(source: string): string {
+  return source.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function curriculumReasonForStatus(

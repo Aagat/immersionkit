@@ -249,6 +249,43 @@ describe("content word render index", () => {
       );
     });
   });
+
+  it("gates cognate curriculum explanations by the active band", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const textNode = document.createTextNode("The activity starts now.");
+      document.body.append(textNode);
+
+      processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "band-gated-cognate-explanation-test",
+        createNodeId: () => "ikn-band-gated-cognate-explanation-test",
+        wordRenderIndex: buildWordRenderIndex([
+          wordUnit({
+            lexemeId: "en:activity:noun",
+            sourceLemma: "activity",
+            targetLemma: "actividad",
+            pos: "noun"
+          })
+        ]),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false,
+        shouldActivateWord: () => ({
+          eligible: true,
+          configId: "test-curriculum",
+          activeBandId: "level-1c",
+          skipReason: null
+        })
+      });
+
+      const token = document.querySelector<HTMLElement>(
+        "[data-ik-lexeme-id='en:activity:noun']"
+      );
+
+      expect(token?.getAttribute("data-ik-curriculum-reason")).toBe(
+        "This word fits your current reading band and appeared in a safe local context."
+      );
+    });
+  });
 });
 
 function telescopeUnit() {

@@ -2,6 +2,7 @@ import {
   DEFAULT_CURRICULUM_CONFIG,
   hashSentence,
   normalizeAnalyzerToken,
+  resolveSentenceGrammarCards,
   type AnalyzerOutput,
   type CuratedPhraseTargetEntry,
   type LanguagePairDefinition,
@@ -22,7 +23,10 @@ import {
   type PhraseRegistryRepository
 } from "../src/background/phrase-registry";
 import type { SentenceAnalysisCacheRepository } from "../src/background/sentence-analysis-cache";
-import type { SentenceAnalyzer } from "../src/background/sentence-analyzers";
+import {
+  createWinkNlpSentenceAnalyzer,
+  type SentenceAnalyzer
+} from "../src/background/sentence-analyzers";
 import { parseRenderUnitAsset } from "../src/render-units/render-units";
 import renderUnitAsset from "../src/assets/en-es.render-units.v1.json";
 
@@ -228,6 +232,36 @@ describe("background sentence analysis service", () => {
         })
       ],
       expect.any(String)
+    );
+  });
+
+  it("detects in order to as purpose grammar", async () => {
+    const sourceText = "The team met early in order to learn the process.";
+    const sentenceHash = hashSentence(sourceText);
+    const analyzer = await createWinkNlpSentenceAnalyzer();
+    const output = await analyzer.analyze(sourceText, sentenceHash);
+
+    expect(output.grammarFeatures).toContainEqual(
+      expect.objectContaining({
+        featureKey: "infinitive:purpose",
+        label: "Purpose with in order to",
+        sourceText: "in order to learn",
+        normalizedSourceText: "in order to learn",
+        evidence: expect.arrayContaining(["in-order-to-before-verb"])
+      })
+    );
+    expect(
+      resolveSentenceGrammarCards({
+        sentenceHash,
+        features: output.grammarFeatures,
+        profile: { activeGrammarBandId: "level-3c" }
+      })
+    ).toContainEqual(
+      expect.objectContaining({
+        conceptId: "gr-304-purpose-in-order-to",
+        featureKey: "infinitive:purpose",
+        curriculumStatus: "focus"
+      })
     );
   });
 

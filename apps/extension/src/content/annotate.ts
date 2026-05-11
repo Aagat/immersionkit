@@ -502,6 +502,7 @@ function createTokenElement(input: {
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
+  activeBandId?: string | null;
   activationReason?: string | null;
 }): HTMLSpanElement {
   const element = document.createElement("span");
@@ -662,6 +663,7 @@ function explainWordCurriculumReason(input: {
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
+  activeBandId?: string | null;
   activationReason?: string | null;
 }): string {
   if (input.isDueForReview) {
@@ -674,7 +676,8 @@ function explainWordCurriculumReason(input: {
 
   const patternReason = explainWordPatternReason(
     input.sourceToken,
-    input.targetToken
+    input.targetToken,
+    input.activeBandId
   );
   if (patternReason) {
     return patternReason;
@@ -693,11 +696,13 @@ function explainWordCurriculumReason(input: {
 
 function explainWordPatternReason(
   sourceToken: string,
-  targetToken: string
+  targetToken: string,
+  activeBandId: string | null | undefined
 ): string | null {
   return explainCognatePatternMatch({
     source: sourceToken,
-    target: targetToken
+    target: targetToken,
+    activeBandId
   });
 }
 
