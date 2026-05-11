@@ -552,10 +552,11 @@ function detectGrammarFeatures(
       });
     }
 
-    if (CONCESSION_MARKERS.has(token.normalized)) {
+    const concessionEnd = getConcessionMarkerEnd(tokens, index);
+    if (concessionEnd !== null) {
       addFeature({
         startToken: index,
-        endToken: Math.min(tokens.length, index + 2),
+        endToken: concessionEnd,
         featureKey: "concession:contrast",
         label: "Contrast concession",
         category: "syntax",
@@ -737,8 +738,15 @@ function isSuperlativeMarker(tokens: readonly AnalyzerToken[], index: number): b
     return true;
   }
 
-  if ((token.normalized === "most" || token.normalized === "least") && nextToken) {
-    return true;
+  if (token.normalized === "most" || token.normalized === "least") {
+    if (nextToken && isAdjectiveOrAdverbToken(nextToken)) {
+      return true;
+    }
+
+    return (
+      previousToken?.normalized === "the" &&
+      (!nextToken || isTerminalPunctuationToken(nextToken))
+    );
   }
 
   return (
@@ -746,6 +754,51 @@ function isSuperlativeMarker(tokens: readonly AnalyzerToken[], index: number): b
     (token.pos === "adjective" || token.pos === "adverb") &&
     token.normalized.length > 4 &&
     token.normalized.endsWith("est")
+  );
+}
+
+function getConcessionMarkerEnd(
+  tokens: readonly AnalyzerToken[],
+  index: number
+): number | null {
+  const token = tokens[index];
+  const nextToken = tokens[index + 1];
+  if (!token) {
+    return null;
+  }
+
+  if (CONCESSION_MARKERS.has(token.normalized)) {
+    return Math.min(tokens.length, index + 2);
+  }
+
+  if (
+    CONCESSION_DISCOURSE_MARKERS.has(token.normalized) &&
+    index === 0 &&
+    nextToken &&
+    isCommaToken(nextToken)
+  ) {
+    return Math.min(tokens.length, index + 2);
+  }
+
+  return null;
+}
+
+function isAdjectiveOrAdverbToken(token: AnalyzerToken): boolean {
+  return token.pos === "adjective" || token.pos === "adverb";
+}
+
+function isCommaToken(token: AnalyzerToken): boolean {
+  return token.text === "," || token.normalized === ",";
+}
+
+function isTerminalPunctuationToken(token: AnalyzerToken): boolean {
+  return (
+    token.text === "." ||
+    token.text === "!" ||
+    token.text === "?" ||
+    token.normalized === "." ||
+    token.normalized === "!" ||
+    token.normalized === "?"
   );
 }
 
@@ -1084,10 +1137,9 @@ const QUANTITY_DETERMINERS = new Set([
 const CONCESSION_MARKERS = new Set([
   "however",
   "nevertheless",
-  "nonetheless",
-  "still",
-  "yet"
+  "nonetheless"
 ]);
+const CONCESSION_DISCOURSE_MARKERS = new Set(["still", "yet"]);
 const STANCE_MARKERS = new Set([
   "perhaps",
   "maybe",

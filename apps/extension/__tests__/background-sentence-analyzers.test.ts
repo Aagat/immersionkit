@@ -1,10 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
-import { createWinkNlpSentenceAnalyzer } from "../src/background/sentence-analyzers";
+import {
+  createWinkNlpSentenceAnalyzer,
+  type SentenceAnalyzer
+} from "../src/background/sentence-analyzers";
 
 describe("background sentence analyzers", () => {
+  let analyzer: SentenceAnalyzer;
+
+  beforeAll(async () => {
+    analyzer = await createWinkNlpSentenceAnalyzer();
+  });
+
   it("normalizes wink lemmas and Universal POS tags for contextual word decisions", async () => {
-    const analyzer = await createWinkNlpSentenceAnalyzer();
     const output = await analyzer.analyze(
       "You might not need to write specs. This creates zero friction. ACIDs rely on stable numbering. The boundary is up to you."
     );
@@ -59,7 +67,6 @@ describe("background sentence analyzers", () => {
     ["However, the office stayed open.", "concession:contrast"],
     ["To some extent, the plan worked.", "discourse:stance-marker"]
   ])("detects %s as %s", async (sentence, featureKey) => {
-    const analyzer = await createWinkNlpSentenceAnalyzer();
     const output = await analyzer.analyze(sentence);
 
     expect(output.grammarFeatures).toContainEqual(
@@ -68,11 +75,58 @@ describe("background sentence analyzers", () => {
   });
 
   it("maps will to future grammar without emitting an unknown modal feature", async () => {
-    const analyzer = await createWinkNlpSentenceAnalyzer();
     const output = await analyzer.analyze("They will visit the city tomorrow.");
     const featureKeys = output.grammarFeatures.map((feature) => feature.featureKey);
 
     expect(featureKeys).toContain("future:will");
     expect(featureKeys).not.toContain("modal:will");
   });
+
+  it("does not treat quantity determiners as superlative grammar", async () => {
+    const quantityOutput = await analyzer.analyze("Most people waited outside.");
+    const leastOutput = await analyzer.analyze("At least one person waited outside.");
+    const superlativeOutput = await analyzer.analyze(
+      "This is the most important office."
+    );
+    const terminalSuperlativeOutput = await analyzer.analyze(
+      "This team improved the most"
+    );
+
+    expect(readFeatureKeys(quantityOutput)).not.toContain("comparison:superlative");
+    expect(readFeatureKeys(leastOutput)).not.toContain("comparison:superlative");
+    expect(readFeatureKeys(superlativeOutput)).toContain("comparison:superlative");
+    expect(readFeatureKeys(terminalSuperlativeOutput)).toContain(
+      "comparison:superlative"
+    );
+  });
+
+  it("gates still and yet concession markers to discourse contexts", async () => {
+    const temporalStillOutput = await analyzer.analyze(
+      "Customers still depend on it."
+    );
+    const temporalYetOutput = await analyzer.analyze("They are not yet ready.");
+    const discourseStillOutput = await analyzer.analyze(
+      "Still, the office stayed open."
+    );
+    const discourseYetOutput = await analyzer.analyze(
+      "Yet, the office stayed open."
+    );
+
+    expect(readFeatureKeys(temporalStillOutput)).not.toContain(
+      "concession:contrast"
+    );
+    expect(readFeatureKeys(temporalYetOutput)).not.toContain(
+      "concession:contrast"
+    );
+    expect(readFeatureKeys(discourseStillOutput)).toContain(
+      "concession:contrast"
+    );
+    expect(readFeatureKeys(discourseYetOutput)).toContain("concession:contrast");
+  });
 });
+
+function readFeatureKeys(output: {
+  grammarFeatures: Array<{ featureKey: string }>;
+}): string[] {
+  return output.grammarFeatures.map((feature) => feature.featureKey);
+}

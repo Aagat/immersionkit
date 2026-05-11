@@ -293,8 +293,15 @@ function matchesCognatePattern(
   }
 
   if (patternId === "cog-02-final-e-descriptors") {
+    if (isListedPatternExample(patternId, source, target)) {
+      return true;
+    }
+
+    if (source === target) {
+      return false;
+    }
+
     return (
-      source === target ||
       target === `${source}e` ||
       (source.endsWith("ant") && target.endsWith("ante")) ||
       (source.endsWith("ent") && target.endsWith("ente")) ||

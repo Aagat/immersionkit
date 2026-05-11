@@ -377,6 +377,34 @@ describe("cognate and checkpoint curriculum", () => {
     ).toBe("cog-03-tion-sion");
     expect(
       matchEnglishSpanishCognatePattern({
+        source: "hospital",
+        target: "hospital",
+        activeBandId: "level-1a"
+      })?.pattern.patternId
+    ).toBe("cog-01-near-identical");
+    expect(
+      matchEnglishSpanishCognatePattern({
+        source: "animal",
+        target: "animal",
+        activeBandId: "level-1a"
+      })?.pattern.patternId
+    ).toBe("cog-01-near-identical");
+    expect(
+      matchEnglishSpanishCognatePattern({
+        source: "important",
+        target: "importante",
+        activeBandId: "level-1a"
+      })?.pattern.patternId
+    ).toBe("cog-02-final-e-descriptors");
+    expect(
+      matchEnglishSpanishCognatePattern({
+        source: "simple",
+        target: "simple",
+        activeBandId: "level-1a"
+      })?.pattern.patternId
+    ).toBe("cog-02-final-e-descriptors");
+    expect(
+      matchEnglishSpanishCognatePattern({
         source: "actual",
         target: "actual",
         activeBandId: "level-3b"
