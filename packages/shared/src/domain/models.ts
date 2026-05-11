@@ -480,6 +480,9 @@ export type CurriculumBand = {
     stableItemRatio: number;
     minimumQualifiedExposures: number;
     maximumRecentLapseRate: number;
+    minimumEvidenceBearingItems?: number;
+    minimumDistinctContextItems?: number;
+    minimumUnassistedItems?: number;
     checkpointRequired: boolean;
   };
   difficultyLimits: {

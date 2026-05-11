@@ -12,6 +12,7 @@ import {
   createLearningProfileForProficiencySeed,
   createLearningProfileForBand,
   getExactActiveBandId,
+  formatCurriculumProgressRequirement,
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
@@ -287,24 +288,7 @@ describe("options state", () => {
         activePhraseBandId: "level-1c",
         activeGrammarBandId: "level-1c"
       },
-      items: [
-        createLearningItem({
-          itemId: "word:city",
-          unitRefId: "city",
-          unitType: "word",
-          bandId: "level-1c",
-          status: "reviewing",
-          qualifiedExposureCount: 2
-        }),
-        createLearningItem({
-          itemId: "phrase:used-to",
-          unitRefId: "used-to",
-          unitType: "phrase",
-          bandId: "level-1c",
-          status: "mastered",
-          qualifiedExposureCount: 3
-        })
-      ],
+      items: createProgressionReadyItems("level-1c"),
       now: "2026-04-29T12:00:00.000Z"
     });
 
@@ -341,9 +325,23 @@ describe("options state", () => {
     expect(preview.checkpointIsOnlyBlocker).toBe(false);
     expect(preview.unmetRequirements).toEqual([
       "stable-item-ratio",
-      "qualified-exposures",
+      "evidence-breadth",
+      "distinct-context-breadth",
+      "unassisted-breadth",
       "checkpoint"
     ]);
+  });
+
+  it("formats calibrated progression blockers as learner-facing copy", () => {
+    expect(formatCurriculumProgressRequirement("evidence-breadth")).toBe(
+      "more real-page learning items"
+    );
+    expect(formatCurriculumProgressRequirement("distinct-context-breadth")).toBe(
+      "more varied real-page contexts"
+    );
+    expect(formatCurriculumProgressRequirement("unassisted-breadth")).toBe(
+      "more unassisted successful sightings"
+    );
   });
 
   it("requests explicit checkpoint graduation through the background runtime", async () => {
@@ -390,6 +388,51 @@ describe("options state", () => {
     }
   });
 });
+
+function createProgressionReadyItems(bandId: string): LearningItem[] {
+  return [
+    createLearningItem({
+      itemId: "word:city",
+      unitRefId: "city",
+      unitType: "word",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "phrase:used-to",
+      unitRefId: "used-to",
+      unitType: "phrase",
+      bandId,
+      status: "mastered",
+      qualifiedExposureCount: 3,
+      consecutiveUnassistedCount: 3,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "grammar-feature:negation:do-not",
+      unitRefId: "negation:do-not",
+      unitType: "grammar-feature",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "word:home",
+      unitRefId: "home",
+      unitType: "word",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    })
+  ];
+}
 
 function createLearningItem(
   input: Pick<LearningItem, "itemId" | "unitRefId" | "unitType"> &

@@ -20,7 +20,16 @@ export type CurriculumTransitionPolicy = {
   minimumStableItemRatio: number;
   minimumQualifiedExposures: number;
   maximumRecentLapseRate: number;
+  minimumEvidenceBearingItems?: number;
+  minimumDistinctContextItems?: number;
+  minimumUnassistedItems?: number;
   checkpointRequired: boolean;
+};
+
+type ResolvedCurriculumTransitionPolicy = CurriculumTransitionPolicy & {
+  minimumEvidenceBearingItems: number;
+  minimumDistinctContextItems: number;
+  minimumUnassistedItems: number;
 };
 
 export type CurriculumConfig = {
@@ -79,6 +88,12 @@ export type CurriculumEligibilityDecision = {
   activeBandId: string | null;
   skipReason: CurriculumEligibilitySkipReason | null;
 };
+
+const DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS = 4;
+const DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS = 3;
+const DEFAULT_MINIMUM_UNASSISTED_ITEMS = 2;
+const MINIMUM_DISTINCT_CONTEXT_COUNT_FOR_PROGRESSION = 2;
+const MINIMUM_CONSECUTIVE_UNASSISTED_COUNT_FOR_PROGRESSION = 2;
 
 export const DEFAULT_CURRICULUM_CONFIG: CurriculumConfig = {
   configId: "en-es-default-v1",
@@ -140,6 +155,9 @@ export const DEFAULT_CURRICULUM_CONFIG: CurriculumConfig = {
     minimumStableItemRatio: 0.72,
     minimumQualifiedExposures: 2,
     maximumRecentLapseRate: 0.18,
+    minimumEvidenceBearingItems: DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS,
+    minimumDistinctContextItems: DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS,
+    minimumUnassistedItems: DEFAULT_MINIMUM_UNASSISTED_ITEMS,
     checkpointRequired: false
   }
 };
@@ -181,14 +199,25 @@ export function evaluateCurriculumBandTransition(
   }
 
   const policy = resolveTransitionPolicy(config, band);
-  const bandItems = input.items.filter((item) => item.bandId === band.bandId);
-  const stableItems = bandItems.filter((item) =>
+  const evidenceBearingItems = selectCurriculumTransitionEvidenceItems(
+    band.bandId,
+    input.items
+  );
+  const stableItems = evidenceBearingItems.filter((item) =>
     policy.stableStatuses.includes(item.status)
   );
   const stableRatio =
-    bandItems.length > 0 ? stableItems.length / bandItems.length : 0;
-  const minimumExposureMet = bandItems.every(
+    evidenceBearingItems.length > 0
+      ? stableItems.length / evidenceBearingItems.length
+      : 0;
+  const minimumExposureMet = evidenceBearingItems.every(
     (item) => item.qualifiedExposureCount >= policy.minimumQualifiedExposures
+  );
+  const distinctContextReadyItems = evidenceBearingItems.filter(
+    hasEnoughDistinctContextForProgression
+  );
+  const unassistedReadyItems = evidenceBearingItems.filter(
+    hasEnoughUnassistedEvidenceForProgression
   );
   const unmetRequirements: string[] = [];
 
@@ -198,6 +227,18 @@ export function evaluateCurriculumBandTransition(
 
   if (!minimumExposureMet) {
     unmetRequirements.push("qualified-exposures");
+  }
+
+  if (evidenceBearingItems.length < policy.minimumEvidenceBearingItems) {
+    unmetRequirements.push("evidence-breadth");
+  }
+
+  if (distinctContextReadyItems.length < policy.minimumDistinctContextItems) {
+    unmetRequirements.push("distinct-context-breadth");
+  }
+
+  if (unassistedReadyItems.length < policy.minimumUnassistedItems) {
+    unmetRequirements.push("unassisted-breadth");
   }
 
   if (input.recentLapseRate > policy.maximumRecentLapseRate) {
@@ -214,6 +255,19 @@ export function evaluateCurriculumBandTransition(
     nextBand: orderedBands[bandIndex + 1] ?? null,
     unmetRequirements
   };
+}
+
+export function selectCurriculumTransitionEvidenceItems(
+  bandId: string,
+  items: readonly LearningItem[]
+): LearningItem[] {
+  return items.filter(
+    (item) =>
+      item.bandId === bandId &&
+      !item.suspended &&
+      item.status !== "suspended" &&
+      item.consecutiveUnassistedCount > 0
+  );
 }
 
 export function resolveActiveCurriculumBand(
@@ -303,12 +357,24 @@ export function evaluateCurriculumEligibility(
 function resolveTransitionPolicy(
   config: CurriculumConfig,
   band: CurriculumBand
-): CurriculumTransitionPolicy {
+): ResolvedCurriculumTransitionPolicy {
   return {
     ...config.defaultTransitionPolicy,
     minimumStableItemRatio: band.unlockRequirements.stableItemRatio,
     minimumQualifiedExposures: band.unlockRequirements.minimumQualifiedExposures,
     maximumRecentLapseRate: band.unlockRequirements.maximumRecentLapseRate,
+    minimumEvidenceBearingItems:
+      band.unlockRequirements.minimumEvidenceBearingItems ??
+      config.defaultTransitionPolicy.minimumEvidenceBearingItems ??
+      DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS,
+    minimumDistinctContextItems:
+      band.unlockRequirements.minimumDistinctContextItems ??
+      config.defaultTransitionPolicy.minimumDistinctContextItems ??
+      DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS,
+    minimumUnassistedItems:
+      band.unlockRequirements.minimumUnassistedItems ??
+      config.defaultTransitionPolicy.minimumUnassistedItems ??
+      DEFAULT_MINIMUM_UNASSISTED_ITEMS,
     checkpointRequired: band.unlockRequirements.checkpointRequired
   };
 }
@@ -357,6 +423,17 @@ function createEligibilityDecision(
   };
 }
 
+function hasEnoughDistinctContextForProgression(item: LearningItem): boolean {
+  return item.distinctContextCount >= MINIMUM_DISTINCT_CONTEXT_COUNT_FOR_PROGRESSION;
+}
+
+function hasEnoughUnassistedEvidenceForProgression(item: LearningItem): boolean {
+  return (
+    item.consecutiveUnassistedCount >=
+    MINIMUM_CONSECUTIVE_UNASSISTED_COUNT_FOR_PROGRESSION
+  );
+}
+
 function createDefaultBand(
   bandId: string,
   label: string,
@@ -376,6 +453,9 @@ function createDefaultBand(
       stableItemRatio: 0.72,
       minimumQualifiedExposures: 2,
       maximumRecentLapseRate: 0.18,
+      minimumEvidenceBearingItems: DEFAULT_MINIMUM_EVIDENCE_BEARING_ITEMS,
+      minimumDistinctContextItems: DEFAULT_MINIMUM_DISTINCT_CONTEXT_ITEMS,
+      minimumUnassistedItems: DEFAULT_MINIMUM_UNASSISTED_ITEMS,
       checkpointRequired
     },
     difficultyLimits: {

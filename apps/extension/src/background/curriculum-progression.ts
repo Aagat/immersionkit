@@ -6,6 +6,7 @@ import {
   parseCurriculumRuntimeProfile,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
+  selectCurriculumTransitionEvidenceItems,
   type CurriculumConfig,
   type CurriculumRuntimeProfileInput,
   type LearningItem
@@ -104,10 +105,17 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
+    const evidenceItems = selectCurriculumTransitionEvidenceItems(
+      activeBand.bandId,
+      input.items
+    );
     const decision = evaluateCurriculumBandTransition(config, {
       bandId: activeBand.bandId,
       items: input.items,
-      recentLapseRate: estimateRecentLearningItemLapseRate(input.items, decidedAt),
+      recentLapseRate: estimateRecentLearningItemLapseRate(
+        evidenceItems,
+        decidedAt
+      ),
       checkpointPassed: false
     });
 
@@ -165,7 +173,14 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
-    const recentLapseRate = estimateRecentLearningItemLapseRate(input.items, decidedAt);
+    const evidenceItems = selectCurriculumTransitionEvidenceItems(
+      activeBand.bandId,
+      input.items
+    );
+    const recentLapseRate = estimateRecentLearningItemLapseRate(
+      evidenceItems,
+      decidedAt
+    );
     const blockedDecision = evaluateCurriculumBandTransition(config, {
       bandId: activeBand.bandId,
       items: input.items,

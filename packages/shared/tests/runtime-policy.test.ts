@@ -147,16 +147,7 @@ describe("checkpoint summaries", () => {
         activeGrammarBandId: "level-1c",
         unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
       },
-      items: [
-        createLearningItem({
-          itemId: "word:lexeme-city",
-          unitRefId: "lexeme-city",
-          unitType: "word",
-          bandId: "level-1c",
-          status: "reviewing",
-          qualifiedExposureCount: 2
-        })
-      ],
+      items: createCheckpointReadyItems("level-1c"),
       now: "2026-04-28T12:00:00.000Z"
     });
 
@@ -179,7 +170,72 @@ describe("checkpoint summaries", () => {
       ])
     });
   });
+
+  it("does not treat checkpoint as the only blocker until evidence breadth clears", () => {
+    const summary = summarizeCheckpointEligibility({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {
+        activeVocabularyBandId: "level-1c",
+        activePhraseBandId: "level-1c",
+        activeGrammarBandId: "level-1c",
+        unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
+      },
+      items: createCheckpointReadyItems("level-1c").slice(0, 3),
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(summary).toMatchObject({
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: false,
+      unmetRequirements: ["evidence-breadth", "checkpoint"]
+    });
+  });
 });
+
+function createCheckpointReadyItems(bandId: string): LearningItem[] {
+  return [
+    createLearningItem({
+      itemId: "word:lexeme-city",
+      unitRefId: "lexeme-city",
+      unitType: "word",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "phrase:fixed-for-now",
+      unitRefId: "fixed-for-now",
+      unitType: "phrase",
+      bandId,
+      status: "mastered",
+      qualifiedExposureCount: 3,
+      consecutiveUnassistedCount: 3,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "grammar-feature:negation:do-not",
+      unitRefId: "negation:do-not",
+      unitType: "grammar-feature",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "word:lexeme-home",
+      unitRefId: "lexeme-home",
+      unitType: "word",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    })
+  ];
+}
 
 function createLearningItem(input: {
   itemId: string;
@@ -189,6 +245,8 @@ function createLearningItem(input: {
   status?: LearningItem["status"];
   nextReviewAt?: string;
   qualifiedExposureCount?: number;
+  consecutiveUnassistedCount?: number;
+  distinctContextCount?: number;
 }): LearningItem {
   return {
     itemId: input.itemId,
@@ -205,8 +263,8 @@ function createLearningItem(input: {
     lapses: 0,
     assistCount: 0,
     qualifiedExposureCount: input.qualifiedExposureCount ?? 1,
-    consecutiveUnassistedCount: 1,
-    distinctContextCount: 1,
+    consecutiveUnassistedCount: input.consecutiveUnassistedCount ?? 1,
+    distinctContextCount: input.distinctContextCount ?? 1,
     suspended: false
   };
 }

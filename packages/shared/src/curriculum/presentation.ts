@@ -575,6 +575,18 @@ export function formatProgressRequirement(requirement: string): string {
     return "seen successfully in real pages";
   }
 
+  if (requirement === "evidence-breadth") {
+    return "more real-page learning items";
+  }
+
+  if (requirement === "distinct-context-breadth") {
+    return "more varied real-page contexts";
+  }
+
+  if (requirement === "unassisted-breadth") {
+    return "more unassisted successful sightings";
+  }
+
   if (requirement === "recent-lapse-rate") {
     return "recent difficulty";
   }
