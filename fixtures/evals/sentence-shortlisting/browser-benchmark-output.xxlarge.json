@@ -1,37 +1,62 @@
 {
+  "metadata": {
+    "schemaVersion": "1.1.0",
+    "generatedAt": "2026-05-07T14:50:24.963Z",
+    "laneId": "sentence-shortlisting-sentence-shortlisting",
+    "canonicalCommand": "pnpm benchmark",
+    "inputProfile": "xxlarge",
+    "sourceOfTruth": "browser-run-validation",
+    "browserContext": {
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+      "language": "en-US",
+      "platform": "Linux x86_64"
+    },
+    "scenarioCount": 9,
+    "phraseHints": [
+      "as soon as",
+      "at least",
+      "take care of",
+      "in order to",
+      "used to",
+      "going to"
+    ],
+    "thresholds": {
+      "phraseAwareMinimumSavedRatio": 0.34,
+      "phraseAwareMustReduceFalseNegatives": true
+    }
+  },
   "policies": [
     {
       "policyId": "analyze-every-segmented",
       "policyLabel": "Analyze Every Segmented Sentence",
-      "shortlistedCandidates": 4238,
-      "uniqueSentenceHashes": 4232,
-      "estimatedAnalysisCalls": 4232,
+      "shortlistedCandidates": 4245,
+      "uniqueSentenceHashes": 4239,
+      "estimatedAnalysisCalls": 4239,
       "estimatedAnalysisCallsSaved": 0,
       "estimatedAnalysisCallsSavedRatio": 0,
       "cacheHits": 6,
-      "cacheMisses": 4232,
-      "cacheHitRate": 0.001415762151958471,
-      "falseNegativeCount": 1,
-      "falseNegatives": [
-        "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
-      ]
+      "cacheMisses": 4239,
+      "cacheHitRate": 0.0014134275618374558,
+      "falseNegativeCount": 0,
+      "falseNegatives": []
     },
     {
-      "policyId": "current-injected-token-gated",
-      "policyLabel": "Current Injected-Token-Gated Flow",
+      "policyId": "legacy-injected-token-gated",
+      "policyLabel": "Legacy Injected-Token-Gated Flow",
       "shortlistedCandidates": 35,
       "uniqueSentenceHashes": 32,
       "estimatedAnalysisCalls": 32,
-      "estimatedAnalysisCallsSaved": 4200,
-      "estimatedAnalysisCallsSavedRatio": 0.9924385633270322,
+      "estimatedAnalysisCallsSaved": 4207,
+      "estimatedAnalysisCallsSavedRatio": 0.9924510497758905,
       "cacheHits": 3,
       "cacheMisses": 32,
       "cacheHitRate": 0.08571428571428572,
-      "falseNegativeCount": 3,
+      "falseNegativeCount": 4,
       "falseNegatives": [
         "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message.",
         "As soon as we arrive at the station, we take care of tools before lunch (generated stress sample 1).",
-        "As soon as we arrive at the station, we take care of tools before lunch."
+        "As soon as we arrive at the station, we take care of tools before lunch.",
+        "In order to avoid delays, mentors explain the checklist before sunrise."
       ]
     },
     {
@@ -40,29 +65,30 @@
       "shortlistedCandidates": 35,
       "uniqueSentenceHashes": 32,
       "estimatedAnalysisCalls": 32,
-      "estimatedAnalysisCallsSaved": 4200,
-      "estimatedAnalysisCallsSavedRatio": 0.9924385633270322,
+      "estimatedAnalysisCallsSaved": 4207,
+      "estimatedAnalysisCallsSavedRatio": 0.9924510497758905,
       "cacheHits": 3,
       "cacheMisses": 32,
       "cacheHitRate": 0.08571428571428572,
-      "falseNegativeCount": 3,
+      "falseNegativeCount": 4,
       "falseNegatives": [
         "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message.",
         "As soon as we arrive at the station, we take care of tools before lunch (generated stress sample 1).",
-        "As soon as we arrive at the station, we take care of tools before lunch."
+        "As soon as we arrive at the station, we take care of tools before lunch.",
+        "In order to avoid delays, mentors explain the checklist before sunrise."
       ]
     },
     {
       "policyId": "phrase-aware-shortlist",
       "policyLabel": "Phrase-Aware Shortlist",
-      "shortlistedCandidates": 36,
-      "uniqueSentenceHashes": 33,
-      "estimatedAnalysisCalls": 33,
-      "estimatedAnalysisCallsSaved": 4199,
-      "estimatedAnalysisCallsSavedRatio": 0.9922022684310019,
+      "shortlistedCandidates": 37,
+      "uniqueSentenceHashes": 34,
+      "estimatedAnalysisCalls": 34,
+      "estimatedAnalysisCallsSaved": 4205,
+      "estimatedAnalysisCallsSavedRatio": 0.9919792403868837,
       "cacheHits": 3,
-      "cacheMisses": 33,
-      "cacheHitRate": 0.08333333333333333,
+      "cacheMisses": 34,
+      "cacheHitRate": 0.08108108108108109,
       "falseNegativeCount": 2,
       "falseNegatives": [
         "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message.",
@@ -96,8 +122,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 5,
           "uniqueSentenceHashes": 5,
           "estimatedAnalysisCalls": 5,
@@ -164,8 +190,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 3,
           "uniqueSentenceHashes": 3,
           "estimatedAnalysisCalls": 3,
@@ -232,8 +258,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 5,
           "uniqueSentenceHashes": 5,
           "estimatedAnalysisCalls": 5,
@@ -300,8 +326,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 3,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -368,8 +394,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 2,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -416,39 +442,109 @@
       ]
     },
     {
+      "scenarioId": "phrase-hint-backfill",
+      "scenarioLabel": "Eval: phrase hint backfill",
+      "source": "fixtures/evals/sentence-shortlisting/phrase-hint-backfill.html",
+      "eligibleTextNodes": 5,
+      "segmentedSentences": 5,
+      "segmentedSentencesLengthFiltered": 4,
+      "uniqueSegmentedSentenceHashes": 5,
+      "usefulSentenceCount": 1,
+      "policySummaries": [
+        {
+          "policyId": "analyze-every-segmented",
+          "policyLabel": "Analyze Every Segmented Sentence",
+          "shortlistedCandidates": 5,
+          "uniqueSentenceHashes": 5,
+          "estimatedAnalysisCalls": 5,
+          "estimatedAnalysisCallsSaved": 0,
+          "estimatedAnalysisCallsSavedRatio": 0,
+          "cacheHits": 0,
+          "cacheMisses": 5,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        },
+        {
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
+          "shortlistedCandidates": 0,
+          "uniqueSentenceHashes": 0,
+          "estimatedAnalysisCalls": 0,
+          "estimatedAnalysisCallsSaved": 5,
+          "estimatedAnalysisCallsSavedRatio": 1,
+          "cacheHits": 0,
+          "cacheMisses": 0,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "In order to avoid delays, mentors explain the checklist before sunrise."
+          ]
+        },
+        {
+          "policyId": "injected-token-length-dedupe",
+          "policyLabel": "Injected Token + Length + Dedupe",
+          "shortlistedCandidates": 0,
+          "uniqueSentenceHashes": 0,
+          "estimatedAnalysisCalls": 0,
+          "estimatedAnalysisCallsSaved": 5,
+          "estimatedAnalysisCallsSavedRatio": 1,
+          "cacheHits": 0,
+          "cacheMisses": 0,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 1,
+          "falseNegatives": [
+            "In order to avoid delays, mentors explain the checklist before sunrise."
+          ]
+        },
+        {
+          "policyId": "phrase-aware-shortlist",
+          "policyLabel": "Phrase-Aware Shortlist",
+          "shortlistedCandidates": 1,
+          "uniqueSentenceHashes": 1,
+          "estimatedAnalysisCalls": 1,
+          "estimatedAnalysisCallsSaved": 4,
+          "estimatedAnalysisCallsSavedRatio": 0.8,
+          "cacheHits": 0,
+          "cacheMisses": 1,
+          "cacheHitRate": 0,
+          "falseNegativeCount": 0,
+          "falseNegatives": []
+        }
+      ]
+    },
+    {
       "scenarioId": "longform-overflow-nodes",
       "scenarioLabel": "Eval: longform overflow nodes",
       "source": "fixtures/evals/sentence-shortlisting/longform-overflow.html",
-      "eligibleTextNodes": 2,
-      "segmentedSentences": 2,
+      "eligibleTextNodes": 3,
+      "segmentedSentences": 4,
       "segmentedSentencesLengthFiltered": 1,
-      "uniqueSegmentedSentenceHashes": 2,
+      "uniqueSegmentedSentenceHashes": 4,
       "usefulSentenceCount": 2,
       "policySummaries": [
         {
           "policyId": "analyze-every-segmented",
           "policyLabel": "Analyze Every Segmented Sentence",
-          "shortlistedCandidates": 2,
-          "uniqueSentenceHashes": 2,
-          "estimatedAnalysisCalls": 2,
+          "shortlistedCandidates": 4,
+          "uniqueSentenceHashes": 4,
+          "estimatedAnalysisCalls": 4,
           "estimatedAnalysisCallsSaved": 0,
           "estimatedAnalysisCallsSavedRatio": 0,
           "cacheHits": 0,
-          "cacheMisses": 2,
+          "cacheMisses": 4,
           "cacheHitRate": 0,
-          "falseNegativeCount": 1,
-          "falseNegatives": [
-            "As soon as the market opens, neighbors take care of old signs and share clear directions with every visitor while mentors explain safe meeting points, public pickup windows, and fallback contacts for late arrivals who miss the first orientation message."
-          ]
+          "falseNegativeCount": 0,
+          "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 1,
           "uniqueSentenceHashes": 1,
           "estimatedAnalysisCalls": 1,
-          "estimatedAnalysisCallsSaved": 1,
-          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "estimatedAnalysisCallsSaved": 3,
+          "estimatedAnalysisCallsSavedRatio": 0.75,
           "cacheHits": 0,
           "cacheMisses": 1,
           "cacheHitRate": 0,
@@ -463,8 +559,8 @@
           "shortlistedCandidates": 1,
           "uniqueSentenceHashes": 1,
           "estimatedAnalysisCalls": 1,
-          "estimatedAnalysisCallsSaved": 1,
-          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "estimatedAnalysisCallsSaved": 3,
+          "estimatedAnalysisCallsSavedRatio": 0.75,
           "cacheHits": 0,
           "cacheMisses": 1,
           "cacheHitRate": 0,
@@ -479,8 +575,8 @@
           "shortlistedCandidates": 1,
           "uniqueSentenceHashes": 1,
           "estimatedAnalysisCalls": 1,
-          "estimatedAnalysisCallsSaved": 1,
-          "estimatedAnalysisCallsSavedRatio": 0.5,
+          "estimatedAnalysisCallsSaved": 3,
+          "estimatedAnalysisCallsSavedRatio": 0.75,
           "cacheHits": 0,
           "cacheMisses": 1,
           "cacheHitRate": 0,
@@ -516,8 +612,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 4,
           "uniqueSentenceHashes": 2,
           "estimatedAnalysisCalls": 2,
@@ -584,8 +680,8 @@
           "falseNegatives": []
         },
         {
-          "policyId": "current-injected-token-gated",
-          "policyLabel": "Current Injected-Token-Gated Flow",
+          "policyId": "legacy-injected-token-gated",
+          "policyLabel": "Legacy Injected-Token-Gated Flow",
           "shortlistedCandidates": 12,
           "uniqueSentenceHashes": 12,
           "estimatedAnalysisCalls": 12,
@@ -638,12 +734,12 @@
     {
       "id": "analysis-calls-reduced-vs-baseline",
       "passed": true,
-      "message": "Current injected-token-gated flow should not exceed baseline analysis calls."
+      "message": "Legacy injected-token-gated flow should not exceed baseline analysis calls."
     },
     {
-      "id": "length-dedupe-reduces-or-matches-current-calls",
+      "id": "length-dedupe-reduces-or-matches-legacy-calls",
       "passed": true,
-      "message": "Injected + length + dedupe should not require more analysis calls than current flow."
+      "message": "Injected + length + dedupe should not require more analysis calls than the legacy flow."
     },
     {
       "id": "phrase-aware-does-not-increase-false-negatives",
@@ -655,5 +751,53 @@
       "passed": true,
       "message": "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
     }
-  ]
+  ],
+  "benchmarkGates": {
+    "pass": true,
+    "checks": [
+      {
+        "id": "sentence-shortlisting-provenance-generated-at-present",
+        "passed": true,
+        "message": "Sentence shortlisting artifact should include metadata.generatedAt."
+      },
+      {
+        "id": "sentence-shortlisting-provenance-browser-context-present",
+        "passed": true,
+        "message": "Sentence shortlisting artifact should include browser user-agent provenance."
+      },
+      {
+        "id": "sentence-shortlisting-browser-assertion-analysis-calls-reduced-vs-baseline",
+        "passed": true,
+        "message": "Legacy injected-token-gated flow should not exceed baseline analysis calls."
+      },
+      {
+        "id": "sentence-shortlisting-browser-assertion-length-dedupe-reduces-or-matches-legacy-calls",
+        "passed": true,
+        "message": "Injected + length + dedupe should not require more analysis calls than the legacy flow."
+      },
+      {
+        "id": "sentence-shortlisting-browser-assertion-phrase-aware-does-not-increase-false-negatives",
+        "passed": true,
+        "message": "Phrase-aware shortlist should keep or reduce obvious false negatives."
+      },
+      {
+        "id": "sentence-shortlisting-browser-assertion-rerender-cache-hits-observed",
+        "passed": true,
+        "message": "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
+      },
+      {
+        "id": "sentence-shortlisting-phrase-aware-call-savings",
+        "passed": true,
+        "actual": 0.9919792403868837,
+        "minimum": 0.34,
+        "message": "Sentence shortlisting phrase-aware shortlist should preserve at least the current 34% analysis-call savings. Actual 0.991979, minimum 0.340000."
+      },
+      {
+        "id": "sentence-shortlisting-phrase-aware-reduces-false-negatives",
+        "passed": true,
+        "message": "Sentence shortlisting phrase-aware shortlist should reduce false negatives relative to injected-token length+dedupe."
+      }
+    ],
+    "failures": []
+  }
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { processTextNode } from "../src/content/annotate";
 import type { CachedPhraseMatch } from "../src/content/storage";
+import type { WordRenderEntry } from "../src/render-units/render-units";
 import { withFixtureDom } from "./helpers/fixture-dom";
 
 describe("content phrase-unit rendering", () => {
@@ -16,31 +17,17 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-test",
         createNodeId: () => "ikn-phrase-test",
-        lexiconLookup: new Map([
+        wordRenderIndex: new Map([
           [
             "visit",
-            {
-              lemmaId: "lemma-visit",
-              sourceLemma: "visit",
-              targetLemma: "visitar",
-              pos: "noun",
-              frequencyRank: 100,
-              confidence: 0.9
-            }
+            wordEntry("lexeme-visit", "visit", "visitar", 100)
           ],
           [
             "city",
-            {
-              lemmaId: "lemma-city",
-              sourceLemma: "city",
-              targetLemma: "ciudad",
-              pos: "noun",
-              frequencyRank: 101,
-              confidence: 0.9
-            }
+            wordEntry("lexeme-city", "city", "ciudad", 101)
           ]
         ]),
-        vocabByLemmaId: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -66,8 +53,8 @@ describe("content phrase-unit rendering", () => {
       const phrase = document.querySelector<HTMLElement>("[data-ik-unit-kind='phrase']");
       expect(phrase?.textContent).toBe("solia visitar");
       expect(phrase?.getAttribute("data-ik-source-token")).toBe("used to visit");
-      expect(document.querySelector("[data-ik-lemma-id='lemma-visit']")).toBeNull();
-      expect(document.querySelector("[data-ik-lemma-id='lemma-city']")).toBeTruthy();
+      expect(document.querySelector("[data-ik-lexeme-id='lexeme-visit']")).toBeNull();
+      expect(document.querySelector("[data-ik-lexeme-id='lexeme-city']")).toBeTruthy();
       expect(phrase?.querySelector("[data-ik-token-id]")).toBeNull();
     });
   });
@@ -82,8 +69,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-overlap-test",
         createNodeId: () => "ikn-phrase-overlap-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -153,8 +140,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-curriculum-test",
         createNodeId: () => "ikn-phrase-curriculum-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -191,6 +178,67 @@ describe("content phrase-unit rendering", () => {
     });
   });
 
+  it("does not let due-review render units bypass the active curriculum gate", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sentence = "We take care of the old city.";
+      const textNode = document.createTextNode(sentence);
+      document.body.append(textNode);
+      const gateInputs: Array<{ renderUnitMinBand?: string; isDueForReview: boolean }> = [];
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "phrase-render-unit-due-gate-test",
+        createNodeId: () => "ikn-phrase-render-unit-due-gate-test",
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false,
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
+          createPhraseMatch(sentence, {
+            phraseId: "ru:test-take-care-of",
+            sourceText: "take care of",
+            startChar: 3,
+            endChar: 15,
+            sourceKind: "fixed-phrase",
+            category: "fixed-idiom",
+            renderUnitMinBand: "level-2a"
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "ru:test-take-care-of",
+            createPhraseLearningItem({
+              phraseId: "ru:test-take-care-of",
+              sourceText: "take care of",
+              targetText: "cuidar de",
+              nextReviewAt: "2000-01-01T00:00:00.000Z"
+            })
+          ]
+        ]),
+        shouldActivatePhrase: (input) => {
+          gateInputs.push({
+            renderUnitMinBand: input.renderUnitMinBand,
+            isDueForReview: input.isDueForReview
+          });
+          return {
+            eligible: false,
+            configId: "test-curriculum",
+            activeBandId: "level-1a",
+            skipReason: "render-unit-outside-active-band"
+          };
+        }
+      });
+
+      expect(gateInputs).toEqual([
+        { renderUnitMinBand: "level-2a", isDueForReview: true }
+      ]);
+      expect(result.phraseInjectedCount).toBe(0);
+      expect(result.curriculumSkippedPhraseCount).toBe(1);
+      expect(result.phraseRejectedCount).toBe(1);
+      expect(document.querySelector("[data-ik-unit-kind='phrase']")).toBeNull();
+      expect(document.body.textContent).toContain(sentence);
+    });
+  });
+
   it("passes phrase source text into the active curriculum inventory gate", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const sentence = "The public health care system needs support.";
@@ -202,8 +250,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 1,
         samplingSeed: "phrase-content-inventory-test",
         createNodeId: () => "ikn-phrase-content-inventory-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -254,8 +302,8 @@ describe("content phrase-unit rendering", () => {
         discoveryRate: 0,
         samplingSeed: "phrase-blank-target-test",
         createNodeId: () => "ikn-phrase-blank-target-test",
-        lexiconLookup: new Map(),
-        vocabByLemmaId: new Map(),
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
         isKnownWordForScoring: () => false,
         cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sentence, [
           createPhraseMatch(sentence, {
@@ -299,6 +347,30 @@ function phraseMatchesFor(
   return new Map([[hashSentence(sentence), matches]]);
 }
 
+function wordEntry(
+  lexemeId: string,
+  sourceText: string,
+  targetText: string,
+  frequencyRank: number
+): WordRenderEntry {
+  return {
+    lexemeId,
+    renderUnitId: `ru:${lexemeId}`,
+    renderUnitMinBand: "level-1a",
+    renderUnitMatchMode: "exact",
+    normalizedSourceText: sourceText,
+    targetText,
+    sourceLemma: sourceText,
+    targetLemma: targetText,
+    pos: "noun",
+    frequencyRank,
+    confidence: 0.9,
+    sourceLanguage: "en",
+    targetLanguage: "es",
+    sourceDataset: "render-units"
+  };
+}
+
 function createPhraseMatch(
   sentence: string,
   input: {
@@ -308,6 +380,7 @@ function createPhraseMatch(
     endChar: number;
     sourceKind?: CachedPhraseMatch["sourceKind"];
     category?: CachedPhraseMatch["category"];
+    renderUnitMinBand?: CachedPhraseMatch["renderUnitMinBand"];
   }
 ): CachedPhraseMatch {
   return {
@@ -318,6 +391,8 @@ function createPhraseMatch(
     normalizedSourceText: input.sourceText.toLowerCase(),
     sourceKind: input.sourceKind ?? "pattern-match",
     category: input.category ?? "grammar-carrier",
+    renderUnitId: input.phraseId.startsWith("ru:") ? input.phraseId : undefined,
+    renderUnitMinBand: input.renderUnitMinBand,
     ruleId: "used-to",
     span: {
       startToken: 1,

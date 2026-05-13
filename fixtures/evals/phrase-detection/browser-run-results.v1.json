@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-04-30T22:25:10.486Z",
+  "generatedAt": "2026-05-11T16:13:21.271Z",
   "browserContext": {
-    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
-    "platform": "MacIntel"
+    "platform": "Linux x86_64"
   },
   "corpusVersion": "2026-04-21",
   "assertions": [
@@ -29,9 +29,9 @@
       "label": "Shared annotated heuristics",
       "inputMode": "fixture-annotated",
       "runtime": {
-        "totalMs": 4,
-        "averageCaseMs": 0.007272727272727273,
-        "casesPerSecond": 137500,
+        "totalMs": 7,
+        "averageCaseMs": 0.012727272727272728,
+        "casesPerSecond": 78571.42857142857,
         "repeatCount": 25
       },
       "overall": {
@@ -153,9 +153,9 @@
       "label": "compromise/three + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 103,
-        "averageCaseMs": 0.18727272727272729,
-        "casesPerSecond": 5339.805825242719,
+        "totalMs": 159,
+        "averageCaseMs": 0.28909090909090907,
+        "casesPerSecond": 3459.119496855346,
         "repeatCount": 25
       },
       "overall": {
@@ -262,9 +262,9 @@
       "label": "wink-nlp + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 12,
-        "averageCaseMs": 0.02181818181818182,
-        "casesPerSecond": 45833.333333333336,
+        "totalMs": 18,
+        "averageCaseMs": 0.03272727272727273,
+        "casesPerSecond": 30555.55555555556,
         "repeatCount": 25
       },
       "overall": {
@@ -371,76 +371,76 @@
     "pass": true,
     "checks": [
       {
-        "id": "task-03-browser-assertion-all-configured-implementations-completed",
+        "id": "phrase-detection-browser-assertion-all-configured-implementations-completed",
         "passed": true,
         "message": "3 implementation runs captured for 22 cases."
       },
       {
-        "id": "task-03-browser-assertion-shared-annotated-baseline-is-present",
+        "id": "phrase-detection-browser-assertion-shared-annotated-baseline-is-present",
         "passed": true,
         "message": "Shared annotated baseline included in the comparison set."
       },
       {
-        "id": "task-03-browser-assertion-at-least-one-library-backed-implementation-is-present",
+        "id": "phrase-detection-browser-assertion-at-least-one-library-backed-implementation-is-present",
         "passed": true,
         "message": "Third-party library backed detector output is present."
       },
       {
-        "id": "task-03-shared-annotated-present",
+        "id": "phrase-detection-shared-annotated-present",
         "passed": true,
-        "message": "Task 03 implementation shared-annotated must be present."
+        "message": "Phrase detection implementation shared-annotated must be present."
       },
       {
-        "id": "task-03-shared-annotated-precision",
+        "id": "phrase-detection-shared-annotated-precision",
         "passed": true,
         "actual": 0.9474,
         "minimum": 0.9473684210526315,
-        "message": "Task 03 shared-annotated phrase precision must not regress below the current target. Actual 0.947400, minimum 0.947368."
+        "message": "Phrase detection shared-annotated precision must not regress below the current target. Actual 0.947400, minimum 0.947368."
       },
       {
-        "id": "task-03-shared-annotated-recall",
+        "id": "phrase-detection-shared-annotated-recall",
         "passed": true,
         "actual": 0.9474,
         "minimum": 0.9473684210526315,
-        "message": "Task 03 shared-annotated phrase recall must not regress below the current target. Actual 0.947400, minimum 0.947368."
+        "message": "Phrase detection shared-annotated recall must not regress below the current target. Actual 0.947400, minimum 0.947368."
       },
       {
-        "id": "task-03-compromise-three-present",
+        "id": "phrase-detection-compromise-three-present",
         "passed": true,
-        "message": "Task 03 implementation compromise-three must be present."
+        "message": "Phrase detection implementation compromise-three must be present."
       },
       {
-        "id": "task-03-compromise-three-precision",
-        "passed": true,
-        "actual": 0.95,
-        "minimum": 0.95,
-        "message": "Task 03 compromise-three phrase precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
-      },
-      {
-        "id": "task-03-compromise-three-recall",
-        "passed": true,
-        "actual": 1,
-        "minimum": 1,
-        "message": "Task 03 compromise-three phrase recall must not regress below the current target. Actual 1.000000, minimum 1.000000."
-      },
-      {
-        "id": "task-03-wink-nlp-present",
-        "passed": true,
-        "message": "Task 03 implementation wink-nlp must be present."
-      },
-      {
-        "id": "task-03-wink-nlp-precision",
+        "id": "phrase-detection-compromise-three-precision",
         "passed": true,
         "actual": 0.95,
         "minimum": 0.95,
-        "message": "Task 03 wink-nlp phrase precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
+        "message": "Phrase detection compromise-three precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
       },
       {
-        "id": "task-03-wink-nlp-recall",
+        "id": "phrase-detection-compromise-three-recall",
         "passed": true,
         "actual": 1,
         "minimum": 1,
-        "message": "Task 03 wink-nlp phrase recall must not regress below the current target. Actual 1.000000, minimum 1.000000."
+        "message": "Phrase detection compromise-three recall must not regress below the current target. Actual 1.000000, minimum 1.000000."
+      },
+      {
+        "id": "phrase-detection-wink-nlp-present",
+        "passed": true,
+        "message": "Phrase detection implementation wink-nlp must be present."
+      },
+      {
+        "id": "phrase-detection-wink-nlp-precision",
+        "passed": true,
+        "actual": 0.95,
+        "minimum": 0.95,
+        "message": "Phrase detection wink-nlp precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
+      },
+      {
+        "id": "phrase-detection-wink-nlp-recall",
+        "passed": true,
+        "actual": 1,
+        "minimum": 1,
+        "message": "Phrase detection wink-nlp recall must not regress below the current target. Actual 1.000000, minimum 1.000000."
       }
     ],
     "failures": []

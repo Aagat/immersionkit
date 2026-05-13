@@ -1,9 +1,9 @@
 import type {
+  SentenceGrammarCard,
   SentenceLearningNote,
   SentenceTranslationResult
 } from "@immersionkit/shared";
 import {
-  createLegacySentenceLearningNote,
   createSentenceLearningNote,
   hasSentenceLearningNoteContent
 } from "@immersionkit/shared";
@@ -12,12 +12,16 @@ import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
   IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE
 } from "./constants";
+import type {
+  RegisteredSentenceAnchor,
+  SentenceAnchorRegistry
+} from "./sentence-anchor-registry";
 
 const SENTENCE_NOTE_SELECTOR = "[data-ik-sentence-note='true']";
 const SENTENCE_SOURCE_TEXT_ATTRIBUTE = "data-ik-sentence-source-text";
 const SENTENCE_TRANSLATED_TEXT_ATTRIBUTE = "data-ik-sentence-translated-text";
 const SENTENCE_LEARNING_NOTE_ATTRIBUTE = "data-ik-sentence-learning-note";
-const SENTENCE_GRAMMAR_NOTE_ATTRIBUTE = "data-ik-sentence-grammar-note";
+const SENTENCE_GRAMMAR_CARDS_ATTRIBUTE = "data-ik-sentence-grammar-cards";
 const SENTENCE_KIND_ATTRIBUTE = "data-ik-sentence-kind";
 const MIN_SENTENCE_NOTE_CHAR_GAP = 180;
 
@@ -27,6 +31,7 @@ export type SentenceNoteMetadata = {
   sourceText: string;
   translatedText: string;
   learningNote: SentenceLearningNote;
+  grammarCards: SentenceGrammarCard[];
 };
 
 export function parseSentenceTranslationResults(
@@ -49,7 +54,8 @@ export function parseSentenceTranslationResults(
 }
 
 export function renderSentenceTranslations(
-  results: readonly SentenceTranslationResult[]
+  results: readonly SentenceTranslationResult[],
+  anchorRegistry?: SentenceAnchorRegistry
 ): number {
   if (results.length === 0) {
     return 0;
@@ -60,7 +66,7 @@ export function renderSentenceTranslations(
   let renderedCount = 0;
 
   for (const result of dedupedResults) {
-    const anchors = collectSentenceAnchors(result.sentenceHash);
+    const anchors = collectSentenceAnchors(result.sentenceHash, anchorRegistry);
 
     for (const anchor of anchors) {
       const existingNote = findSentenceNote(anchor.nodeId, result.sentenceHash);
@@ -70,12 +76,12 @@ export function renderSentenceTranslations(
         continue;
       }
 
-      if (!spacingGuard.canPlace(anchor.wrapper)) {
+      if (!spacingGuard.canPlace(anchor.node)) {
         continue;
       }
 
       const note = createSentenceNote(result, anchor.nodeId, anchor.sentenceKind);
-      anchor.wrapper.after(note);
+      anchor.node.after(note);
       renderedCount += 1;
     }
   }
@@ -116,6 +122,7 @@ export function readSentenceNoteMetadata(
     note.getAttribute(SENTENCE_TRANSLATED_TEXT_ATTRIBUTE)
   );
   const learningNote = readSentenceLearningNote(note);
+  const grammarCards = readSentenceGrammarCards(note);
 
   if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
@@ -126,7 +133,8 @@ export function readSentenceNoteMetadata(
     sentenceHash,
     sourceText,
     translatedText,
-    learningNote
+    learningNote,
+    grammarCards
   };
 }
 
@@ -142,10 +150,11 @@ export function clearSentenceTranslations(root: ParentNode = document): number {
 }
 
 function collectSentenceAnchors(
-  sentenceHash: string
+  sentenceHash: string,
+  anchorRegistry?: SentenceAnchorRegistry
 ): {
   nodeId: string;
-  wrapper: HTMLElement;
+  node: ChildNode;
   sentenceKind: "known" | "unknown";
 }[] {
   const escapedHash = escapeSelectorValue(sentenceHash);
@@ -189,11 +198,19 @@ function collectSentenceAnchors(
     }
   }
 
-  return [...anchors.entries()].map(([nodeId, entry]) => ({
-    nodeId,
-    wrapper: entry.wrapper,
-    sentenceKind: entry.hasUnknownToken ? "unknown" : "known"
-  }));
+  const domAnchors: RegisteredSentenceAnchor[] = [...anchors.entries()].map(
+    ([nodeId, entry]) => ({
+      nodeId,
+      node: entry.wrapper,
+      sentenceKind: entry.hasUnknownToken ? "unknown" : "known"
+    })
+  );
+  const existingNodeIds = new Set(domAnchors.map((anchor) => anchor.nodeId));
+  const registeredAnchors = (anchorRegistry?.collect(sentenceHash) ?? []).filter(
+    (anchor): anchor is RegisteredSentenceAnchor => !existingNodeIds.has(anchor.nodeId)
+  );
+
+  return [...domAnchors, ...registeredAnchors];
 }
 
 function findSentenceNote(
@@ -215,10 +232,10 @@ function createSentenceNote(
 ): HTMLElement {
   const note = document.createElement("span");
 
-  note.className = "ik-sentence-note";
+  note.className = "ik-ui-mark ik-ui-mark--sentence ik-sentence-note";
   note.tabIndex = 0;
   note.setAttribute("role", "button");
-  note.setAttribute("title", "Click for details. Double-click to reveal original.");
+  note.setAttribute("title", "Open sentence help.");
   note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-note", "true");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
@@ -235,7 +252,7 @@ function updateSentenceNote(
   result: SentenceTranslationResult,
   sentenceKind: "known" | "unknown"
 ): void {
-  note.setAttribute("title", "Click for details. Double-click to reveal original.");
+  note.setAttribute("title", "Open sentence help.");
   note.setAttribute("aria-label", "Open sentence details");
   note.setAttribute("data-ik-sentence-hash", result.sentenceHash);
   note.setAttribute(SENTENCE_KIND_ATTRIBUTE, sentenceKind);
@@ -246,8 +263,8 @@ function updateSentenceNote(
     JSON.stringify(result.learningNote)
   );
   note.setAttribute(
-    SENTENCE_GRAMMAR_NOTE_ATTRIBUTE,
-    result.learningNote.summary || result.grammarNote || ""
+    SENTENCE_GRAMMAR_CARDS_ATTRIBUTE,
+    JSON.stringify(result.grammarCards ?? [])
   );
 
   const translated = ensureChild(note, "ik-sentence-note__translated");
@@ -255,9 +272,6 @@ function updateSentenceNote(
 
   const source = ensureChild(note, "ik-sentence-note__source");
   source.textContent = result.sourceText;
-
-  const legacyGrammar = note.querySelector<HTMLElement>(".ik-sentence-note__grammar");
-  legacyGrammar?.remove();
 }
 
 function ensureChild(note: HTMLElement, className: string): HTMLElement {
@@ -273,14 +287,18 @@ function ensureChild(note: HTMLElement, className: string): HTMLElement {
 }
 
 function createSentenceSpacingGuard(minCharGap: number): {
-  canPlace: (wrapper: HTMLElement) => boolean;
+  canPlace: (node: ChildNode) => boolean;
 } {
   const offsetsByContainer = new Map<HTMLElement, number[]>();
 
   return {
-    canPlace(wrapper) {
-      const container = findSentenceContainer(wrapper);
-      const wrapperOffset = readTextOffsetWithin(container, wrapper);
+    canPlace(node) {
+      if (!(node instanceof HTMLElement)) {
+        return true;
+      }
+
+      const container = findSentenceContainer(node);
+      const wrapperOffset = readTextOffsetWithin(container, node);
       if (wrapperOffset === null) {
         return true;
       }
@@ -372,10 +390,12 @@ function normalizeSentenceTranslationResult(
   const sentenceHash = readNonEmptyString(value.sentenceHash);
   const sourceText = readNonEmptyString(value.sourceText);
   const translatedText = readNonEmptyString(value.translatedText);
-  const learningNote = normalizeSentenceLearningNote(
-    value.learningNote,
-    readNonEmptyString(value.grammarNote)
-  );
+  const grammarCards = normalizeSentenceGrammarCards(value.grammarCards);
+  const learningNote =
+    normalizeSentenceLearningNote(value.learningNote) ??
+    (grammarCards[0]
+      ? createSentenceLearningNote({ summary: grammarCards[0].explanation })
+      : null);
 
   if (!sentenceHash || !sourceText || !translatedText || !learningNote) {
     return null;
@@ -386,7 +406,7 @@ function normalizeSentenceTranslationResult(
     sourceText,
     translatedText,
     learningNote,
-    grammarNote: learningNote.summary
+    grammarCards
   };
 }
 
@@ -417,29 +437,110 @@ function readNonEmptyString(value: unknown): string | null {
 
 function readSentenceLearningNote(note: HTMLElement): SentenceLearningNote | null {
   const encodedLearningNote = note.getAttribute(SENTENCE_LEARNING_NOTE_ATTRIBUTE);
-  const legacyGrammarNote = readNonEmptyString(
-    note.getAttribute(SENTENCE_GRAMMAR_NOTE_ATTRIBUTE)
-  );
 
   if (encodedLearningNote) {
     try {
       const parsed = JSON.parse(encodedLearningNote) as unknown;
-      const learningNote = normalizeSentenceLearningNote(parsed, legacyGrammarNote);
+      const learningNote = normalizeSentenceLearningNote(parsed);
       if (learningNote) {
         return learningNote;
       }
     } catch {
-      // Ignore malformed legacy attributes and fall through to the summary fallback.
+      return null;
     }
   }
 
-  return legacyGrammarNote ? createLegacySentenceLearningNote(legacyGrammarNote) : null;
+  return null;
 }
 
-function normalizeSentenceLearningNote(
-  value: unknown,
-  legacyGrammarNote?: string | null
-): SentenceLearningNote | null {
+function readSentenceGrammarCards(note: HTMLElement): SentenceGrammarCard[] {
+  const raw = note.getAttribute(SENTENCE_GRAMMAR_CARDS_ATTRIBUTE);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    return normalizeSentenceGrammarCards(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+function normalizeSentenceGrammarCards(value: unknown): SentenceGrammarCard[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return [];
+    }
+
+    const card = entry as Partial<SentenceGrammarCard>;
+    const conceptId = readNonEmptyString(card.conceptId);
+    const featureKey = readNonEmptyString(card.featureKey);
+    const sentenceHash = readNonEmptyString(card.sentenceHash);
+    const sourceText = readNonEmptyString(card.sourceText);
+    const title = readNonEmptyString(card.title);
+    const explanation = readNonEmptyString(card.explanation);
+    const sourcePatternLabel = readNonEmptyString(card.sourcePatternLabel);
+    const targetPatternLabel = readNonEmptyString(card.targetPatternLabel);
+    const bandId = readNonEmptyString(card.bandId);
+    const exposureItemId = readNonEmptyString(card.exposureItemId);
+    if (
+      !conceptId ||
+      !featureKey ||
+      !sentenceHash ||
+      !sourceText ||
+      !title ||
+      !explanation ||
+      !sourcePatternLabel ||
+      !targetPatternLabel ||
+      !card.sourceSpan ||
+      typeof card.sourceSpan.startChar !== "number" ||
+      typeof card.sourceSpan.endChar !== "number" ||
+      !bandId ||
+      !exposureItemId
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        conceptId,
+        featureKey,
+        sentenceHash,
+        sourceSpan: {
+          startToken: Number(card.sourceSpan.startToken) || 0,
+          endToken: Number(card.sourceSpan.endToken) || 0,
+          startChar: card.sourceSpan.startChar,
+          endChar: card.sourceSpan.endChar
+        },
+        sourceText,
+        title,
+        explanation,
+        sourcePatternLabel,
+        targetPatternLabel,
+        exampleMapping: readNonEmptyString(card.exampleMapping) ?? null,
+        curriculumReason:
+          readNonEmptyString(card.curriculumReason) ??
+          "This pattern fits your current reading focus.",
+        bandId,
+        curriculumStatus:
+          card.curriculumStatus === "review" || card.curriculumStatus === "stretch"
+            ? card.curriculumStatus
+            : "focus",
+        exposureItemId,
+        confidence:
+          typeof card.confidence === "number" && Number.isFinite(card.confidence)
+            ? Math.max(0, Math.min(1, card.confidence))
+            : 0
+      }
+    ];
+  });
+}
+
+function normalizeSentenceLearningNote(value: unknown): SentenceLearningNote | null {
   if (isRecord(value)) {
     const learningNote = createSentenceLearningNote({
       summary: readNonEmptyString(value.summary) ?? undefined,
@@ -454,7 +555,7 @@ function normalizeSentenceLearningNote(
     }
   }
 
-  return legacyGrammarNote ? createLegacySentenceLearningNote(legacyGrammarNote) : null;
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

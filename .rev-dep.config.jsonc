@@ -1,0 +1,239 @@
+{
+  "configVersion": "1.7",
+  "$schema": "https://github.com/jayu/rev-dep/blob/master/config-schema/1.7.schema.json?raw=true",
+  "ignoreFiles": [
+    "apps/extension/src/assets/**",
+    "fixtures/**",
+    "tools/importers/inputs/**",
+    "tools/importers/outputs/**"
+  ],
+  "rules": [
+    {
+      "path": "apps/extension",
+      "followMonorepoPackages": true,
+      "prodEntryPoints": [
+        "src/background/index.ts",
+        "src/content/index.ts",
+        "src/options/main.tsx",
+        "src/popup/main.tsx"
+      ],
+      "devEntryPoints": [
+        "manifest.config.ts",
+        "vite.config.ts",
+        "__tests__/*.ts",
+        "__tests__/**/*.ts",
+        "src/validation/main.ts",
+        "src/validation/run-nlp-performance-browser.mjs",
+        "src/validation/**/*.ts",
+        "src/validation/**/*.mjs",
+        "src/validation/vite.validation.config.mjs"
+      ],
+      "circularImportsDetection": {
+        "enabled": true,
+        "ignoreTypeImports": true
+      },
+      "orphanFilesDetection": {
+        "enabled": true,
+        "validEntryPoints": [
+          "src/background/index.ts",
+          "src/content/index.ts",
+          "src/options/main.tsx",
+          "src/popup/main.tsx",
+          "manifest.config.ts",
+          "vite.config.ts",
+          "__tests__/*.ts",
+          "__tests__/**/*.ts",
+          "src/validation/main.ts",
+          "src/validation/run-nlp-performance-browser.mjs",
+          "src/validation/**/*.ts",
+          "src/validation/**/*.mjs",
+          "src/validation/vite.validation.config.mjs"
+        ],
+        "ignoreTypeImports": false,
+        "graphExclude": [
+          "**/*.css",
+          "src/env.d.ts"
+        ]
+      },
+      "unusedExportsDetection": {
+        "enabled": true,
+        "validEntryPoints": [
+          "src/background/index.ts",
+          "src/content/index.ts",
+          "src/options/main.tsx",
+          "src/popup/main.tsx",
+          "manifest.config.ts",
+          "vite.config.ts",
+          "__tests__/*.ts",
+          "__tests__/**/*.ts",
+          "src/validation/main.ts",
+          "src/validation/run-nlp-performance-browser.mjs",
+          "src/validation/**/*.ts",
+          "src/validation/**/*.mjs",
+          "src/validation/vite.validation.config.mjs"
+        ],
+        "ignoreTypeExports": true,
+        "graphExclude": [
+          "src/env.d.ts"
+        ],
+        "ignoreFiles": [
+          "packages/shared/**",
+          "../packages/shared/**",
+          "../../packages/shared/**"
+        ]
+      },
+      "unusedNodeModulesDetection": {
+        "enabled": true,
+        "excludeModules": [
+          "@types/**"
+        ],
+        "pkgJsonFieldsWithBinaries": [
+          "scripts"
+        ]
+      },
+      "missingNodeModulesDetection": {
+        "enabled": true,
+        "excludeModules": [
+          "node:*"
+        ]
+      },
+      "unresolvedImportsDetection": {
+        "enabled": true,
+        "ignoreImports": [
+          "*.css",
+          "*.html?raw",
+          "*.json?raw"
+        ]
+      },
+      "devDepsUsageOnProdDetection": {
+        "enabled": true,
+        "prodEntryPoints": [
+          "src/background/index.ts",
+          "src/content/index.ts",
+          "src/options/main.tsx",
+          "src/popup/main.tsx"
+        ],
+        "ignoreTypeImports": true
+      }
+    },
+    {
+      "path": "packages/shared",
+      "followMonorepoPackages": true,
+      "prodEntryPoints": [
+        "src/index.ts",
+        "src/runtime.ts",
+        "src/validation/index.ts"
+      ],
+      "devEntryPoints": [
+        "tests/*.ts"
+      ],
+      "circularImportsDetection": {
+        "enabled": true,
+        "ignoreTypeImports": true
+      },
+      "orphanFilesDetection": {
+        "enabled": true,
+        "validEntryPoints": [
+          "src/index.ts",
+          "src/runtime.ts",
+          "src/validation/index.ts",
+          "tests/*.ts"
+        ],
+        "ignoreTypeImports": false,
+        "graphExclude": [
+          "src/**/*.d.ts"
+        ]
+      },
+      "unusedExportsDetection": {
+        "enabled": true,
+        "validEntryPoints": [
+          "src/index.ts",
+          "src/runtime.ts",
+          "src/validation/index.ts",
+          "tests/*.ts"
+        ],
+        "ignoreTypeExports": true,
+        "graphExclude": [
+          "tests/**",
+          "src/**/*.d.ts"
+        ]
+      },
+      "unusedNodeModulesDetection": {
+        "enabled": true
+      },
+      "missingNodeModulesDetection": {
+        "enabled": true,
+        "excludeModules": [
+          "node:*"
+        ]
+      },
+      "unresolvedImportsDetection": {
+        "enabled": true,
+        "ignoreImports": [
+          "../../fixtures/**"
+        ]
+      },
+      "devDepsUsageOnProdDetection": {
+        "enabled": true,
+        "ignoreTypeImports": true
+      }
+    },
+    {
+      "path": "packages/ui",
+      "followMonorepoPackages": true,
+      "prodEntryPoints": [
+        "src/index.ts"
+      ],
+      "devEntryPoints": [
+        "vite.config.ts",
+        "src/preview/main.tsx"
+      ],
+      "circularImportsDetection": {
+        "enabled": true,
+        "ignoreTypeImports": true
+      },
+      "orphanFilesDetection": {
+        "enabled": true,
+        "ignoreTypeImports": true,
+        "graphExclude": [
+          "**/*.css"
+        ]
+      },
+      "unusedExportsDetection": {
+        "enabled": true,
+        "ignoreTypeExports": true
+      },
+      "unusedNodeModulesDetection": {
+        "enabled": true,
+        "excludeModules": [
+          "@types/**"
+        ],
+        "pkgJsonFieldsWithBinaries": [
+          "scripts"
+        ]
+      },
+      "missingNodeModulesDetection": {
+        "enabled": true,
+        "excludeModules": [
+          "node:*",
+          "react",
+          "react-dom",
+          "react-dom/*"
+        ]
+      },
+      "unresolvedImportsDetection": {
+        "enabled": true,
+        "ignoreImports": [
+          "*.css",
+          "react",
+          "react-dom",
+          "react-dom/*"
+        ]
+      },
+      "devDepsUsageOnProdDetection": {
+        "enabled": true,
+        "ignoreTypeImports": true
+      }
+    }
+  ]
+}

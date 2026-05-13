@@ -1,7 +1,7 @@
 import { hashSentence } from "@immersionkit/shared";
 import { describe, expect, it } from "vitest";
 
-import { loadNlpPerformanceFixtures } from "../src/background/analysis-spike";
+import { loadNlpPerformanceFixtures } from "../src/background/analyzer-performance";
 
 describe("background NLP performance fixtures", () => {
   it("loads deterministic sentence corpora for synthetic, page, and replay sets", () => {

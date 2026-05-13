@@ -30,10 +30,7 @@ describe("background curriculum progression", () => {
 
     const result = await service.advanceAfterImplicitEvidence({
       config: DEFAULT_CURRICULUM_CONFIG,
-      items: [
-        createLearningItem("word:lemma-city", "word", "level-1a"),
-        createLearningItem("phrase:fixed-as-soon-as", "phrase", "level-1a")
-      ],
+      items: createProgressionReadyItems("level-1a"),
       now: "2026-04-28T12:00:00.000Z"
     });
 
@@ -55,6 +52,53 @@ describe("background curriculum progression", () => {
     });
   });
 
+  it("does not let auto-created no-exposure items block implicit advancement", async () => {
+    const profileStore = new InMemoryLearningProfileStore({
+      activeVocabularyBandId: "level-1a",
+      activePhraseBandId: "level-1a",
+      activeGrammarBandId: "level-1a",
+      unlockedBandIds: ["level-1a"]
+    });
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
+
+    const result = await service.advanceAfterImplicitEvidence({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      items: [
+        ...createProgressionReadyItems("level-1a"),
+        createLearningItem("phrase:auto-created", "phrase", "level-1a", {
+          status: "new",
+          qualifiedExposureCount: 0,
+          consecutiveUnassistedCount: 0,
+          distinctContextCount: 0
+        }),
+        createLearningItem(
+          "grammar-feature:future:will",
+          "grammar-feature",
+          "level-1a",
+          {
+            status: "new",
+            qualifiedExposureCount: 0,
+            consecutiveUnassistedCount: 0,
+            distinctContextCount: 0
+          }
+        )
+      ],
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1a",
+      nextBandId: "level-1b",
+      eligible: true,
+      reason: "advanced",
+      unmetRequirements: []
+    });
+  });
+
   it("does not advance across checkpoint-gated band boundaries implicitly", async () => {
     const profileStore = new InMemoryLearningProfileStore({
       activeVocabularyBandId: "level-1c",
@@ -70,7 +114,7 @@ describe("background curriculum progression", () => {
 
     const result = await service.advanceAfterImplicitEvidence({
       config: DEFAULT_CURRICULUM_CONFIG,
-      items: [createLearningItem("word:lemma-city", "word", "level-1c")],
+      items: createProgressionReadyItems("level-1c"),
       now: "2026-04-28T12:00:00.000Z"
     });
 
@@ -104,7 +148,7 @@ describe("background curriculum progression", () => {
 
     const result = await service.advanceAfterExplicitCheckpoint({
       config: DEFAULT_CURRICULUM_CONFIG,
-      items: [createLearningItem("word:lemma-city", "word", "level-1c")],
+      items: createProgressionReadyItems("level-1c"),
       now: "2026-04-28T12:00:00.000Z"
     });
 
@@ -140,9 +184,11 @@ describe("background curriculum progression", () => {
     const result = await service.advanceAfterExplicitCheckpoint({
       config: DEFAULT_CURRICULUM_CONFIG,
       items: [
-        createLearningItem("word:lemma-city", "word", "level-1c", {
+        createLearningItem("word:lexeme-city", "word", "level-1c", {
           status: "new",
-          qualifiedExposureCount: 0
+          qualifiedExposureCount: 0,
+          consecutiveUnassistedCount: 0,
+          distinctContextCount: 0
         })
       ],
       now: "2026-04-28T12:00:00.000Z"
@@ -156,7 +202,9 @@ describe("background curriculum progression", () => {
       reason: "checkpoint-requirements-unmet",
       unmetRequirements: [
         "stable-item-ratio",
-        "qualified-exposures",
+        "evidence-breadth",
+        "distinct-context-breadth",
+        "unassisted-breadth",
         "checkpoint"
       ]
     });
@@ -216,6 +264,19 @@ class InMemoryCurriculumProgressionDiagnosticsStore
   }
 }
 
+function createProgressionReadyItems(bandId: string): LearningItem[] {
+  return [
+    createLearningItem("word:lexeme-city", "word", bandId),
+    createLearningItem("phrase:fixed-as-soon-as", "phrase", bandId, {
+      status: "mastered",
+      qualifiedExposureCount: 3,
+      consecutiveUnassistedCount: 3
+    }),
+    createLearningItem("grammar-feature:negation:do-not", "grammar-feature", bandId),
+    createLearningItem("word:lexeme-home", "word", bandId)
+  ];
+}
+
 function createLearningItem(
   itemId: string,
   unitType: LearningItem["unitType"],
@@ -237,8 +298,8 @@ function createLearningItem(
     lapses: 0,
     assistCount: 0,
     qualifiedExposureCount: overrides.qualifiedExposureCount ?? 2,
-    consecutiveUnassistedCount: 2,
-    distinctContextCount: 2,
-    suspended: false
+    consecutiveUnassistedCount: overrides.consecutiveUnassistedCount ?? 2,
+    distinctContextCount: overrides.distinctContextCount ?? 2,
+    suspended: overrides.suspended ?? false
   };
 }

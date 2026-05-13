@@ -1,0 +1,537 @@
+{
+  "version": "1.0.0",
+  "createdAt": "2026-05-09T00:00:00.000Z",
+  "sourceLanguage": "en",
+  "targetLanguage": "es",
+  "description": "Production analyzer and content-rendering scenarios for contextual word injection quality after the render-unit runtime refactor.",
+  "scenarios": [
+    {
+      "id": "need-verb-frame",
+      "sentence": "You might not need to write specs.",
+      "tokens": [
+        [
+          "You",
+          "you",
+          "pronoun",
+          [
+            "PRON",
+            "pronoun"
+          ]
+        ],
+        [
+          "might",
+          "might",
+          "modal",
+          [
+            "AUX",
+            "modal"
+          ]
+        ],
+        [
+          "not",
+          "not",
+          "particle",
+          [
+            "PART",
+            "particle"
+          ]
+        ],
+        [
+          "need",
+          "need",
+          "verb",
+          [
+            "VERB",
+            "verb"
+          ]
+        ],
+        [
+          "to",
+          "to",
+          "particle",
+          [
+            "PART",
+            "particle"
+          ]
+        ],
+        [
+          "write",
+          "write",
+          "verb",
+          [
+            "VERB",
+            "verb"
+          ]
+        ],
+        [
+          "specs",
+          "spec",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          ".",
+          ".",
+          "other",
+          [
+            "PUNCT",
+            "other"
+          ]
+        ]
+      ],
+      "chunks": [],
+      "renderUnits": [
+        {
+          "lexemeId": "lexeme-need-noun",
+          "sourceLemma": "need",
+          "targetLemma": "necesidad",
+          "pos": "noun"
+        }
+      ],
+      "expectedWordDecisions": [
+        {
+          "id": "need-noun-vs-verb",
+          "lexemeId": "lexeme-need-noun",
+          "normalizedText": "need",
+          "expectedDecision": "skip",
+          "expectedRendered": false,
+          "rationale": "The render unit is the noun sense, but the analyzer observes verb use."
+        }
+      ]
+    },
+    {
+      "id": "pronoun-number-frame",
+      "sentence": "This creates zero friction for readers.",
+      "tokens": [
+        [
+          "This",
+          "this",
+          "pronoun",
+          [
+            "PRON",
+            "pronoun"
+          ]
+        ],
+        [
+          "creates",
+          "create",
+          "verb",
+          [
+            "VERB",
+            "verb"
+          ]
+        ],
+        [
+          "zero",
+          "zero",
+          "number",
+          [
+            "NUM",
+            "number"
+          ]
+        ],
+        [
+          "friction",
+          "friction",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          "for",
+          "for",
+          "preposition",
+          [
+            "ADP",
+            "preposition"
+          ]
+        ],
+        [
+          "readers",
+          "reader",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          ".",
+          ".",
+          "other",
+          [
+            "PUNCT",
+            "other"
+          ]
+        ]
+      ],
+      "chunks": [],
+      "renderUnits": [
+        {
+          "lexemeId": "lexeme-this-adjective",
+          "sourceLemma": "this",
+          "targetLemma": "este",
+          "pos": "adjective"
+        },
+        {
+          "lexemeId": "lexeme-zero-noun",
+          "sourceLemma": "zero",
+          "targetLemma": "cero",
+          "pos": "noun"
+        }
+      ],
+      "expectedWordDecisions": [
+        {
+          "id": "this-adjective-vs-pronoun",
+          "lexemeId": "lexeme-this-adjective",
+          "normalizedText": "this",
+          "expectedDecision": "skip",
+          "expectedRendered": false,
+          "rationale": "Demonstrative pronoun use should not render the adjective-side entry."
+        },
+        {
+          "id": "zero-noun-vs-number",
+          "lexemeId": "lexeme-zero-noun",
+          "normalizedText": "zero",
+          "expectedDecision": "skip",
+          "expectedRendered": false,
+          "rationale": "Numeric use should not render a noun-sense replacement."
+        }
+      ]
+    },
+    {
+      "id": "preposition-and-adjective-frame",
+      "sentence": "ACIDs rely on stable numbering.",
+      "tokens": [
+        [
+          "ACIDs",
+          "acid",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          "rely",
+          "rely",
+          "verb",
+          [
+            "VERB",
+            "verb"
+          ]
+        ],
+        [
+          "on",
+          "on",
+          "preposition",
+          [
+            "ADP",
+            "preposition"
+          ]
+        ],
+        [
+          "stable",
+          "stable",
+          "adjective",
+          [
+            "ADJ",
+            "adjective"
+          ]
+        ],
+        [
+          "numbering",
+          "numbering",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          ".",
+          ".",
+          "other",
+          [
+            "PUNCT",
+            "other"
+          ]
+        ]
+      ],
+      "chunks": [
+        {
+          "text": "stable numbering",
+          "normalized": "stable numbering",
+          "type": "noun-phrase",
+          "tokenStart": 3,
+          "tokenEnd": 5,
+          "confidence": 0.86
+        }
+      ],
+      "renderUnits": [
+        {
+          "lexemeId": "lexeme-on-adverb",
+          "sourceLemma": "on",
+          "targetLemma": "encima",
+          "pos": "adverb"
+        },
+        {
+          "lexemeId": "lexeme-stable-adjective",
+          "sourceLemma": "stable",
+          "targetLemma": "estable",
+          "pos": "adjective"
+        }
+      ],
+      "expectedWordDecisions": [
+        {
+          "id": "on-adverb-vs-preposition",
+          "lexemeId": "lexeme-on-adverb",
+          "normalizedText": "on",
+          "expectedDecision": "skip",
+          "expectedRendered": false,
+          "rationale": "Preposition use should not render the adverb-side entry."
+        },
+        {
+          "id": "stable-adjective-safe",
+          "lexemeId": "lexeme-stable-adjective",
+          "normalizedText": "stable",
+          "expectedDecision": "inject",
+          "expectedRendered": true,
+          "expectedTargetText": "estable",
+          "rationale": "Attributive adjective evidence should stay renderable."
+        }
+      ]
+    },
+    {
+      "id": "prepositional-up-frame",
+      "sentence": "The boundary is up to you.",
+      "tokens": [
+        [
+          "The",
+          "the",
+          "determiner",
+          [
+            "DET",
+            "determiner"
+          ]
+        ],
+        [
+          "boundary",
+          "boundary",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          "is",
+          "be",
+          "auxiliary",
+          [
+            "AUX",
+            "auxiliary"
+          ]
+        ],
+        [
+          "up",
+          "up",
+          "preposition",
+          [
+            "ADP",
+            "preposition"
+          ]
+        ],
+        [
+          "to",
+          "to",
+          "preposition",
+          [
+            "ADP",
+            "preposition"
+          ]
+        ],
+        [
+          "you",
+          "you",
+          "pronoun",
+          [
+            "PRON",
+            "pronoun"
+          ]
+        ],
+        [
+          ".",
+          ".",
+          "other",
+          [
+            "PUNCT",
+            "other"
+          ]
+        ]
+      ],
+      "chunks": [],
+      "renderUnits": [
+        {
+          "lexemeId": "lexeme-up-adverb",
+          "sourceLemma": "up",
+          "targetLemma": "arriba",
+          "pos": "adverb"
+        }
+      ],
+      "expectedWordDecisions": [
+        {
+          "id": "up-adverb-vs-preposition",
+          "lexemeId": "lexeme-up-adverb",
+          "normalizedText": "up",
+          "expectedDecision": "skip",
+          "expectedRendered": false,
+          "rationale": "Prepositional phrase use should not render the adverb-side entry."
+        }
+      ]
+    },
+    {
+      "id": "duration-time-sense",
+      "sentence": "The time you must contribute depends on the specific benefit.",
+      "tokens": [
+        [
+          "The",
+          "the",
+          "determiner",
+          [
+            "DET",
+            "determiner"
+          ]
+        ],
+        [
+          "time",
+          "time",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          "you",
+          "you",
+          "pronoun",
+          [
+            "PRON",
+            "pronoun"
+          ]
+        ],
+        [
+          "must",
+          "must",
+          "modal",
+          [
+            "AUX",
+            "modal"
+          ]
+        ],
+        [
+          "contribute",
+          "contribute",
+          "verb",
+          [
+            "VERB",
+            "verb"
+          ]
+        ],
+        [
+          "depends",
+          "depend",
+          "verb",
+          [
+            "VERB",
+            "verb"
+          ]
+        ],
+        [
+          "on",
+          "on",
+          "preposition",
+          [
+            "ADP",
+            "preposition"
+          ]
+        ],
+        [
+          "the",
+          "the",
+          "determiner",
+          [
+            "DET",
+            "determiner"
+          ]
+        ],
+        [
+          "specific",
+          "specific",
+          "adjective",
+          [
+            "ADJ",
+            "adjective"
+          ]
+        ],
+        [
+          "benefit",
+          "benefit",
+          "noun",
+          [
+            "NOUN",
+            "noun"
+          ]
+        ],
+        [
+          ".",
+          ".",
+          "other",
+          [
+            "PUNCT",
+            "other"
+          ]
+        ]
+      ],
+      "chunks": [
+        {
+          "text": "The time",
+          "normalized": "the time",
+          "type": "noun-phrase",
+          "tokenStart": 0,
+          "tokenEnd": 2,
+          "confidence": 0.86
+        },
+        {
+          "text": "the specific benefit",
+          "normalized": "the specific benefit",
+          "type": "noun-phrase",
+          "tokenStart": 7,
+          "tokenEnd": 10,
+          "confidence": 0.88
+        }
+      ],
+      "assetRenderUnitIds": [
+        "ru:time-tiempo:noun:exact"
+      ],
+      "expectedWordDecisions": [
+        {
+          "id": "time-duration-tiempo",
+          "lexemeId": "lx:time-tiempo:noun",
+          "renderUnitId": "ru:time-tiempo:noun:exact",
+          "normalizedText": "time",
+          "expectedDecision": "inject",
+          "expectedRendered": true,
+          "expectedTargetText": "tiempo",
+          "rationale": "Bare duration/amount time should use tiempo after the sense-aware render-unit refactor."
+        }
+      ]
+    }
+  ]
+}

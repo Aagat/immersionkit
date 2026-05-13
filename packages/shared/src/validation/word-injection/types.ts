@@ -1,8 +1,15 @@
+import type { ContextualWordCandidate as DomainContextualWordCandidate } from "../../domain/models";
 import type {
-  ContextChunkType,
-  ContextualWordCandidate as DomainContextualWordCandidate,
-  ObservedContextPos
-} from "../../domain/models";
+  WordInjectionDecision,
+  WordInjectionDecisionResult
+} from "../../scoring/word-injection";
+export { WORD_INJECTION_DECISIONS } from "../../scoring/word-injection";
+export type {
+  ContextualAmbiguityRule,
+  WordInjectionDecision,
+  WordInjectionDecisionCode,
+  WordInjectionDecisionResult
+} from "../../scoring/word-injection";
 export {
   CONTEXT_CHUNK_TYPES,
   OBSERVED_CONTEXT_POS_VALUES
@@ -15,54 +22,25 @@ export const WORD_INJECTION_EXPECTED_OUTCOMES = [
   "uncertain-skip"
 ] as const;
 
-export const WORD_INJECTION_DECISIONS = ["inject", "skip"] as const;
-
 export type WordInjectionExpectedOutcome =
   (typeof WORD_INJECTION_EXPECTED_OUTCOMES)[number];
-export type WordInjectionDecision = (typeof WORD_INJECTION_DECISIONS)[number];
 
 export type ContextualWordCandidate = DomainContextualWordCandidate & {
   expectedOutcome: WordInjectionExpectedOutcome;
   rationale: string;
 };
 
-export type WordInjectionDecisionCode =
-  | "lemma-only-safe-pos"
-  | "lemma-only-unsafe-pos"
-  | "group-not-in-inventory"
-  | "low-confidence"
-  | "blocked-observed-pos"
-  | "blocked-context-signature"
-  | "insufficient-context-evidence"
-  | "context-evidence-accepted";
-
-export type WordInjectionDecisionResult = {
-  decision: WordInjectionDecision;
-  code: WordInjectionDecisionCode;
-  reason: string;
-};
-
-export type ContextualAmbiguityRule = {
-  ambiguityGroup: string;
-  minimumConfidence: number;
-  allowedObservedPos: ReadonlySet<ObservedContextPos>;
-  blockedObservedPos: ReadonlySet<ObservedContextPos>;
-  allowedChunkTypes: ReadonlySet<ContextChunkType>;
-  requiredContextEvidence: ReadonlySet<string>;
-  blockedContextEvidence: ReadonlySet<string>;
-};
-
 export type WordInjectionCaseEvaluation = {
   candidate: ContextualWordCandidate;
   expectedDecision: WordInjectionDecision;
   baseline: WordInjectionDecisionResult;
-  prototype: WordInjectionDecisionResult;
+  contextAware: WordInjectionDecisionResult;
   baselineCorrect: boolean;
-  prototypeCorrect: boolean;
+  contextAwareCorrect: boolean;
 };
 
 export type WordInjectionStrategyMetrics = {
-  name: "baseline" | "prototype";
+  name: "baseline" | "context-aware";
   totalCases: number;
   correctCases: number;
   accuracy: number;
@@ -83,7 +61,7 @@ export type WordInjectionEvaluationSummary = {
   uncertainSkipCount: number;
   perCase: WordInjectionCaseEvaluation[];
   baseline: WordInjectionStrategyMetrics;
-  prototype: WordInjectionStrategyMetrics;
+  contextAware: WordInjectionStrategyMetrics;
 };
 
 export type WordInjectionLibraryImplementationId =

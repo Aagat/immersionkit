@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  createLegacySentenceLearningNote,
   createSentenceLearningNote,
   DEFAULT_EXTENSION_SETTINGS,
   clampSentenceBatchSize,
@@ -48,6 +47,34 @@ describe("settings model helpers", () => {
     expect(resolveExtensionSettings(null)).toEqual(DEFAULT_EXTENSION_SETTINGS);
   });
 
+  it("derives source and target languages from an explicit language pair", () => {
+    expect(
+      resolveExtensionSettings({
+        languagePair: "en-fr",
+        sourceLanguage: "en",
+        targetLanguage: "es"
+      })
+    ).toEqual({
+      ...DEFAULT_EXTENSION_SETTINGS,
+      languagePair: "en-fr",
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+  });
+
+  it("keeps language pair fields consistent when only target language is stored", () => {
+    expect(
+      resolveExtensionSettings({
+        targetLanguage: "fr"
+      })
+    ).toEqual({
+      ...DEFAULT_EXTENSION_SETTINGS,
+      languagePair: "en-fr",
+      sourceLanguage: "en",
+      targetLanguage: "fr"
+    });
+  });
+
   it("retains explicit flags while clamping noisy numeric inputs", () => {
     expect(
       resolveExtensionSettings({
@@ -85,16 +112,12 @@ describe("settings model helpers", () => {
     });
   });
 
-  it("wraps legacy grammar notes into the structured learning-note shape", () => {
-    const legacy = createLegacySentenceLearningNote("Present tense for habitual actions.");
-
-    expect(legacy).toEqual({
-      summary: "Present tense for habitual actions.",
-      literalGloss: "",
-      keyPhrase: "",
-      canonicalUsage: "",
-      grammarFocus: ""
+  it("detects learning-note content after summary backfill", () => {
+    const note = createSentenceLearningNote({
+      grammarFocus: "Present tense for habitual actions."
     });
-    expect(hasSentenceLearningNoteContent(legacy)).toBe(true);
+
+    expect(note.summary).toBe("Present tense for habitual actions.");
+    expect(hasSentenceLearningNoteContent(note)).toBe(true);
   });
 });

@@ -11,10 +11,10 @@
     "baseline": {
       "mustInjectCoverage": 1,
       "mustSkipPrecision": 0,
-      "uncertainSkipRate": 0,
+      "uncertainSkipRate": 0.4,
       "lowConfidenceSkipCount": 0
     },
-    "prototype": {
+    "contextAware": {
       "mustInjectCoverage": 0.9285714285714286,
       "mustSkipPrecision": 1,
       "uncertainSkipRate": 1,
@@ -22,35 +22,166 @@
     }
   },
   "expectedPerCaseDecisions": {
-    "can-01": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "can-02": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "can-03": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "can-04": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "can-05": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "can-06": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "watch-01": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "watch-02": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "watch-03": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "watch-04": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "watch-05": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "watch-06": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "light-01": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "light-02": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "light-03": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "light-04": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "light-05": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "light-06": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "right-01": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "right-02": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "right-03": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "right-04": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "right-05": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "right-06": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "plant-01": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "plant-02": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "plant-03": { "baselineDecision": "inject", "prototypeDecision": "inject" },
-    "plant-04": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "plant-05": { "baselineDecision": "inject", "prototypeDecision": "skip" },
-    "plant-06": { "baselineDecision": "inject", "prototypeDecision": "skip" }
+    "can-01": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "can-02": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "can-03": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "can-04": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "can-05": {
+      "baselineDecision": "skip",
+      "contextAwareDecision": "skip"
+    },
+    "can-06": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "watch-01": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "watch-02": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "watch-03": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "watch-04": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "watch-05": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "watch-06": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "light-01": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "light-02": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "light-03": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "light-04": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "light-05": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "light-06": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "right-01": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "right-02": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "right-03": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "right-04": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "right-05": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "right-06": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "plant-01": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "plant-02": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "plant-03": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "inject"
+    },
+    "plant-04": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    },
+    "plant-05": {
+      "baselineDecision": "skip",
+      "contextAwareDecision": "skip"
+    },
+    "plant-06": {
+      "baselineDecision": "inject",
+      "contextAwareDecision": "skip"
+    }
+  },
+  "expectedProductionQuality": {
+    "scenarioVersion": "1.0.0",
+    "totalCases": 7,
+    "expectedInjectCount": 2,
+    "expectedSkipCount": 5,
+    "wrongSenseRenderedCount": 0,
+    "missedExpectedInjectCount": 0,
+    "wrongTargetCount": 0,
+    "expectedPerCase": {
+      "need-noun-vs-verb": {
+        "decision": "skip",
+        "rendered": false
+      },
+      "this-adjective-vs-pronoun": {
+        "decision": "skip",
+        "rendered": false
+      },
+      "zero-noun-vs-number": {
+        "decision": "skip",
+        "rendered": false
+      },
+      "on-adverb-vs-preposition": {
+        "decision": "skip",
+        "rendered": false
+      },
+      "stable-adjective-safe": {
+        "decision": "inject",
+        "rendered": true,
+        "targetText": "estable"
+      },
+      "up-adverb-vs-preposition": {
+        "decision": "skip",
+        "rendered": false
+      },
+      "time-duration-tiempo": {
+        "decision": "inject",
+        "rendered": true,
+        "targetText": "tiempo"
+      }
+    }
   }
 }

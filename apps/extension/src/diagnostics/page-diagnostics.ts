@@ -10,10 +10,10 @@ export type PageDiagnosticsSnapshot = {
   pagePathname: string;
   siteEnabled: boolean;
   sentenceTranslationEnabled: boolean;
-  lexiconSource: string;
-  lexiconEntryCount: number;
-  lexiconAssetVersion: string | null;
-  fallbackLexicon: boolean;
+  assetSource: string;
+  renderUnitCount: number;
+  renderAssetVersion: string | null;
+  fallbackAsset: boolean;
   processedTextNodes: number;
   injectedTokens: number;
   injectedPhrases: number;
@@ -56,6 +56,7 @@ export type PageDiagnosticsSentenceRankingReason = {
     grammarFit: number;
     dueTargetValue: number;
     grammarDueValue?: number;
+    grammarCurriculumValue?: number;
     chunkUsefulness: number;
     ambiguityPenalty: number;
     sentencePolicyFit?: number;
@@ -75,7 +76,7 @@ export type PageDiagnosticsSentenceRankingReason = {
 export type PageDiagnosticsTokenSample = {
   sourceToken: string | null;
   targetToken: string | null;
-  lemmaId: string | null;
+  lexemeId: string | null;
   unitKind: string | null;
   wordKind: string | null;
   contextDecision: string | null;

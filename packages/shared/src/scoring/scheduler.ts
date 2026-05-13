@@ -76,6 +76,13 @@ export function evaluateLearningItemSchedule(
   };
 }
 
+export function evaluateLearningItemDueStatus(
+  item: LearningItem | null | undefined,
+  now: string | number | Date = Date.now()
+): SchedulerDecision {
+  return evaluateLearningItemSchedule(item, now);
+}
+
 export function shouldReceiveDueReviewBoost(
   item: LearningItem | null | undefined,
   now: string | number | Date = Date.now()

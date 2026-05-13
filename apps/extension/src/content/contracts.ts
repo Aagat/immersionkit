@@ -1,5 +1,7 @@
 import type {
-  SeedLexiconEntry,
+  SafeInjectionPos,
+  SupportedSourceLanguage,
+  SupportedTargetLanguage,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
@@ -14,38 +16,41 @@ export type InjectedWordKind = "known" | "discovery";
 export type TokenMetadata = {
   tokenId: string;
   nodeId: string;
-  sourceLanguage: "en";
-  targetLanguage: "es";
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sourceToken: string;
   targetToken: string;
   sourceLemma: string;
-  lemmaId: string;
-  pos: SeedLexiconEntry["pos"];
+  lexemeId: string;
+  renderUnitId: string | null;
+  pos: SafeInjectionPos;
   status: VocabStatus;
   wordKind: InjectedWordKind;
   sentence: string | null;
   sentenceHash: string | null;
   exampleSentenceEnglish: string | null;
   exampleSentenceNative: string | null;
+  curriculumReason: string | null;
 };
 
 export type PhraseMetadata = {
   tokenId: string;
   nodeId: string;
-  sourceLanguage: "en";
-  targetLanguage: "es";
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sourceText: string;
   targetText: string;
   phraseId: string;
   itemId: string;
-  category: string;
-  sourceKind: string;
-  ruleId: string;
+  category: string | null;
+  sourceKind: string | null;
+  ruleId: string | null;
   confidence: number | null;
   dueStatus: string | null;
   schedulerReason: string | null;
   sentence: string | null;
   sentenceHash: string | null;
+  curriculumReason: string | null;
 };
 
 export type SentenceCandidateReason = "injected-token" | "fixed-phrase-hint";
@@ -60,7 +65,7 @@ export type PhraseActivatedDetail = PhraseMetadata & {
 
 export type TokenStatusUpdatedDetail = {
   tokenId: string;
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   entry?: UserVocabEntry;
 };

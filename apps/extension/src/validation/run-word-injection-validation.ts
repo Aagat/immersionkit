@@ -1,3 +1,4 @@
+import { normalizeToken } from "@immersionkit/shared";
 import {
   evaluateContextAwareDecision,
   mapExpectedOutcomeToDecision,
@@ -17,9 +18,13 @@ import {
   type BrowserExpectedSnapshot
 } from "./word-injection-corpus";
 import {
-  runLemmaOnlyContentBaseline,
+  runContentBaseline,
   type BrowserBaselineDecision
 } from "./run-word-injection-baseline";
+import {
+  runProductionQualityValidation,
+  type ProductionQualitySummary
+} from "./run-word-injection-production-quality";
 
 export type BrowserValidationChecks = {
   pass: boolean;
@@ -31,13 +36,14 @@ export type BrowserWordInjectionValidationResult = {
   browserUserAgent: string;
   corpusVersion: string;
   summary: WordInjectionEvaluationSummary;
+  productionQuality: ProductionQualitySummary;
   checks: BrowserValidationChecks;
   comparisons: WordInjectionLibraryComparison[];
 };
 
 export async function runWordInjectionValidation(): Promise<BrowserWordInjectionValidationResult> {
   const baselineById = new Map<string, BrowserBaselineDecision>(
-    runLemmaOnlyContentBaseline(WORD_INJECTION_CANDIDATES).map((decision) => [
+    runContentBaseline(WORD_INJECTION_CANDIDATES).map((decision) => [
       decision.id,
       decision
     ])
@@ -49,21 +55,26 @@ export async function runWordInjectionValidation(): Promise<BrowserWordInjection
       throw new Error(`Missing baseline decision for case ${candidate.id}`);
     }
 
-    const prototype = evaluateContextAwareDecision(candidate);
+    const contextAware = evaluateContextAwareDecision(candidate);
     const expectedDecision = mapExpectedOutcomeToDecision(candidate.expectedOutcome);
 
     return {
       candidate,
       expectedDecision,
       baseline,
-      prototype,
+      contextAware,
       baselineCorrect: baseline.decision === expectedDecision,
-      prototypeCorrect: prototype.decision === expectedDecision
+      contextAwareCorrect: contextAware.decision === expectedDecision
     };
   });
 
   const summary = summarize(perCase, WORD_INJECTION_CANDIDATES);
-  const checks = validateAgainstExpectedSnapshot(summary, WORD_INJECTION_EXPECTED_BROWSER_RESULTS);
+  const productionQuality = await runProductionQualityValidation();
+  const checks = validateAgainstExpectedSnapshot(
+    summary,
+    productionQuality,
+    WORD_INJECTION_EXPECTED_BROWSER_RESULTS
+  );
   const comparisons = await runWordInjectionLibraryComparisons(WORD_INJECTION_CANDIDATES);
 
   return {
@@ -71,6 +82,7 @@ export async function runWordInjectionValidation(): Promise<BrowserWordInjection
     browserUserAgent: navigator.userAgent,
     corpusVersion: WORD_INJECTION_CORPUS_VERSION,
     summary,
+    productionQuality,
     checks,
     comparisons
   };
@@ -97,8 +109,8 @@ function summarize(
       mustSkipCount,
       uncertainSkipCount
     ),
-    prototype: summarizeStrategy(
-      "prototype",
+    contextAware: summarizeStrategy(
+      "context-aware",
       perCase,
       mustInjectCount,
       mustSkipCount,
@@ -108,14 +120,14 @@ function summarize(
 }
 
 function summarizeStrategy(
-  name: "baseline" | "prototype",
+  name: "baseline" | "context-aware",
   perCase: WordInjectionCaseEvaluation[],
   mustInjectCount: number,
   mustSkipCount: number,
   uncertainSkipCount: number
 ): WordInjectionStrategyMetrics {
   const decisions = perCase.map((entry) =>
-    name === "baseline" ? entry.baseline : entry.prototype
+    name === "baseline" ? entry.baseline : entry.contextAware
   );
 
   let correctCases = 0;
@@ -185,6 +197,7 @@ function summarizeStrategy(
 
 function validateAgainstExpectedSnapshot(
   summary: WordInjectionEvaluationSummary,
+  productionQuality: ProductionQualitySummary,
   expected: BrowserExpectedSnapshot
 ): BrowserValidationChecks {
   const mismatches: string[] = [];
@@ -233,21 +246,21 @@ function validateAgainstExpectedSnapshot(
   );
   assertMetric(
     mismatches,
-    "prototype.mustInjectCoverage",
-    summary.prototype.mustInjectCoverage,
-    expected.expectedMetrics.prototype.mustInjectCoverage
+    "contextAware.mustInjectCoverage",
+    summary.contextAware.mustInjectCoverage,
+    expected.expectedMetrics.contextAware.mustInjectCoverage
   );
   assertMetric(
     mismatches,
-    "prototype.mustSkipPrecision",
-    summary.prototype.mustSkipPrecision,
-    expected.expectedMetrics.prototype.mustSkipPrecision
+    "contextAware.mustSkipPrecision",
+    summary.contextAware.mustSkipPrecision,
+    expected.expectedMetrics.contextAware.mustSkipPrecision
   );
   assertMetric(
     mismatches,
-    "prototype.uncertainSkipRate",
-    summary.prototype.uncertainSkipRate,
-    expected.expectedMetrics.prototype.uncertainSkipRate
+    "contextAware.uncertainSkipRate",
+    summary.contextAware.uncertainSkipRate,
+    expected.expectedMetrics.contextAware.uncertainSkipRate
   );
 
   if (
@@ -260,11 +273,11 @@ function validateAgainstExpectedSnapshot(
   }
 
   if (
-    summary.prototype.lowConfidenceSkipCount !==
-    expected.expectedMetrics.prototype.lowConfidenceSkipCount
+    summary.contextAware.lowConfidenceSkipCount !==
+    expected.expectedMetrics.contextAware.lowConfidenceSkipCount
   ) {
     mismatches.push(
-      `prototype.lowConfidenceSkipCount expected ${expected.expectedMetrics.prototype.lowConfidenceSkipCount}, got ${summary.prototype.lowConfidenceSkipCount}`
+      `contextAware.lowConfidenceSkipCount expected ${expected.expectedMetrics.contextAware.lowConfidenceSkipCount}, got ${summary.contextAware.lowConfidenceSkipCount}`
     );
   }
 
@@ -281,17 +294,107 @@ function validateAgainstExpectedSnapshot(
       );
     }
 
-    if (entry.prototype.decision !== expectedCase.prototypeDecision) {
+    if (entry.contextAware.decision !== expectedCase.contextAwareDecision) {
       mismatches.push(
-        `${entry.candidate.id} prototype expected ${expectedCase.prototypeDecision}, got ${entry.prototype.decision}`
+        `${entry.candidate.id} context-aware expected ${expectedCase.contextAwareDecision}, got ${entry.contextAware.decision}`
       );
     }
   }
+
+  validateProductionQualityAgainstExpectedSnapshot(
+    mismatches,
+    productionQuality,
+    expected
+  );
 
   return {
     pass: mismatches.length === 0,
     mismatches
   };
+}
+
+function validateProductionQualityAgainstExpectedSnapshot(
+  mismatches: string[],
+  productionQuality: ProductionQualitySummary,
+  expected: BrowserExpectedSnapshot
+) {
+  const expectedQuality = expected.expectedProductionQuality;
+  if (productionQuality.scenarioVersion !== expectedQuality.scenarioVersion) {
+    mismatches.push(
+      `productionQuality.scenarioVersion expected ${expectedQuality.scenarioVersion}, got ${productionQuality.scenarioVersion}`
+    );
+  }
+
+  if (productionQuality.totalCases !== expectedQuality.totalCases) {
+    mismatches.push(
+      `productionQuality.totalCases expected ${expectedQuality.totalCases}, got ${productionQuality.totalCases}`
+    );
+  }
+
+  if (productionQuality.expectedInjectCount !== expectedQuality.expectedInjectCount) {
+    mismatches.push(
+      `productionQuality.expectedInjectCount expected ${expectedQuality.expectedInjectCount}, got ${productionQuality.expectedInjectCount}`
+    );
+  }
+
+  if (productionQuality.expectedSkipCount !== expectedQuality.expectedSkipCount) {
+    mismatches.push(
+      `productionQuality.expectedSkipCount expected ${expectedQuality.expectedSkipCount}, got ${productionQuality.expectedSkipCount}`
+    );
+  }
+
+  if (
+    productionQuality.wrongSenseRenderedCaseIds.length !==
+    expectedQuality.wrongSenseRenderedCount
+  ) {
+    mismatches.push(
+      `productionQuality.wrongSenseRenderedCount expected ${expectedQuality.wrongSenseRenderedCount}, got ${productionQuality.wrongSenseRenderedCaseIds.length}`
+    );
+  }
+
+  if (
+    productionQuality.missedExpectedInjectCaseIds.length !==
+    expectedQuality.missedExpectedInjectCount
+  ) {
+    mismatches.push(
+      `productionQuality.missedExpectedInjectCount expected ${expectedQuality.missedExpectedInjectCount}, got ${productionQuality.missedExpectedInjectCaseIds.length}`
+    );
+  }
+
+  if (productionQuality.wrongTargetCaseIds.length !== expectedQuality.wrongTargetCount) {
+    mismatches.push(
+      `productionQuality.wrongTargetCount expected ${expectedQuality.wrongTargetCount}, got ${productionQuality.wrongTargetCaseIds.length}`
+    );
+  }
+
+  for (const entry of productionQuality.perCase) {
+    const expectedCase = expectedQuality.expectedPerCase[entry.id];
+    if (!expectedCase) {
+      mismatches.push(`Missing production quality snapshot for case ${entry.id}`);
+      continue;
+    }
+
+    if (entry.actualDecision !== expectedCase.decision) {
+      mismatches.push(
+        `${entry.id} production decision expected ${expectedCase.decision}, got ${entry.actualDecision}`
+      );
+    }
+
+    if (entry.rendered !== expectedCase.rendered) {
+      mismatches.push(
+        `${entry.id} production render expected ${String(expectedCase.rendered)}, got ${String(entry.rendered)}`
+      );
+    }
+
+    if (
+      expectedCase.targetText &&
+      normalizeToken(entry.renderedTargetText ?? "") !== normalizeToken(expectedCase.targetText)
+    ) {
+      mismatches.push(
+        `${entry.id} production target expected ${expectedCase.targetText}, got ${entry.renderedTargetText ?? "(none)"}`
+      );
+    }
+  }
 }
 
 function assertMetric(

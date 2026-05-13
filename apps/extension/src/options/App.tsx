@@ -1,32 +1,45 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  ExtensionOptions,
+  type OptionsAdvancedDiagnostics,
+  type OptionsSection
+} from "@immersionkit/ui";
 import type { ProviderName } from "@immersionkit/shared";
 import {
-  PROFICIENCY_SEED_OPTIONS,
+  loadActivePageDiagnostics,
   isProviderKeyValid,
-  loadActiveTabContext,
   loadCheckpointEligibilityPreview,
   loadCurriculumDiagnostics,
-  loadGrammarEvidenceStats,
-  loadPageDiagnostics,
-  loadSentenceStats,
+  loadFirstRunIntroVisible,
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
   graduateCheckpoint,
+  createCurriculumDiagnosticsForProfile,
+  createLearningProfileForBand,
+  createLearningProfileForProficiencySeed,
+  getExactActiveBandId,
+  formatCurriculumProgressRequirement,
+  markFirstRunIntroSeen,
   normalizeDiscoveryRate,
   notifySettingsRefresh,
   parseProficiencySeed,
   saveSettingsState,
-  type SentenceStats,
+  saveLearningProfile,
+  CURRICULUM_BAND_OPTIONS,
   type SettingsState,
   type SiteSettingsMap,
   type VocabStats,
-  type ActiveTabContext,
   type CheckpointEligibilityPreview,
+  type ProficiencySeed,
   type CurriculumDiagnostics,
-  type GrammarEvidenceStats,
-  type PageDiagnostics
-} from "./state";
+  type ActivePageDiagnostics,
+  type StoredSiteSetting
+} from "../app-state/settings-state";
+import {
+  DIAGNOSTICS_ENABLED,
+  EXTENSION_BUILD_PROFILE
+} from "../build-profile";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -36,43 +49,17 @@ const EMPTY_STATS: VocabStats = {
   ignored: 0
 };
 
-const EMPTY_SENTENCE_STATS: SentenceStats = {
-  cacheSize: 0,
-  pendingCount: 0
-};
-
-const EMPTY_ACTIVE_TAB_CONTEXT: ActiveTabContext = {
-  tabId: null,
-  hostname: null,
-  url: null,
-  isSupportedPage: false,
-  supportMessage: "Active tab has not been checked yet."
-};
-
-const EMPTY_CURRICULUM_DIAGNOSTICS: CurriculumDiagnostics = {
-  profile: {},
-  activeContent: null,
-  lastProgressionDecision: null
-};
-
-const EMPTY_GRAMMAR_EVIDENCE_STATS: GrammarEvidenceStats = {
-  featureCount: 0,
-  assistCount: 0,
-  qualifiedExposureCount: 0,
-  dueCount: 0
-};
-
 const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   activeBandId: null,
   activeBandLabel: null,
   nextBandId: null,
   nextBandLabel: null,
+  checkpointBlueprint: null,
+  checkpointScopeLabels: [],
   checkpointRequired: false,
   checkpointIsOnlyBlocker: false,
   unmetRequirements: []
 };
-
-const SHOW_ADVANCED_TAB = true;
 
 type OptionsTab = "general" | "translation" | "advanced";
 
@@ -80,18 +67,17 @@ export function OptionsApp() {
   const [settingsState, setSettingsState] = useState<SettingsState | null>(null);
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
   const [siteSettings, setSiteSettings] = useState<SiteSettingsMap>({});
-  const [sentenceStats, setSentenceStats] = useState<SentenceStats>(EMPTY_SENTENCE_STATS);
-  const [activeTabContext, setActiveTabContext] = useState<ActiveTabContext>(
-    EMPTY_ACTIVE_TAB_CONTEXT
-  );
-  const [curriculumDiagnostics, setCurriculumDiagnostics] =
-    useState<CurriculumDiagnostics>(EMPTY_CURRICULUM_DIAGNOSTICS);
-  const [grammarEvidenceStats, setGrammarEvidenceStats] =
-    useState<GrammarEvidenceStats>(EMPTY_GRAMMAR_EVIDENCE_STATS);
   const [checkpointPreview, setCheckpointPreview] =
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
-  const [pageDiagnostics, setPageDiagnostics] = useState<PageDiagnostics | null>(null);
-  const [activeTab, setActiveTab] = useState<OptionsTab>("general");
+  const showAdvancedTab = shouldShowAdvancedTab();
+  const [curriculumDiagnostics, setCurriculumDiagnostics] =
+    useState<CurriculumDiagnostics | null>(null);
+  const [activePageDiagnostics, setActivePageDiagnostics] =
+    useState<ActivePageDiagnostics | null>(null);
+  const [activeTab, setActiveTab] = useState<OptionsTab>(
+    showAdvancedTab ? "advanced" : "general"
+  );
+  const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
@@ -109,42 +95,34 @@ export function OptionsApp() {
         loadedSettings,
         loadedVocabStats,
         loadedSiteSettings,
-        loadedSentenceStats,
-        loadedCurriculumDiagnostics,
-        loadedGrammarEvidenceStats,
         loadedCheckpointPreview,
-        loadedActiveTabContext
+        loadedFirstRunIntroVisible,
+        loadedCurriculumDiagnostics,
+        loadedActivePageDiagnostics
       ] =
         await Promise.all([
           loadSettingsState(),
           loadVocabStats(),
           loadSiteSettingsMap(),
-          loadSentenceStats(),
-          loadCurriculumDiagnostics(),
-          loadGrammarEvidenceStats(),
           loadCheckpointEligibilityPreview(),
-          loadActiveTabContext()
+          loadFirstRunIntroVisible(),
+          loadCurriculumDiagnostics(),
+          showAdvancedTab ? loadActivePageDiagnostics() : Promise.resolve(null)
         ]);
-
-      const loadedPageDiagnostics = loadedActiveTabContext.isSupportedPage
-        ? await loadPageDiagnostics(loadedActiveTabContext.tabId)
-        : null;
 
       setSettingsState(loadedSettings);
       setVocabStats(loadedVocabStats);
       setSiteSettings(loadedSiteSettings);
-      setSentenceStats(loadedSentenceStats);
-      setCurriculumDiagnostics(loadedCurriculumDiagnostics);
-      setGrammarEvidenceStats(loadedGrammarEvidenceStats);
       setCheckpointPreview(loadedCheckpointPreview);
-      setActiveTabContext(loadedActiveTabContext);
-      setPageDiagnostics(loadedPageDiagnostics);
+      setShowFirstRunIntro(loadedFirstRunIntroVisible);
+      setCurriculumDiagnostics(loadedCurriculumDiagnostics);
+      setActivePageDiagnostics(loadedActivePageDiagnostics);
     } catch {
       setErrorMessage("Could not load extension settings.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showAdvancedTab]);
 
   useEffect(() => {
     void loadState();
@@ -169,6 +147,8 @@ export function OptionsApp() {
   }, []);
 
   const handleProficiencySeedChange = useCallback((nextSeed: string) => {
+    const proficiencySeed = parseProficiencySeed(nextSeed);
+    const profile = createLearningProfileForProficiencySeed(proficiencySeed);
     setSettingsState((current) => {
       if (!current) {
         return current;
@@ -176,9 +156,27 @@ export function OptionsApp() {
 
       return {
         ...current,
-        proficiencySeed: parseProficiencySeed(nextSeed)
+        proficiencySeed
       };
     });
+    setCurriculumDiagnostics((current) =>
+      createCurriculumDiagnosticsForProfile(
+        profile,
+        current?.lastProgressionDecision ?? null
+      )
+    );
+    setStatusMessage(null);
+    setErrorMessage(null);
+  }, []);
+
+  const handleExactBandChange = useCallback((bandId: string) => {
+    const profile = createLearningProfileForBand(bandId);
+    setCurriculumDiagnostics((current) =>
+      createCurriculumDiagnosticsForProfile(
+        profile,
+        current?.lastProgressionDecision ?? null
+      )
+    );
     setStatusMessage(null);
     setErrorMessage(null);
   }, []);
@@ -273,7 +271,9 @@ export function OptionsApp() {
       ...settingsState,
       settings: {
         ...settingsState.settings,
-        targetLanguage: "es",
+        languagePair: settingsState.settings.languagePair,
+        sourceLanguage: settingsState.settings.sourceLanguage,
+        targetLanguage: settingsState.settings.targetLanguage,
         discoveryRate: normalizeDiscoveryRate(settingsState.settings.discoveryRate),
         sentenceTranslationEnabled:
           settingsState.settings.provider === "openai"
@@ -285,8 +285,18 @@ export function OptionsApp() {
     setIsSaving(true);
 
     try {
+      const profileToPersist =
+        curriculumDiagnostics?.profile ??
+        createLearningProfileForProficiencySeed(normalizedState.proficiencySeed);
       const savedState = await saveSettingsState(normalizedState);
+      await saveLearningProfile(profileToPersist);
       setSettingsState(savedState);
+      setCurriculumDiagnostics((current) =>
+        createCurriculumDiagnosticsForProfile(
+          profileToPersist,
+          current?.lastProgressionDecision ?? null
+        )
+      );
       await notifySettingsRefresh();
       setStatusMessage("Settings saved.");
     } catch {
@@ -294,7 +304,7 @@ export function OptionsApp() {
     } finally {
       setIsSaving(false);
     }
-  }, [settingsState]);
+  }, [curriculumDiagnostics?.profile, settingsState]);
 
   const handleClearApiKey = useCallback(() => {
     setSettingsState((current) => {
@@ -330,14 +340,25 @@ export function OptionsApp() {
 
       await loadState();
       setStatusMessage(
-        `Progress checkpoint complete. Advanced to ${result.nextBandId ?? "the next level"}.`
+        `Reading band widened to ${result.nextBandId ?? "the next band"}.`
       );
     } catch {
-      setErrorMessage("Unable to complete checkpoint graduation. Try again.");
+      setErrorMessage("Unable to widen the reading band right now. Try again.");
     } finally {
       setIsGraduatingCheckpoint(false);
     }
   }, [loadState]);
+
+  const handleDismissFirstRunIntro = useCallback(async () => {
+    setShowFirstRunIntro(false);
+    await markFirstRunIntroSeen();
+  }, []);
+
+  useEffect(() => {
+    if (!showAdvancedTab && activeTab === "advanced") {
+      setActiveTab("general");
+    }
+  }, [activeTab, showAdvancedTab]);
 
   const discoveryRatePercent = Math.round(
     (settingsState?.settings.discoveryRate ?? 0) * 100
@@ -349,1109 +370,164 @@ export function OptionsApp() {
     (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
   );
   const disabledSiteCount = siteEntries.filter((entry) => !entry.enabled).length;
-  const translationReady =
-    settingsState?.settings.provider === "openai" && providerKeyValid;
   const translationSummary = getTranslationSummary({
     provider: settingsState?.settings.provider ?? "none",
     sentenceTranslationEnabled: Boolean(settingsState?.settings.sentenceTranslationEnabled),
     providerKeyValid
   });
-  const lastProgressionDecision =
-    curriculumDiagnostics.lastProgressionDecision;
   const checkpointStatus = getCheckpointStatus(checkpointPreview);
+  const advancedDiagnostics = createAdvancedDiagnostics({
+    vocabStats,
+    siteEntries,
+    activePageDiagnostics,
+    curriculumDiagnostics
+  });
 
   return (
-    <main className="panel-shell options-shell">
-      <section className="panel-card options-hero">
-        <div style={{ display: "grid", gap: 12 }}>
-          <div>
-            <p className="eyebrow">ImmersionKit</p>
-            <h1>Make reading feel guided, not crowded.</h1>
-          </div>
-          <p className="muted">
-            Keep the popup focused on a quick on or off decision, and use this page
-            when you want to tune how much Spanish appears, how much help you get,
-            and any advanced behavior behind the scenes.
-          </p>
-        </div>
-
-        <div className="toolbar-actions">
-          <button
-            type="button"
-            className="button-primary"
-            disabled={!settingsState || isLoading || isSaving}
-            onClick={() => {
-              void handleSave();
-            }}
-          >
-            {isSaving ? "Saving..." : "Save changes"}
-          </button>
-          <button
-            type="button"
-            className="button-secondary"
-            disabled={isLoading || isSaving}
-            onClick={() => {
-              void loadState();
-            }}
-          >
-            Reload
-          </button>
-        </div>
-      </section>
-
-      <nav className="tab-strip" aria-label="Settings sections">
-        <TabButton
-          label="General"
-          isActive={activeTab === "general"}
-          onClick={() => {
-            setActiveTab("general");
-          }}
-        />
-        <TabButton
-          label="Translation"
-          isActive={activeTab === "translation"}
-          onClick={() => {
-            setActiveTab("translation");
-          }}
-        />
-        {SHOW_ADVANCED_TAB ? (
-          <TabButton
-            label="Advanced"
-            isActive={activeTab === "advanced"}
-            onClick={() => {
-              setActiveTab("advanced");
-            }}
-          />
-        ) : null}
-      </nav>
-
-      {statusMessage ? (
-        <section className="status-banner status-banner--success" role="status">
-          <p>{statusMessage}</p>
-        </section>
-      ) : null}
-
-      {errorMessage ? (
-        <section className="status-banner status-banner--error" role="status">
-          <p>{errorMessage}</p>
-        </section>
-      ) : null}
-
-      {activeTab === "general" ? (
-        <div className="settings-grid">
-          <div className="settings-grid settings-grid--two">
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Reading Feel</p>
-                  <h2>New word pace</h2>
-                </div>
-                <span className="badge-soft">{describeDiscoveryRate(discoveryRatePercent)}</span>
-              </div>
-
-              <div className="slider-wrap">
-                <p className="slider-value">
-                  Show new words at <strong>{discoveryRatePercent}%</strong>
-                </p>
-                <input
-                  id="settings-discovery-rate"
-                  type="range"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={discoveryRatePercent}
-                  disabled={!settingsState || isLoading || isSaving}
-                  onChange={(event) => {
-                    handleDiscoveryRateChange(Number(event.target.value));
-                  }}
-                />
-                <div className="slider-scale" aria-hidden="true">
-                  <span>Subtle</span>
-                  <span>Balanced</span>
-                  <span>Bold</span>
-                </div>
-              </div>
-
-              <p className="helper-line muted">
-                Lower values keep pages closer to the original text. Higher values
-                surface more new vocabulary while you read.
-              </p>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Starting Point</p>
-                  <h2>Reading level</h2>
-                </div>
-              </div>
-
-              <div className="choice-grid">
-                {PROFICIENCY_SEED_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={`choice-card${settingsState?.proficiencySeed === option.id ? " is-selected" : ""}`}
-                    disabled={!settingsState || isLoading || isSaving}
-                    onClick={() => {
-                      handleProficiencySeedChange(option.id);
-                    }}
-                  >
-                    <p className="choice-card-title">{option.label}</p>
-                    <p className="choice-card-text muted">{option.description}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <div className="settings-grid settings-grid--two">
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Your Progress</p>
-                  <h2>Learning snapshot</h2>
-                </div>
-              </div>
-
-              <div className="metric-grid metric-grid--wide">
-                <MetricCard label="Comfortable" value={formatCount(vocabStats.known)} />
-                <MetricCard label="In practice" value={formatCount(vocabStats.learning)} />
-                <MetricCard label="Still new" value={formatCount(vocabStats.newCount)} />
-                <MetricCard label="Tracked total" value={formatCount(vocabStats.total)} />
-              </div>
-
-              <p className="support-line muted">
-                This is the same user-facing snapshot the popup keeps visible, just
-                with a little more breathing room.
-              </p>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Site Controls</p>
-                  <h2>Popup behavior</h2>
-                </div>
-                <span className="mini-badge">{formatCount(siteEntries.length)} saved</span>
-              </div>
-
-              <p className="helper-line muted" style={{ marginTop: 0 }}>
-                The popup is now just a quick site power button plus your learning
-                snapshot. Use it when a page needs an immediate pause, and come here
-                for everything global.
-              </p>
-
-              <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
-                <MetricCard label="Sites paused" value={formatCount(disabledSiteCount)} />
-                <MetricCard
-                  label="Translation"
-                  value={translationReady ? "Ready" : "Needs setup"}
-                />
-              </div>
-
-              {siteEntries.length > 0 ? (
-                <p className="support-line muted">
-                  Recent site choices:{" "}
-                  {siteEntries
-                    .slice(0, 3)
-                    .map((entry) => entry.hostname)
-                    .join(", ")}
-                  .
-                </p>
-              ) : (
-                <p className="support-line muted">
-                  No site-specific overrides yet.
-                </p>
-              )}
-            </section>
-          </div>
-
-          <section className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Level Progress</p>
-                <h2>Ready for what is next?</h2>
-              </div>
-              <span className={checkpointStatus.badgeClass}>
-                {checkpointStatus.badgeLabel}
-              </span>
-            </div>
-
-            <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
-              <MetricCard
-                label="Current step"
-                value={checkpointPreview.activeBandLabel ?? "Starting"}
-              />
-              <MetricCard
-                label="Next step"
-                value={checkpointPreview.nextBandLabel ?? "None"}
-              />
-              <MetricCard
-                label="Signals left"
-                value={formatCount(checkpointPreview.unmetRequirements.length)}
-              />
-              <MetricCard
-                label="Advance"
-                value={checkpointPreview.checkpointRequired ? "Checkpoint" : "Automatic"}
-              />
-            </div>
-
-            <p className="support-line muted">
-              {checkpointStatus.description}
-            </p>
-
-            <div className="field-action-row">
-              <button
-                type="button"
-                className="button-primary"
-                disabled={
-                  isLoading ||
-                  isSaving ||
-                  isGraduatingCheckpoint ||
-                  !checkpointPreview.checkpointIsOnlyBlocker
-                }
-                onClick={() => {
-                  void handleCheckpointGraduation();
-                }}
-              >
-                {isGraduatingCheckpoint ? "Advancing..." : "Move to next level"}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      {activeTab === "translation" ? (
-        <div className="settings-grid">
-          <section className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Sentence Help</p>
-                <h2>Translation and grammar notes</h2>
-              </div>
-              <span className={translationSummary.badgeClass}>{translationSummary.badgeLabel}</span>
-            </div>
-
-            <div className="switch-row">
-              <div className="switch-copy">
-                <p className="choice-card-title">Enable sentence translation</p>
-                <p className="muted">
-                  Show translated sentences and grammar hints when the provider is ready.
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={Boolean(settingsState?.settings.sentenceTranslationEnabled)}
-                disabled={!settingsState || isLoading || isSaving}
-                ariaLabel="Enable sentence translation and grammar notes"
-                onChange={(checked) => {
-                  handleSentenceTranslationChange(checked);
-                }}
-              />
-            </div>
-
-            <p className="support-line muted">{translationSummary.description}</p>
-          </section>
-
-          <div className="settings-grid settings-grid--two">
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Provider</p>
-                  <h2>Connection</h2>
-                </div>
-              </div>
-
-              <label className="field-grid">
-                <span className="field-label">Provider</span>
-                <select
-                  className="select-input"
-                  value={settingsState?.settings.provider ?? "none"}
-                  disabled={!settingsState || isLoading || isSaving}
-                  onChange={(event) => {
-                    const provider = event.target.value as ProviderName;
-                    if (provider !== "none" && provider !== "openai") {
-                      return;
-                    }
-
-                    handleProviderChange(provider);
-                  }}
-                >
-                  <option value="none">None</option>
-                  <option value="openai">OpenAI</option>
-                </select>
-              </label>
-
-              <p className="support-line muted">
-                Leave this off if you only want vocabulary swaps and no sentence-level help.
-              </p>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">API Key</p>
-                  <h2>Credentials</h2>
-                </div>
-                <span className={providerKeyValid ? "badge-soft badge-soft--on" : "badge-soft badge-soft--off"}>
-                  {providerKeyValid ? "Looks valid" : "Needs key"}
-                </span>
-              </div>
-
-              <label className="field-grid">
-                <span className="field-label">OpenAI API key</span>
-                <input
-                  className="text-input"
-                  type={showApiKey ? "text" : "password"}
-                  value={settingsState?.providerApiKey ?? ""}
-                  disabled={!settingsState || isLoading || isSaving}
-                  onChange={(event) => {
-                    handleApiKeyChange(event.target.value);
-                  }}
-                  placeholder="sk-..."
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </label>
-
-              <div className="field-action-row">
-                <button
-                  type="button"
-                  className="field-button"
-                  onClick={() => {
-                    setShowApiKey((current) => !current);
-                  }}
-                >
-                  {showApiKey ? "Hide key" : "Show key"}
-                </button>
-                <button
-                  type="button"
-                  className="field-button"
-                  disabled={!settingsState || settingsState.providerApiKey.length === 0 || isSaving}
-                  onClick={handleClearApiKey}
-                >
-                  Clear key
-                </button>
-              </div>
-
-              <p className="support-line muted">
-                {settingsState?.settings.provider === "none"
-                  ? "Provider is off, so sentence help will stay disabled."
-                  : providerKeyValid
-                    ? "Your key format looks ready for OpenAI."
-                    : "Enter a valid OpenAI key to unlock sentence translation."}
-              </p>
-            </section>
-          </div>
-        </div>
-      ) : null}
-
-      {SHOW_ADVANCED_TAB && activeTab === "advanced" ? (
-        <div className="settings-grid">
-          <div className="settings-grid settings-grid--two">
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Troubleshooting</p>
-                  <h2>Runtime snapshot</h2>
-                </div>
-              </div>
-
-              <div className="metric-grid metric-grid--wide">
-                <MetricCard
-                  label="Cached sentences"
-                  value={formatCount(sentenceStats.cacheSize)}
-                />
-                <MetricCard
-                  label="Pending sentences"
-                  value={formatCount(sentenceStats.pendingCount)}
-                />
-                <MetricCard
-                  label="Provider"
-                  value={settingsState?.settings.provider ?? "none"}
-                />
-                <MetricCard
-                  label="Translation"
-                  value={Boolean(settingsState?.settings.sentenceTranslationEnabled) ? "On" : "Off"}
-                />
-                <MetricCard
-                  label="Vocabulary band"
-                  value={
-                    curriculumDiagnostics.profile.activeVocabularyBandId ?? "default"
-                  }
-                />
-                <MetricCard
-                  label="Phrase band"
-                  value={curriculumDiagnostics.profile.activePhraseBandId ?? "default"}
-                />
-                <MetricCard
-                  label="Grammar band"
-                  value={curriculumDiagnostics.profile.activeGrammarBandId ?? "default"}
-                />
-                <MetricCard
-                  label="Unlocked bands"
-                  value={formatUnlockedBands(
-                    curriculumDiagnostics.profile.unlockedBandIds
-                  )}
-                />
-              </div>
-
-              <p className="support-line muted">
-                This tab is intended for lower-signal details that do not need to live in the popup.
-              </p>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Active Page</p>
-                  <h2>Diagnostics</h2>
-                </div>
-                <span className={pageDiagnostics ? "badge-soft badge-soft--on" : "badge-soft badge-soft--off"}>
-                  {pageDiagnostics ? "Live" : "Unavailable"}
-                </span>
-              </div>
-
-              <p className="helper-line muted" style={{ marginTop: 0 }}>
-                {pageDiagnostics
-                  ? `${pageDiagnostics.pageHostname}${pageDiagnostics.pagePathname}`
-                  : activeTabContext.supportMessage}
-              </p>
-
-              <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
-                <MetricCard
-                  label="Context skips"
-                  value={formatCount(pageDiagnostics?.contextSkippedTokens ?? 0)}
-                />
-                <MetricCard
-                  label="Suppressed"
-                  value={formatCount(pageDiagnostics?.analysisSuppressedTokens ?? 0)}
-                />
-                <MetricCard
-                  label="Phrases"
-                  value={formatCount(pageDiagnostics?.injectedPhrases ?? 0)}
-                />
-                <MetricCard
-                  label="Phrase rejects"
-                  value={formatCount(pageDiagnostics?.rejectedPhrases ?? 0)}
-                />
-                <MetricCard
-                  label="Seen sentences"
-                  value={formatCount(pageDiagnostics?.sentenceCandidatesSeen ?? 0)}
-                />
-                <MetricCard
-                  label="Queued sentences"
-                  value={formatCount(pageDiagnostics?.sentenceCandidatesQueued ?? 0)}
-                />
-                <MetricCard
-                  label="Mutation cache"
-                  value={`${formatCount(pageDiagnostics?.mutationCacheRefreshHits ?? 0)} hits`}
-                />
-                <MetricCard
-                  label="Mutation reads"
-                  value={formatCount(pageDiagnostics?.mutationCacheRefreshes ?? 0)}
-                />
-                <MetricCard
-                  label="Fresh phrase hits"
-                  value={formatCount(pageDiagnostics?.freshPhraseAnalysisHits ?? 0)}
-                />
-                <MetricCard
-                  label="Phrase rerenders"
-                  value={formatCount(pageDiagnostics?.freshPhraseRerenders ?? 0)}
-                />
-                <MetricCard
-                  label="Curriculum"
-                  value={pageDiagnostics?.activeCurriculumBandId ?? "unknown"}
-                />
-                <MetricCard
-                  label="Sentence band skips"
-                  value={formatCount(pageDiagnostics?.curriculumSkippedSentences ?? 0)}
-                />
-                <MetricCard
-                  label="Word band skips"
-                  value={formatCount(pageDiagnostics?.curriculumSkippedWords ?? 0)}
-                />
-                <MetricCard
-                  label="Phrase band skips"
-                  value={formatCount(pageDiagnostics?.curriculumSkippedPhrases ?? 0)}
-                />
-                <MetricCard
-                  label="Due grammar"
-                  value={formatCount(pageDiagnostics?.grammarDueSentenceCount ?? 0)}
-                />
-                <MetricCard
-                  label="Grammar items"
-                  value={formatCount(grammarEvidenceStats.featureCount)}
-                />
-                <MetricCard
-                  label="Grammar assists"
-                  value={formatCount(grammarEvidenceStats.assistCount)}
-                />
-                <MetricCard
-                  label="Grammar exposures"
-                  value={formatCount(grammarEvidenceStats.qualifiedExposureCount)}
-                />
-                <MetricCard
-                  label="Due grammar items"
-                  value={formatCount(grammarEvidenceStats.dueCount)}
-                />
-              </div>
-
-              <p className="support-line muted">
-                Queue storage has {formatCount(sentenceStats.pendingCount)} pending and{" "}
-                {formatCount(sentenceStats.cacheSize)} cached sentence records.
-              </p>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Curriculum</p>
-                  <h2>Last implicit decision</h2>
-                </div>
-                <span
-                  className={
-                    lastProgressionDecision?.eligible
-                      ? "badge-soft badge-soft--on"
-                      : "badge-soft badge-soft--off"
-                  }
-                >
-                  {lastProgressionDecision?.eligible ? "Advanced" : "Blocked"}
-                </span>
-              </div>
-
-              {lastProgressionDecision ? (
-                <>
-                  <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
-                    <MetricCard
-                      label="Previous"
-                      value={lastProgressionDecision.previousBandId ?? "unknown"}
-                    />
-                    <MetricCard
-                      label="Next"
-                      value={lastProgressionDecision.nextBandId ?? "none"}
-                    />
-                    <MetricCard
-                      label="Reason"
-                      value={lastProgressionDecision.reason}
-                    />
-                    <MetricCard
-                      label="Checkpoint"
-                      value={
-                        lastProgressionDecision.checkpointBoundary
-                          ? "Required"
-                          : "Clear"
-                      }
-                    />
-                  </div>
-                  <p className="support-line muted">
-                    {formatProgressionDecision(lastProgressionDecision)}
-                  </p>
-                </>
-              ) : (
-                <p className="helper-line muted" style={{ marginTop: 0 }}>
-                  No implicit curriculum decision has been recorded yet.
-                </p>
-              )}
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Checkpoint</p>
-                  <h2>Eligibility preview</h2>
-                </div>
-                <span
-                  className={
-                    checkpointPreview.checkpointIsOnlyBlocker
-                      ? "badge-soft badge-soft--off"
-                      : "badge-soft badge-soft--on"
-                  }
-                >
-                  {checkpointPreview.checkpointIsOnlyBlocker
-                    ? "Checkpoint needed"
-                    : "No checkpoint block"}
-                </span>
-              </div>
-
-              <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
-                <MetricCard
-                  label="Active band"
-                  value={checkpointPreview.activeBandLabel ?? "unknown"}
-                />
-                <MetricCard
-                  label="Next band"
-                  value={checkpointPreview.nextBandLabel ?? "none"}
-                />
-                <MetricCard
-                  label="Boundary"
-                  value={checkpointPreview.checkpointRequired ? "Required" : "Clear"}
-                />
-                <MetricCard
-                  label="Missing"
-                  value={formatCount(checkpointPreview.unmetRequirements.length)}
-                />
-              </div>
-
-              <p className="support-line muted">
-                {formatCheckpointPreview(checkpointPreview)}
-              </p>
-
-              <div className="field-action-row">
-                <button
-                  type="button"
-                  className="button-primary"
-                  disabled={
-                    isLoading ||
-                    isSaving ||
-                    isGraduatingCheckpoint ||
-                    !checkpointPreview.checkpointIsOnlyBlocker
-                  }
-                  onClick={() => {
-                    void handleCheckpointGraduation();
-                  }}
-                >
-                  {isGraduatingCheckpoint ? "Completing..." : "Complete checkpoint"}
-                </button>
-              </div>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Site Overrides</p>
-                  <h2>Saved site decisions</h2>
-                </div>
-                <span className="mini-badge">{formatCount(siteEntries.length)} total</span>
-              </div>
-
-              {siteEntries.length > 0 ? (
-                <div className="list-stack">
-                  {siteEntries.map((entry) => (
-                    <div key={entry.hostname} className="list-item">
-                      <div className="list-row">
-                        <p className="list-title">{entry.hostname}</p>
-                        <span
-                          className={
-                            entry.enabled
-                              ? "badge-soft badge-soft--on"
-                              : "badge-soft badge-soft--off"
-                          }
-                        >
-                          {entry.enabled ? "On" : "Paused"}
-                        </span>
-                      </div>
-                      <p className="list-subtitle">
-                        Updated {formatUpdatedAt(entry.updatedAt)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="helper-line muted" style={{ marginTop: 0 }}>
-                  No site-specific overrides have been saved yet.
-                </p>
-              )}
-            </section>
-          </div>
-
-          <section className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Curriculum Content</p>
-                <h2>Active band map</h2>
-              </div>
-              <span className="mini-badge">
-                {curriculumDiagnostics.activeContent?.bandLabel ?? "Default"}
-              </span>
-            </div>
-
-            {curriculumDiagnostics.activeContent ? (
-              <>
-                <div className="metric-grid metric-grid--wide" style={{ marginTop: 14 }}>
-                  <MetricCard
-                    label="Vocabulary"
-                    value={formatListPreview(
-                      curriculumDiagnostics.activeContent.vocabularyDomains
-                    )}
-                  />
-                  <MetricCard
-                    label="Phrases"
-                    value={formatListPreview(
-                      curriculumDiagnostics.activeContent.phraseChunks
-                    )}
-                  />
-                  <MetricCard
-                    label="Grammar now"
-                    value={formatListPreview(
-                      curriculumDiagnostics.activeContent.currentGrammarKeys,
-                      "detector-light"
-                    )}
-                  />
-                  <MetricCard
-                    label="Sentence range"
-                    value={`${curriculumDiagnostics.activeContent.sentenceTokenRange[0]}-${curriculumDiagnostics.activeContent.sentenceTokenRange[1]} tokens`}
-                  />
-                </div>
-                <p className="support-line muted">
-                  {formatActiveCurriculumContent(curriculumDiagnostics.activeContent)}
-                </p>
-              </>
-            ) : (
-              <p className="helper-line muted" style={{ marginTop: 0 }}>
-                No active curriculum content map is available.
-              </p>
-            )}
-          </section>
-
-          <section className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Sentence Queue</p>
-                <h2>Ranking reasons</h2>
-              </div>
-              <span className="mini-badge">
-                {formatCount(getSentenceRankingReasons(pageDiagnostics).length)} shown
-              </span>
-            </div>
-
-            {getSentenceRankingReasons(pageDiagnostics).length ? (
-              <div className="list-stack">
-                {getSentenceRankingReasons(pageDiagnostics).map((reason) => (
-                  <div
-                    key={`${reason.sentenceHash}-${reason.rank}`}
-                    className="list-item"
-                  >
-                    <div className="list-row">
-                      <p className="list-title">
-                        #{reason.rank} sentence {shortenHash(reason.sentenceHash)}
-                      </p>
-                      <span className="mini-badge">{reason.primaryReason}</span>
-                    </div>
-                    <p className="list-subtitle">
-                      {formatRankingSignals(reason)}
-                      {formatRankingCurriculum(reason)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="helper-line muted" style={{ marginTop: 0 }}>
-                No sentence ranking sample is available from the active page.
-              </p>
-            )}
-          </section>
-
-          <section className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Phrase Decisions</p>
-                <h2>Sampled phrase spans</h2>
-              </div>
-              <span className="mini-badge">
-                {formatCount(getPhraseDecisionSamples(pageDiagnostics).length)} shown
-              </span>
-            </div>
-
-            {getPhraseDecisionSamples(pageDiagnostics).length ? (
-              <div className="list-stack">
-                {getPhraseDecisionSamples(pageDiagnostics).map((sample, index) => (
-                  <div
-                    key={`${sample.phraseId ?? "phrase"}-${sample.sentenceHash ?? index}-${index}`}
-                    className="list-item"
-                  >
-                    <div className="list-row">
-                      <p className="list-title">
-                        {sample.selected
-                          ? formatTokenPair(sample.sourceText, sample.targetText)
-                          : sample.phraseId ?? "Rejected phrase"}
-                      </p>
-                      <span className="mini-badge">
-                        {sample.selected ? "selected" : sample.rejectedReason ?? "rejected"}
-                      </span>
-                    </div>
-                    <p className="list-subtitle">
-                      {[
-                        sample.phraseId ? `phrase ${sample.phraseId}` : null,
-                        sample.category ? `category ${sample.category}` : null,
-                        sample.sourceKind ? `source ${sample.sourceKind}` : null,
-                        sample.dueStatus ? `due ${sample.dueStatus}` : null,
-                        sample.schedulerReason ? `scheduler ${sample.schedulerReason}` : null,
-                        sample.exposureEligible ? "exposure eligible" : "no exposure",
-                        sample.sentenceHash ? `sentence ${shortenHash(sample.sentenceHash)}` : null
-                      ].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="helper-line muted" style={{ marginTop: 0 }}>
-                No phrase decision sample is available from the active page.
-              </p>
-            )}
-          </section>
-
-          <section className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Token Decisions</p>
-                <h2>Sampled render attributes</h2>
-              </div>
-              <span className="mini-badge">
-                {formatCount(getTokenDecisionSamples(pageDiagnostics).length)} shown
-              </span>
-            </div>
-
-            {getTokenDecisionSamples(pageDiagnostics).length ? (
-              <div className="list-stack">
-                {getTokenDecisionSamples(pageDiagnostics).map((sample, index) => (
-                  <div
-                    key={`${sample.lemmaId ?? "token"}-${sample.sentenceHash ?? index}-${index}`}
-                    className="list-item"
-                  >
-                    <div className="list-row">
-                      <p className="list-title">
-                        {formatTokenPair(sample.sourceToken, sample.targetToken)}
-                      </p>
-                      <span className="mini-badge">
-                        {sample.contextDecision ?? "unknown"}
-                      </span>
-                    </div>
-                    <p className="list-subtitle">
-                      {[
-                        sample.lemmaId ? `lemma ${sample.lemmaId}` : null,
-                        sample.unitKind ? `unit ${sample.unitKind}` : null,
-                        sample.wordKind ? `kind ${sample.wordKind}` : null,
-                        sample.dueStatus ? `due ${sample.dueStatus}` : null,
-                        sample.schedulerReason ? `scheduler ${sample.schedulerReason}` : null,
-                        sample.sentenceHash ? `sentence ${shortenHash(sample.sentenceHash)}` : null
-                      ].filter(Boolean).join(" · ")}
-                    </p>
-                    {sample.contextRationale ? (
-                      <p className="list-subtitle">{sample.contextRationale}</p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="helper-line muted" style={{ marginTop: 0 }}>
-                No annotated tokens are available from the active page.
-              </p>
-            )}
-          </section>
-        </div>
-      ) : null}
-    </main>
-  );
-}
-
-type TabButtonProps = {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-};
-
-function TabButton({ label, isActive, onClick }: TabButtonProps) {
-  return (
-    <button
-      type="button"
-      className={`button-chip${isActive ? " is-active" : ""}`}
-      aria-pressed={isActive}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-type ToggleSwitchProps = {
-  checked: boolean;
-  disabled?: boolean;
-  ariaLabel: string;
-  onChange: (checked: boolean) => void;
-};
-
-function ToggleSwitch({ checked, disabled, ariaLabel, onChange }: ToggleSwitchProps) {
-  return (
-    <button
-      type="button"
-      className={`switch${checked ? " is-on" : ""}`}
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={() => {
-        onChange(!checked);
+    <ExtensionOptions
+      chromeFrame={false}
+      activeSection={toUiOptionsSection(activeTab)}
+      showAdvanced={showAdvancedTab}
+      firstRunIntro={showFirstRunIntro}
+      statusMessage={statusMessage}
+      errorMessage={errorMessage}
+      isSaving={isSaving}
+      isLoading={isLoading}
+      discoveryRatePercent={discoveryRatePercent}
+      readingLevel={toUiReadingLevel(settingsState?.proficiencySeed)}
+      stats={{
+        comfortable: formatCount(vocabStats.known),
+        practice: formatCount(vocabStats.learning),
+        newCount: formatCount(vocabStats.newCount),
+        total: formatCount(vocabStats.total)
       }}
-    >
-      <span className="switch-thumb" />
-    </button>
+      checkpoint={{
+        currentBand: checkpointPreview.activeBandLabel ?? "Starting",
+        nextBand: checkpointPreview.nextBandLabel ?? "Next band",
+        progressValue: estimateCheckpointProgress(checkpointPreview),
+        progressLabel: `${formatCount(countPublicSignalsLeft(checkpointPreview))} reading evidence item${countPublicSignalsLeft(checkpointPreview) === 1 ? "" : "s"} left`,
+        description: checkpointStatus.description,
+        canWiden: checkpointPreview.checkpointIsOnlyBlocker,
+        isWidening: isGraduatingCheckpoint,
+        onWiden: () => {
+          void handleCheckpointGraduation();
+        }
+      }}
+      currentFocus={curriculumDiagnostics?.currentFocus ?? null}
+      learningPath={curriculumDiagnostics?.path ?? []}
+      sentenceHelpEnabled={Boolean(settingsState?.settings.sentenceTranslationEnabled)}
+      provider={settingsState?.settings.provider ?? "none"}
+      apiKey={settingsState?.providerApiKey ?? ""}
+      apiKeyValid={providerKeyValid}
+      showApiKey={showApiKey}
+      translationSummary={translationSummary.description}
+      savedSiteCount={formatCount(siteEntries.length)}
+      pausedSiteCount={formatCount(disabledSiteCount)}
+      advancedDiagnostics={advancedDiagnostics}
+      exactActiveBandId={getExactActiveBandId(curriculumDiagnostics?.profile)}
+      bandOptions={CURRICULUM_BAND_OPTIONS}
+      siteSummary={
+        siteEntries.length > 0
+          ? `Recent site choices: ${siteEntries.slice(0, 3).map((entry) => entry.hostname).join(", ")}.`
+          : "No site-specific overrides yet."
+      }
+      onSectionChange={(section) => {
+        setActiveTab(toLocalOptionsTab(section));
+      }}
+      onSave={() => {
+        void handleSave();
+      }}
+      onReload={() => {
+        void loadState();
+      }}
+      onDismissIntro={() => {
+        void handleDismissFirstRunIntro();
+      }}
+      onDiscoveryRateChange={handleDiscoveryRateChange}
+      onReadingLevelChange={(level) => {
+        handleProficiencySeedChange(toProficiencySeed(level));
+      }}
+      onExactBandChange={handleExactBandChange}
+      onSentenceHelpChange={handleSentenceTranslationChange}
+      onProviderChange={handleProviderChange}
+      onApiKeyChange={handleApiKeyChange}
+      onToggleApiKeyVisibility={() => {
+        setShowApiKey((current) => !current);
+      }}
+      onClearApiKey={handleClearApiKey}
+    />
   );
-}
-
-type MetricCardProps = {
-  label: string;
-  value: number | string;
-};
-
-function MetricCard({ label, value }: MetricCardProps) {
-  const valueIsText = typeof value === "string";
-
-  return (
-    <div className="metric-card">
-      <p className="metric-label">{label}</p>
-      <p className={`metric-value${valueIsText ? " metric-value--text" : ""}`}>{value}</p>
-    </div>
-  );
-}
-
-function getTokenDecisionSamples(
-  diagnostics: PageDiagnostics | null
-): PageDiagnostics["tokenDecisionSamples"] {
-  return Array.isArray(diagnostics?.tokenDecisionSamples)
-    ? diagnostics.tokenDecisionSamples
-    : [];
-}
-
-function getSentenceRankingReasons(
-  diagnostics: PageDiagnostics | null
-): PageDiagnostics["sentenceRankingReasons"] {
-  return Array.isArray(diagnostics?.sentenceRankingReasons)
-    ? diagnostics.sentenceRankingReasons
-    : [];
-}
-
-function getPhraseDecisionSamples(
-  diagnostics: PageDiagnostics | null
-): PageDiagnostics["phraseDecisionSamples"] {
-  return Array.isArray(diagnostics?.phraseDecisionSamples)
-    ? diagnostics.phraseDecisionSamples
-    : [];
-}
-
-function formatRankingSignals(
-  reason: PageDiagnostics["sentenceRankingReasons"][number]
-): string {
-  const signals = reason.signals;
-  if (!signals) {
-    return `score ${reason.score.toFixed(3)}`;
-  }
-
-  return [
-    `score ${reason.score.toFixed(3)}`,
-    `vocab ${signals.vocabularyFit.toFixed(2)}`,
-    `grammar ${signals.grammarFit.toFixed(2)}`,
-    `due ${signals.dueTargetValue.toFixed(2)}`,
-    signals.grammarDueValue ? `grammar due ${signals.grammarDueValue.toFixed(2)}` : null,
-    `phrase ${signals.chunkUsefulness.toFixed(2)}`,
-    `ambiguity ${signals.ambiguityPenalty.toFixed(2)}`,
-    typeof signals.sentencePolicyFit === "number"
-      ? `band fit ${signals.sentencePolicyFit.toFixed(2)}`
-      : null
-  ].filter(Boolean).join(" · ");
-}
-
-function formatRankingCurriculum(
-  reason: PageDiagnostics["sentenceRankingReasons"][number]
-): string {
-  const curriculum = reason.curriculum;
-  if (!curriculum) {
-    return "";
-  }
-
-  const sentencePolicy = reason.sentencePolicy;
-  const sentencePolicyText = sentencePolicy
-    ? ` · ${sentencePolicy.tokenCount} tokens, target ${sentencePolicy.tokenRange[0]}-${sentencePolicy.tokenRange[1]}${
-        sentencePolicy.outsideRange ? " · outside band policy" : ""
-      }`
-    : "";
-
-  return ` · band ${curriculum.activeBandId ?? "unknown"}${
-    curriculum.skipReason ? ` · skipped ${curriculum.skipReason}` : ""
-  }${sentencePolicyText}`;
-}
-
-function formatTokenPair(sourceToken: string | null, targetToken: string | null): string {
-  if (sourceToken && targetToken) {
-    return `${sourceToken} -> ${targetToken}`;
-  }
-
-  return sourceToken ?? targetToken ?? "Unknown token";
-}
-
-function shortenHash(value: string): string {
-  return value.length > 12 ? `${value.slice(0, 12)}...` : value;
 }
 
 function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-function formatUnlockedBands(bandIds: readonly string[] | undefined): string {
-  if (!bandIds?.length) {
-    return "default";
+function toUiOptionsSection(tab: OptionsTab): OptionsSection {
+  if (tab === "translation") {
+    return "Translation";
   }
 
-  return bandIds.length <= 2 ? bandIds.join(", ") : `${bandIds.length} bands`;
-}
-
-function formatListPreview(
-  values: readonly string[],
-  fallback: string = "none yet"
-): string {
-  if (values.length === 0) {
-    return fallback;
+  if (tab === "advanced") {
+    return "Advanced";
   }
 
-  return values.length <= 2 ? values.join(", ") : `${values.slice(0, 2).join(", ")} +${values.length - 2}`;
+  return "General";
 }
 
-function formatActiveCurriculumContent(
-  content: NonNullable<CurriculumDiagnostics["activeContent"]>
-): string {
-  const plannedGrammar = content.plannedGrammarKeys.length
-    ? ` Planned grammar: ${content.plannedGrammarKeys.slice(0, 3).join(", ")}.`
-    : "";
-
-  return `${content.bandLabel} focuses on ${content.vocabularyDomains.slice(0, 4).join(", ")} with ${content.sentenceClausePolicy}; ${content.sentenceTargetPolicy}. ${content.sentenceNotes}${plannedGrammar}`;
-}
-
-function formatProgressionDecision(
-  decision: NonNullable<CurriculumDiagnostics["lastProgressionDecision"]>
-): string {
-  const requirements = decision.unmetRequirements.length
-    ? `Blocked by ${decision.unmetRequirements.join(", ")}.`
-    : "No unmet requirements.";
-  const when = formatUpdatedAt(decision.decidedAt);
-
-  if (decision.eligible) {
-    return `Advanced from ${decision.previousBandId ?? "unknown"} to ${decision.nextBandId ?? "unknown"} on ${when}.`;
+function toLocalOptionsTab(section: OptionsSection): OptionsTab {
+  if (section === "Translation") {
+    return "translation";
   }
 
-  return `${requirements} Last checked ${when}.`;
+  if (section === "Advanced") {
+    return "advanced";
+  }
+
+  return "general";
 }
 
-function formatCheckpointPreview(preview: CheckpointEligibilityPreview): string {
+function toUiReadingLevel(seed: ProficiencySeed | undefined) {
+  if (seed === "intermediate") {
+    return "Intermediate";
+  }
+
+  if (seed === "beginner") {
+    return "Beginner";
+  }
+
+  return "False beginner";
+}
+
+function toProficiencySeed(
+  level: "Beginner" | "False beginner" | "Intermediate"
+): ProficiencySeed {
+  if (level === "Intermediate") {
+    return "intermediate";
+  }
+
+  if (level === "Beginner") {
+    return "beginner";
+  }
+
+  return "false-beginner";
+}
+
+function estimateCheckpointProgress(preview: CheckpointEligibilityPreview): number {
   if (!preview.activeBandId) {
-    return "No active curriculum band is available for checkpoint preview.";
+    return 0;
   }
 
-  if (preview.checkpointIsOnlyBlocker) {
-    return `Ready for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"} after an explicit checkpoint.`;
-  }
-
-  if (preview.unmetRequirements.length > 0) {
-    return `Checkpoint is not the only blocker: ${preview.unmetRequirements.join(", ")}.`;
-  }
-
-  if (preview.nextBandId) {
-    return `No checkpoint block is active before ${preview.nextBandLabel ?? preview.nextBandId}.`;
-  }
-
-  return "No next curriculum band is available.";
+  return Math.max(12, Math.min(100, 100 - countPublicSignalsLeft(preview) * 20));
 }
 
-function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
+function countPublicSignalsLeft(preview: CheckpointEligibilityPreview): number {
+  return preview.unmetRequirements.filter(
+    (requirement) => requirement !== "checkpoint"
+  ).length;
+}
+
+export function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
   badgeClass: string;
   badgeLabel: string;
   description: string;
@@ -1468,20 +544,21 @@ function getCheckpointStatus(preview: CheckpointEligibilityPreview): {
     return {
       badgeClass: "status-badge status-badge--warning",
       badgeLabel: "Ready",
-      description: `You have enough reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next level"}. Move forward when you are ready.`
+      description: `You have enough local reading evidence for ${preview.nextBandLabel ?? preview.nextBandId ?? "the next band"}. Widen the reading band when you want the next level.`
     };
   }
 
   if (preview.unmetRequirements.length > 0) {
     const blockers = preview.unmetRequirements
       .filter((requirement) => requirement !== "checkpoint")
+      .map(formatCurriculumProgressRequirement)
       .join(", ");
     return {
       badgeClass: "badge-soft badge-soft--off",
       badgeLabel: "Building",
       description: blockers
-        ? `Keep reading to build ${blockers}; the next level unlocks after those signals are met.`
-        : "Keep reading to gather the signals needed for the next level."
+        ? `Keep reading to build ${blockers}; the reading band widens after that evidence is ready.`
+        : "Keep reading to build local reading evidence; the reading band widens after that evidence is ready."
     };
   }
 
@@ -1505,45 +582,100 @@ function formatCheckpointGraduationBlock(input: {
   unmetRequirements: readonly string[];
 }): string {
   if (input.unmetRequirements.length > 0) {
-    return `The next level is still waiting on ${input.unmetRequirements.join(", ")}.`;
+    return `The next reading band is still waiting on ${input.unmetRequirements.map(formatCurriculumProgressRequirement).join(", ")}.`;
   }
 
   if (input.reason === "no-checkpoint-boundary") {
-    return "There is no level checkpoint to complete right now.";
+    return "There is no manual reading-band step right now.";
   }
 
   if (input.reason === "no-next-band") {
     return "There is no next curriculum band available right now.";
   }
 
-  return "Level advancement is not available yet.";
+  return "Reading-band widening is not available yet.";
 }
 
-function describeDiscoveryRate(percent: number): string {
-  if (percent <= 5) {
-    return "Subtle";
+function shouldShowAdvancedTab(): boolean {
+  if (typeof window === "undefined") {
+    return false;
   }
 
-  if (percent <= 12) {
-    return "Balanced";
-  }
-
-  return "Bold";
-}
-
-function formatUpdatedAt(value: string): string {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "recently";
-  }
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
+  return shouldShowAdvancedTabForLocation({
+    diagnosticsEnabled: DIAGNOSTICS_ENABLED,
+    hash: window.location.hash,
+    search: window.location.search
   });
+}
+
+export function shouldShowAdvancedTabForLocation(input: {
+  diagnosticsEnabled: boolean;
+  hash: string;
+  search: string;
+}): boolean {
+  if (!input.diagnosticsEnabled) {
+    return false;
+  }
+
+  const params = new URLSearchParams(input.search);
+  return (
+    input.hash === "#advanced" ||
+    params.get("debug") === "1" ||
+    params.get("advanced") === "1"
+  );
+}
+
+function createAdvancedDiagnostics(input: {
+  vocabStats: VocabStats;
+  siteEntries: StoredSiteSetting[];
+  activePageDiagnostics: ActivePageDiagnostics | null;
+  curriculumDiagnostics: CurriculumDiagnostics | null;
+}): OptionsAdvancedDiagnostics | null {
+  if (!DIAGNOSTICS_ENABLED) {
+    return null;
+  }
+
+  const page = input.activePageDiagnostics?.diagnostics ?? null;
+  const activeContent = input.curriculumDiagnostics?.activeContent ?? null;
+  const progression =
+    input.curriculumDiagnostics?.lastProgressionDecision ?? null;
+  const pausedSiteCount = input.siteEntries.filter((entry) => !entry.enabled).length;
+
+  return {
+    buildProfile: EXTENSION_BUILD_PROFILE,
+    diagnosticsEnabled: DIAGNOSTICS_ENABLED,
+    activePageMessage:
+      input.activePageDiagnostics?.message ??
+      "Open a supported page, then reload diagnostics.",
+    activePageUrl: input.activePageDiagnostics?.url ?? page?.pageUrl ?? null,
+    activePageUpdatedAt: page?.updatedAt ?? null,
+    activePageMetrics: page
+      ? [
+          { label: "Injected words", value: page.injectedTokens },
+          { label: "Injected phrases", value: page.injectedPhrases },
+          { label: "Context skips", value: page.contextSkippedTokens },
+          { label: "Sentence candidates", value: page.sentenceCandidatesQueued },
+          { label: "Sentence notes", value: page.sentenceNotesVisible },
+          {
+            label: "Decision samples",
+            value: page.tokenDecisionSamples.length + page.phraseDecisionSamples.length
+          }
+        ]
+      : [],
+    curriculumSummary: activeContent
+      ? `${activeContent.bandLabel} (${activeContent.bandId}) using ${input.curriculumDiagnostics?.profile.activeVocabularyBandId ?? "default"} vocabulary band.`
+      : "Default curriculum profile is active.",
+    progressionSummary: progression
+      ? `${progression.reason}; next ${progression.nextBandId ?? "none"}; unmet ${progression.unmetRequirements.length}.`
+      : "No progression decision recorded.",
+    storageMetrics: [
+      { label: "Vocab records", value: input.vocabStats.total },
+      { label: "Known", value: input.vocabStats.known },
+      { label: "Learning", value: input.vocabStats.learning },
+      { label: "Site choices", value: input.siteEntries.length },
+      { label: "Paused sites", value: pausedSiteCount }
+    ]
+  };
 }
 
 function getTranslationSummary(input: {

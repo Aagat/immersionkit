@@ -1,0 +1,399 @@
+import {
+  RENDER_UNIT_KINDS,
+  RENDER_UNIT_MATCH_MODES,
+  RENDER_UNIT_POLICIES,
+  RENDER_UNIT_PROVENANCE_SOURCES,
+  SUPPORTED_POS_VALUES,
+  DEFAULT_LANGUAGE_PAIR_ID,
+  isLanguagePairId,
+  normalizeToken,
+  splitLanguagePairId,
+  type RenderUnitEntry,
+  type RenderUnitKind,
+  type RenderUnitMatchMode,
+  type RenderUnitPolicy,
+  type RenderUnitProvenanceSource,
+  type RenderUnitTokenPattern,
+  type LexemeEntry,
+  type LanguagePairId,
+  type SupportedPos
+} from "@immersionkit/shared";
+
+export { getRenderUnitSentenceHints } from "@immersionkit/shared";
+export type {
+  RenderUnitPhraseTarget,
+  RenderUnitRuntimeIndex,
+  WordRenderEntry
+} from "@immersionkit/shared";
+
+type StorageRecord = Record<string, unknown>;
+
+export type ParsedRenderUnitAsset = {
+  entries: RenderUnitEntry[];
+  languagePair: LanguagePairId;
+  assetVersion: string | null;
+  schemaVersion: string | null;
+};
+
+export type ParsedLexemeAsset = {
+  entries: LexemeEntry[];
+  languagePair: LanguagePairId;
+  assetVersion: string | null;
+  schemaVersion: string | null;
+};
+
+const SUPPORTED_POS = new Set<string>(SUPPORTED_POS_VALUES);
+const RENDER_UNIT_KIND_SET = new Set<string>(RENDER_UNIT_KINDS);
+const RENDER_UNIT_MATCH_MODE_SET = new Set<string>(RENDER_UNIT_MATCH_MODES);
+const RENDER_UNIT_POLICY_SET = new Set<string>(RENDER_UNIT_POLICIES);
+const RENDER_UNIT_PROVENANCE_SOURCE_SET = new Set<string>(
+  RENDER_UNIT_PROVENANCE_SOURCES
+);
+
+export function parseRenderUnitAsset(input: unknown): ParsedRenderUnitAsset | null {
+  if (!isRecord(input) || !Array.isArray(input.entries)) {
+    return null;
+  }
+
+  const languagePair = readLanguagePair(input.languagePair);
+  const languages = splitLanguagePairId(languagePair);
+  const entries = input.entries.flatMap((entry): RenderUnitEntry[] => {
+    const normalized = normalizeRenderUnitEntry(entry, languages);
+    return normalized ? [normalized] : [];
+  });
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return {
+    entries,
+    languagePair,
+    assetVersion: readString(input.assetVersion),
+    schemaVersion: readString(input.schemaVersion)
+  };
+}
+
+export function parseLexemeAsset(input: unknown): ParsedLexemeAsset | null {
+  if (!isRecord(input) || !Array.isArray(input.entries)) {
+    return null;
+  }
+
+  const languagePair = readLanguagePair(input.languagePair);
+  const languages = splitLanguagePairId(languagePair);
+  const entries = input.entries.flatMap((entry): LexemeEntry[] => {
+    const normalized = normalizeLexemeEntry(entry, languages);
+    return normalized ? [normalized] : [];
+  });
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return {
+    entries,
+    languagePair,
+    assetVersion: readString(input.assetVersion),
+    schemaVersion: readString(input.schemaVersion)
+  };
+}
+
+function normalizeLexemeEntry(
+  input: unknown,
+  languages: {
+    sourceLanguage: string;
+    targetLanguage: string;
+  }
+): LexemeEntry | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const lexemeId = readString(input.lexemeId);
+  const sourceLemma = readString(input.sourceLemma);
+  const targetLemma = readString(input.targetLemma);
+  const pos = readSupportedPos(input.pos);
+  const confidence = readFiniteNumber(input.confidence, Number.NaN);
+  if (!lexemeId || !sourceLemma || !targetLemma || !pos || !Number.isFinite(confidence)) {
+    return null;
+  }
+
+  return {
+    lexemeId,
+    sourceLemma,
+    targetLemma,
+    pos,
+    frequencyRank: readFiniteNumberOrNull(input.frequencyRank),
+    cefrLevel: readString(input.cefrLevel) ?? undefined,
+    confidence: Math.max(0, Math.min(1, confidence)),
+    exampleSentenceEnglish: readString(input.exampleSentenceEnglish) ?? undefined,
+    exampleSentenceNative: readString(input.exampleSentenceNative) ?? undefined,
+    inflections: Array.isArray(input.inflections)
+      ? input.inflections.filter((value): value is string => typeof value === "string")
+      : undefined,
+    sourceLanguage: readString(input.sourceLanguage) ?? languages.sourceLanguage,
+    targetLanguage: readString(input.targetLanguage) ?? languages.targetLanguage,
+    sourceDataset: readString(input.sourceDataset) ?? undefined
+  };
+}
+
+function normalizeRenderUnitEntry(
+  input: unknown,
+  languages: {
+    sourceLanguage: string;
+    targetLanguage: string;
+  }
+): RenderUnitEntry | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const renderUnitId = readString(input.renderUnitId);
+  const kind = readRenderUnitKind(input.kind);
+  const sourceText = readString(input.sourceText);
+  const normalizedSourceText = normalizeToken(
+    readString(input.normalizedSourceText) ?? sourceText ?? ""
+  );
+  const sourcePattern = readSourcePattern(input.sourcePattern, normalizedSourceText);
+  const renderPolicy = readRenderUnitPolicy(input.renderPolicy);
+  const confidence = readFiniteNumber(input.confidence, Number.NaN);
+  const minBand = readString(input.minBand);
+  const provenanceSource = readProvenanceSource(
+    isRecord(input.provenance) ? input.provenance.source : undefined
+  );
+
+  if (
+    !renderUnitId ||
+    !kind ||
+    !sourceText ||
+    !normalizedSourceText ||
+    !sourcePattern ||
+    !renderPolicy ||
+    !Number.isFinite(confidence) ||
+    !minBand ||
+    !provenanceSource
+  ) {
+    return null;
+  }
+
+  const rawTargetText = readString(input.targetText);
+  const normalizedTargetText = normalizeToken(
+    readString(input.normalizedTargetText) ?? rawTargetText ?? ""
+  );
+  const targetText = rawTargetText ?? undefined;
+  const pos = readSupportedPos(input.pos) ?? inferPatternPos(sourcePattern.tokens);
+  const lexemeIds = Array.isArray(input.lexemeIds)
+    ? input.lexemeIds
+        .map((value) => readString(value))
+        .filter((value): value is string => Boolean(value))
+    : [];
+
+  if (
+    (renderPolicy === "inline" || renderPolicy === "phrase-only") &&
+    (!targetText || !normalizedTargetText)
+  ) {
+    return null;
+  }
+
+  return {
+    renderUnitId,
+    lexemeIds,
+    kind,
+    renderPolicy,
+    sourceText,
+    normalizedSourceText,
+    targetText,
+    normalizedTargetText: normalizedTargetText || undefined,
+    sourcePattern,
+    replacement: readReplacement(input.replacement),
+    pos,
+    minBand,
+    frequencyRank: readFiniteNumberOrNull(input.frequencyRank),
+    confidence: Math.max(0, Math.min(1, confidence)),
+    provenance: {
+      source: provenanceSource,
+      sourceRowHash: isRecord(input.provenance)
+        ? readString(input.provenance.sourceRowHash) ?? undefined
+        : undefined,
+      promptVersion: isRecord(input.provenance)
+        ? readString(input.provenance.promptVersion) ?? undefined
+        : undefined,
+      model: isRecord(input.provenance)
+        ? readString(input.provenance.model) ?? undefined
+        : undefined,
+      notes: isRecord(input.provenance)
+        ? readString(input.provenance.notes) ?? undefined
+        : undefined
+    },
+    exampleSentenceEnglish: readString(input.exampleSentenceEnglish) ?? undefined,
+    exampleSentenceNative: readString(input.exampleSentenceNative) ?? undefined,
+    inflections: Array.isArray(input.inflections)
+      ? input.inflections.filter((value): value is string => typeof value === "string")
+      : undefined,
+    sourceLanguage: readString(input.sourceLanguage) ?? languages.sourceLanguage,
+    targetLanguage: readString(input.targetLanguage) ?? languages.targetLanguage
+  };
+}
+
+function readSourcePattern(
+  input: unknown,
+  normalizedSourceText: string
+): RenderUnitEntry["sourcePattern"] | null {
+  if (isRecord(input)) {
+    const matchMode = readRenderUnitMatchMode(input.matchMode);
+    const tokens = Array.isArray(input.tokens)
+      ? input.tokens.flatMap((token): RenderUnitTokenPattern[] => {
+          const normalized = normalizePatternToken(token);
+          return normalized ? [normalized] : [];
+        })
+      : [];
+
+    if (matchMode && tokens.length > 0) {
+      return {
+        matchMode,
+        tokens
+      };
+    }
+  }
+
+  const exactTokens = normalizedSourceText
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((normal) => ({ normal }));
+
+  return exactTokens.length > 0
+    ? {
+        matchMode: "exact",
+        tokens: exactTokens
+      }
+    : null;
+}
+
+function normalizePatternToken(input: unknown): RenderUnitTokenPattern | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const surface = readString(input.surface) ?? undefined;
+  const normal = normalizeToken(readString(input.normal) ?? surface ?? "");
+  const lemma = normalizeToken(readString(input.lemma) ?? "");
+  const pos = readSupportedPos(input.pos);
+  const role = readRenderUnitRole(input.role);
+  const features = isRecord(input.features)
+    ? (Object.fromEntries(
+        Object.entries(input.features).filter(([, value]) =>
+          typeof value === "string" ||
+          typeof value === "boolean" ||
+          (Array.isArray(value) && value.every((item) => typeof item === "string"))
+        )
+      ) as Record<string, string | string[] | boolean>)
+    : undefined;
+
+  if (!surface && !normal && !lemma && !pos && !role && !features) {
+    return null;
+  }
+
+  return {
+    surface,
+    normal: normal || undefined,
+    lemma: lemma || undefined,
+    pos,
+    role,
+    optional: input.optional === true,
+    features
+  };
+}
+
+function readReplacement(input: unknown): RenderUnitEntry["replacement"] | undefined {
+  if (!isRecord(input)) {
+    return undefined;
+  }
+
+  const startToken = readFiniteNumber(input.startToken, Number.NaN);
+  const endToken = readFiniteNumber(input.endToken, Number.NaN);
+  const targetText = readString(input.targetText);
+  if (!Number.isInteger(startToken) || !Number.isInteger(endToken) || !targetText) {
+    return undefined;
+  }
+
+  return {
+    startToken,
+    endToken,
+    targetText
+  };
+}
+
+function inferPatternPos(tokens: readonly RenderUnitTokenPattern[]): SupportedPos | undefined {
+  return tokens.length === 1 ? tokens[0]?.pos : undefined;
+}
+
+function readRenderUnitKind(value: unknown): RenderUnitKind | null {
+  return readStringSetValue(value, RENDER_UNIT_KIND_SET) as RenderUnitKind | null;
+}
+
+function readRenderUnitMatchMode(value: unknown): RenderUnitMatchMode | null {
+  const text = readString(value);
+  if (text === "token-pattern") {
+    return "analyzer-pattern";
+  }
+
+  return text && RENDER_UNIT_MATCH_MODE_SET.has(text)
+    ? (text as RenderUnitMatchMode)
+    : null;
+}
+
+function readRenderUnitPolicy(value: unknown): RenderUnitPolicy | null {
+  return readStringSetValue(value, RENDER_UNIT_POLICY_SET) as RenderUnitPolicy | null;
+}
+
+function readProvenanceSource(value: unknown): RenderUnitProvenanceSource | null {
+  return readStringSetValue(value, RENDER_UNIT_PROVENANCE_SOURCE_SET) as
+    | RenderUnitProvenanceSource
+    | null;
+}
+
+function readSupportedPos(value: unknown): SupportedPos | undefined {
+  const pos = readString(value);
+  return pos && SUPPORTED_POS.has(pos) ? (pos as SupportedPos) : undefined;
+}
+
+function readRenderUnitRole(
+  value: unknown
+): RenderUnitTokenPattern["role"] | undefined {
+  const role = readString(value);
+  return role === "subject" ||
+    role === "verb" ||
+    role === "object" ||
+    role === "complement"
+    ? role
+    : undefined;
+}
+
+function readStringSetValue(value: unknown, allowed: ReadonlySet<string>): string | null {
+  const text = readString(value);
+  return text && allowed.has(text) ? text : null;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readLanguagePair(value: unknown): LanguagePairId {
+  if (isLanguagePairId(value)) {
+    return value;
+  }
+
+  return DEFAULT_LANGUAGE_PAIR_ID;
+}
+
+function readFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function readFiniteNumberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function isRecord(value: unknown): value is StorageRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}

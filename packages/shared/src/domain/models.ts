@@ -1,9 +1,38 @@
-export const SUPPORTED_SOURCE_LANGUAGES = ["en"] as const;
-export const SUPPORTED_TARGET_LANGUAGES = ["es"] as const;
+import {
+  DEFAULT_LANGUAGE_PAIR_ID,
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+  buildLanguagePairId,
+  isLanguagePairId,
+  splitLanguagePairId,
+  type LanguagePairId,
+  type SourceLanguageCode,
+  type TargetLanguageCode
+} from "../language-pairs/types";
+
+export type {
+  LanguagePairId,
+  SourceLanguageCode,
+  TargetLanguageCode
+} from "../language-pairs/types";
+
+export const SUPPORTED_SOURCE_LANGUAGES = [DEFAULT_SOURCE_LANGUAGE] as const;
+export const SUPPORTED_TARGET_LANGUAGES = [DEFAULT_TARGET_LANGUAGE] as const;
 export const SUPPORTED_POS_VALUES = [
   "noun",
+  "verb",
   "adjective",
   "adverb",
+  "modal",
+  "auxiliary",
+  "pronoun",
+  "determiner",
+  "preposition",
+  "particle",
+  "conjunction",
+  "interjection",
+  "proper-noun",
+  "number",
   "other"
 ] as const;
 export const SAFE_INJECTION_POS_VALUES = ["noun", "adjective", "adverb"] as const;
@@ -43,6 +72,12 @@ export const OBSERVED_CONTEXT_POS_VALUES = [
   "adverb",
   "modal",
   "auxiliary",
+  "preposition",
+  "pronoun",
+  "determiner",
+  "number",
+  "particle",
+  "conjunction",
   "interjection",
   "other"
 ] as const;
@@ -84,9 +119,32 @@ export const CURRICULUM_BAND_UNIT_TYPES = [
   "grammar-feature",
   "mixed"
 ] as const;
+export const RENDER_UNIT_KINDS = [
+  "single-token",
+  "fixed-phrase",
+  "grammar-phrase",
+  "subject-verb-phrase",
+  "verb-object-phrase",
+  "noun-phrase",
+  "sentence-help-only"
+] as const;
+export const RENDER_UNIT_MATCH_MODES = ["exact", "analyzer-pattern"] as const;
+export const RENDER_UNIT_POLICIES = [
+  "inline",
+  "phrase-only",
+  "sentence-help-only",
+  "suppress"
+] as const;
+export const RENDER_UNIT_PROVENANCE_SOURCES = [
+  "deck-row",
+  "deck-example",
+  "manual",
+  "llm-import",
+  "curated"
+] as const;
 
-export type SupportedSourceLanguage = (typeof SUPPORTED_SOURCE_LANGUAGES)[number];
-export type SupportedTargetLanguage = (typeof SUPPORTED_TARGET_LANGUAGES)[number];
+export type SupportedSourceLanguage = SourceLanguageCode;
+export type SupportedTargetLanguage = TargetLanguageCode;
 export type SupportedPos = (typeof SUPPORTED_POS_VALUES)[number];
 export type SafeInjectionPos = (typeof SAFE_INJECTION_POS_VALUES)[number];
 export type VocabStatus = (typeof VOCAB_STATUS_VALUES)[number];
@@ -104,6 +162,11 @@ export type ReviewEventType = (typeof REVIEW_EVENT_TYPES)[number];
 export type ReviewGrade = (typeof REVIEW_GRADES)[number];
 export type AssistEventType = (typeof ASSIST_EVENT_TYPES)[number];
 export type CurriculumBandUnitType = (typeof CURRICULUM_BAND_UNIT_TYPES)[number];
+export type RenderUnitKind = (typeof RENDER_UNIT_KINDS)[number];
+export type RenderUnitMatchMode = (typeof RENDER_UNIT_MATCH_MODES)[number];
+export type RenderUnitPolicy = (typeof RENDER_UNIT_POLICIES)[number];
+export type RenderUnitProvenanceSource =
+  (typeof RENDER_UNIT_PROVENANCE_SOURCES)[number];
 
 export type TokenSpan = {
   startToken: number;
@@ -171,6 +234,90 @@ export type PhraseLexiconEntry = {
   sourceDataset?: string;
 };
 
+export type LexemeEntry = {
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  pos: SupportedPos;
+  frequencyRank: number | null;
+  cefrLevel?: string;
+  confidence: number;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: string[];
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
+  sourceDataset?: string;
+};
+
+export type LexemeAsset = {
+  schemaVersion: string;
+  assetVersion: string;
+  languagePair: LanguagePairId;
+  generatedAt?: IsoTimestamp;
+  entries: LexemeEntry[];
+};
+
+export type RenderUnitTokenPattern = {
+  surface?: string;
+  normal?: string;
+  lemma?: string;
+  pos?: SupportedPos;
+  role?: "subject" | "verb" | "object" | "complement";
+  optional?: boolean;
+  features?: Record<string, string | string[] | boolean>;
+};
+
+export type RenderUnitSourcePattern = {
+  matchMode: RenderUnitMatchMode;
+  tokens: RenderUnitTokenPattern[];
+};
+
+export type RenderUnitReplacement = {
+  startToken: number;
+  endToken: number;
+  targetText: string;
+};
+
+export type RenderUnitProvenance = {
+  source: RenderUnitProvenanceSource;
+  sourceRowHash?: string;
+  promptVersion?: string;
+  model?: string;
+  notes?: string;
+};
+
+export type RenderUnitEntry = {
+  renderUnitId: string;
+  lexemeIds: string[];
+  kind: RenderUnitKind;
+  renderPolicy: RenderUnitPolicy;
+  sourceText: string;
+  normalizedSourceText: string;
+  targetText?: string;
+  normalizedTargetText?: string;
+  sourcePattern: RenderUnitSourcePattern;
+  replacement?: RenderUnitReplacement;
+  pos?: SupportedPos;
+  minBand: string;
+  frequencyRank?: number | null;
+  confidence: number;
+  provenance: RenderUnitProvenance;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: string[];
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
+};
+
+export type RenderUnitAsset = {
+  schemaVersion: string;
+  assetVersion: string;
+  languagePair: LanguagePairId;
+  generatedAt?: IsoTimestamp;
+  entries: RenderUnitEntry[];
+};
+
 export type PhraseRegistryEntry = {
   phraseId: string;
   normalizedSourceText: string;
@@ -178,17 +325,20 @@ export type PhraseRegistryEntry = {
   normalizedTargetText: string;
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
-  provenance: "seed" | "runtime";
+  provenance: "curated" | "runtime";
   confidence: number;
   firstSeenAt: IsoTimestamp;
   lastSeenAt: IsoTimestamp;
   exposureCount: number;
-  lexiconEntryId?: string;
+  sourceEntryId?: string;
 };
 
 export type PhraseOccurrence = {
   occurrenceId: string;
   phraseId: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
+  renderPolicy?: RenderUnitPolicy;
   sentenceHash: string;
   analyzerVersion: string;
   sourceText: string;
@@ -210,10 +360,15 @@ export type ContextualWordCandidate = {
   tokenText: string;
   surfaceText?: string;
   normalizedText?: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
+  lexemeId?: string;
+  normalizedSourceText?: string;
+  targetText?: string;
   targetLemma: string;
   candidateLemma: string;
-  lemmaId?: string;
   candidatePos: SafeInjectionPos;
+  frequencyRank?: number | null;
   observedPos: ObservedContextPos;
   chunkType: ContextChunkType;
   chunkText?: string;
@@ -326,6 +481,11 @@ export type CurriculumBand = {
     stableItemRatio: number;
     minimumQualifiedExposures: number;
     maximumRecentLapseRate: number;
+    minimumEvidenceBearingItems?: number;
+    minimumDistinctContextItems?: number;
+    minimumDistinctContextItemRatio?: number;
+    minimumUnassistedItems?: number;
+    minimumUnassistedItemRatio?: number;
     checkpointRequired: boolean;
   };
   difficultyLimits: {
@@ -345,15 +505,17 @@ export type UserLearningProfile = {
   unlockedBandIds: string[];
   difficultyPresetId: string;
   stretchTolerance: number;
-  knownLemmaIds: string[];
+  knownLexemeIds: string[];
   learningItems: Record<string, LearningItem>;
   lastCheckpointAt?: IsoTimestamp;
   checkpointEligibilityAt?: IsoTimestamp;
   updatedAt: IsoTimestamp;
 };
 
-export type SeedLexiconEntry = {
-  lemmaId: string;
+export type WordInventoryEntry = {
+  lexemeId: string;
+  renderUnitId?: string;
+  renderUnitMinBand?: string;
   sourceLemma: string;
   targetLemma: string;
   pos: SupportedPos;
@@ -367,16 +529,8 @@ export type SeedLexiconEntry = {
   sourceDataset?: string;
 };
 
-export type SeedLexiconAsset = {
-  version: string;
-  sourceLanguage: SupportedSourceLanguage;
-  targetLanguage: SupportedTargetLanguage;
-  createdAt: IsoTimestamp;
-  entries: SeedLexiconEntry[];
-};
-
 export type UserVocabEntry = {
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   lastSeenAt: IsoTimestamp | null;
   exposureCount: number;
@@ -397,11 +551,11 @@ export type SentenceCacheEntry = {
   sourceText: string;
   translatedText: string;
   learningNote: SentenceLearningNote;
+  languagePair?: LanguagePairId;
   targetLanguage: SupportedTargetLanguage;
   model: string;
   promptVersion: string;
   createdAt: IsoTimestamp;
-  grammarNote?: string;
   sourceLanguage?: SupportedSourceLanguage;
   provider?: ProviderName;
   lastAccessedAt?: IsoTimestamp;
@@ -416,6 +570,7 @@ export type SiteSetting = {
 };
 
 export type ExtensionSettings = {
+  languagePair?: LanguagePairId;
   discoveryRate: number;
   targetLanguage: SupportedTargetLanguage;
   sentenceTranslationEnabled: boolean;
@@ -430,6 +585,7 @@ export type ResolvedExtensionSettings = Omit<
   ExtensionSettings,
   "enabled" | "sourceLanguage" | "goldilocksThreshold" | "sentenceBatchSize"
 > & {
+  languagePair: LanguagePairId;
   enabled: boolean;
   sourceLanguage: SupportedSourceLanguage;
   goldilocksThreshold: number;
@@ -437,10 +593,11 @@ export type ResolvedExtensionSettings = Omit<
 };
 
 export const DEFAULT_EXTENSION_SETTINGS: ResolvedExtensionSettings = {
+  languagePair: DEFAULT_LANGUAGE_PAIR_ID,
   enabled: true,
   discoveryRate: 0.15,
-  targetLanguage: "es",
-  sourceLanguage: "en",
+  targetLanguage: DEFAULT_TARGET_LANGUAGE,
+  sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
   sentenceTranslationEnabled: false,
   provider: "none",
   goldilocksThreshold: 0.6,
@@ -485,12 +642,6 @@ export function createSentenceLearningNote(
   return note;
 }
 
-export function createLegacySentenceLearningNote(summary: string): SentenceLearningNote {
-  return createSentenceLearningNote({
-    summary
-  });
-}
-
 export function hasSentenceLearningNoteContent(note: SentenceLearningNote): boolean {
   return Boolean(
     note.summary ||
@@ -505,15 +656,23 @@ export function resolveExtensionSettings(
   settings: Partial<ExtensionSettings> | null | undefined
 ): ResolvedExtensionSettings {
   const draft = settings ?? {};
+  const languagePair = resolveSettingsLanguagePair(draft);
+  const pairLanguages = splitLanguagePairId(languagePair);
+  const hasExplicitLanguagePair = isLanguagePairId(draft.languagePair);
 
   return {
+    languagePair,
     enabled: draft.enabled ?? DEFAULT_EXTENSION_SETTINGS.enabled,
     discoveryRate: clampUnitInterval(
       draft.discoveryRate,
       DEFAULT_EXTENSION_SETTINGS.discoveryRate
     ),
-    targetLanguage: draft.targetLanguage ?? DEFAULT_EXTENSION_SETTINGS.targetLanguage,
-    sourceLanguage: draft.sourceLanguage ?? DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
+    targetLanguage: hasExplicitLanguagePair
+      ? pairLanguages.targetLanguage
+      : draft.targetLanguage ?? pairLanguages.targetLanguage,
+    sourceLanguage: hasExplicitLanguagePair
+      ? pairLanguages.sourceLanguage
+      : draft.sourceLanguage ?? pairLanguages.sourceLanguage,
     sentenceTranslationEnabled:
       draft.sentenceTranslationEnabled ??
       DEFAULT_EXTENSION_SETTINGS.sentenceTranslationEnabled,
@@ -524,6 +683,19 @@ export function resolveExtensionSettings(
     ),
     sentenceBatchSize: clampSentenceBatchSize(draft.sentenceBatchSize)
   };
+}
+
+function resolveSettingsLanguagePair(
+  settings: Partial<ExtensionSettings>
+): LanguagePairId {
+  if (isLanguagePairId(settings.languagePair)) {
+    return settings.languagePair;
+  }
+
+  return buildLanguagePairId(
+    settings.sourceLanguage ?? DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
+    settings.targetLanguage ?? DEFAULT_EXTENSION_SETTINGS.targetLanguage
+  );
 }
 
 function normalizeLearningNoteField(value: string | undefined): string {

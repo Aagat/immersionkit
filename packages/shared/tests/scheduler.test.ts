@@ -9,8 +9,8 @@ import {
 import { describe, expect, it } from "vitest";
 
 const BASE_ITEM: LearningItem = {
-  itemId: "word:lemma-city",
-  unitRefId: "lemma-city",
+  itemId: "word:lexeme-city",
+  unitRefId: "lexeme-city",
   unitType: "word",
   sourceText: "city",
   targetText: "ciudad",

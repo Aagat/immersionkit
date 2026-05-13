@@ -1,8 +1,8 @@
-import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
+import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 
 export type ShortlistingPolicyId =
   | "analyze-every-segmented"
-  | "current-injected-token-gated"
+  | "legacy-injected-token-gated"
   | "injected-token-length-dedupe"
   | "phrase-aware-shortlist";
 
@@ -63,8 +63,8 @@ export type SentenceShortlistingBenchmarkResult = {
 export type SentenceShortlistingBenchmarkInput = {
   document: Document;
   scenarios: readonly SentenceShortlistingScenario[];
-  lexicon: readonly SeedLexiconEntry[];
-  vocabByLemmaId: ReadonlyMap<string, VocabStatus> | Record<string, VocabStatus>;
+  wordInventory: readonly WordInventoryEntry[];
+  vocabByLexemeId: ReadonlyMap<string, VocabStatus> | Record<string, VocabStatus>;
   discoveryRate: number;
   goldilocksThreshold: number;
   phraseHints: readonly string[];

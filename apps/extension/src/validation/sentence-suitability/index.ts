@@ -92,7 +92,7 @@ function renderSummary(resultsToRender: ProfileComparisonResult[], failures: str
 
   statusNode.textContent =
     failures.length === 0
-      ? "PASS: Prototype ranking beats known-ratio baseline on all required checks."
+      ? "PASS: Suitability ranking beats known-ratio baseline on all required checks."
       : `FAIL: ${failures.length} check(s) below thresholds.`;
   statusNode.className = failures.length === 0 ? "status pass" : "status fail";
 
@@ -101,10 +101,10 @@ function renderSummary(resultsToRender: ProfileComparisonResult[], failures: str
       return `<tr>
         <td>${result.profileDisplayName}</td>
         <td>${formatScore(result.baselineMetrics.ndcgAt5)}</td>
-        <td>${formatScore(result.prototypeMetrics.ndcgAt5)}</td>
+        <td>${formatScore(result.suitabilityMetrics.ndcgAt5)}</td>
         <td>${formatPercent(result.deltas.ndcgAt5)}</td>
         <td>${formatScore(result.baselineMetrics.pairwiseAccuracy)}</td>
-        <td>${formatScore(result.prototypeMetrics.pairwiseAccuracy)}</td>
+        <td>${formatScore(result.suitabilityMetrics.pairwiseAccuracy)}</td>
         <td>${formatPercent(result.deltas.pairwiseAccuracy)}</td>
       </tr>`;
     })
@@ -123,10 +123,10 @@ function renderSummary(resultsToRender: ProfileComparisonResult[], failures: str
         <tr>
           <th>Profile</th>
           <th>Baseline NDCG@5</th>
-          <th>Prototype NDCG@5</th>
+          <th>Suitability NDCG@5</th>
           <th>Delta</th>
           <th>Baseline Pairwise</th>
-          <th>Prototype Pairwise</th>
+          <th>Suitability Pairwise</th>
           <th>Delta</th>
         </tr>
       </thead>
@@ -143,7 +143,7 @@ function renderProfileCards(resultsToRender: ProfileComparisonResult[]): void {
 
   container.innerHTML = resultsToRender
     .map((result) => {
-      const prototypeTop = result.prototypeOrder
+      const suitabilityTop = result.suitabilityOrder
         .slice(0, 5)
         .map((id) => lookupSentence(result, id))
         .map((entry, index) => `<li>${index + 1}. ${escapeHtml(entry.sentence)} <small>(${entry.category})</small></li>`)
@@ -164,16 +164,16 @@ function renderProfileCards(resultsToRender: ProfileComparisonResult[]): void {
 
       return `<article class="profile-card">
         <h2>${result.profileDisplayName}</h2>
-        <p><strong>Spearman:</strong> baseline ${formatScore(result.baselineMetrics.spearmanRho)} → prototype ${formatScore(result.prototypeMetrics.spearmanRho)} (${formatPercent(result.deltas.spearmanRho)})</p>
-        <p><strong>Precision@5:</strong> baseline ${formatScore(result.baselineMetrics.precisionAt5)} → prototype ${formatScore(result.prototypeMetrics.precisionAt5)} (${formatPercent(result.deltas.precisionAt5)})</p>
+        <p><strong>Spearman:</strong> baseline ${formatScore(result.baselineMetrics.spearmanRho)} → suitability ${formatScore(result.suitabilityMetrics.spearmanRho)} (${formatPercent(result.deltas.spearmanRho)})</p>
+        <p><strong>Precision@5:</strong> baseline ${formatScore(result.baselineMetrics.precisionAt5)} → suitability ${formatScore(result.suitabilityMetrics.precisionAt5)} (${formatPercent(result.deltas.precisionAt5)})</p>
         <div class="columns">
           <section>
             <h3>Top 5 Baseline</h3>
             <ol>${baselineTop}</ol>
           </section>
           <section>
-            <h3>Top 5 Prototype</h3>
-            <ol>${prototypeTop}</ol>
+            <h3>Top 5 Suitability</h3>
+            <ol>${suitabilityTop}</ol>
           </section>
         </div>
         <div class="columns">

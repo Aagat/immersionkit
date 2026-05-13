@@ -1,4 +1,5 @@
 import {
+  CONTENT_EVIDENCE_POLICY,
   RuntimeMessageType,
   type SentenceLearningNote,
   hashSentence
@@ -21,7 +22,7 @@ const BASE_SETTINGS = {
 
 const SEED_LEXICON = [
   {
-    lemmaId: "lemma-city",
+    lexemeId: "lexeme-city",
     sourceLemma: "city",
     targetLemma: "ciudad",
     pos: "noun",
@@ -31,7 +32,7 @@ const SEED_LEXICON = [
     exampleSentenceNative: "La ciudad recibe a los visitantes cada primavera."
   },
   {
-    lemmaId: "lemma-important",
+    lexemeId: "lexeme-important",
     sourceLemma: "important",
     targetLemma: "importante",
     pos: "adjective",
@@ -39,6 +40,59 @@ const SEED_LEXICON = [
     confidence: 0.95
   }
 ] as const;
+
+type TestSeedEntry = {
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  pos: "noun" | "adjective" | "adverb";
+  frequencyRank: number | null;
+  confidence: number;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: readonly string[];
+};
+
+function renderUnitAsset(entries: readonly TestSeedEntry[]) {
+  return {
+    schemaVersion: "1.0.0",
+    assetVersion: "test-render-units",
+    languagePair: "en-es",
+    entries: entries.map((entry) => ({
+      renderUnitId: `ru:${entry.lexemeId}`,
+      lexemeIds: [entry.lexemeId],
+      kind: "single-token",
+      renderPolicy: "inline",
+      sourceText: entry.sourceLemma,
+      normalizedSourceText: entry.sourceLemma,
+      targetText: entry.targetLemma,
+      normalizedTargetText: entry.targetLemma,
+      sourcePattern: {
+        matchMode: "exact",
+        tokens: [
+          {
+            normal: entry.sourceLemma,
+            lemma: entry.sourceLemma,
+            pos: entry.pos
+          }
+        ]
+      },
+      replacement: {
+        startToken: 0,
+        endToken: 1,
+        targetText: entry.targetLemma
+      },
+      pos: entry.pos,
+      minBand: "level-1a",
+      frequencyRank: entry.frequencyRank,
+      confidence: entry.confidence,
+      provenance: { source: "manual" },
+      exampleSentenceEnglish: entry.exampleSentenceEnglish,
+      exampleSentenceNative: entry.exampleSentenceNative,
+      inflections: entry.inflections
+    }))
+  };
+}
 
 describe("content inline learning loop", () => {
   it("restarts processing when a disabled site is re-enabled", async () => {
@@ -49,9 +103,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: false,
@@ -67,7 +121,7 @@ describe("content inline learning loop", () => {
           expect(getInjectedTokens(document).length).toBe(0);
 
           chromeStub.setStorageValues({
-            "immersionkit.siteSettings": {
+            "site-settings": {
               [HOSTNAME]: {
                 hostname: HOSTNAME,
                 enabled: true,
@@ -98,9 +152,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -115,7 +169,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
 
@@ -142,6 +196,10 @@ describe("content inline learning loop", () => {
           );
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
 
+          window.dispatchEvent(new window.Event("scroll"));
+          await wait(20);
+          expect(document.querySelector("[data-ik-popover='true']")).toBe(popover);
+
           await wait(220);
           expect(
             popover?.querySelector("[data-ik-token-id], [data-ik-sentence-note='true']")
@@ -161,9 +219,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -178,7 +236,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
 
@@ -204,12 +262,12 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(token?.getAttribute("data-ik-status")).toBe("ignored");
-          expect(token?.classList.contains("ik-word--ignored")).toBe(true);
+          expect(token?.getAttribute("data-status")).toBe("muted");
           expect(token?.textContent).toBe("city");
           expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
 
           const storageSnapshot = chromeStub.getStorageSnapshot();
-          const vocabEntries = storageSnapshot["immersionkit.vocab"] as Record<
+          const vocabEntries = storageSnapshot["user-vocab"] as Record<
             string,
             {
               status: string;
@@ -217,8 +275,8 @@ describe("content inline learning loop", () => {
             }
           >;
 
-          expect(vocabEntries["lemma-city"].status).toBe("ignored");
-          expect(vocabEntries["lemma-city"].exposureCount).toBe(1);
+          expect(vocabEntries["lexeme-city"].status).toBe("ignored");
+          expect(vocabEntries["lexeme-city"].exposureCount).toBe(1);
         } finally {
           chromeStub.restore();
         }
@@ -226,7 +284,7 @@ describe("content inline learning loop", () => {
     );
   });
 
-  it("falls back to the page sentence when the lexicon has no example sentence", async () => {
+  it("falls back to the page sentence when the render entry has no example sentence", async () => {
     await withFixtureDom(
       "article-basic.html",
       { url: FIXTURE_URL },
@@ -234,9 +292,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -251,7 +309,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-important']"
+            "[data-ik-lexeme-id='lexeme-important']"
           );
           expect(token).toBeTruthy();
 
@@ -286,9 +344,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -307,7 +365,6 @@ describe("content inline learning loop", () => {
           const queueMessage = chromeStub.sentMessages.find(
             (message): message is {
               type: RuntimeMessageType.QueueSentenceCandidates;
-              sentences: string[];
               candidates: Array<{
                 sourceText: string;
                 sentenceHash: string;
@@ -321,7 +378,6 @@ describe("content inline learning loop", () => {
                 RuntimeMessageType.QueueSentenceCandidates
           );
 
-          expect(queueMessage?.sentences).toEqual([sourceSentence]);
           expect(queueMessage?.candidates[0]).toMatchObject({
             sourceText: sourceSentence,
             sentenceHash: hashSentence(sourceSentence),
@@ -330,7 +386,8 @@ describe("content inline learning loop", () => {
           });
           expect(
             document.querySelector("[data-ik-render-layer='word phrase-candidate']")
-          ).toBeTruthy();
+          ).toBeNull();
+          expect(document.body.textContent).toContain(sourceSentence);
         } finally {
           chromeStub.restore();
         }
@@ -351,9 +408,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${lead} ${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -368,7 +425,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
           expect(token?.getAttribute("data-ik-sentence-hash")).toBe(
@@ -389,9 +446,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -406,7 +463,7 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           const token = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-city']"
+            "[data-ik-lexeme-id='lexeme-city']"
           );
           expect(token).toBeTruthy();
 
@@ -431,7 +488,7 @@ describe("content inline learning loop", () => {
           );
 
           expect(assistMessage).toMatchObject({
-            itemId: "word:lemma-city",
+            itemId: "word:lexeme-city",
             assistType: "manual-lookup",
             contextSentenceHash: hashSentence(
               "The city is important for every visitor."
@@ -455,16 +512,70 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:14:15.000Z"
             }
-          }
+          },
+          "learning-items": [
+            {
+              itemId: `phrase:${phraseId}`,
+              unitRefId: phraseId,
+              unitType: "phrase",
+              sourceText: "used to visit",
+              targetText: "solia visitar",
+              status: "learning",
+              introducedAt: "2026-04-18T10:00:00.000Z",
+              nextReviewAt: "2026-04-19T10:00:00.000Z",
+              interval: 600000,
+              ease: 2.3,
+              lapses: 0,
+              assistCount: 0,
+              qualifiedExposureCount: 0,
+              consecutiveUnassistedCount: 0,
+              distinctContextCount: 0,
+              suspended: false
+            }
+          ],
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              tokens: [{ text: "I", normalized: "i", tags: [], startOffset: 0, endOffset: 1 }],
+              chunks: [],
+              grammarFeatures: [],
+              phraseMatches: [
+                {
+                  occurrenceId: "occurrence-used-to-visit",
+                  phraseId,
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  sourceText: "used to visit",
+                  normalizedSourceText: "used to visit",
+                  sourceKind: "pattern-match",
+                  category: "grammar-carrier",
+                  ruleId: "used-to-verb",
+                  span: {
+                    startToken: 1,
+                    endToken: 4,
+                    startChar: 2,
+                    endChar: 15
+                  },
+                  confidence: 0.91
+                }
+              ],
+              contextualWordCandidates: [],
+              createdAt: "2026-04-18T10:00:00.000Z",
+              lastAccessedAt: "2026-04-18T10:00:00.000Z"
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -578,8 +689,12 @@ describe("content inline learning loop", () => {
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover?.textContent).toContain("used to visit");
           expect(popover?.textContent).toContain("solia visitar");
-          expect(popover?.textContent).toContain("grammar carrier");
-          expect(popover?.textContent).toContain("review due");
+          expect(popover?.textContent).toContain(
+            "This phrase is due for review and still fits the current page."
+          );
+          expect(popover?.textContent).not.toContain("grammar carrier");
+          expect(popover?.textContent).not.toContain("review due");
+          expect(popover?.textContent).not.toContain("confidence");
           expect(popover?.textContent).toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
 
@@ -619,19 +734,19 @@ describe("content inline learning loop", () => {
         const sentenceHash = hashSentence(sourceSentence);
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": [
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lemmaId: "lemma-can",
+              lexemeId: "lexeme-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
               frequencyRank: 200,
               confidence: 0.95
             }
-          ],
-          "immersionkit.siteSettings": {
+          ]),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -678,7 +793,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lemmaId: "lemma-can",
+                      lexemeId: "lexeme-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -701,12 +816,11 @@ describe("content inline learning loop", () => {
           await wait(60);
 
           const canToken = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-can']"
+            "[data-ik-lexeme-id='lexeme-can']"
           );
-          expect(canToken).toBeTruthy();
-          expect(canToken?.textContent).toBe("can");
-          expect(canToken?.getAttribute("data-ik-context-decision")).toBe("skip");
-          expect(canToken?.classList.contains("ik-word--suppressed")).toBe(true);
+          expect(canToken).toBeNull();
+          expect(document.body.textContent).toContain("I can watch");
+          expect(document.body.textContent).not.toContain("lata");
         } finally {
           chromeStub.restore();
         }
@@ -725,9 +839,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -843,7 +957,7 @@ describe("content inline learning loop", () => {
           );
           expect(phrase).toBeTruthy();
           expect(phrase?.textContent).toBe("solia visitar");
-          expect(document.querySelector("[data-ik-lemma-id='lemma-city']")).toBeTruthy();
+          expect(document.querySelector("[data-ik-lexeme-id='lexeme-city']")).toBeTruthy();
 
           const diagnostics = (
             await chromeStub.dispatchRuntimeMessage({
@@ -899,9 +1013,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1058,9 +1172,9 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1200,19 +1314,55 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
               discoveryRate: 0,
               updatedAt: "2026-04-18T10:14:00.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              tokens: [],
+              lemmas: [],
+              posTags: [],
+              chunks: [],
+              grammarFeatures: [],
+              createdAt: "2026-04-18T10:14:00.000Z",
+              lastAccessedAt: "2026-04-18T10:14:00.000Z",
+              contextualWordCandidates: [],
+              phraseMatches: [
+                {
+                  occurrenceId: "occurrence-old-city",
+                  phraseId,
+                  sentenceHash,
+                  analyzerVersion: "fixture-v1",
+                  sourceText: "old city",
+                  normalizedSourceText: "old city",
+                  sourceKind: "chunk",
+                  category: "noun-chunk",
+                  ruleId: "chunk-noun-coherent-v1",
+                  span: {
+                    startToken: 1,
+                    endToken: 3,
+                    startChar: 4,
+                    endChar: 12
+                  },
+                  confidence: 0.88
+                }
+              ]
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1321,26 +1471,56 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": [
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lemmaId: "lemma-can",
+              lexemeId: "lexeme-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
               frequencyRank: 200,
               confidence: 0.95
             }
-          ],
-          "immersionkit.siteSettings": {
+          ]),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:15:30.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              createdAt: "2026-04-18T10:15:00.000Z",
+              lastAccessedAt: "2026-04-18T10:15:00.000Z",
+              contextualWordCandidates: [
+                {
+                  id: "candidate-can",
+                  sentenceHash,
+                  sentence: sourceSentence,
+                  tokenText: "can",
+                  normalizedText: "can",
+                  targetLemma: "lata",
+                  candidateLemma: "can",
+                  lexemeId: "lexeme-can",
+                  candidatePos: "noun",
+                  observedPos: "modal",
+                  chunkType: "other",
+                  nearbyContextSignature: ["modal-before-base-verb"],
+                  ambiguityGroup: "can_modal_vs_noun",
+                  confidence: 0.41,
+                  decision: "skip",
+                  rationale: "Modal use should not inject the noun sense."
+                }
+              ]
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1368,7 +1548,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lemmaId: "lemma-can",
+                      lexemeId: "lexeme-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -1392,12 +1572,12 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-can']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-can']")
           ).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
           expect(document.body.textContent).not.toContain("lata");
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-city']")
               ?.textContent
           ).toBe("ciudad");
         } finally {
@@ -1417,26 +1597,57 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<main id='feed'></main>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": BASE_SETTINGS,
-          "immersionkit.seedLexicon": [
+          "settings": BASE_SETTINGS,
+          "asset-render-units": renderUnitAsset([
             ...SEED_LEXICON,
             {
-              lemmaId: "lemma-can",
+              lexemeId: "lexeme-can",
               sourceLemma: "can",
               targetLemma: "lata",
               pos: "noun",
               frequencyRank: 200,
               confidence: 0.95
             }
-          ],
-          "immersionkit.siteSettings": {
+          ]),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:15:45.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              createdAt: "2026-04-18T10:15:00.000Z",
+              lastAccessedAt: "2026-04-18T10:15:00.000Z",
+              phraseMatches: [],
+              contextualWordCandidates: [
+                {
+                  id: "candidate-can",
+                  sentenceHash,
+                  sentence: sourceSentence,
+                  tokenText: "can",
+                  normalizedText: "can",
+                  targetLemma: "lata",
+                  candidateLemma: "can",
+                  lexemeId: "lexeme-can",
+                  candidatePos: "noun",
+                  observedPos: "modal",
+                  chunkType: "other",
+                  nearbyContextSignature: ["modal-before-base-verb"],
+                  ambiguityGroup: "can_modal_vs_noun",
+                  confidence: 0.41,
+                  decision: "skip",
+                  rationale: "Modal use should not inject the noun sense."
+                }
+              ]
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1473,7 +1684,7 @@ describe("content inline learning loop", () => {
                       normalizedText: "can",
                       targetLemma: "lata",
                       candidateLemma: "can",
-                      lemmaId: "lemma-can",
+                      lexemeId: "lexeme-can",
                       candidatePos: "noun",
                       observedPos: "modal",
                       chunkType: "other",
@@ -1504,12 +1715,12 @@ describe("content inline learning loop", () => {
           await wait(240);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-can']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-can']")
           ).toBeNull();
           expect(document.body.textContent).toContain("I can watch");
           expect(document.body.textContent).not.toContain("lata");
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-city']")
               ?.textContent
           ).toBe("ciudad");
 
@@ -1539,19 +1750,39 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             ...BASE_SETTINGS,
             discoveryRate: 0
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
               discoveryRate: 0,
               updatedAt: "2026-04-18T10:17:00.000Z"
             }
-          }
+          },
+          "learning-items": [
+            {
+              itemId: "word:lexeme-city",
+              unitRefId: "lexeme-city",
+              unitType: "word",
+              sourceText: "city",
+              targetText: "ciudad",
+              status: "reviewing",
+              introducedAt: "2026-04-18T10:00:00.000Z",
+              nextReviewAt: "2020-01-01T00:00:00.000Z",
+              interval: 600000,
+              ease: 2.3,
+              lapses: 0,
+              assistCount: 0,
+              qualifiedExposureCount: 1,
+              consecutiveUnassistedCount: 0,
+              distinctContextCount: 1,
+              suspended: false
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1564,8 +1795,8 @@ describe("content inline learning loop", () => {
               ok: true,
               items: [
                 {
-                  itemId: "word:lemma-city",
-                  unitRefId: "lemma-city",
+                  itemId: "word:lexeme-city",
+                  unitRefId: "lexeme-city",
                   unitType: "word",
                   sourceText: "city",
                   targetText: "ciudad",
@@ -1593,15 +1824,69 @@ describe("content inline learning loop", () => {
           await wait(30);
 
           expect(
-            document.querySelector<HTMLElement>("[data-ik-lemma-id='lemma-city']")
+            document.querySelector<HTMLElement>("[data-ik-lexeme-id='lexeme-city']")
               ?.textContent
           ).toBe("ciudad");
           const cognateToken = document.querySelector<HTMLElement>(
-            "[data-ik-lemma-id='lemma-important']"
+            "[data-ik-lexeme-id='lexeme-important']"
           );
           expect(cognateToken?.textContent).toBe("importante");
           expect(cognateToken?.getAttribute("data-ik-scheduler-reason")).toBe(
             "beginner-cognate"
+          );
+        } finally {
+          chromeStub.restore();
+        }
+      }
+    );
+  });
+
+  it("explains accented cognate word-family patterns", async () => {
+    await withFixtureDom(
+      "article-basic.html",
+      { url: FIXTURE_URL },
+      async ({ document, wait }) => {
+        document.body.innerHTML = "<p>The information is important.</p>";
+
+        const chromeStub = installChromeStub({
+          "settings": BASE_SETTINGS,
+          "learning-profile": {
+            activeVocabularyBandId: "level-1c",
+            activePhraseBandId: "level-1c",
+            activeGrammarBandId: "level-1c",
+            unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
+          },
+          "asset-render-units": renderUnitAsset([
+            ...SEED_LEXICON,
+            {
+              lexemeId: "lexeme-information",
+              sourceLemma: "information",
+              targetLemma: "información",
+              pos: "noun",
+              frequencyRank: 120,
+              confidence: 0.98
+            }
+          ]),
+          "site-settings": {
+            [HOSTNAME]: {
+              hostname: HOSTNAME,
+              enabled: true,
+              discoveryRate: 1,
+              updatedAt: "2026-04-18T10:18:00.000Z"
+            }
+          }
+        });
+
+        try {
+          await bootContentScript();
+          await wait(30);
+
+          const token = document.querySelector<HTMLElement>(
+            "[data-ik-lexeme-id='lexeme-information']"
+          );
+          expect(token?.textContent).toBe("información");
+          expect(token?.getAttribute("data-ik-curriculum-reason")).toContain(
+            "English words ending in -tion often become Spanish -ción"
           );
         } finally {
           chromeStub.restore();
@@ -1618,13 +1903,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = "<p>The city is important for every visitor.</p>";
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1657,7 +1942,7 @@ describe("content inline learning loop", () => {
           expect(document.querySelector("[data-ik-sentence-note='true']")).toBeTruthy();
 
           chromeStub.setStorageValues({
-            "immersionkit.siteSettings": {
+            "site-settings": {
               [HOSTNAME]: {
                 hostname: HOSTNAME,
                 enabled: false,
@@ -1690,13 +1975,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1757,13 +2042,13 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
@@ -1810,32 +2095,28 @@ describe("content inline learning loop", () => {
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover).toBeTruthy();
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
-          expect(popover?.textContent).toContain(learningNote.summary);
-          expect(popover?.textContent).toContain("Word-by-word");
-          const glossLines = [
-            ...document.querySelectorAll<HTMLElement>(".ik-popover__sentence-detail-line")
-          ].map((node) => node.textContent);
-          expect(glossLines).toEqual([
-            "\"la ciudad\" = the city",
-            "\"es importante\" = is important",
-            "\"para cada visitante\" = for each visitor"
-          ]);
-          expect(popover?.textContent).toContain("Phrase");
-          expect(popover?.textContent).toContain(learningNote.keyPhrase);
-          expect(popover?.textContent).toContain("Natural Spanish");
-          expect(popover?.textContent).toContain(learningNote.canonicalUsage);
-          expect(popover?.textContent).toContain("Grammar");
+          expect(popover?.textContent).toContain("Uses OpenAI only when enabled.");
+          expect(popover?.textContent).toContain("Original");
+          expect(popover?.textContent).toContain(sourceSentence);
+          expect(popover?.textContent).toContain("Translation");
+          expect(popover?.textContent).toContain(translatedSentence);
+          expect(popover?.textContent).toContain("Why this helps");
           expect(popover?.textContent).toContain(learningNote.grammarFocus);
-          expect(popover?.textContent).not.toContain(translatedSentence);
-          expect(popover?.textContent).not.toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
           expect(popover?.querySelector("[data-ik-sentence-action]")).toBeTruthy();
+
+          const translationButton = popover?.querySelector<HTMLButtonElement>(
+            "[data-ik-sentence-action='show-translation']"
+          );
+          expect(translationButton).toBeTruthy();
+          expect(translationButton?.textContent).toContain("Translation");
+          expect(translationButton?.getAttribute("aria-pressed")).toBe("true");
 
           const toggleButton = popover?.querySelector<HTMLButtonElement>(
             "[data-ik-sentence-action='toggle-source']"
           );
           expect(toggleButton).toBeTruthy();
-          expect(toggleButton?.textContent).toBe("Show Original");
+          expect(toggleButton?.textContent).toContain("Original");
 
           toggleButton?.dispatchEvent(
             new window.MouseEvent("click", {
@@ -1850,7 +2131,17 @@ describe("content inline learning loop", () => {
           const toggledButton = document.querySelector<HTMLButtonElement>(
             "[data-ik-sentence-action='toggle-source']"
           );
-          expect(toggledButton?.textContent).toBe("Show Translation");
+          expect(toggledButton?.getAttribute("aria-pressed")).toBe("true");
+
+          translationButton?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("false");
 
           note?.dispatchEvent(
             new window.MouseEvent("dblclick", {
@@ -1860,8 +2151,8 @@ describe("content inline learning loop", () => {
           );
           await wait(20);
 
-          expect(note?.getAttribute("data-ik-source-visible")).toBe("false");
-          expect(note?.textContent).toContain(translatedSentence);
+          expect(note?.getAttribute("data-ik-source-visible")).toBe("true");
+          expect(note?.textContent).toContain(sourceSentence);
           expect(document.querySelector("[data-ik-popover='true']")).toBeNull();
         } finally {
           chromeStub.restore();
@@ -1880,20 +2171,58 @@ describe("content inline learning loop", () => {
         document.body.innerHTML = `<p>${sourceSentence}</p>`;
 
         const chromeStub = installChromeStub({
-          "immersionkit.settings": {
+          "settings": {
             discoveryRate: 1,
             sentenceTranslationEnabled: true,
             provider: "openai"
           },
-          "immersionkit.seedLexicon": SEED_LEXICON,
-          "immersionkit.siteSettings": {
+          "learning-profile": {
+            activeVocabularyBandId: "level-1a",
+            activePhraseBandId: "level-1a",
+            activeGrammarBandId: "level-4a",
+            unlockedBandIds: ["level-1a", "level-4a"]
+          },
+          "asset-render-units": renderUnitAsset(SEED_LEXICON),
+          "site-settings": {
             [HOSTNAME]: {
               hostname: HOSTNAME,
               enabled: true,
               discoveryRate: 1,
               updatedAt: "2026-04-18T10:19:00.000Z"
             }
-          }
+          },
+          "sentence-analysis-cache": [
+            {
+              sentenceHash,
+              analyzerVersion: "fixture-v1",
+              analyzerId: "fixture-annotated",
+              sourceText: sourceSentence,
+              tokens: [],
+              chunks: [],
+              grammarFeatures: [
+                {
+                  featureId: "grammar:aspect:have-been",
+                  featureKey: "aspect:have-been",
+                  label: "Have been",
+                  category: "tense-aspect",
+                  sourceText: "has been",
+                  normalizedSourceText: "has been",
+                  span: {
+                    startToken: 2,
+                    endToken: 4,
+                    startChar: 9,
+                    endChar: 17
+                  },
+                  evidence: ["fixture"],
+                  confidence: 0.86
+                }
+              ],
+              phraseMatches: [],
+              contextualWordCandidates: [],
+              createdAt: "2026-04-18T10:00:00.000Z",
+              lastAccessedAt: "2026-04-18T10:00:00.000Z"
+            }
+          ]
         });
         chromeStub.setSendMessageHandler((message) => {
           if (
@@ -1983,6 +2312,10 @@ describe("content inline learning loop", () => {
           );
           await wait(20);
 
+          const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
+          expect(popover?.textContent).toContain("Ongoing result with have been");
+          expect(popover?.textContent).toContain("haber");
+
           const assistMessage = chromeStub.sentMessages.find(
             (message): message is {
               type: string;
@@ -2005,7 +2338,7 @@ describe("content inline learning loop", () => {
             source: "content-grammar-note"
           });
 
-          await wait(2600);
+          await wait(CONTENT_EVIDENCE_POLICY.grammarDetailDwellMs + 100);
 
           const exposureMessage = chromeStub.sentMessages.find(
             (message): message is {
@@ -2013,6 +2346,7 @@ describe("content inline learning loop", () => {
               itemId: string;
               sentenceHash: string;
               wasAssisted: boolean;
+              dwellMs: number;
               source: string;
             } =>
               Boolean(message) &&
@@ -2028,6 +2362,7 @@ describe("content inline learning loop", () => {
             itemId: "grammar-feature:aspect:have-been",
             sentenceHash,
             wasAssisted: true,
+            dwellMs: CONTENT_EVIDENCE_POLICY.grammarDetailDwellMs,
             source: "content-grammar-detail-dwell"
           });
         } finally {

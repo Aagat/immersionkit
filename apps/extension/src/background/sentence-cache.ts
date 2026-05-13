@@ -4,7 +4,10 @@ import type {
   SentenceLearningNote
 } from "@immersionkit/shared";
 import {
-  createLegacySentenceLearningNote,
+  DEFAULT_LANGUAGE_PAIR_ID,
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+  isLanguagePairId,
   createSentenceLearningNote,
   hasSentenceLearningNoteContent
 } from "@immersionkit/shared";
@@ -12,14 +15,14 @@ import {
 import {
   readString,
   isRecord
-} from "./storage";
+} from "../storage/serialization";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,
   isIndexedDbAvailable,
   requestToPromise,
   transactionDone
-} from "./indexeddb";
+} from "../storage/indexeddb";
 
 export class IndexedDbSentenceCacheRepository implements SentenceCacheRepository {
   async getByHash(hash: string): Promise<SentenceCacheEntry | null> {
@@ -156,8 +159,7 @@ function normalizeSentenceCacheEntry(
   const sentenceHash = readString(value.sentenceHash) ?? readString(fallbackHash);
   const sourceText = readString(value.sourceText);
   const translatedText = readString(value.translatedText);
-  const grammarNote = readString(value.grammarNote);
-  const learningNote = normalizeSentenceLearningNote(value.learningNote, grammarNote);
+  const learningNote = normalizeSentenceLearningNote(value.learningNote);
   const model = readString(value.model);
   const promptVersion = readString(value.promptVersion);
   const createdAt = readString(value.createdAt);
@@ -174,10 +176,18 @@ function normalizeSentenceCacheEntry(
     return null;
   }
 
-  const targetLanguage = value.targetLanguage === "es" ? "es" : null;
+  const targetLanguage = readString(value.targetLanguage);
   if (!targetLanguage) {
     return null;
   }
+  const sourceLanguage = readString(value.sourceLanguage);
+  const languagePair =
+    isLanguagePairId(value.languagePair)
+      ? value.languagePair
+      : (!sourceLanguage || sourceLanguage === DEFAULT_SOURCE_LANGUAGE) &&
+          targetLanguage === DEFAULT_TARGET_LANGUAGE
+        ? DEFAULT_LANGUAGE_PAIR_ID
+        : undefined;
 
   return {
     sentenceHash,
@@ -187,9 +197,9 @@ function normalizeSentenceCacheEntry(
     model,
     promptVersion,
     createdAt,
+    languagePair,
     targetLanguage,
-    grammarNote: learningNote.summary,
-    sourceLanguage: value.sourceLanguage === "en" ? "en" : undefined,
+    sourceLanguage: sourceLanguage ?? undefined,
     provider:
       value.provider === "openai" || value.provider === "none"
         ? value.provider
@@ -199,8 +209,7 @@ function normalizeSentenceCacheEntry(
 }
 
 function normalizeSentenceLearningNote(
-  value: unknown,
-  legacyGrammarNote: string | undefined | null
+  value: unknown
 ): SentenceLearningNote | null {
   if (isRecord(value)) {
     const learningNote = createSentenceLearningNote({
@@ -214,10 +223,6 @@ function normalizeSentenceLearningNote(
     if (hasSentenceLearningNoteContent(learningNote)) {
       return learningNote;
     }
-  }
-
-  if (legacyGrammarNote) {
-    return createLegacySentenceLearningNote(legacyGrammarNote);
   }
 
   return null;

@@ -14,14 +14,14 @@ import {
 import {
   readString,
   isRecord
-} from "./storage";
+} from "../storage/serialization";
 import {
   INDEXEDDB_STORES,
   getIndexedDbStore,
   isIndexedDbAvailable,
   requestToPromise,
   transactionDone
-} from "./indexeddb";
+} from "../storage/indexeddb";
 
 // Temporary background-owned bridge until shared grows a durable
 // SentenceAnalysisEntry repository contract.

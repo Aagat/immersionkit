@@ -5,36 +5,60 @@ import type {
   SupportedTargetLanguage
 } from "@immersionkit/shared";
 import {
+  buildLanguagePairId,
+  createFallbackLanguagePairDefinition,
   createSentenceLearningNote,
-  hasSentenceLearningNoteContent
+  getLanguagePairDefinition,
+  hasSentenceLearningNoteContent,
 } from "@immersionkit/shared";
 
 import type { ProviderCredentials } from "./settings";
-import { isRecord, readString } from "./storage";
+import { isRecord, readString } from "../storage/serialization";
 
 const OPENAI_CHAT_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 export const OPENAI_SENTENCE_PROMPT_VERSION = "openai-sentence-v4";
 const DEFAULT_OPENAI_MODEL = "gpt-5.4-nano";
-const OPENAI_SENTENCE_SYSTEM_PROMPT = `
-Translate English sentences into natural, learner-friendly Spanish.
+export function buildOpenAiSentenceSystemPrompt(input: {
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
+}): string {
+  const languagePair = buildLanguagePairId(
+    input.sourceLanguage,
+    input.targetLanguage
+  );
+  const pair =
+    getLanguagePairDefinition(languagePair) ??
+    createFallbackLanguagePairDefinition(languagePair);
+  const sourceLanguageName =
+    pair.sourceLanguage === input.sourceLanguage
+      ? pair.displayNames.sourceLanguage
+      : input.sourceLanguage;
+  const targetLanguageName =
+    pair.targetLanguage === input.targetLanguage
+      ? pair.displayNames.targetLanguage
+      : input.targetLanguage;
+
+  return `
+Translate ${sourceLanguageName} sentences into natural, learner-friendly ${targetLanguageName}.
 
 For each sentence:
-- translatedText should be idiomatic Spanish a native speaker would naturally say.
-- learningNote.summary should be the single most useful takeaway for a learner, written in English. Prefer the format: "To say X, use Y" or "Spanish expresses X with Y".
-- learningNote.literalGloss should be written in English and give a short chunk-by-chunk gloss only when it helps explain the Spanish structure. Format each chunk as "Spanish chunk" = English meaning, with one chunk per line.
-- learningNote.keyPhrase should highlight the most reusable Spanish phrase, collocation, or fixed expression from the sentence, and explain it in English.
-- learningNote.canonicalUsage should explain in English the canonical or natural Spanish way to express the idea when it differs from direct English wording.
-- learningNote.grammarFocus should explain in English one important grammar point only when it truly helps, and it must describe the actual form used in translatedText.
+- translatedText should be idiomatic ${targetLanguageName} a native speaker would naturally say.
+- learningNote.summary should be the single most useful takeaway for a learner, written in ${sourceLanguageName}. Prefer the format: "To say X, use Y" or "${targetLanguageName} expresses X with Y".
+- learningNote.literalGloss should be written in ${sourceLanguageName} and give a short chunk-by-chunk gloss only when it helps explain the ${targetLanguageName} structure. Format each chunk as "${targetLanguageName} chunk" = ${sourceLanguageName} meaning, with one chunk per line.
+- learningNote.keyPhrase should highlight the most reusable ${targetLanguageName} phrase, collocation, or fixed expression from the sentence, and explain it in ${sourceLanguageName}.
+- learningNote.canonicalUsage should explain in ${sourceLanguageName} the canonical or natural ${targetLanguageName} way to express the idea when it differs from direct ${sourceLanguageName} wording.
+- learningNote.grammarFocus should explain in ${sourceLanguageName} one important grammar point only when it truly helps, and it must describe the actual form used in translatedText.
 
 Rules:
 - Keep each field concise.
 - Use empty strings for fields that are not useful for the sentence.
 - Prefer reusable phrases and natural wording over abstract grammar labels.
-- All explanatory text must be in English. Spanish may appear only as the translated sentence or as quoted example phrases/chunks being explained.
+- All explanatory text must be in ${sourceLanguageName}. ${targetLanguageName} may appear only as the translated sentence or as quoted example phrases/chunks being explained.
 - For learningNote.literalGloss, do not write slash-separated prose. Use newline-separated chunks instead.
 - If there is no real grammar point worth teaching, leave learningNote.grammarFocus empty instead of forcing one.
 - Do not repeat the same content across multiple fields unless needed for clarity.
 `.trim();
+}
 const OPENAI_SENTENCE_RESPONSE_FORMAT = {
   type: "json_schema",
   json_schema: {
@@ -157,7 +181,10 @@ class OpenAiSentenceProviderClient implements SentenceProviderClient {
         messages: [
           {
             role: "system",
-            content: OPENAI_SENTENCE_SYSTEM_PROMPT
+            content: buildOpenAiSentenceSystemPrompt({
+              sourceLanguage: input.sourceLanguage,
+              targetLanguage: input.targetLanguage
+            })
           },
           {
             role: "user",
@@ -170,15 +197,15 @@ class OpenAiSentenceProviderClient implements SentenceProviderClient {
               })),
               noteStyle: {
                 summary:
-                  "The most useful high-level takeaway in one short English sentence, ideally in a form like: To say X, use Y.",
+                  "The most useful high-level takeaway in one short source-language sentence, ideally in a form like: To say X, use Y.",
                 literalGloss:
-                  "A selective chunk-by-chunk gloss in English when it clarifies Spanish structure. Use one chunk per line in the format: Spanish chunk = English meaning.",
+                  "A selective chunk-by-chunk gloss in the source language when it clarifies target-language structure. Use one chunk per line in the format: target-language chunk = source-language meaning.",
                 keyPhrase:
-                  "A frequent reusable Spanish phrase or expression from the sentence, explained in English.",
+                  "A frequent reusable target-language phrase or expression from the sentence, explained in the source language.",
                 canonicalUsage:
-                  "In English, explain how Spanish naturally phrases the idea when it differs from literal English.",
+                  "In the source language, explain how the target language naturally phrases the idea when it differs from literal source-language wording.",
                 grammarFocus:
-                  "In English, explain one important grammar point only when it meaningfully helps the learner. Leave empty if none."
+                  "In the source language, explain one important grammar point only when it meaningfully helps the learner. Leave empty if none."
               }
             })
           }

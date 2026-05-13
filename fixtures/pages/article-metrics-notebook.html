@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Fixture - Metrics Notebook</title>
+  </head>
+  <body>
+    <main>
+      <article id="metrics-notebook">
+        <header>
+          <p>Data Notes</p>
+          <h1>Reading a Small Metrics Notebook</h1>
+          <p>
+            A walkthrough for checking whether a weekly metrics notebook is telling a
+            stable story or merely producing attractive charts.
+          </p>
+        </header>
+
+        <section>
+          <h2>Start With the Shape</h2>
+          <p>
+            Like a bug report, the notebook needs a boring title and a clear owner.
+            This means zero rows can move through the pipeline without a timestamp,
+            even when the model is still experimental.
+          </p>
+          <p>
+            The current model is fine for a first review, but it should not decide
+            whether the launch is safe. We left the control chart open because the
+            next cohort has a different traffic pattern.
+          </p>
+        </section>
+
+        <section>
+          <h2>Keep the Calculation Visible</h2>
+          <p>
+            The most useful notebook cell explains why a small period of missing data
+            changes the rate. Without that note, a reviewer might mistake sampling
+            noise for product movement.
+          </p>
+
+          <pre><code>weekly_rate =
+  completed_events / eligible_sessions
+guardrail = missing_timestamps == 0</code></pre>
+        </section>
+
+        <section>
+          <h2>Review Notes</h2>
+          <p>
+            A notebook can be precise without being long. The goal is to help another
+            person reproduce the case and spot the first assumption that might be
+            wrong.
+          </p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

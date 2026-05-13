@@ -11,17 +11,17 @@ import {
   resolveSentenceShortlistingInputProfile,
   SENTENCE_SHORTLISTING_DISCOVERY_RATE,
   SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
-  SENTENCE_SHORTLISTING_LEXICON,
+  SENTENCE_SHORTLISTING_WORD_INVENTORY,
   SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE,
   SENTENCE_SHORTLISTING_PHRASE_HINTS,
-  SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID
+  SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID
 } from "./sentence-shortlisting-data";
 
 type SentenceShortlistingBrowserBenchmarkArtifact = SentenceShortlistingBenchmarkResult & {
   metadata: {
     schemaVersion: "1.1.0";
     generatedAt: string;
-    taskId: "task-04-sentence-shortlisting";
+    laneId: "sentence-shortlisting";
     canonicalCommand: "pnpm benchmark";
     inputProfile: string;
     sourceOfTruth: "browser-run-validation";
@@ -73,8 +73,8 @@ function executeBenchmark() {
     const benchmarkResult = runSentenceShortlistingBenchmark({
       document,
       scenarios: shortlistingScenarios,
-      lexicon: SENTENCE_SHORTLISTING_LEXICON,
-      vocabByLemmaId: SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID,
+      wordInventory: SENTENCE_SHORTLISTING_WORD_INVENTORY,
+      vocabByLexemeId: SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID,
       discoveryRate: SENTENCE_SHORTLISTING_DISCOVERY_RATE,
       goldilocksThreshold: SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD,
       phraseHints: SENTENCE_SHORTLISTING_PHRASE_HINTS,
@@ -101,7 +101,7 @@ function buildMetadata(): SentenceShortlistingBrowserBenchmarkArtifact["metadata
   return {
     schemaVersion: "1.1.0",
     generatedAt: new Date().toISOString(),
-    taskId: "task-04-sentence-shortlisting",
+    laneId: "sentence-shortlisting",
     canonicalCommand: "pnpm benchmark",
     inputProfile: shortlistingInputProfile,
     sourceOfTruth: "browser-run-validation",

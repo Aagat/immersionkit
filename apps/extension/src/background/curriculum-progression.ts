@@ -2,28 +2,24 @@ import {
   type CurriculumBand,
   type CurriculumTransitionDecision,
   evaluateCurriculumBandTransition,
+  estimateRecentLearningItemLapseRate,
+  parseCurriculumRuntimeProfile,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
+  selectCurriculumTransitionEvidenceItems,
   type CurriculumConfig,
   type CurriculumRuntimeProfileInput,
   type LearningItem
 } from "@immersionkit/shared";
 
+import { pickFirstDefinedValue } from "../storage/serialization";
 import {
-  isRecord,
-  pickFirstDefinedValue,
-  readStorageValues,
-  readString,
-  writeStorageValues
-} from "./storage";
+  loadUserDataValues,
+  setUserDataValues,
+  USER_DATA_KEYS
+} from "../storage/user-data-repository";
 
-const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile",
-  "learningProfile"
-] as const;
-
-const CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEY =
-  "immersionkit.curriculum.lastProgressionDecision";
+const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
 
 export interface LearningProfileStore {
   load(): Promise<CurriculumRuntimeProfileInput>;
@@ -50,16 +46,16 @@ export type CurriculumProgressionResult = {
   diagnostics: CurriculumProgressionDecisionDiagnostics;
 };
 
-export class ChromeLearningProfileStore implements LearningProfileStore {
+class ChromeLearningProfileStore implements LearningProfileStore {
   async load(): Promise<CurriculumRuntimeProfileInput> {
-    const storage = await readStorageValues(LEARNING_PROFILE_STORAGE_KEYS);
+    const storage = await loadUserDataValues(LEARNING_PROFILE_STORAGE_KEYS);
     const rawProfile = pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS);
-    return parseLearningProfile(rawProfile);
+    return parseCurriculumRuntimeProfile(rawProfile);
   }
 
   async persist(profile: CurriculumRuntimeProfileInput): Promise<void> {
-    await writeStorageValues({
-      "immersionkit.learningProfile": profile
+    await setUserDataValues({
+      [USER_DATA_KEYS.learningProfile]: profile
     });
   }
 }
@@ -68,12 +64,12 @@ export interface CurriculumProgressionDiagnosticsStore {
   persist(diagnostics: CurriculumProgressionDecisionDiagnostics): Promise<void>;
 }
 
-export class ChromeCurriculumProgressionDiagnosticsStore
+class ChromeCurriculumProgressionDiagnosticsStore
   implements CurriculumProgressionDiagnosticsStore
 {
   async persist(diagnostics: CurriculumProgressionDecisionDiagnostics): Promise<void> {
-    await writeStorageValues({
-      [CURRICULUM_PROGRESSION_DIAGNOSTICS_STORAGE_KEY]: diagnostics
+    await setUserDataValues({
+      [USER_DATA_KEYS.curriculumProgressionDiagnostics]: diagnostics
     });
   }
 }
@@ -109,10 +105,17 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
+    const evidenceItems = selectCurriculumTransitionEvidenceItems(
+      activeBand.bandId,
+      input.items
+    );
     const decision = evaluateCurriculumBandTransition(config, {
       bandId: activeBand.bandId,
       items: input.items,
-      recentLapseRate: estimateRecentLapseRate(input.items, decidedAt),
+      recentLapseRate: estimateRecentLearningItemLapseRate(
+        evidenceItems,
+        decidedAt
+      ),
       checkpointPassed: false
     });
 
@@ -170,7 +173,14 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
-    const recentLapseRate = estimateRecentLapseRate(input.items, decidedAt);
+    const evidenceItems = selectCurriculumTransitionEvidenceItems(
+      activeBand.bandId,
+      input.items
+    );
+    const recentLapseRate = estimateRecentLearningItemLapseRate(
+      evidenceItems,
+      decidedAt
+    );
     const blockedDecision = evaluateCurriculumBandTransition(config, {
       bandId: activeBand.bandId,
       items: input.items,
@@ -260,52 +270,5 @@ function applyActiveBand(
     activePhraseBandId: bandId,
     activeGrammarBandId: bandId,
     unlockedBandIds: [...new Set([...(profile.unlockedBandIds ?? []), bandId])]
-  };
-}
-
-function estimateRecentLapseRate(
-  items: readonly LearningItem[],
-  now: string = new Date().toISOString()
-): number {
-  const nowMs = Date.parse(now);
-  const recentItems = items.filter((item) => {
-    const introducedAt = Date.parse(item.introducedAt);
-    return (
-      Number.isFinite(nowMs) &&
-      Number.isFinite(introducedAt) &&
-      nowMs - introducedAt <= 14 * 24 * 60 * 60 * 1000
-    );
-  });
-  const denominator = recentItems.length > 0 ? recentItems.length : items.length;
-  if (denominator === 0) {
-    return 0;
-  }
-
-  const lapses = (recentItems.length > 0 ? recentItems : items).filter(
-    (item) => item.lapses > 0
-  ).length;
-  return lapses / denominator;
-}
-
-function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
-  if (!isRecord(input)) {
-    return {};
-  }
-
-  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
-  const activePhraseBandId = readString(input.activePhraseBandId);
-  const activeGrammarBandId = readString(input.activeGrammarBandId);
-  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
-    ? input.unlockedBandIds.flatMap((value): string[] => {
-        const bandId = readString(value);
-        return bandId ? [bandId] : [];
-      })
-    : undefined;
-
-  return {
-    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
-    ...(activePhraseBandId ? { activePhraseBandId } : {}),
-    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
-    ...(unlockedBandIds ? { unlockedBandIds } : {})
   };
 }

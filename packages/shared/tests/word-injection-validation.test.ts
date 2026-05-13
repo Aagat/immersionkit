@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import ambiguousCandidatesFixture from "../../fixtures/evals/word-injection/ambiguous-candidates.v1.json";
 import {
   CONTEXTUAL_AMBIGUITY_RULES,
-  INITIAL_AMBIGUOUS_LEMMA_INVENTORY,
+  INITIAL_AMBIGUOUS_WORD_INVENTORY,
   evaluateContextAwareDecision,
-  evaluateLemmaOnlyDecision,
+  evaluateContentBaselineDecision,
   evaluateWordInjectionCorpus,
   mapExpectedOutcomeToDecision,
   type ContextualWordCandidate
@@ -15,8 +15,8 @@ const CANDIDATES =
   ambiguousCandidatesFixture.cases as unknown as ContextualWordCandidate[];
 
 describe("word injection ambiguity inventory", () => {
-  it("covers the first-pass ambiguous lemma set", () => {
-    expect(INITIAL_AMBIGUOUS_LEMMA_INVENTORY).toEqual([
+  it("covers the first-pass ambiguous word set", () => {
+    expect(INITIAL_AMBIGUOUS_WORD_INVENTORY).toEqual([
       "can",
       "watch",
       "light",
@@ -41,14 +41,14 @@ describe("word injection ambiguity inventory", () => {
 });
 
 describe("word injection decision behavior", () => {
-  it("keeps baseline behavior lemma-only for ambiguous forms", () => {
+  it("keeps baseline content behavior for ambiguous forms", () => {
     const modalCan = CANDIDATES.find((candidate) => candidate.id === "can-03");
     expect(modalCan).toBeTruthy();
 
-    const decision = evaluateLemmaOnlyDecision(modalCan as ContextualWordCandidate);
+    const decision = evaluateContentBaselineDecision(modalCan as ContextualWordCandidate);
 
     expect(decision.decision).toBe("inject");
-    expect(decision.code).toBe("lemma-only-safe-pos");
+    expect(decision.code).toBe("content-baseline-safe-pos");
   });
 
   it("suppresses wrong-sense cases when context or confidence is unsafe", () => {
@@ -91,17 +91,17 @@ describe("word injection corpus metrics", () => {
     expect(summary.baseline.mustSkipPrecision).toBe(0);
     expect(summary.baseline.uncertainSkipRate).toBe(0);
 
-    expect(summary.prototype.accuracy).toBeCloseTo(29 / 30, 6);
-    expect(summary.prototype.mustInjectCoverage).toBeCloseTo(13 / 14, 6);
-    expect(summary.prototype.mustSkipPrecision).toBe(1);
-    expect(summary.prototype.uncertainSkipRate).toBe(1);
-    expect(summary.prototype.lowConfidenceSkipCount).toBe(6);
-    expect(summary.prototype.lowConfidenceSkipRateAmongSkips).toBeCloseTo(6 / 17, 6);
-    expect(summary.prototype.lowConfidenceSkipRateOverall).toBeCloseTo(6 / 30, 6);
+    expect(summary.contextAware.accuracy).toBeCloseTo(29 / 30, 6);
+    expect(summary.contextAware.mustInjectCoverage).toBeCloseTo(13 / 14, 6);
+    expect(summary.contextAware.mustSkipPrecision).toBe(1);
+    expect(summary.contextAware.uncertainSkipRate).toBe(1);
+    expect(summary.contextAware.lowConfidenceSkipCount).toBe(6);
+    expect(summary.contextAware.lowConfidenceSkipRateAmongSkips).toBeCloseTo(6 / 17, 6);
+    expect(summary.contextAware.lowConfidenceSkipRateOverall).toBeCloseTo(6 / 30, 6);
 
     expect(summary.baseline.falsePositiveCaseIds).toHaveLength(16);
     expect(summary.baseline.falseNegativeCaseIds).toHaveLength(0);
-    expect(summary.prototype.falsePositiveCaseIds).toHaveLength(0);
-    expect(summary.prototype.falseNegativeCaseIds).toEqual(["plant-06"]);
+    expect(summary.contextAware.falsePositiveCaseIds).toHaveLength(0);
+    expect(summary.contextAware.falseNegativeCaseIds).toEqual(["plant-06"]);
   });
 });

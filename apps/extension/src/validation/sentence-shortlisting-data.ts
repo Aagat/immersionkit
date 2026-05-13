@@ -1,4 +1,4 @@
-import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
+import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 import type { SentenceShortlistingScenario } from "../content/validation/shortlisting";
 
 import articleBasicHtml from "../../../../fixtures/pages/article-basic.html?raw";
@@ -26,7 +26,7 @@ export const SENTENCE_SHORTLISTING_DISCOVERY_RATE = 1;
 export const SENTENCE_SHORTLISTING_GOLDILOCKS_THRESHOLD = 0.6;
 export const SENTENCE_SHORTLISTING_MAX_SHORTLIST_SIZE = 12;
 
-export const SENTENCE_SHORTLISTING_LEXICON: SeedLexiconEntry[] = [
+export const SENTENCE_SHORTLISTING_WORD_INVENTORY: WordInventoryEntry[] = [
   createEntry("bench-city-noun", "city", "ciudad", "noun", ["cities"]),
   createEntry("bench-garden-noun", "garden", "jardin", "noun", ["gardens"]),
   createEntry("bench-volunteer-noun", "volunteer", "voluntario", "noun", ["volunteers"]),
@@ -71,7 +71,7 @@ export const SENTENCE_SHORTLISTING_LEXICON: SeedLexiconEntry[] = [
   createEntry("bench-old-adjective", "old", "viejo", "adjective")
 ];
 
-export const SENTENCE_SHORTLISTING_VOCAB_BY_LEMMA_ID: Record<string, VocabStatus> = {
+export const SENTENCE_SHORTLISTING_VOCAB_BY_LEXEME_ID: Record<string, VocabStatus> = {
   "bench-city-noun": "known",
   "bench-garden-noun": "known",
   "bench-guide-noun": "known",
@@ -374,14 +374,14 @@ function buildStressSentences(count: number): string[] {
 }
 
 function createEntry(
-  lemmaId: string,
+  lexemeId: string,
   sourceLemma: string,
   targetLemma: string,
-  pos: SeedLexiconEntry["pos"],
+  pos: WordInventoryEntry["pos"],
   inflections?: string[]
-): SeedLexiconEntry {
+): WordInventoryEntry {
   return {
-    lemmaId,
+    lexemeId,
     sourceLemma,
     targetLemma,
     pos,

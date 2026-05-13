@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
+import { ExtensionPopup } from "@immersionkit/ui";
 import {
   PROFICIENCY_SEED_OPTIONS,
   getSiteEnabledForHost,
   loadActiveTabContext,
   loadCheckpointEligibilityPreview,
+  loadFirstRunIntroVisible,
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
+  markFirstRunIntroSeen,
   notifySettingsRefresh,
   upsertSiteEnabledState,
   type ActiveTabContext,
@@ -14,7 +17,7 @@ import {
   type SettingsState,
   type SiteSettingsMap,
   type VocabStats
-} from "../options/state";
+} from "../app-state/settings-state";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -29,7 +32,8 @@ const DEFAULT_TAB_CONTEXT: ActiveTabContext = {
   hostname: null,
   url: null,
   isSupportedPage: false,
-  supportMessage: "Open an HTTP(S) page to manage this site."
+  supportMessage:
+    "Open a normal HTTP(S) article, blog, or docs page to use reading mode."
 };
 
 const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
@@ -37,6 +41,8 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   activeBandLabel: null,
   nextBandId: null,
   nextBandLabel: null,
+  checkpointBlueprint: null,
+  checkpointScopeLabels: [],
   checkpointRequired: false,
   checkpointIsOnlyBlocker: false,
   unmetRequirements: []
@@ -49,6 +55,7 @@ export function PopupApp() {
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
   const [checkpointPreview, setCheckpointPreview] =
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
+  const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,12 +66,14 @@ export function PopupApp() {
       loadedSettingsState,
       loadedSiteSettings,
       loadedVocabStats,
-      loadedCheckpointPreview
+      loadedCheckpointPreview,
+      loadedFirstRunIntroVisible
     ] = await Promise.all([
       loadSettingsState(),
       loadSiteSettingsMap(),
       loadVocabStats(),
-      loadCheckpointEligibilityPreview()
+      loadCheckpointEligibilityPreview(),
+      loadFirstRunIntroVisible()
     ]);
 
     return {
@@ -72,7 +81,8 @@ export function PopupApp() {
       loadedSettingsState,
       loadedSiteSettings,
       loadedVocabStats,
-      loadedCheckpointPreview
+      loadedCheckpointPreview,
+      loadedFirstRunIntroVisible
     };
   }, []);
 
@@ -87,6 +97,7 @@ export function PopupApp() {
       setSiteSettings(snapshot.loadedSiteSettings);
       setVocabStats(snapshot.loadedVocabStats);
       setCheckpointPreview(snapshot.loadedCheckpointPreview);
+      setShowFirstRunIntro(snapshot.loadedFirstRunIntroVisible);
     } catch {
       setErrorMessage("Unable to load your reading controls right now.");
     } finally {
@@ -131,117 +142,58 @@ export function PopupApp() {
     chrome.runtime.openOptionsPage();
   }, []);
 
+  const handleDismissFirstRunIntro = useCallback(async () => {
+    setShowFirstRunIntro(false);
+    await markFirstRunIntroSeen();
+  }, []);
+
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
-      ?.label ?? "Beginner";
+      ?.label ?? "False beginner";
   const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
-  const pageStatus = getPageStatus({
-    activeTab,
-    isLoading,
-    siteEnabled
+  const progressCopy = formatPopupProgressCopy({
+    checkpointPreview,
+    vocabStats
   });
 
   return (
-    <main className="panel-shell popup-shell">
-      <div className="popup-topbar">
-        <div className="brand-mark">ImmersionKit</div>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="Open settings"
-          onClick={handleOpenOptions}
-        >
-          <SettingsIcon />
-        </button>
-      </div>
-
-      <section className="panel-card hero-card" aria-live="polite">
-        <div className="hero-copy">
-          <span className={pageStatus.badgeClass}>{pageStatus.badgeLabel}</span>
-          <h1 className="hero-title">{pageStatus.title}</h1>
-          <p className="hero-text muted">{pageStatus.description}</p>
-        </div>
-
-        <div className="hero-toggle">
-          <button
-            type="button"
-            className={`power-toggle${siteEnabled ? " is-on" : ""}`}
-            role="switch"
-            aria-checked={siteEnabled}
-            aria-label={siteEnabled ? "Pause reading mode on this site" : "Enable reading mode on this site"}
-            disabled={!activeTab.isSupportedPage || isLoading || isSavingSite}
-            onClick={() => {
-              void handleSiteToggle();
-            }}
-          >
-            <PowerIcon />
-          </button>
-          <p className="toggle-caption">
-            {isSavingSite
-              ? "Saving..."
-              : siteEnabled
-                ? "On for this site"
-                : "Off for this site"}
-          </p>
-        </div>
-      </section>
-
-      <section className="panel-card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Your Progress</p>
-            <h2>Learning snapshot</h2>
-          </div>
-          <span className="badge-soft">{discoverySummary}</span>
-        </div>
-
-        <div className="metric-grid metric-grid--compact">
-          <MetricCard label="Reading level" value={proficiencyLabel} />
-          <MetricCard label="Comfortable" value={formatCount(vocabStats.known)} />
-          <MetricCard label="In practice" value={formatCount(vocabStats.learning)} />
-          <MetricCard label="Tracked words" value={formatCount(vocabStats.total)} />
-        </div>
-
-        <p className="support-line muted">
-          {formatPopupCheckpointHint(checkpointPreview)}
-        </p>
-
-        <p className="support-line muted">
-          {translationEnabled
-            ? "Sentence help is enabled globally."
-            : "Sentence help is currently off."}{" "}
-          Fine-tune the rest in{" "}
-          <button type="button" className="inline-link" onClick={handleOpenOptions}>
-            settings
-          </button>
-          .
-        </p>
-      </section>
-
-      {errorMessage ? (
-        <section className="status-banner status-banner--error" role="status">
-          <p>{errorMessage}</p>
-        </section>
-      ) : null}
-    </main>
-  );
-}
-
-type MetricCardProps = {
-  label: string;
-  value: number | string;
-};
-
-function MetricCard({ label, value }: MetricCardProps) {
-  const valueIsText = typeof value === "string";
-
-  return (
-    <div className="metric-card">
-      <p className="metric-label">{label}</p>
-      <p className={`metric-value${valueIsText ? " metric-value--text" : ""}`}>{value}</p>
-    </div>
+    <>
+      <ExtensionPopup
+        chromeFrame={false}
+        state={activeTab.isSupportedPage && !isLoading ? "supported" : "unsupported"}
+        siteState={siteEnabled ? "on" : "paused"}
+        bandTitle={checkpointPreview.activeBandLabel ?? proficiencyLabel}
+        bandSubtitle={`${discoverySummary}. Words + phrases.`}
+        progressValue={estimateProgressValue(checkpointPreview)}
+        progressLabel={progressCopy.progressLabel}
+        progressDetail={progressCopy.progressDetail}
+        localFooterText={progressCopy.localFooterText}
+        unsupportedMessage={activeTab.supportMessage}
+        firstRunIntro={showFirstRunIntro}
+        errorMessage={errorMessage}
+        isSavingSite={isSavingSite}
+        metrics={[
+          { label: "Comfortable", value: formatCount(vocabStats.known), icon: "check" },
+          { label: "In practice", value: formatCount(vocabStats.learning), icon: "pause" },
+          { label: "Tracked words", value: formatCount(vocabStats.total), icon: "spark" }
+        ]}
+        sentenceHelpSummary={
+          translationEnabled
+            ? "Stored on this device. Sentence help is enabled."
+            : "Stored on this device. Sentence help is off."
+        }
+        onSiteToggle={() => {
+          void handleSiteToggle();
+        }}
+        onOpenSettings={handleOpenOptions}
+        onAdjustPace={handleOpenOptions}
+        onDismissIntro={() => {
+          void handleDismissFirstRunIntro();
+        }}
+      />
+    </>
   );
 }
 
@@ -263,23 +215,50 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
+export function formatPopupProgressCopy(input: {
+  checkpointPreview: CheckpointEligibilityPreview;
+  vocabStats: VocabStats;
+}): {
+  progressLabel: string;
+  progressDetail: string;
+  localFooterText: string;
+} {
+  if (input.vocabStats.total === 0 || !input.checkpointPreview.activeBandId) {
+    return {
+      progressLabel: "Progress starts as you read",
+      progressDetail:
+        "Reading history and local evidence build on this device while you browse supported pages.",
+      localFooterText:
+        "Stored on this device. Sentence help is off unless you turn it on."
+    };
+  }
+
+  const progressDetail = formatPopupCheckpointHint(input.checkpointPreview);
+  return {
+    progressLabel: progressDetail,
+    progressDetail,
+    localFooterText:
+      "Stored on this device. Sentence help is off unless you turn it on."
+  };
+}
+
 function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): string {
   if (!preview.activeBandId) {
-    return "Next step: loading your reading progress.";
+    return "Next step: build reading history on supported pages.";
   }
 
   const activeBand = preview.activeBandLabel ?? preview.activeBandId;
   const nextBand = preview.nextBandLabel ?? preview.nextBandId;
 
   if (preview.checkpointIsOnlyBlocker) {
-    return `Next step: ${activeBand} is ready to advance in settings.`;
+    return `Next step: ${activeBand} is ready to widen the reading band in settings.`;
   }
 
   if (preview.unmetRequirements.length > 0) {
     const missingCount = preview.unmetRequirements.filter(
       (requirement) => requirement !== "checkpoint"
     ).length;
-    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading signal${missingCount === 1 ? "" : "s"} left.`;
+    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading evidence item${missingCount === 1 ? "" : "s"} left.`;
   }
 
   if (nextBand) {
@@ -289,84 +268,13 @@ function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): strin
   return `Next step: ${activeBand} is the latest available level.`;
 }
 
-function getPageStatus(input: {
-  activeTab: ActiveTabContext;
-  isLoading: boolean;
-  siteEnabled: boolean;
-}): {
-  badgeClass: string;
-  badgeLabel: string;
-  title: string;
-  description: string;
-} {
-  if (input.isLoading) {
-    return {
-      badgeClass: "status-badge status-badge--warning",
-      badgeLabel: "Checking",
-      title: "Getting your current page ready.",
-      description: "Loading your reading controls and saved progress."
-    };
+function estimateProgressValue(preview: CheckpointEligibilityPreview): number {
+  if (!preview.activeBandId) {
+    return 0;
   }
 
-  if (!input.activeTab.isSupportedPage) {
-    return {
-      badgeClass: "status-badge status-badge--warning",
-      badgeLabel: "Unavailable",
-      title: "Open a regular webpage to use the site toggle.",
-      description: input.activeTab.supportMessage
-    };
-  }
-
-  if (input.siteEnabled) {
-    return {
-      badgeClass: "status-badge status-badge--on",
-      badgeLabel: "Active",
-      title: "Spanish hints are live while you read.",
-      description: "Use the power button any time a page feels too busy."
-    };
-  }
-
-  return {
-    badgeClass: "status-badge status-badge--off",
-    badgeLabel: "Paused",
-    title: "This site is taking a break.",
-    description: "Turn it back on whenever you want vocabulary support here again."
-  };
-}
-
-function PowerIcon() {
-  return (
-    <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 3.5V11.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M7.2 5.8C5.2 7.2 4 9.5 4 12C4 16.4 7.6 20 12 20C16.4 20 20 16.4 20 12C20 9.5 18.8 7.2 16.8 5.8"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 8.75C10.2 8.75 8.75 10.2 8.75 12C8.75 13.8 10.2 15.25 12 15.25C13.8 15.25 15.25 13.8 15.25 12C15.25 10.2 13.8 8.75 12 8.75Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M4.7 13.2L3.5 12L4.7 10.8L5.1 9.2L6.8 8.8L8 7.6L9.6 8L11.1 7.3L12 5.8L12.9 7.3L14.4 8L16 7.6L17.2 8.8L18.9 9.2L19.3 10.8L20.5 12L19.3 13.2L18.9 14.8L17.2 15.2L16 16.4L14.4 16L12.9 16.7L12 18.2L11.1 16.7L9.6 16L8 16.4L6.8 15.2L5.1 14.8L4.7 13.2Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  const publicSignalsLeft = preview.unmetRequirements.filter(
+    (requirement) => requirement !== "checkpoint"
+  ).length;
+  return Math.max(12, Math.min(100, 100 - publicSignalsLeft * 20));
 }

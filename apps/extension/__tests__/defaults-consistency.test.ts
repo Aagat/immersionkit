@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_DISCOVERY_RATE, DEFAULT_SETTINGS } from "../src/content/constants";
 import { loadProcessingContext } from "../src/content/storage";
-import { loadSettingsState, normalizeDiscoveryRate } from "../src/options/state";
+import { loadSettingsState, normalizeDiscoveryRate } from "../src/app-state/settings-state";
 import { installChromeStub } from "./helpers/chrome-stub";
 
 describe("default settings consistency", () => {

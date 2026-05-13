@@ -1,6 +1,4 @@
-import { normalizeToken, tokenizePlainText } from "@immersionkit/shared";
-
-const WORD_PATTERN = /[A-Za-z]+(?:'[A-Za-z]+)*/g;
+import { normalizeToken, tokenizeForLookup, tokenizePlainText } from "@immersionkit/shared";
 
 export type TextSegment =
   | {
@@ -21,10 +19,10 @@ export function segmentText(input: string): TextSegment[] {
   const segments: TextSegment[] = [];
   let cursor = 0;
 
-  for (const match of input.matchAll(WORD_PATTERN)) {
-    const value = match[0];
-    const start = match.index ?? 0;
-    const end = start + value.length;
+  for (const token of tokenizeForLookup(input)) {
+    const value = token.raw;
+    const start = token.start;
+    const end = token.end;
 
     if (start > cursor) {
       segments.push({
@@ -35,23 +33,13 @@ export function segmentText(input: string): TextSegment[] {
       });
     }
 
-    const normalized = normalizeToken(value);
-    if (!normalized) {
-      segments.push({
-        kind: "text",
-        value,
-        start,
-        end
-      });
-    } else {
-      segments.push({
-        kind: "word",
-        value,
-        normalized,
-        start,
-        end
-      });
-    }
+    segments.push({
+      kind: "word",
+      value,
+      normalized: token.normalized,
+      start,
+      end
+    });
 
     cursor = end;
   }

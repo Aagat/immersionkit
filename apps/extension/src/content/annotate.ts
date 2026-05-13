@@ -1,11 +1,19 @@
-import { hashString, normalizeToken } from "@immersionkit/shared";
+import {
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+  explainCognatePatternMatch,
+  splitTextIntoWindows
+} from "@immersionkit/shared";
 import type {
   LearningItem,
-  SeedLexiconEntry,
-  SentenceAnalysisEntry,
+  SupportedSourceLanguage,
+  SupportedTargetLanguage,
+  TextWindow,
   UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
+import type { WordRenderEntry } from "../render-units/render-units";
+import { DIAGNOSTICS_ENABLED } from "../build-profile";
 
 import {
   IMMERSIONKIT_NODE_ATTRIBUTE,
@@ -21,20 +29,36 @@ import type {
   TokenMetadata,
   TokenStatusUpdatedDetail
 } from "./contracts";
-import { findSentenceForOffset, scoreSentenceCandidates, segmentSentences } from "./sentences";
-import type { CachedContextSkipDecision, CachedPhraseMatch } from "./storage";
+import {
+  type CachedPhraseMatch,
+  type CachedWordRenderDecision,
+  type RuntimeAnalysisContext
+} from "./storage";
 import { preserveWordCasing, segmentText } from "./tokenize";
+import {
+  planTextReplacements,
+  type ActivationDecision,
+  type PhraseActivationInput,
+  type PhraseRenderRejection,
+  type PhraseReplacementSpan,
+  type WordActivationInput,
+  type WordReplacementSpan
+} from "./replacement-planner";
 
 export type ProcessTextNodeContext = {
   discoveryRate: number;
   samplingSeed: string;
   createNodeId: () => string;
-  lexiconLookup: Map<string, SeedLexiconEntry>;
-  vocabByLemmaId: Map<string, UserVocabEntry>;
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
+  wordRenderIndex: Map<string, WordRenderEntry>;
+  vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
-  isDueForReview?: (lemmaId: string) => boolean;
-  cachedContextSkipDecisions?: Map<string, CachedContextSkipDecision[]>;
+  isDueForReview?: (lexemeId: string) => boolean;
+  analysisContext?: RuntimeAnalysisContext;
+  cachedWordRenderDecisions?: Map<string, CachedWordRenderDecision[]>;
   cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
+  sentenceHintPhrases?: readonly string[];
   learningItemsByUnitRefId?: Map<string, LearningItem>;
   shouldActivateWord?: (input: WordActivationInput) => ActivationDecision;
   shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
@@ -55,31 +79,12 @@ export type ProcessTextNodeResult = {
   unrenderedPhraseRejections: PhraseRenderRejection[];
 };
 
-export type ActivationDecision = {
-  eligible: boolean;
-  configId?: string;
-  activeBandId?: string | null;
-  discoveryRateFloor?: number | null;
-  activationReason?: string | null;
-  skipReason?: string | null;
-};
-
-export type WordActivationInput = {
-  lexiconEntry: SeedLexiconEntry;
-  learningItem: LearningItem | null;
-  status: VocabStatus;
-  isDueForReview: boolean;
-};
-
-export type PhraseActivationInput = {
-  phraseId: string;
-  sourceText: string;
-  learningItem: LearningItem;
-  confidence: number;
-  sourceKind: CachedPhraseMatch["sourceKind"];
-  category: CachedPhraseMatch["category"];
-  isDueForReview: boolean;
-};
+export type {
+  ActivationDecision,
+  WordActivationInput,
+  PhraseActivationInput,
+  PhraseRenderRejection
+} from "./replacement-planner";
 
 export function processTextNode(
   node: Text,
@@ -95,7 +100,10 @@ export function processTextNode(
     return emptyResult();
   }
 
-  const windows = splitTextIntoProcessableWindows(sourceText);
+  const windows = splitTextIntoWindows({
+    text: sourceText,
+    maxLength: MAX_TEXT_NODE_LENGTH
+  });
   if (windows.length > 1) {
     return processWindowedTextNode(node, context, windows);
   }
@@ -170,8 +178,7 @@ function renderTextWindow(input: {
   result: ProcessTextNodeResult;
 } {
   const { sourceText, context, offsetBase } = input;
-  const segments = segmentText(sourceText);
-  if (segments.length === 0) {
+  if (segmentText(sourceText).length === 0) {
     return {
       replaced: false,
       node: document.createTextNode(sourceText),
@@ -179,239 +186,70 @@ function renderTextWindow(input: {
     };
   }
 
-  const sentences = segmentSentences(sourceText);
-  const phraseCandidates = selectPhraseRenderCandidates({
-    sourceText,
-    sentences,
-    cachedPhraseMatchesBySentenceHash: context.cachedPhraseMatchesBySentenceHash,
-    learningItemsByUnitRefId: context.learningItemsByUnitRefId,
-    shouldActivatePhrase: context.shouldActivatePhrase
-  });
-  const injectedSentenceHashes = new Set<string>();
-  const wrapper = document.createElement("span");
   const nodeId = context.createNodeId();
-
-  wrapper.className = "ik-node";
-  wrapper.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, nodeId);
-  wrapper.setAttribute(IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE, encodeOriginalText(sourceText));
-  wrapper.setAttribute("data-ik-render-layer", "word");
-
-  let injectedCount = 0;
-  let knownCount = 0;
-  let discoveryCount = 0;
-  let contextSkippedCount = 0;
-  let curriculumSkippedWordCount = 0;
-  let phraseInjectedCount = 0;
-  let tokenIndex = 0;
-  let cursor = 0;
-
-  for (const segment of segments) {
-    const phraseCandidate = phraseCandidates.acceptedByStart.get(segment.start);
-    if (phraseCandidate) {
-      if (cursor < phraseCandidate.start) {
-        wrapper.append(sourceText.slice(cursor, phraseCandidate.start));
-      }
-
-      const tokenId = `${nodeId}-t${tokenIndex}`;
-      tokenIndex += 1;
-      wrapper.append(
-        createPhraseElement({
-          tokenId,
-          nodeId,
-          sourceText: sourceText.slice(phraseCandidate.start, phraseCandidate.end),
-          targetText: phraseCandidate.targetText,
-          sentence: phraseCandidate.sentence,
-          phraseId: phraseCandidate.phraseId,
-          itemId: phraseCandidate.itemId,
-          category: phraseCandidate.category,
-          sourceKind: phraseCandidate.sourceKind,
-          ruleId: phraseCandidate.ruleId,
-          confidence: phraseCandidate.confidence,
-          isDueForReview: phraseCandidate.isDueForReview
-        })
-      );
-
-      injectedSentenceHashes.add(phraseCandidate.sentence.hash);
-      injectedCount += 1;
-      discoveryCount += 1;
-      phraseInjectedCount += 1;
-      cursor = phraseCandidate.end;
-      continue;
-    }
-
-    if (segment.start < cursor) {
-      continue;
-    }
-
-    if (cursor < segment.start) {
-      wrapper.append(sourceText.slice(cursor, segment.start));
-    }
-
-    if (segment.kind === "text") {
-      wrapper.append(segment.value);
-      cursor = segment.end;
-      continue;
-    }
-
-    const lexiconEntry = context.lexiconLookup.get(segment.normalized);
-    if (!lexiconEntry) {
-      wrapper.append(segment.value);
-      cursor = segment.end;
-      continue;
-    }
-
-    const status = getVocabStatus(lexiconEntry.lemmaId, context.vocabByLemmaId);
-    if (status === "ignored") {
-      wrapper.append(segment.value);
-      cursor = segment.end;
-      continue;
-    }
-
-    const wordKind: InjectedWordKind = status === "known" ? "known" : "discovery";
-    const isDueForReview = context.isDueForReview?.(lexiconEntry.lemmaId) ?? false;
-    const learningItem =
-      context.learningItemsByUnitRefId?.get(lexiconEntry.lemmaId) ?? null;
-    let activationDecision: ActivationDecision | null = null;
-    if (
-      status === "new" &&
-      !isDueForReview &&
-      context.shouldActivateWord
-    ) {
-      activationDecision = context.shouldActivateWord({
-        lexiconEntry,
-        learningItem,
-        status,
-        isDueForReview
-      });
-      if (!activationDecision.eligible) {
-        wrapper.append(segment.value);
-        curriculumSkippedWordCount += 1;
-        cursor = segment.end;
-        continue;
-      }
-    }
-
-    if (
-      wordKind === "discovery" &&
-      !isDueForReview &&
-      !shouldInjectDiscoveryToken(
-        `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`,
-        effectiveDiscoveryRate(context.discoveryRate, activationDecision)
-      )
-    ) {
-      wrapper.append(segment.value);
-      cursor = segment.end;
-      continue;
-    }
-
-    const sentence = findSentenceForOffset(sentences, segment.start);
-    const cachedSkipDecision = sentence
-      ? findCachedSkipDecision({
-          decisionsBySentenceHash: context.cachedContextSkipDecisions,
-          sentenceHash: sentence.hash,
-          lemmaId: lexiconEntry.lemmaId,
-          sourceToken: segment.value
-        })
-      : null;
-    if (cachedSkipDecision) {
-      wrapper.append(segment.value);
-      contextSkippedCount += 1;
-      cursor = segment.end;
-      continue;
-    }
-
-    const replacement = preserveWordCasing(segment.value, lexiconEntry.targetLemma);
-    if (sentence) {
-      injectedSentenceHashes.add(sentence.hash);
-    }
-
-    const tokenId = `${nodeId}-t${tokenIndex}`;
-    tokenIndex += 1;
-
-    const tokenElement = createTokenElement({
-      tokenId,
+  const plan = planTextReplacements({
+    sourceText,
+    context: {
+      ...context,
       nodeId,
-      sourceToken: segment.value,
-      targetToken: replacement,
-      sentence,
-      lexiconEntry,
-      status,
-      wordKind,
-      isDueForReview,
-      activationReason: activationDecision?.activationReason ?? null
-    });
+      sourceLanguage: context.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE,
+      targetLanguage: context.targetLanguage ?? DEFAULT_TARGET_LANGUAGE
+    },
+    offsetBase
+  });
 
-    wrapper.append(tokenElement);
-    cursor = segment.end;
-    injectedCount += 1;
-
-    if (wordKind === "known") {
-      knownCount += 1;
-    } else {
-      discoveryCount += 1;
-    }
-  }
-
-  if (cursor < sourceText.length) {
-    wrapper.append(sourceText.slice(cursor));
-  }
-
-  const scoredSentenceCandidates = scoreSentenceCandidates(
-    sentences,
-    nodeId,
-    injectedSentenceHashes,
-    context.isKnownWordForScoring
-  );
-  const sentenceCandidates = context.allowPhraseOnlyCandidates
-    ? scoredSentenceCandidates
-    : scoredSentenceCandidates.filter((candidate) => candidate.reason === "injected-token");
-
-  const phraseHints = collectCandidatePhraseHints(sentenceCandidates);
-  if (phraseHints.length > 0) {
-    wrapper.setAttribute("data-ik-render-layer", "word phrase-candidate");
-    wrapper.setAttribute("data-ik-phrase-hints", phraseHints.join("|"));
-  }
-
-  if (phraseInjectedCount > 0) {
-    wrapper.setAttribute(
-      "data-ik-render-layer",
-      phraseHints.length > 0 ? "word phrase phrase-candidate" : "word phrase"
-    );
-    wrapper.setAttribute(
-      "data-ik-phrase-selected",
-      [...phraseCandidates.acceptedByStart.values()]
-        .map((candidate) => candidate.phraseId)
-        .join("|")
-    );
-  }
-
-  if (phraseCandidates.rejected.length > 0) {
-    wrapper.setAttribute(
-      "data-ik-phrase-rejection-details",
-      JSON.stringify(phraseCandidates.rejected.slice(0, 8))
-    );
-  }
-
-  if (sentenceCandidates.length > 0) {
-    wrapper.setAttribute(
-      "data-ik-sentence-candidate-hashes",
-      sentenceCandidates.map((candidate) => candidate.sentenceHash).join("|")
-    );
-  }
-
-  if (injectedCount === 0 && sentenceCandidates.length === 0) {
+  if (plan.spans.length === 0) {
     return {
       replaced: false,
       node: document.createTextNode(sourceText),
       result: {
         ...emptyResult(),
-        contextSkippedCount,
-        phraseRejectedCount: phraseCandidates.rejected.length,
-        curriculumSkippedWordCount,
-        curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount,
-        unrenderedPhraseRejections: phraseCandidates.rejected
+        contextSkippedCount: plan.diagnostics.contextSkippedCount,
+        phraseRejectedCount: plan.diagnostics.phraseRejectedCount,
+        curriculumSkippedWordCount: plan.diagnostics.curriculumSkippedWordCount,
+        curriculumSkippedPhraseCount: plan.diagnostics.curriculumSkippedPhraseCount,
+        sentenceCandidates: plan.sentenceCandidates,
+        unrenderedPhraseRejections: plan.phraseRejections
       }
     };
+  }
+
+  const wrapper = renderReplacementPlan(plan);
+  const phraseHints = collectCandidatePhraseHints(plan.sentenceCandidates);
+  if (phraseHints.length > 0) {
+    setDiagnosticAttribute(wrapper, "data-ik-render-layer", "word phrase-candidate");
+    setDiagnosticAttribute(wrapper, "data-ik-phrase-hints", phraseHints.join("|"));
+  }
+
+  if (plan.diagnostics.phraseInjectedCount > 0) {
+    setDiagnosticAttribute(
+      wrapper,
+      "data-ik-render-layer",
+      phraseHints.length > 0 ? "word phrase phrase-candidate" : "word phrase"
+    );
+    setDiagnosticAttribute(
+      wrapper,
+      "data-ik-phrase-selected",
+      plan.spans
+        .flatMap((span) => (span.kind === "phrase" ? [span.phraseId] : []))
+        .join("|")
+    );
+  }
+
+  if (plan.phraseRejections.length > 0) {
+    setDiagnosticAttribute(
+      wrapper,
+      "data-ik-phrase-rejection-details",
+      JSON.stringify(plan.phraseRejections.slice(0, 8))
+    );
+  }
+
+  if (plan.sentenceCandidates.length > 0) {
+    setDiagnosticAttribute(
+      wrapper,
+      "data-ik-sentence-candidate-hashes",
+      plan.sentenceCandidates.map((candidate) => candidate.sentenceHash).join("|")
+    );
   }
 
   return {
@@ -419,18 +257,55 @@ function renderTextWindow(input: {
     node: wrapper,
     result: {
       replaced: true,
-      injectedCount,
-      knownCount,
-      discoveryCount,
-      contextSkippedCount,
-      phraseInjectedCount,
-      phraseRejectedCount: phraseCandidates.rejected.length,
-      curriculumSkippedWordCount,
-      curriculumSkippedPhraseCount: phraseCandidates.curriculumSkippedCount,
-      sentenceCandidates,
+      injectedCount: plan.diagnostics.injectedCount,
+      knownCount: plan.diagnostics.knownCount,
+      discoveryCount: plan.diagnostics.discoveryCount,
+      contextSkippedCount: plan.diagnostics.contextSkippedCount,
+      phraseInjectedCount: plan.diagnostics.phraseInjectedCount,
+      phraseRejectedCount: plan.diagnostics.phraseRejectedCount,
+      curriculumSkippedWordCount: plan.diagnostics.curriculumSkippedWordCount,
+      curriculumSkippedPhraseCount: plan.diagnostics.curriculumSkippedPhraseCount,
+      sentenceCandidates: plan.sentenceCandidates,
       unrenderedPhraseRejections: []
     }
   };
+}
+
+function renderReplacementPlan(plan: {
+  sourceText: string;
+  nodeId: string;
+  spans: readonly (WordReplacementSpan | PhraseReplacementSpan)[];
+}): HTMLElement {
+  const wrapper = document.createElement("span");
+  let cursor = 0;
+
+  wrapper.className = "ik-node";
+  wrapper.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, plan.nodeId);
+  wrapper.setAttribute(
+    IMMERSIONKIT_ORIGINAL_TEXT_ATTRIBUTE,
+    encodeOriginalText(plan.sourceText)
+  );
+  setDiagnosticAttribute(wrapper, "data-ik-render-layer", "word");
+
+  for (const span of plan.spans) {
+    if (cursor < span.start) {
+      wrapper.append(plan.sourceText.slice(cursor, span.start));
+    }
+
+    if (span.kind === "word") {
+      wrapper.append(createTokenElement(span));
+    } else {
+      wrapper.append(createPhraseElement(span));
+    }
+
+    cursor = span.end;
+  }
+
+  if (cursor < plan.sourceText.length) {
+    wrapper.append(plan.sourceText.slice(cursor));
+  }
+
+  return wrapper;
 }
 
 export function restoreAnnotatedNodes(root: ParentNode = document): number {
@@ -477,7 +352,12 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
   const sourceToken = tokenElement.getAttribute("data-ik-source-token");
   const targetToken = tokenElement.getAttribute("data-ik-target-token");
   const sourceLemma = tokenElement.getAttribute("data-ik-source-lemma");
-  const lemmaId = tokenElement.getAttribute("data-ik-lemma-id");
+  const lexemeId = tokenElement.getAttribute("data-ik-lexeme-id");
+  const renderUnitId = tokenElement.getAttribute("data-ik-render-unit-id");
+  const sourceLanguage =
+    tokenElement.getAttribute("data-ik-source-language") ?? DEFAULT_SOURCE_LANGUAGE;
+  const targetLanguage =
+    tokenElement.getAttribute("data-ik-target-language") ?? DEFAULT_TARGET_LANGUAGE;
   const pos = tokenElement.getAttribute("data-ik-pos");
   const status = tokenElement.getAttribute("data-ik-status");
   const wordKind = tokenElement.getAttribute("data-ik-word-kind");
@@ -488,7 +368,7 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
     !sourceToken ||
     !targetToken ||
     !sourceLemma ||
-    !lemmaId ||
+    !lexemeId ||
     !pos ||
     !status ||
     !wordKind
@@ -503,19 +383,21 @@ export function readTokenMetadata(tokenElement: HTMLElement): TokenMetadata | nu
   return {
     tokenId,
     nodeId,
-    sourceLanguage: "en",
-    targetLanguage: "es",
+    sourceLanguage,
+    targetLanguage,
     sourceToken,
     targetToken,
     sourceLemma,
-    lemmaId,
-    pos: pos as SeedLexiconEntry["pos"],
+    lexemeId,
+    renderUnitId,
+    pos: pos as WordRenderEntry["pos"],
     status: safeStatus,
     wordKind: safeWordKind,
     sentence: tokenElement.getAttribute("data-ik-sentence"),
     sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash"),
     exampleSentenceEnglish: tokenElement.getAttribute("data-ik-example-sentence-english"),
-    exampleSentenceNative: tokenElement.getAttribute("data-ik-example-sentence-native")
+    exampleSentenceNative: tokenElement.getAttribute("data-ik-example-sentence-native"),
+    curriculumReason: tokenElement.getAttribute("data-ik-curriculum-reason")
   };
 }
 
@@ -529,6 +411,10 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
   const category = tokenElement.getAttribute("data-ik-phrase-category");
   const sourceKind = tokenElement.getAttribute("data-ik-phrase-source-kind");
   const ruleId = tokenElement.getAttribute("data-ik-phrase-rule-id");
+  const sourceLanguage =
+    tokenElement.getAttribute("data-ik-source-language") ?? DEFAULT_SOURCE_LANGUAGE;
+  const targetLanguage =
+    tokenElement.getAttribute("data-ik-target-language") ?? DEFAULT_TARGET_LANGUAGE;
 
   if (
     !tokenId ||
@@ -536,10 +422,7 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
     !sourceText ||
     !targetText ||
     !phraseId ||
-    !itemId ||
-    !category ||
-    !sourceKind ||
-    !ruleId
+    !itemId
   ) {
     return null;
   }
@@ -550,8 +433,8 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
   return {
     tokenId,
     nodeId,
-    sourceLanguage: "en",
-    targetLanguage: "es",
+    sourceLanguage,
+    targetLanguage,
     sourceText,
     targetText,
     phraseId,
@@ -563,7 +446,8 @@ export function readPhraseMetadata(tokenElement: HTMLElement): PhraseMetadata | 
     dueStatus: tokenElement.getAttribute("data-ik-due-status"),
     schedulerReason: tokenElement.getAttribute("data-ik-scheduler-reason"),
     sentence: tokenElement.getAttribute("data-ik-sentence"),
-    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash")
+    sentenceHash: tokenElement.getAttribute("data-ik-sentence-hash"),
+    curriculumReason: tokenElement.getAttribute("data-ik-curriculum-reason")
   };
 }
 
@@ -577,15 +461,13 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   }
 
   token.setAttribute("data-ik-status", update.status);
-  token.classList.remove("ik-word--known", "ik-word--discovery", "ik-word--ignored");
+  token.setAttribute("data-status", toUiTokenStatus(update.status));
 
   if (update.status === "known") {
     const targetToken = token.getAttribute("data-ik-target-token");
     if (targetToken) {
       token.textContent = targetToken;
     }
-
-    token.classList.add("ik-word--known");
     token.setAttribute("data-ik-word-kind", "known");
     return true;
   }
@@ -595,8 +477,6 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
     if (sourceToken) {
       token.textContent = sourceToken;
     }
-
-    token.classList.add("ik-word--ignored");
     token.setAttribute("data-ik-word-kind", "discovery");
     return true;
   }
@@ -605,55 +485,8 @@ export function applyTokenStatusUpdate(update: TokenStatusUpdatedDetail): boolea
   if (targetToken) {
     token.textContent = targetToken;
   }
-
-  token.classList.add("ik-word--discovery");
   token.setAttribute("data-ik-word-kind", "discovery");
   return true;
-}
-
-export function applySentenceAnalysisDecisions(
-  entries: readonly SentenceAnalysisEntry[],
-  root: ParentNode = document
-): number {
-  const queryRoot = isQueryRoot(root) ? root : document;
-  let suppressedCount = 0;
-
-  for (const entry of entries) {
-    for (const candidate of entry.contextualWordCandidates) {
-      if (candidate.decision !== "skip" || !candidate.lemmaId) {
-        continue;
-      }
-
-      const tokens = queryRoot.querySelectorAll<HTMLElement>(
-        `[data-ik-sentence-hash='${escapeSelector(entry.sentenceHash)}'][data-ik-lemma-id='${escapeSelector(candidate.lemmaId)}']`
-      );
-
-      for (const token of tokens) {
-        if (token.getAttribute("data-ik-context-decision") === "skip") {
-          continue;
-        }
-
-        const sourceToken = token.getAttribute("data-ik-source-token");
-        const candidateToken = candidate.normalizedText ?? normalizeToken(candidate.tokenText);
-        if (!sourceToken || normalizeToken(sourceToken) !== candidateToken) {
-          continue;
-        }
-
-        token.textContent = sourceToken;
-        token.classList.remove("ik-word--known", "ik-word--discovery");
-        token.classList.add("ik-word--suppressed");
-        token.setAttribute("data-ik-context-decision", "skip");
-        token.setAttribute("data-ik-context-rationale", candidate.rationale ?? "");
-        token.setAttribute(
-          "aria-label",
-          `${sourceToken} kept in English because the local meaning is ambiguous`
-        );
-        suppressedCount += 1;
-      }
-    }
-  }
-
-  return suppressedCount;
 }
 
 function createTokenElement(input: {
@@ -665,34 +498,53 @@ function createTokenElement(input: {
     text: string;
     hash: string;
   } | null;
-  lexiconEntry: SeedLexiconEntry;
+  wordEntry: WordRenderEntry;
   status: VocabStatus;
   wordKind: InjectedWordKind;
   isDueForReview: boolean;
+  activeBandId?: string | null;
   activationReason?: string | null;
 }): HTMLSpanElement {
   const element = document.createElement("span");
 
-  element.className = `ik-word ik-word--${input.wordKind}`;
+  element.className = "ik-ui-mark ik-ui-mark--word";
   element.textContent = input.targetToken;
   element.tabIndex = 0;
   element.setAttribute("role", "button");
-  element.setAttribute("data-ik-source-language", "en");
-  element.setAttribute("data-ik-target-language", "es");
+  element.setAttribute(
+    "data-ik-source-language",
+    input.wordEntry.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE
+  );
+  element.setAttribute(
+    "data-ik-target-language",
+    input.wordEntry.targetLanguage ?? DEFAULT_TARGET_LANGUAGE
+  );
   element.setAttribute("data-ik-unit-kind", "word");
+  element.setAttribute("data-kind", "word");
+  element.setAttribute("data-status", toUiTokenStatus(input.status));
   element.setAttribute("data-ik-phrase-render-hook", "reserved");
   element.setAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE, input.tokenId);
   element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
   element.setAttribute("data-ik-source-token", input.sourceToken);
   element.setAttribute("data-ik-target-token", input.targetToken);
-  element.setAttribute("data-ik-source-lemma", input.lexiconEntry.sourceLemma);
-  element.setAttribute("data-ik-lemma-id", input.lexiconEntry.lemmaId);
-  element.setAttribute("data-ik-status", input.status);
-  element.setAttribute("data-ik-pos", input.lexiconEntry.pos);
-  element.setAttribute("data-ik-word-kind", input.wordKind);
-  element.setAttribute("data-ik-context-decision", "inject");
-  element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
+  element.setAttribute("data-ik-source-lemma", input.wordEntry.sourceLemma);
+  element.setAttribute("data-ik-lexeme-id", input.wordEntry.lexemeId);
+  element.setAttribute("data-ik-render-unit-id", input.wordEntry.renderUnitId);
   element.setAttribute(
+    "data-ik-normalized-source-text",
+    input.wordEntry.normalizedSourceText
+  );
+  element.setAttribute("data-ik-status", input.status);
+  element.setAttribute("data-ik-pos", input.wordEntry.pos);
+  element.setAttribute("data-ik-word-kind", input.wordKind);
+  setDiagnosticAttribute(element, "data-ik-context-decision", "inject");
+  setDiagnosticAttribute(
+    element,
+    "data-ik-due-status",
+    input.isDueForReview ? "due" : "not-due"
+  );
+  setDiagnosticAttribute(
+    element,
     "data-ik-scheduler-reason",
     input.isDueForReview
       ? "due-review"
@@ -703,21 +555,25 @@ function createTokenElement(input: {
           : "discovery-sampling"
   );
   element.setAttribute(
+    "data-ik-curriculum-reason",
+    explainWordCurriculumReason(input)
+  );
+  element.setAttribute(
     "aria-label",
     `${input.sourceToken} translated to ${input.targetToken}`
   );
 
-  if (input.lexiconEntry.exampleSentenceEnglish) {
+  if (input.wordEntry.exampleSentenceEnglish) {
     element.setAttribute(
       "data-ik-example-sentence-english",
-      input.lexiconEntry.exampleSentenceEnglish
+      input.wordEntry.exampleSentenceEnglish
     );
   }
 
-  if (input.lexiconEntry.exampleSentenceNative) {
+  if (input.wordEntry.exampleSentenceNative) {
     element.setAttribute(
       "data-ik-example-sentence-native",
-      input.lexiconEntry.exampleSentenceNative
+      input.wordEntry.exampleSentenceNative
     );
   }
 
@@ -737,6 +593,8 @@ function createPhraseElement(input: {
   nodeId: string;
   sourceText: string;
   targetText: string;
+  sourceLanguage: SupportedSourceLanguage;
+  targetLanguage: SupportedTargetLanguage;
   sentence: {
     text: string;
     hash: string;
@@ -751,28 +609,43 @@ function createPhraseElement(input: {
 }): HTMLSpanElement {
   const element = document.createElement("span");
 
-  element.className = "ik-word ik-word--discovery ik-phrase";
+  element.className = "ik-ui-mark ik-ui-mark--phrase";
   element.textContent = preserveWordCasing(input.sourceText, input.targetText);
   element.tabIndex = 0;
   element.setAttribute("role", "button");
-  element.setAttribute("data-ik-source-language", "en");
-  element.setAttribute("data-ik-target-language", "es");
+  element.setAttribute("data-ik-source-language", input.sourceLanguage);
+  element.setAttribute("data-ik-target-language", input.targetLanguage);
   element.setAttribute("data-ik-unit-kind", "phrase");
+  element.setAttribute("data-kind", "phrase");
+  element.setAttribute("data-status", input.isDueForReview ? "learning" : "new");
   element.setAttribute(IMMERSIONKIT_TOKEN_ATTRIBUTE, input.tokenId);
   element.setAttribute(IMMERSIONKIT_NODE_ATTRIBUTE, input.nodeId);
   element.setAttribute("data-ik-source-token", input.sourceText);
   element.setAttribute("data-ik-target-token", input.targetText);
   element.setAttribute("data-ik-phrase-id", input.phraseId);
   element.setAttribute("data-ik-item-id", input.itemId);
-  element.setAttribute("data-ik-phrase-category", input.category);
-  element.setAttribute("data-ik-phrase-source-kind", input.sourceKind);
-  element.setAttribute("data-ik-phrase-rule-id", input.ruleId);
-  element.setAttribute("data-ik-phrase-confidence", input.confidence.toFixed(3));
-  element.setAttribute("data-ik-context-decision", "inject");
-  element.setAttribute("data-ik-due-status", input.isDueForReview ? "due" : "not-due");
-  element.setAttribute(
+  setDiagnosticAttribute(element, "data-ik-phrase-category", input.category);
+  setDiagnosticAttribute(element, "data-ik-phrase-source-kind", input.sourceKind);
+  setDiagnosticAttribute(element, "data-ik-phrase-rule-id", input.ruleId);
+  setDiagnosticAttribute(
+    element,
+    "data-ik-phrase-confidence",
+    input.confidence.toFixed(3)
+  );
+  setDiagnosticAttribute(element, "data-ik-context-decision", "inject");
+  setDiagnosticAttribute(
+    element,
+    "data-ik-due-status",
+    input.isDueForReview ? "due" : "not-due"
+  );
+  setDiagnosticAttribute(
+    element,
     "data-ik-scheduler-reason",
     input.isDueForReview ? "phrase-due-review" : "phrase-learning-item"
+  );
+  element.setAttribute(
+    "data-ik-curriculum-reason",
+    explainPhraseCurriculumReason(input)
   );
   element.setAttribute("data-ik-sentence", truncateSentenceMetadata(input.sentence.text));
   element.setAttribute("data-ik-sentence-hash", input.sentence.hash);
@@ -784,220 +657,92 @@ function createPhraseElement(input: {
   return element;
 }
 
-type PhraseRenderCandidate = {
-  phraseId: string;
-  itemId: string;
-  sourceKind: string;
-  category: string;
-  ruleId: string;
-  confidence: number;
-  start: number;
-  end: number;
-  sourceText: string;
-  targetText: string;
-  sentence: {
-    text: string;
-    hash: string;
-  };
+function explainWordCurriculumReason(input: {
+  sourceToken: string;
+  targetToken: string;
+  status: VocabStatus;
+  wordKind: InjectedWordKind;
   isDueForReview: boolean;
-};
+  activeBandId?: string | null;
+  activationReason?: string | null;
+}): string {
+  if (input.isDueForReview) {
+    return "This word is due for review and still passed the current reading safety checks.";
+  }
 
-export type PhraseRenderRejection = {
-  phraseId: string;
-  reason: string;
-  sourceText: string | null;
-  targetText: string | null;
-  sourceKind: string | null;
-  category: string | null;
-  sentenceHash: string | null;
-};
+  if (input.status === "known") {
+    return "This word is comfortable enough to appear while you read.";
+  }
 
-function selectPhraseRenderCandidates(input: {
+  const patternReason = explainWordPatternReason(
+    input.sourceToken,
+    input.targetToken,
+    input.activeBandId
+  );
+  if (patternReason) {
+    return patternReason;
+  }
+
+  if (input.activationReason === "beginner-cognate") {
+    return "This is a familiar Spanish-English pair that fits your current focus.";
+  }
+
+  if (input.wordKind === "discovery") {
+    return "This word fits your current reading band and appeared in a safe local context.";
+  }
+
+  return "This item fits your current reading path.";
+}
+
+function explainWordPatternReason(
+  sourceToken: string,
+  targetToken: string,
+  activeBandId: string | null | undefined
+): string | null {
+  return explainCognatePatternMatch({
+    source: sourceToken,
+    target: targetToken,
+    activeBandId
+  });
+}
+
+function explainPhraseCurriculumReason(input: {
   sourceText: string;
-  sentences: ReturnType<typeof segmentSentences>;
-  cachedPhraseMatchesBySentenceHash?: Map<string, CachedPhraseMatch[]>;
-  learningItemsByUnitRefId?: Map<string, LearningItem>;
-  shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
-}): {
-  acceptedByStart: Map<number, PhraseRenderCandidate>;
-  rejected: PhraseRenderRejection[];
-  curriculumSkippedCount: number;
-} {
-  const acceptedByStart = new Map<number, PhraseRenderCandidate>();
-  const rejected: PhraseRenderRejection[] = [];
-  const candidates: PhraseRenderCandidate[] = [];
-  let curriculumSkippedCount = 0;
-
-  for (const sentence of input.sentences) {
-    const matches = input.cachedPhraseMatchesBySentenceHash?.get(sentence.hash) ?? [];
-    for (const match of matches) {
-      const learningItem = input.learningItemsByUnitRefId?.get(match.phraseId);
-      if (!learningItem || learningItem.unitType !== "phrase" || learningItem.suspended) {
-        rejected.push(
-          createPhraseRenderRejection(
-            match,
-            sentence.hash,
-            "missing-active-learning-item"
-          )
-        );
-        continue;
-      }
-
-      if (!hasUsablePhraseTarget(learningItem.targetText)) {
-        rejected.push(
-          createPhraseRenderRejection(match, sentence.hash, "blank-target", {
-            targetText: learningItem.targetText
-          })
-        );
-        continue;
-      }
-
-      const start = sentence.start + match.span.startChar;
-      const end = sentence.start + match.span.endChar;
-      const sourceSlice = input.sourceText.slice(start, end);
-      if (
-        start < sentence.start ||
-        end > sentence.end ||
-        normalizePhraseText(sourceSlice) !== normalizePhraseText(match.sourceText)
-      ) {
-        rejected.push(
-          createPhraseRenderRejection(match, sentence.hash, "span-mismatch", {
-            targetText: learningItem.targetText
-          })
-        );
-        continue;
-      }
-
-      const isDueForReview =
-        Boolean(learningItem.nextReviewAt) &&
-        Date.parse(learningItem.nextReviewAt ?? "") <= Date.now();
-      if (!isDueForReview && input.shouldActivatePhrase) {
-        const curriculumDecision = input.shouldActivatePhrase({
-          phraseId: match.phraseId,
-          sourceText: match.sourceText,
-          learningItem,
-          confidence: match.confidence,
-          sourceKind: match.sourceKind,
-          category: match.category,
-          isDueForReview
-        });
-        if (!curriculumDecision.eligible) {
-          rejected.push(
-            createPhraseRenderRejection(
-              match,
-              sentence.hash,
-              `curriculum-${curriculumDecision.skipReason ?? "skip"}`,
-              { targetText: learningItem.targetText }
-            )
-          );
-          curriculumSkippedCount += 1;
-          continue;
-        }
-      }
-
-      candidates.push({
-        phraseId: match.phraseId,
-        itemId: learningItem.itemId,
-        sourceKind: match.sourceKind,
-        category: match.category,
-        ruleId: match.ruleId,
-        confidence: match.confidence,
-        start,
-        end,
-        sourceText: match.sourceText,
-        targetText: learningItem.targetText,
-        sentence,
-        isDueForReview
-      });
-    }
+  category: string;
+  sourceKind: string;
+  isDueForReview: boolean;
+}): string {
+  if (input.isDueForReview) {
+    return "This phrase is due for review and still fits the current page.";
   }
 
-  const selected: PhraseRenderCandidate[] = [];
-  for (const candidate of candidates.sort(comparePhraseCandidates)) {
-    if (
-      selected.some((existing) =>
-        spansOverlap(candidate.start, candidate.end, existing.start, existing.end)
-      )
-    ) {
-      rejected.push(createPhraseRenderRejectionFromCandidate(candidate, "overlap"));
-      continue;
-    }
-
-    selected.push(candidate);
-    acceptedByStart.set(candidate.start, candidate);
+  if (input.category === "grammar-carrier") {
+    return "This phrase carries a grammar pattern that is easier to learn as a chunk.";
   }
 
-  return {
-    acceptedByStart,
-    rejected,
-    curriculumSkippedCount
-  };
-}
-
-function createPhraseRenderRejection(
-  match: CachedPhraseMatch,
-  sentenceHash: string,
-  reason: string,
-  options: { targetText?: string | null } = {}
-): PhraseRenderRejection {
-  return {
-    phraseId: match.phraseId,
-    reason,
-    sourceText: match.sourceText,
-    targetText: options.targetText ?? null,
-    sourceKind: match.sourceKind,
-    category: match.category,
-    sentenceHash
-  };
-}
-
-function createPhraseRenderRejectionFromCandidate(
-  candidate: PhraseRenderCandidate,
-  reason: string
-): PhraseRenderRejection {
-  return {
-    phraseId: candidate.phraseId,
-    reason,
-    sourceText: candidate.sourceText,
-    targetText: candidate.targetText,
-    sourceKind: candidate.sourceKind,
-    category: candidate.category,
-    sentenceHash: candidate.sentence.hash
-  };
-}
-
-function comparePhraseCandidates(
-  left: PhraseRenderCandidate,
-  right: PhraseRenderCandidate
-): number {
-  const leftLength = left.end - left.start;
-  const rightLength = right.end - right.start;
-  if (leftLength !== rightLength) {
-    return rightLength - leftLength;
+  if (input.sourceKind === "fixed-phrase") {
+    return "This phrase is learned as a chunk because it does not map word-for-word cleanly.";
   }
 
-  if (left.confidence !== right.confidence) {
-    return right.confidence - left.confidence;
+  return "This phrase fits your current phrase focus and is easier to read as a chunk.";
+}
+
+function setDiagnosticAttribute(
+  element: HTMLElement,
+  name: string,
+  value: string
+): void {
+  if (DIAGNOSTICS_ENABLED) {
+    element.setAttribute(name, value);
+  }
+}
+
+function toUiTokenStatus(status: VocabStatus): "new" | "learning" | "known" | "muted" {
+  if (status === "ignored") {
+    return "muted";
   }
 
-  return left.start - right.start;
-}
-
-function spansOverlap(
-  leftStart: number,
-  leftEnd: number,
-  rightStart: number,
-  rightEnd: number
-): boolean {
-  return leftStart < rightEnd && rightStart < leftEnd;
-}
-
-function normalizePhraseText(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, " ").trim();
-}
-
-function hasUsablePhraseTarget(value: string): boolean {
-  return value.trim().length > 0;
+  return status;
 }
 
 function truncateSentenceMetadata(input: string): string {
@@ -1024,107 +769,6 @@ function decodeOriginalText(input: string | null): string {
   }
 }
 
-function getVocabStatus(
-  lemmaId: string,
-  vocabByLemmaId: Map<string, UserVocabEntry>
-): VocabStatus {
-  const entry = vocabByLemmaId.get(lemmaId);
-  return entry?.status ?? "new";
-}
-
-function shouldInjectDiscoveryToken(seed: string, discoveryRate: number): boolean {
-  if (discoveryRate <= 0) {
-    return false;
-  }
-
-  if (discoveryRate >= 1) {
-    return true;
-  }
-
-  const hashPrefix = hashString(seed).slice(0, 8);
-  const hashValue = Number.parseInt(hashPrefix, 16);
-  return hashValue / 0xffffffff <= discoveryRate;
-}
-
-function effectiveDiscoveryRate(
-  baseRate: number,
-  activationDecision: ActivationDecision | null
-): number {
-  const floor = activationDecision?.discoveryRateFloor;
-  if (typeof floor !== "number" || !Number.isFinite(floor)) {
-    return baseRate;
-  }
-
-  return Math.min(1, Math.max(baseRate, floor));
-}
-
-type TextWindow = {
-  text: string;
-  start: number;
-  end: number;
-};
-
-function splitTextIntoProcessableWindows(input: string): TextWindow[] {
-  if (input.length <= MAX_TEXT_NODE_LENGTH) {
-    return [
-      {
-        text: input,
-        start: 0,
-        end: input.length
-      }
-    ];
-  }
-
-  const windows: TextWindow[] = [];
-  let windowStart = 0;
-  let lastSentenceBreak = 0;
-
-  for (const match of input.matchAll(/[^.!?]+[.!?]?/g)) {
-    const raw = match[0] ?? "";
-    const end = (match.index ?? 0) + raw.length;
-
-    if (end - windowStart > MAX_TEXT_NODE_LENGTH && lastSentenceBreak > windowStart) {
-      windows.push(createTextWindow(input, windowStart, lastSentenceBreak));
-      windowStart = lastSentenceBreak;
-    }
-
-    while (end - windowStart > MAX_TEXT_NODE_LENGTH) {
-      const splitAt = findWindowBreak(input, windowStart, MAX_TEXT_NODE_LENGTH);
-      windows.push(createTextWindow(input, windowStart, splitAt));
-      windowStart = splitAt;
-    }
-
-    lastSentenceBreak = end;
-  }
-
-  if (windowStart < input.length) {
-    windows.push(createTextWindow(input, windowStart, input.length));
-  }
-
-  return windows.filter((window) => window.text.length > 0);
-}
-
-function createTextWindow(input: string, start: number, end: number): TextWindow {
-  return {
-    text: input.slice(start, end),
-    start,
-    end
-  };
-}
-
-function findWindowBreak(input: string, start: number, maxLength: number): number {
-  const hardLimit = Math.min(start + maxLength, input.length);
-  const preferredFloor = start + Math.floor(maxLength * 0.6);
-
-  for (let index = hardLimit; index > preferredFloor; index -= 1) {
-    if (/\s/.test(input.charAt(index))) {
-      return index;
-    }
-  }
-
-  return hardLimit;
-}
-
 function collectCandidatePhraseHints(
   candidates: readonly SentenceCandidateMetadata[]
 ): string[] {
@@ -1139,34 +783,6 @@ function normalizeStatus(status: string): VocabStatus {
   }
 
   return "new";
-}
-
-function findCachedSkipDecision(input: {
-  decisionsBySentenceHash?: Map<string, CachedContextSkipDecision[]>;
-  sentenceHash: string;
-  lemmaId: string;
-  sourceToken: string;
-}): CachedContextSkipDecision | null {
-  const decisions = input.decisionsBySentenceHash?.get(input.sentenceHash);
-  if (!decisions || decisions.length === 0) {
-    return null;
-  }
-
-  const normalizedSourceToken = normalizeToken(input.sourceToken);
-  return (
-    decisions.find((decision) => {
-      return (
-        decision.lemmaId === input.lemmaId &&
-        normalizeToken(decision.normalizedText) === normalizedSourceToken
-      );
-    }) ?? null
-  );
-}
-
-function escapeSelector(value: string): string {
-  return globalThis.CSS?.escape
-    ? globalThis.CSS.escape(value)
-    : value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
 function isQueryRoot(

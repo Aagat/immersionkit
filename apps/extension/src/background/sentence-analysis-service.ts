@@ -1,32 +1,47 @@
-import bundledSeedLexiconAsset from "../assets/en-es.seed.v1.json";
 import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
+  DEFAULT_LANGUAGE_PAIR_ID,
+  createFallbackLanguagePairDefinition,
+  buildRenderUnitRuntimeIndex,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
-  detectPhraseCandidatesFromAnalyzerOutput,
-  evaluateContextAwareDecision,
-  getV1AmbiguityGroupForLemma,
+  findRenderUnitTokenSpans,
+  findWordRenderEntriesForAnalyzerToken,
   hashSentence,
   normalizeToken,
-  scorePrototypeSuitability,
+  getLanguagePairDefinition,
+  resolveGrammarConcept,
+  scoreSentenceSuitability,
   scoreSentenceByVocabStatuses,
+  resolveRenderUnitPhraseTarget,
   type AnalyzerChunk,
   type AnalyzerOutput,
   type AnalyzerToken,
   type ContextChunkType,
   type ContextualWordCandidate,
   type CuratedPhraseTargetEntry,
+  type LanguagePairDefinition,
+  type LanguagePairId,
   type ObservedContextPos,
   type PhraseOccurrence,
-  type SafeInjectionPos,
-  type SeedLexiconEntry,
+  type RenderUnitEntry,
+  type RenderUnitRuntimeIndex,
   type SentenceAnalysisEntry,
   type UserVocabEntry,
-  type VocabStatus
+  type VocabStatus,
+  type WordRenderEntry
 } from "@immersionkit/shared";
+import {
+  evaluateContextAwareDecision,
+  getV1AmbiguityGroupForWord
+} from "@immersionkit/shared/runtime";
+import { detectPhraseCandidatesFromAnalyzerOutput } from "@immersionkit/shared/phrases/detection";
 
-import { parseSeedLexiconInput } from "../seed/seed-lexicon";
+import {
+  getBackgroundAssetPackService,
+  type BackgroundAssetPackService
+} from "./asset-packs";
 import {
   IndexedDbPhraseRegistryRepository,
   type PhraseRegistryRepository
@@ -40,15 +55,17 @@ import {
   getDefaultSentenceAnalyzer,
   type SentenceAnalyzer
 } from "./sentence-analyzers";
-import { pickFirstDefinedValue, readStorageValues } from "./storage";
+import { IndexedDbUserVocabRepository } from "../storage/user-data-repository";
 
-const VOCAB_STORAGE_KEYS = ["immersionkit.vocab", "vocab", "vocabEntries"] as const;
-const SEED_LEXICON_STORAGE_KEYS = [
-  "immersionkit.seedLexicon",
-  "seedLexicon",
-  "lexicon"
-] as const;
-const RUNTIME_PHRASE_TARGET_LEXICON = parsePhraseTargetAsset(phraseTargetAsset);
+const RUNTIME_PHRASE_TARGET_LEXICON_BY_PAIR = new Map<
+  LanguagePairId,
+  readonly CuratedPhraseTargetEntry[]
+>([
+  [
+    DEFAULT_LANGUAGE_PAIR_ID,
+    parsePhraseTargetAsset(phraseTargetAsset, DEFAULT_LANGUAGE_PAIR_ID)
+  ]
+]);
 
 export type SentenceAnalysisCandidate = {
   sentenceHash?: string;
@@ -79,13 +96,22 @@ type SentenceAnalysisServiceOptions = {
   phraseRegistry?: PhraseRegistryRepository;
   learningItems?: Pick<BackgroundLearningItemService, "upsertGrammarFeatureItems">;
   analyzer?: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>);
-  loadLexicon?: () => Promise<SeedLexiconEntry[]>;
+  assetPacks?: Pick<BackgroundAssetPackService, "loadActiveContext">;
+  loadRenderUnits?: () => Promise<RenderUnitEntry[]>;
+  languagePair?: LanguagePairId;
+  languagePairDefinitions?: ReadonlyMap<LanguagePairId, LanguagePairDefinition>;
+  phraseTargetsByLanguagePair?: ReadonlyMap<
+    LanguagePairId,
+    readonly CuratedPhraseTargetEntry[]
+  >;
   loadVocab?: () => Promise<Map<string, UserVocabEntry>>;
 };
 
-type LexiconLookup = {
-  byNormalizedForm: Map<string, SeedLexiconEntry[]>;
-};
+type DetectedPhraseCandidate = ReturnType<
+  typeof detectPhraseCandidatesFromAnalyzerOutput
+>["selectedCandidates"][number];
+
+type WordRenderLookup = RenderUnitRuntimeIndex;
 
 type ResolvedPhraseTarget = {
   targetText: string;
@@ -107,8 +133,23 @@ export class SentenceAnalysisService {
     "upsertGrammarFeatureItems"
   >;
   private readonly analyzerLoader: () => Promise<SentenceAnalyzer>;
-  private readonly loadLexicon: () => Promise<SeedLexiconEntry[]>;
+  private readonly loadAssetContext: () => Promise<{
+    languagePair: LanguagePairId;
+    renderUnits: RenderUnitEntry[];
+  }>;
+  private readonly phraseTargetsByLanguagePair: ReadonlyMap<
+    LanguagePairId,
+    readonly CuratedPhraseTargetEntry[]
+  >;
+  private readonly languagePairDefinitions: ReadonlyMap<
+    LanguagePairId,
+    LanguagePairDefinition
+  >;
   private readonly loadVocab: () => Promise<Map<string, UserVocabEntry>>;
+  private renderUnitIndexCache: {
+    analysisVersion: string;
+    index: RenderUnitRuntimeIndex;
+  } | null = null;
 
   constructor(options: SentenceAnalysisServiceOptions = {}) {
     this.cache = options.cache ?? new IndexedDbSentenceAnalysisCacheRepository();
@@ -123,7 +164,19 @@ export class SentenceAnalysisService {
     } else {
       this.analyzerLoader = options.analyzer;
     }
-    this.loadLexicon = options.loadLexicon ?? loadBackgroundLexicon;
+    if (options.loadRenderUnits) {
+      const loadRenderUnits = options.loadRenderUnits ?? (async () => []);
+      this.loadAssetContext = async () => ({
+        languagePair: options.languagePair ?? DEFAULT_LANGUAGE_PAIR_ID,
+        renderUnits: await loadRenderUnits()
+      });
+    } else {
+      const assetPacks = options.assetPacks ?? getBackgroundAssetPackService();
+      this.loadAssetContext = () => assetPacks.loadActiveContext();
+    }
+    this.phraseTargetsByLanguagePair =
+      options.phraseTargetsByLanguagePair ?? RUNTIME_PHRASE_TARGET_LEXICON_BY_PAIR;
+    this.languagePairDefinitions = options.languagePairDefinitions ?? new Map();
     this.loadVocab = options.loadVocab ?? loadBackgroundVocab;
   }
 
@@ -135,17 +188,28 @@ export class SentenceAnalysisService {
     }
 
     const analyzer = await this.analyzerLoader();
+    const assetContext = await this.loadAssetContext();
+    const languagePair = assetContext.languagePair;
+    const pairDefinition =
+      this.languagePairDefinitions.get(languagePair) ??
+      getLanguagePairDefinition(languagePair) ??
+      createFallbackLanguagePairDefinition(languagePair);
+    const renderUnits = assetContext.renderUnits;
+    const analysisVersion = buildRenderUnitAnalysisVersion(
+      analyzer.analyzerVersion,
+      renderUnits,
+      languagePair
+    );
     const normalizedCandidates = normalizeAnalysisCandidates(candidates);
     const cachedEntries = await this.cache.getMany(
       normalizedCandidates.map((candidate) => candidate.sentenceHash),
-      analyzer.analyzerVersion
+      analysisVersion
     );
     const cachedByHash = new Map(
       cachedEntries.map((entry) => [entry.sentenceHash, entry] as const)
     );
-    const lexicon = await this.loadLexicon();
     const vocab = await this.loadVocab();
-    const lookup = buildLexiconLookup(lexicon);
+    const lookup = this.getRenderUnitRuntimeIndex(renderUnits, analysisVersion);
     const now = new Date().toISOString();
     const results: AnalyzedSentenceCandidate[] = [];
     const entriesToPersist: SentenceAnalysisEntry[] = [];
@@ -166,11 +230,23 @@ export class SentenceAnalysisService {
         continue;
       }
 
-      const analyzerOutput = await analyzer.analyze(
+      const rawAnalyzerOutput = await analyzer.analyze(
         candidate.sourceText,
         candidate.sentenceHash
       );
-      const entry = buildAnalysisEntry(analyzerOutput, lookup, vocab, now);
+      const analyzerOutput = {
+        ...rawAnalyzerOutput,
+        analyzerVersion: analysisVersion
+      };
+      const entry = buildAnalysisEntry(
+        analyzerOutput,
+        lookup,
+        vocab,
+        now,
+        renderUnits,
+        pairDefinition,
+        this.phraseTargetsByLanguagePair.get(languagePair) ?? []
+      );
       entriesToPersist.push(entry);
       results.push({
         entry,
@@ -185,18 +261,39 @@ export class SentenceAnalysisService {
       now
     );
     await this.learningItems.upsertGrammarFeatureItems(
-      results.flatMap((result) => result.entry.grammarFeatures),
+      results
+        .flatMap((result) => result.entry.grammarFeatures)
+        .filter((feature) => resolveGrammarConcept(feature.featureKey)),
       now
     );
     return results;
+  }
+
+  private getRenderUnitRuntimeIndex(
+    renderUnits: readonly RenderUnitEntry[],
+    analysisVersion: string
+  ): RenderUnitRuntimeIndex {
+    if (this.renderUnitIndexCache?.analysisVersion === analysisVersion) {
+      return this.renderUnitIndexCache.index;
+    }
+
+    const index = buildRenderUnitRuntimeIndex(renderUnits);
+    this.renderUnitIndexCache = {
+      analysisVersion,
+      index
+    };
+    return index;
   }
 }
 
 function buildAnalysisEntry(
   analyzerOutput: AnalyzerOutput,
-  lookup: LexiconLookup,
+  lookup: WordRenderLookup,
   vocab: ReadonlyMap<string, UserVocabEntry>,
-  now: string
+  now: string,
+  renderUnits: readonly RenderUnitEntry[],
+  pairDefinition: LanguagePairDefinition,
+  curatedPhraseTargets: readonly CuratedPhraseTargetEntry[]
 ): SentenceAnalysisEntry {
   const contextualWordCandidates = buildContextualWordCandidates(
     analyzerOutput,
@@ -204,7 +301,9 @@ function buildAnalysisEntry(
   );
   const phraseMatches = buildPhraseOccurrences(
     analyzerOutput,
-    buildSeedLexiconPhraseTargetResolver(lookup)
+    buildRenderUnitPhraseTargetResolver(renderUnits, curatedPhraseTargets),
+    renderUnits,
+    pairDefinition
   );
   const vocabStats = scoreSentenceByVocabStatuses(
     analyzerOutput.tokens.map((token) =>
@@ -217,7 +316,7 @@ function buildAnalysisEntry(
     phraseMatches,
     vocabStats
   );
-  const suitabilityScore = scorePrototypeSuitability(
+  const suitabilityScore = scoreSentenceSuitability(
     suitabilitySignals,
     BEGINNER_DIFFICULTY_PRESET
   );
@@ -236,19 +335,15 @@ function buildAnalysisEntry(
 
 function buildContextualWordCandidates(
   analyzerOutput: AnalyzerOutput,
-  lookup: LexiconLookup
+  lookup: WordRenderLookup
 ): ContextualWordCandidate[] {
   const candidates: ContextualWordCandidate[] = [];
 
   analyzerOutput.tokens.forEach((token, tokenIndex) => {
-    const lexiconEntries = findLexiconEntriesForToken(token, lookup);
-    for (const lexiconEntry of lexiconEntries) {
-      if (!isSafeInjectionPos(lexiconEntry.pos)) {
-        continue;
-      }
-
-      const ambiguityGroup = getV1AmbiguityGroupForLemma(
-        lexiconEntry.sourceLemma
+    const wordEntries = findWordRenderEntriesForToken(token, tokenIndex, analyzerOutput, lookup);
+    for (const wordEntry of wordEntries) {
+      const ambiguityGroup = getV1AmbiguityGroupForWord(
+        wordEntry.sourceLemma
       );
       const observedPos = toObservedContextPos(token);
       const chunk = findChunkForToken(analyzerOutput.chunks, tokenIndex);
@@ -262,22 +357,27 @@ function buildContextualWordCandidates(
       const confidence = scoreCandidateConfidence({
         token,
         tokenIndex,
-        lexiconEntry,
+        wordEntry,
         observedPos,
         chunkType,
         nearbyContextSignature
       });
       const candidate: ContextualWordCandidate = {
-        id: `${analyzerOutput.sentenceHash}:${tokenIndex}:${lexiconEntry.lemmaId}`,
+        id: `${analyzerOutput.sentenceHash}:${tokenIndex}:${wordEntry.renderUnitId}:${wordEntry.lexemeId}`,
         sentenceHash: analyzerOutput.sentenceHash,
         sentence: analyzerOutput.sourceText,
         tokenText: token.text,
         surfaceText: token.text,
         normalizedText: token.normalized,
-        targetLemma: lexiconEntry.targetLemma,
-        candidateLemma: lexiconEntry.sourceLemma,
-        lemmaId: lexiconEntry.lemmaId,
-        candidatePos: lexiconEntry.pos,
+        renderUnitId: wordEntry.renderUnitId,
+        renderUnitMinBand: wordEntry.renderUnitMinBand,
+        lexemeId: wordEntry.lexemeId,
+        normalizedSourceText: wordEntry.normalizedSourceText,
+        targetText: wordEntry.targetText,
+        targetLemma: wordEntry.targetLemma,
+        candidateLemma: wordEntry.sourceLemma,
+        candidatePos: wordEntry.pos,
+        frequencyRank: wordEntry.frequencyRank,
         observedPos,
         chunkType,
         chunkText: chunk?.text,
@@ -290,9 +390,23 @@ function buildContextualWordCandidates(
           .slice(tokenIndex + 1, tokenIndex + 4)
           .map((entry) => entry.lemma ?? entry.normalized),
         nearbyContextSignature,
-        ambiguityGroup: ambiguityGroup ?? `unambiguous:${lexiconEntry.sourceLemma}`,
+        ambiguityGroup: ambiguityGroup ?? `unambiguous:${wordEntry.sourceLemma}`,
         confidence
       };
+
+      if (wordEntry.renderUnitMatchMode === "analyzer-pattern") {
+        const analyzerPatternDecision = evaluateAnalyzerPatternCandidate({
+          tokenIndex,
+          analyzerOutput,
+          wordEntry
+        });
+        candidates.push({
+          ...candidate,
+          decision: analyzerPatternDecision.decision,
+          rationale: analyzerPatternDecision.rationale
+        });
+        continue;
+      }
 
       if (ambiguityGroup) {
         const decision = evaluateContextAwareDecision(candidate);
@@ -316,35 +430,59 @@ function buildContextualWordCandidates(
   return candidates;
 }
 
+function evaluateAnalyzerPatternCandidate(input: {
+  tokenIndex: number;
+  analyzerOutput: AnalyzerOutput;
+  wordEntry: WordRenderEntry;
+}): { decision: "inject" | "skip"; rationale: string } {
+  const token = input.analyzerOutput.tokens[input.tokenIndex];
+  const next = input.analyzerOutput.tokens[input.tokenIndex + 1];
+  if (
+    (input.wordEntry.sourceLemma === "like" ||
+      input.wordEntry.normalizedSourceText === "like") &&
+    token?.normalized === "like" &&
+    (next?.pos === "determiner" ||
+      next?.pos === "pronoun" ||
+      next?.pos === "noun" ||
+      next?.pos === "proper-noun" ||
+      next?.pos === "adjective")
+  ) {
+    return {
+      decision: "skip",
+      rationale: "Comparative preposition frame is unsafe for the discourse-marker render unit."
+    };
+  }
+
+  return {
+    decision: "inject",
+    rationale: "Analyzer pattern matched the approved render unit."
+  };
+}
+
 function isSentenceAnalyzer(value: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>)): value is SentenceAnalyzer {
   return typeof value === "object" && value !== null && "analyze" in value;
 }
 
-function isSafeInjectionPos(value: SeedLexiconEntry["pos"]): value is SafeInjectionPos {
-  return value === "noun" || value === "adjective" || value === "adverb";
-}
-
 function buildPhraseOccurrences(
   analyzerOutput: AnalyzerOutput,
-  resolvePhraseTarget: PhraseTargetResolver
+  resolvePhraseTarget: PhraseTargetResolver,
+  renderUnits: readonly RenderUnitEntry[],
+  pairDefinition: LanguagePairDefinition
 ): PhraseOccurrence[] {
-  const detection = detectPhraseCandidatesFromAnalyzerOutput(analyzerOutput, undefined, {
-    minimumChunkConfidence: 0.76
-  });
+  const detection = detectPhraseCandidatesFromAnalyzerOutput(
+    analyzerOutput,
+    pairDefinition.fixedPhraseLexicon,
+    {
+      minimumChunkConfidence: 0.76
+    }
+  );
+  const renderUnitOccurrences = buildRenderUnitPhraseOccurrences(
+    analyzerOutput,
+    renderUnits
+  );
 
-  return detection.selectedCandidates.map((candidate) => {
-    const resolvedTarget =
-      candidate.targetText && candidate.normalizedTargetText
-        ? {
-            targetText: candidate.targetText,
-            normalizedTargetText: candidate.normalizedTargetText
-          }
-        : resolvePhraseTarget({
-            sourceText: candidate.sourceText,
-            normalizedSourceText: candidate.normalizedSourceText,
-            sourceKind: candidate.sourceKind,
-            category: candidate.category
-          });
+  const detectedOccurrences = detection.selectedCandidates.map((candidate) => {
+    const resolvedTarget = resolveDetectedPhraseTarget(candidate, resolvePhraseTarget);
     const normalizedTargetText = resolvedTarget?.normalizedTargetText ?? "";
 
     return {
@@ -371,18 +509,210 @@ function buildPhraseOccurrences(
       },
       confidence: candidate.confidence
     };
+  }).filter((occurrence) => !overlapsRenderUnitOccurrence(occurrence, renderUnitOccurrences));
+
+  return [
+    ...renderUnitOccurrences,
+    ...detectedOccurrences
+  ];
+}
+
+function resolveDetectedPhraseTarget(
+  candidate: DetectedPhraseCandidate,
+  resolvePhraseTarget: PhraseTargetResolver
+): ResolvedPhraseTarget | null {
+  const candidateTargetText = readString(candidate.targetText);
+  const candidateNormalizedTargetText = readString(candidate.normalizedTargetText);
+  if (candidateTargetText && candidateNormalizedTargetText) {
+    return {
+      targetText: candidateTargetText,
+      normalizedTargetText: candidateNormalizedTargetText
+    };
+  }
+
+  return resolvePhraseTarget({
+    sourceText: candidate.sourceText,
+    normalizedSourceText: candidate.normalizedSourceText,
+    sourceKind: candidate.sourceKind,
+    category: candidate.category
   });
 }
 
-function buildSeedLexiconPhraseTargetResolver(
-  lookup: LexiconLookup
+function buildRenderUnitAnalysisVersion(
+  analyzerVersion: string,
+  renderUnits: readonly RenderUnitEntry[],
+  languagePair: LanguagePairId = DEFAULT_LANGUAGE_PAIR_ID
+): string {
+  if (renderUnits.length === 0) {
+    return `${analyzerVersion}+pair:${languagePair}`;
+  }
+
+  const signature = renderUnits
+    .map((unit) =>
+      stableSerializeRenderUnitSignature({
+        renderUnitId: unit.renderUnitId,
+        kind: unit.kind,
+        renderPolicy: unit.renderPolicy,
+        minBand: unit.minBand,
+        sourceText: unit.sourceText,
+        normalizedSourceText: unit.normalizedSourceText,
+        targetText: unit.targetText ?? null,
+        normalizedTargetText: unit.normalizedTargetText ?? null,
+        sourcePattern: unit.sourcePattern,
+        replacement: unit.replacement ?? null,
+        lexemeIds: unit.lexemeIds,
+        pos: unit.pos ?? null,
+        frequencyRank: unit.frequencyRank ?? null,
+        confidence: unit.confidence
+      })
+    )
+    .sort()
+    .join("|");
+
+  return `${analyzerVersion}+pair:${languagePair}+render-units:${hashSentence(signature).slice(0, 12)}`;
+}
+
+function stableSerializeRenderUnitSignature(input: unknown): string {
+  if (input === null || typeof input !== "object") {
+    return JSON.stringify(input);
+  }
+
+  if (Array.isArray(input)) {
+    return `[${input.map((item) => stableSerializeRenderUnitSignature(item)).join(",")}]`;
+  }
+
+  const entries = Object.entries(input)
+    .filter(([, value]) => value !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right));
+  return `{${entries
+    .map(
+      ([key, value]) =>
+        `${JSON.stringify(key)}:${stableSerializeRenderUnitSignature(value)}`
+    )
+    .join(",")}}`;
+}
+
+function overlapsRenderUnitOccurrence(
+  occurrence: PhraseOccurrence,
+  renderUnitOccurrences: readonly PhraseOccurrence[]
+): boolean {
+  return renderUnitOccurrences.some(
+    (renderUnitOccurrence) =>
+      renderUnitOccurrence.sentenceHash === occurrence.sentenceHash &&
+      occurrence.span.startToken < renderUnitOccurrence.span.endToken &&
+      renderUnitOccurrence.span.startToken < occurrence.span.endToken
+  );
+}
+
+function buildRenderUnitPhraseOccurrences(
+  analyzerOutput: AnalyzerOutput,
+  renderUnits: readonly RenderUnitEntry[]
+): PhraseOccurrence[] {
+  const occurrences: PhraseOccurrence[] = [];
+
+  for (const renderUnit of renderUnits) {
+    if (
+      renderUnit.kind === "single-token" ||
+      !shouldEmitRenderUnitOccurrence(renderUnit)
+    ) {
+      continue;
+    }
+
+    for (const span of findRenderUnitTokenSpans(analyzerOutput.tokens, renderUnit)) {
+      const replacementStart =
+        span.startToken + (renderUnit.replacement?.startToken ?? 0);
+      const replacementEnd =
+        span.startToken + (renderUnit.replacement?.endToken ?? span.endToken - span.startToken);
+      const firstToken = analyzerOutput.tokens[replacementStart];
+      const lastToken = analyzerOutput.tokens[replacementEnd - 1];
+      if (!firstToken || !lastToken) {
+        continue;
+      }
+
+      const sourceText = analyzerOutput.sourceText.slice(
+        firstToken.startOffset,
+        lastToken.endOffset
+      );
+      const sourceMetadata = mapRenderUnitPhraseMetadata(renderUnit.kind);
+      occurrences.push({
+        occurrenceId: `${analyzerOutput.sentenceHash}:${analyzerOutput.analyzerVersion}:${span.startToken}-${span.endToken}:${renderUnit.renderUnitId}`,
+        phraseId: renderUnit.renderUnitId,
+        renderUnitId: renderUnit.renderUnitId,
+        renderUnitMinBand: renderUnit.minBand,
+        renderPolicy: renderUnit.renderPolicy,
+        sentenceHash: analyzerOutput.sentenceHash,
+        analyzerVersion: analyzerOutput.analyzerVersion,
+        sourceText,
+        normalizedSourceText: renderUnit.normalizedSourceText,
+        targetText:
+          renderUnit.renderPolicy === "inline" || renderUnit.renderPolicy === "phrase-only"
+            ? renderUnit.replacement?.targetText ?? renderUnit.targetText
+            : undefined,
+        normalizedTargetText:
+          renderUnit.renderPolicy === "inline" || renderUnit.renderPolicy === "phrase-only"
+            ? normalizeToken(renderUnit.replacement?.targetText ?? renderUnit.targetText ?? "")
+            : undefined,
+        sourceKind: sourceMetadata.sourceKind,
+        category: sourceMetadata.category,
+        ruleId: `render-unit:${renderUnit.renderUnitId}`,
+        span: {
+          startToken: replacementStart,
+          endToken: replacementEnd,
+          startChar: firstToken.startOffset,
+          endChar: lastToken.endOffset
+        },
+        confidence: renderUnit.confidence
+      });
+    }
+  }
+
+  return occurrences;
+}
+
+function shouldEmitRenderUnitOccurrence(renderUnit: RenderUnitEntry): boolean {
+  if (renderUnit.renderPolicy === "sentence-help-only") {
+    return true;
+  }
+
+  return (
+    (renderUnit.renderPolicy === "inline" || renderUnit.renderPolicy === "phrase-only") &&
+    Boolean(renderUnit.targetText && renderUnit.normalizedTargetText)
+  );
+}
+
+function mapRenderUnitPhraseMetadata(kind: RenderUnitEntry["kind"]): Pick<
+  PhraseOccurrence,
+  "sourceKind" | "category"
+> {
+  if (kind === "fixed-phrase") {
+    return { sourceKind: "fixed-phrase", category: "fixed-idiom" };
+  }
+
+  if (kind === "noun-phrase") {
+    return { sourceKind: "chunk", category: "noun-chunk" };
+  }
+
+  return { sourceKind: "pattern-match", category: "grammar-carrier" };
+}
+
+function buildRenderUnitPhraseTargetResolver(
+  renderUnits: readonly RenderUnitEntry[],
+  curatedPhraseTargets: readonly CuratedPhraseTargetEntry[]
 ): PhraseTargetResolver {
   return (input) => {
+    const renderUnitTarget = resolveRenderUnitPhraseTarget(
+      renderUnits,
+      input.normalizedSourceText
+    );
+    if (renderUnitTarget) {
+      return renderUnitTarget;
+    }
+
     if (input.sourceKind === "fixed-phrase") {
       return null;
     }
 
-    const curatedTarget = RUNTIME_PHRASE_TARGET_LEXICON.find(
+    const curatedTarget = curatedPhraseTargets.find(
       (entry) =>
         entry.sourceKind === input.sourceKind &&
         entry.category === input.category &&
@@ -395,25 +725,19 @@ function buildSeedLexiconPhraseTargetResolver(
       };
     }
 
-    const entries = lookup.byNormalizedForm.get(input.normalizedSourceText) ?? [];
-    const entry = entries.find(
-      (candidate) =>
-        candidate.targetLemma.trim().length > 0 &&
-        normalizeToken(candidate.sourceLemma) === input.normalizedSourceText
-    );
-    if (!entry) {
-      return null;
-    }
-
-    return {
-      targetText: entry.targetLemma.trim(),
-      normalizedTargetText: normalizeToken(entry.targetLemma)
-    };
+    return null;
   };
 }
 
-function parsePhraseTargetAsset(value: unknown): readonly CuratedPhraseTargetEntry[] {
-  if (!isRecord(value) || !Array.isArray(value.entries)) {
+function parsePhraseTargetAsset(
+  value: unknown,
+  expectedLanguagePair: LanguagePairId
+): readonly CuratedPhraseTargetEntry[] {
+  if (
+    !isRecord(value) ||
+    value.languagePair !== expectedLanguagePair ||
+    !Array.isArray(value.entries)
+  ) {
     return [];
   }
 
@@ -474,11 +798,11 @@ function computeSuitabilitySignals(
     (candidate) => candidate.decision === "inject"
   ).length;
   const ambiguousCandidateCount = contextualWordCandidates.filter((candidate) =>
-    Boolean(getV1AmbiguityGroupForLemma(candidate.candidateLemma))
+    Boolean(getV1AmbiguityGroupForWord(candidate.candidateLemma))
   ).length;
   const skippedAmbiguousCount = contextualWordCandidates.filter(
     (candidate) =>
-      Boolean(getV1AmbiguityGroupForLemma(candidate.candidateLemma)) &&
+      Boolean(getV1AmbiguityGroupForWord(candidate.candidateLemma)) &&
       candidate.decision === "skip"
   ).length;
   const averagePhraseConfidence =
@@ -541,6 +865,23 @@ function deriveSuitabilitySignals(
 function evaluateUnambiguousCandidate(
   candidate: ContextualWordCandidate
 ): { decision: "inject" | "skip"; rationale: string } {
+  if (
+    candidate.candidateLemma === "map" &&
+    candidate.leftContextLemmas?.includes("release")
+  ) {
+    return {
+      decision: "skip",
+      rationale: "Product-term frame 'release maps' is safer to keep in English."
+    };
+  }
+
+  if (candidate.observedPos !== candidate.candidatePos) {
+    return {
+      decision: "skip",
+      rationale: `Observed POS ${candidate.observedPos} does not match render-unit POS ${candidate.candidatePos}.`
+    };
+  }
+
   if (candidate.confidence < 0.58) {
     return {
       decision: "skip",
@@ -548,93 +889,40 @@ function evaluateUnambiguousCandidate(
     };
   }
 
-  if (
-    candidate.observedPos !== candidate.candidatePos &&
-    candidate.observedPos !== "other"
-  ) {
-    return {
-      decision: "skip",
-      rationale: `Observed POS ${candidate.observedPos} does not match lexicon POS ${candidate.candidatePos}.`
-    };
-  }
-
   return {
     decision: "inject",
-    rationale: "Analyzer evidence is compatible with the lexicon entry."
+    rationale: "Analyzer evidence is compatible with the render unit."
   };
 }
 
-function findLexiconEntriesForToken(
+function findWordRenderEntriesForToken(
   token: AnalyzerToken,
-  lookup: LexiconLookup
-): SeedLexiconEntry[] {
-  return uniqueLexiconEntries([
-    ...(lookup.byNormalizedForm.get(token.normalized) ?? []),
-    ...(token.lemma ? lookup.byNormalizedForm.get(normalizeToken(token.lemma)) ?? [] : [])
-  ]);
+  tokenIndex: number,
+  analyzerOutput: AnalyzerOutput | null,
+  lookup: WordRenderLookup
+): WordRenderEntry[] {
+  return findWordRenderEntriesForAnalyzerToken({
+    token,
+    tokenIndex,
+    tokens: analyzerOutput?.tokens ?? null,
+    index: lookup
+  });
 }
 
 function resolveTokenVocabStatus(
   token: AnalyzerToken,
-  lookup: LexiconLookup,
+  lookup: WordRenderLookup,
   vocab: ReadonlyMap<string, UserVocabEntry>
 ): VocabStatus {
-  const lexiconEntry = findLexiconEntriesForToken(token, lookup)[0];
-  if (!lexiconEntry) {
+  const observedPos = toObservedContextPos(token);
+  const wordEntry = findWordRenderEntriesForToken(token, -1, null, lookup).find(
+    (entry) => observedPos === entry.pos
+  );
+  if (!wordEntry) {
     return "new";
   }
 
-  return vocab.get(lexiconEntry.lemmaId)?.status ?? "new";
-}
-
-function buildLexiconLookup(entries: readonly SeedLexiconEntry[]): LexiconLookup {
-  const byNormalizedForm = new Map<string, SeedLexiconEntry[]>();
-
-  for (const entry of entries) {
-    addLexiconForm(byNormalizedForm, entry.sourceLemma, entry);
-    for (const inflection of entry.inflections ?? []) {
-      addLexiconForm(byNormalizedForm, inflection, entry);
-    }
-  }
-
-  return { byNormalizedForm };
-}
-
-function addLexiconForm(
-  lookup: Map<string, SeedLexiconEntry[]>,
-  form: string,
-  entry: SeedLexiconEntry
-) {
-  const normalized = normalizeToken(form);
-  if (!normalized) {
-    return;
-  }
-
-  const existing = lookup.get(normalized);
-  if (existing) {
-    existing.push(entry);
-    return;
-  }
-
-  lookup.set(normalized, [entry]);
-}
-
-function uniqueLexiconEntries(
-  entries: readonly SeedLexiconEntry[]
-): SeedLexiconEntry[] {
-  const seen = new Set<string>();
-  const output: SeedLexiconEntry[] = [];
-
-  for (const entry of entries) {
-    if (seen.has(entry.lemmaId)) {
-      continue;
-    }
-
-    seen.add(entry.lemmaId);
-    output.push(entry);
-  }
-
-  return output;
+  return vocab.get(wordEntry.lexemeId)?.status ?? "new";
 }
 
 function buildContextSignatures(
@@ -735,20 +1023,20 @@ function buildContextSignatures(
 function scoreCandidateConfidence(input: {
   token: AnalyzerToken;
   tokenIndex: number;
-  lexiconEntry: SeedLexiconEntry;
+  wordEntry: WordRenderEntry;
   observedPos: ObservedContextPos;
   chunkType: ContextChunkType;
   nearbyContextSignature: readonly string[];
 }): number {
   let score = 0.5;
 
-  if (input.observedPos === input.lexiconEntry.pos) {
+  if (input.observedPos === input.wordEntry.pos) {
     score += 0.24;
   }
 
   if (
-    (input.lexiconEntry.pos === "noun" && input.chunkType === "noun-phrase") ||
-    (input.lexiconEntry.pos === "adjective" && input.chunkType === "adjective-phrase")
+    (input.wordEntry.pos === "noun" && input.chunkType === "noun-phrase") ||
+    (input.wordEntry.pos === "adjective" && input.chunkType === "adjective-phrase")
   ) {
     score += 0.12;
   }
@@ -816,6 +1104,12 @@ function toObservedContextPos(token: AnalyzerToken): ObservedContextPos {
     token.pos === "adverb" ||
     token.pos === "modal" ||
     token.pos === "auxiliary" ||
+    token.pos === "preposition" ||
+    token.pos === "pronoun" ||
+    token.pos === "determiner" ||
+    token.pos === "number" ||
+    token.pos === "particle" ||
+    token.pos === "conjunction" ||
     token.pos === "interjection"
   ) {
     return token.pos;
@@ -852,76 +1146,12 @@ function normalizeAnalysisCandidates(
   return [...byHash.values()];
 }
 
-async function loadBackgroundLexicon(): Promise<SeedLexiconEntry[]> {
-  const storage = await readStorageValues(SEED_LEXICON_STORAGE_KEYS);
-  const stored = parseSeedLexiconInput(
-    pickFirstDefinedValue(storage, SEED_LEXICON_STORAGE_KEYS)
-  );
-  if (stored && stored.entries.length > 0) {
-    return stored.entries;
-  }
-
-  return parseSeedLexiconInput(bundledSeedLexiconAsset)?.entries ?? [];
-}
-
 async function loadBackgroundVocab(): Promise<Map<string, UserVocabEntry>> {
-  const storage = await readStorageValues(VOCAB_STORAGE_KEYS);
-  return parseVocabEntries(pickFirstDefinedValue(storage, VOCAB_STORAGE_KEYS));
-}
-
-function parseVocabEntries(input: unknown): Map<string, UserVocabEntry> {
-  const entries: UserVocabEntry[] = [];
-
-  if (Array.isArray(input)) {
-    for (const entry of input) {
-      const normalized = normalizeVocabEntry(entry);
-      if (normalized) {
-        entries.push(normalized);
-      }
-    }
-  } else if (isRecord(input)) {
-    for (const value of Object.values(input)) {
-      const normalized = normalizeVocabEntry(value);
-      if (normalized) {
-        entries.push(normalized);
-      }
-    }
-  }
-
-  return new Map(entries.map((entry) => [entry.lemmaId, entry] as const));
-}
-
-function normalizeVocabEntry(input: unknown): UserVocabEntry | null {
-  if (!isRecord(input)) {
-    return null;
-  }
-
-  const lemmaId = readString(input.lemmaId);
-  if (!lemmaId) {
-    return null;
-  }
-
-  return {
-    lemmaId,
-    status: normalizeVocabStatus(input.status),
-    lastSeenAt: readString(input.lastSeenAt),
-    exposureCount: readNumber(input.exposureCount, 0),
-    updatedAt: readString(input.updatedAt) ?? new Date().toISOString()
-  };
-}
-
-function normalizeVocabStatus(value: unknown): VocabStatus {
-  return value === "known" || value === "learning" || value === "ignored"
-    ? value
-    : "new";
+  return new IndexedDbUserVocabRepository().loadAll();
 }
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function readNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

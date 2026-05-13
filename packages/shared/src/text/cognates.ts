@@ -1,4 +1,5 @@
-import type { SeedLexiconEntry } from "../domain/models";
+import type { WordInventoryEntry } from "../domain/models";
+import { isFalseFriendSource } from "../curriculum/cognates";
 import { normalizeToken } from "./normalize";
 
 export type CognateEvaluation = {
@@ -13,6 +14,22 @@ export type CognateEvaluation = {
     | "low-similarity";
 };
 
+export type BeginnerCognatePolicy = {
+  evaluate: (
+    entry: Pick<
+      WordInventoryEntry,
+      | "sourceLemma"
+      | "targetLemma"
+      | "confidence"
+      | "sourceLanguage"
+      | "targetLanguage"
+    >
+  ) => CognateEvaluation;
+  isEligibleBand: (bandId: string | null | undefined) => boolean;
+  maxFrequencyRank: number;
+  discoveryRateFloor: number;
+};
+
 export const BEGINNER_COGNATE_MIN_SIMILARITY = 0.62;
 export const BEGINNER_COGNATE_MIN_CONFIDENCE = 0.82;
 export const BEGINNER_COGNATE_MAX_FREQUENCY_RANK = 3000;
@@ -22,7 +39,7 @@ const MIN_COGNATE_TOKEN_LENGTH = 4;
 
 export function evaluateEnglishSpanishCognate(
   entry: Pick<
-    SeedLexiconEntry,
+    WordInventoryEntry,
     | "sourceLemma"
     | "targetLemma"
     | "confidence"
@@ -48,6 +65,10 @@ export function evaluateEnglishSpanishCognate(
     target.length < MIN_COGNATE_TOKEN_LENGTH
   ) {
     return lowScore("too-short");
+  }
+
+  if (isFalseFriendSource(source)) {
+    return lowScore("low-similarity");
   }
 
   if (entry.confidence < BEGINNER_COGNATE_MIN_CONFIDENCE) {
@@ -80,31 +101,7 @@ export function isBeginnerCognateBand(bandId: string | null | undefined): boolea
 
 export function isBeginnerConfidenceCognate(
   entry: Pick<
-    SeedLexiconEntry,
-    | "sourceLemma"
-    | "targetLemma"
-    | "confidence"
-    | "frequencyRank"
-    | "sourceLanguage"
-    | "targetLanguage"
-  >
-): boolean {
-  const rank = entry.frequencyRank;
-  if (
-    typeof rank !== "number" ||
-    !Number.isFinite(rank) ||
-    rank < 1 ||
-    rank > BEGINNER_COGNATE_MAX_FREQUENCY_RANK
-  ) {
-    return false;
-  }
-
-  return evaluateEnglishSpanishCognate(entry).isCognate;
-}
-
-export function beginnerCognateDiscoveryRateFloor(
-  entry: Pick<
-    SeedLexiconEntry,
+    WordInventoryEntry,
     | "sourceLemma"
     | "targetLemma"
     | "confidence"
@@ -112,14 +109,51 @@ export function beginnerCognateDiscoveryRateFloor(
     | "sourceLanguage"
     | "targetLanguage"
   >,
-  bandId: string | null | undefined
+  policy: BeginnerCognatePolicy = ENGLISH_SPANISH_COGNATE_POLICY
+): boolean {
+  const rank = entry.frequencyRank;
+  if (
+    typeof rank !== "number" ||
+    !Number.isFinite(rank) ||
+    rank < 1 ||
+    rank > policy.maxFrequencyRank
+  ) {
+    return false;
+  }
+
+  return policy.evaluate(entry).isCognate;
+}
+
+export function beginnerCognateDiscoveryRateFloor(
+  entry: Pick<
+    WordInventoryEntry,
+    | "sourceLemma"
+    | "targetLemma"
+    | "confidence"
+    | "frequencyRank"
+    | "sourceLanguage"
+    | "targetLanguage"
+  >,
+  bandId: string | null | undefined,
+  policy: BeginnerCognatePolicy | null = ENGLISH_SPANISH_COGNATE_POLICY
 ): number | null {
-  if (!isBeginnerCognateBand(bandId) || !isBeginnerConfidenceCognate(entry)) {
+  if (
+    !policy ||
+    !policy.isEligibleBand(bandId) ||
+    !isBeginnerConfidenceCognate(entry, policy)
+  ) {
     return null;
   }
 
-  return BEGINNER_COGNATE_DISCOVERY_RATE_FLOOR;
+  return policy.discoveryRateFloor;
 }
+
+export const ENGLISH_SPANISH_COGNATE_POLICY: BeginnerCognatePolicy = {
+  evaluate: evaluateEnglishSpanishCognate,
+  isEligibleBand: isBeginnerCognateBand,
+  maxFrequencyRank: BEGINNER_COGNATE_MAX_FREQUENCY_RANK,
+  discoveryRateFloor: BEGINNER_COGNATE_DISCOVERY_RATE_FLOOR
+};
 
 export function scoreOrthographicSimilarity(left: string, right: string): number {
   const normalizedLeft = normalizeComparableToken(left);

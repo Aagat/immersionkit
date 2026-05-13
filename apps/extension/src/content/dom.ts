@@ -76,6 +76,18 @@ export function shouldSkipDocument(url: URL, doc: Document): DocumentSkipDecisio
 
 export function collectEligibleTextNodes(root: ParentNode): Text[] {
   const nodes: Text[] = [];
+  visitEligibleTextNodes(root, (node) => {
+    nodes.push(node);
+    return true;
+  });
+  return nodes;
+}
+
+export function visitEligibleTextNodes(
+  root: ParentNode,
+  visitor: (node: Text) => boolean | void
+): void {
+  const parentEligibilityCache = new WeakMap<Element, boolean>();
 
   const walker = document.createTreeWalker(
     root,
@@ -86,7 +98,7 @@ export function collectEligibleTextNodes(root: ParentNode): Text[] {
           return NodeFilter.FILTER_REJECT;
         }
 
-        return isEligibleTextNode(node)
+        return isEligibleTextNode(node, parentEligibilityCache)
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT;
       }
@@ -96,13 +108,14 @@ export function collectEligibleTextNodes(root: ParentNode): Text[] {
   let current = walker.nextNode();
   while (current) {
     if (current instanceof Text) {
-      nodes.push(current);
+      const shouldContinue = visitor(current);
+      if (shouldContinue === false) {
+        return;
+      }
     }
 
     current = walker.nextNode();
   }
-
-  return nodes;
 }
 
 export function isInImmersionNode(node: Node): boolean {
@@ -128,7 +141,10 @@ export function nodeToProcessRoot(node: Node): ParentNode | null {
   return null;
 }
 
-function isEligibleTextNode(node: Text): boolean {
+function isEligibleTextNode(
+  node: Text,
+  parentEligibilityCache: WeakMap<Element, boolean>
+): boolean {
   if (!node.isConnected) {
     return false;
   }
@@ -147,6 +163,17 @@ function isEligibleTextNode(node: Text): boolean {
     return false;
   }
 
+  const cachedParentEligibility = parentEligibilityCache.get(parent);
+  if (cachedParentEligibility !== undefined) {
+    return cachedParentEligibility;
+  }
+
+  const parentEligible = isEligibleTextParent(parent);
+  parentEligibilityCache.set(parent, parentEligible);
+  return parentEligible;
+}
+
+function isEligibleTextParent(parent: Element): boolean {
   if (parent.closest(EXCLUDED_ANCESTOR_SELECTOR)) {
     return false;
   }

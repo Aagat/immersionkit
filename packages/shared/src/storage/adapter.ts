@@ -1,5 +1,4 @@
 export const STORAGE_NAMESPACES = [
-  "seed-lexicon",
   "vocab",
   "sentence-cache",
   "site-settings",

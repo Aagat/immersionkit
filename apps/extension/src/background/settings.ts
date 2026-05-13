@@ -7,25 +7,15 @@ import {
   resolveExtensionSettings
 } from "@immersionkit/shared";
 
-import { isRecord, pickFirstDefinedValue, readStorageValues, readString } from "./storage";
+import { isRecord, pickFirstDefinedValue, readString } from "../storage/serialization";
+import { loadUserDataValues } from "../storage/user-data-repository";
+import { USER_DATA_KEYS } from "../shared/user-data-keys";
+import { resolveLearningProfileFromStorage } from "../app-state/proficiency";
 
-const SETTINGS_STORAGE_KEYS = ["immersionkit.settings", "settings"] as const;
-const CURRICULUM_CONFIG_STORAGE_KEYS = [
-  "immersionkit.curriculum.config",
-  "curriculumConfig"
-] as const;
-const LEARNING_PROFILE_STORAGE_KEYS = [
-  "immersionkit.learningProfile",
-  "learningProfile"
-] as const;
-const OPENAI_API_KEY_STORAGE_KEYS = [
-  "immersionkit.provider.openai.apiKey",
-  "immersionkit.providers.openai.apiKey",
-  "immersionkit.openai.apiKey",
-  "openaiApiKey",
-  "providerApiKey",
-  "apiKey"
-] as const;
+const SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.settings] as const;
+const CURRICULUM_CONFIG_STORAGE_KEYS = [USER_DATA_KEYS.curriculumConfig] as const;
+const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
+const OPENAI_API_KEY_STORAGE_KEYS = [USER_DATA_KEYS.providerOpenAiApiKey] as const;
 
 export type ProviderCredentials = {
   openAiApiKey: string | null;
@@ -41,7 +31,7 @@ export type BackgroundRuntimeConfig = {
 };
 
 export async function loadBackgroundRuntimeConfig(): Promise<BackgroundRuntimeConfig> {
-  const storage = await readStorageValues([
+  const storage = await loadUserDataValues([
     ...SETTINGS_STORAGE_KEYS,
     ...CURRICULUM_CONFIG_STORAGE_KEYS,
     ...LEARNING_PROFILE_STORAGE_KEYS,
@@ -49,19 +39,20 @@ export async function loadBackgroundRuntimeConfig(): Promise<BackgroundRuntimeCo
   ]);
 
   const rawSettings = pickFirstDefinedValue(storage, SETTINGS_STORAGE_KEYS);
-  const rawCurriculumConfig =
-    pickFirstDefinedValue(storage, CURRICULUM_CONFIG_STORAGE_KEYS) ??
-    (isRecord(rawSettings) ? rawSettings.curriculumConfig : null);
-  const rawLearningProfile =
-    pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS) ??
-    (isRecord(rawSettings) ? rawSettings.learningProfile : null);
+  const rawCurriculumConfig = pickFirstDefinedValue(
+    storage,
+    CURRICULUM_CONFIG_STORAGE_KEYS
+  );
+  const rawLearningProfile = pickFirstDefinedValue(
+    storage,
+    LEARNING_PROFILE_STORAGE_KEYS
+  );
   const resolvedSettings = isRecord(rawSettings)
     ? resolveExtensionSettings(rawSettings as Partial<ExtensionSettings>)
     : resolveExtensionSettings(null);
 
   const openAiApiKey =
-    readString(pickFirstDefinedValue(storage, OPENAI_API_KEY_STORAGE_KEYS)) ??
-    readOpenAiKeyFromSettings(rawSettings);
+    readString(pickFirstDefinedValue(storage, OPENAI_API_KEY_STORAGE_KEYS));
 
   return {
     settings: resolvedSettings,
@@ -74,48 +65,10 @@ export async function loadBackgroundRuntimeConfig(): Promise<BackgroundRuntimeCo
           ? (rawCurriculumConfig as Partial<CurriculumConfig>)
           : null
       ),
-      profile: parseLearningProfile(rawLearningProfile)
+      profile: resolveLearningProfileFromStorage(
+        rawLearningProfile,
+        isRecord(rawSettings) ? rawSettings.proficiencySeed : undefined
+      )
     }
-  };
-}
-
-function readOpenAiKeyFromSettings(rawSettings: unknown): string | null {
-  if (!isRecord(rawSettings)) {
-    return null;
-  }
-
-  const credentials = isRecord(rawSettings.credentials) ? rawSettings.credentials : null;
-  const provider = isRecord(rawSettings.provider) ? rawSettings.provider : null;
-
-  return (
-    readString(rawSettings.openaiApiKey) ??
-    readString(rawSettings.providerApiKey) ??
-    readString(credentials?.openaiApiKey) ??
-    readString(credentials?.providerApiKey) ??
-    readString(provider?.openaiApiKey) ??
-    readString(provider?.apiKey)
-  );
-}
-
-function parseLearningProfile(input: unknown): CurriculumRuntimeProfileInput {
-  if (!isRecord(input)) {
-    return {};
-  }
-
-  const activeVocabularyBandId = readString(input.activeVocabularyBandId);
-  const activePhraseBandId = readString(input.activePhraseBandId);
-  const activeGrammarBandId = readString(input.activeGrammarBandId);
-  const unlockedBandIds = Array.isArray(input.unlockedBandIds)
-    ? input.unlockedBandIds.flatMap((value): string[] => {
-        const bandId = readString(value);
-        return bandId ? [bandId] : [];
-      })
-    : undefined;
-
-  return {
-    ...(activeVocabularyBandId ? { activeVocabularyBandId } : {}),
-    ...(activePhraseBandId ? { activePhraseBandId } : {}),
-    ...(activeGrammarBandId ? { activeGrammarBandId } : {}),
-    ...(unlockedBandIds ? { unlockedBandIds } : {})
   };
 }

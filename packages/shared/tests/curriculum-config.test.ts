@@ -11,14 +11,15 @@ import {
   normalizePhraseText,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
+  type CurriculumDefinition,
   type CurriculumConfig,
   type LearningItem
 } from "../src";
 import { describe, expect, it } from "vitest";
 
 const BASE_ITEM: LearningItem = {
-  itemId: "word:lemma-city",
-  unitRefId: "lemma-city",
+  itemId: "word:lexeme-city",
+  unitRefId: "lexeme-city",
   unitType: "word",
   sourceText: "city",
   targetText: "ciudad",
@@ -127,7 +128,7 @@ describe("curriculum configuration", () => {
   it("evaluates band transitions from config instead of hardcoded thresholds", () => {
     const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
       bandId: "level-1a",
-      items: [BASE_ITEM],
+      items: createTransitionItems(4),
       recentLapseRate: 0,
       checkpointPassed: false
     });
@@ -137,6 +138,50 @@ describe("curriculum configuration", () => {
       nextBand: expect.objectContaining({ bandId: "level-1b" }),
       unmetRequirements: []
     });
+  });
+
+  it("does not require a checkpoint when there is no next band", () => {
+    const terminalConfig: CurriculumConfig = {
+      ...DEFAULT_CURRICULUM_CONFIG,
+      bands: DEFAULT_CURRICULUM_CONFIG.bands.map((band) =>
+        band.bandId === "level-5b"
+          ? {
+              ...band,
+              unlockRequirements: {
+                ...band.unlockRequirements,
+                checkpointRequired: true
+              }
+            }
+          : band
+      )
+    };
+
+    const decision = evaluateCurriculumBandTransition(terminalConfig, {
+      bandId: "level-5b",
+      items: createTransitionItems(4, { bandId: "level-5b" }),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision).toMatchObject({
+      nextBand: null,
+      unmetRequirements: []
+    });
+  });
+
+  it("does not advance from one or two mastered items alone", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(2, { status: "mastered" }),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual([
+      "evidence-breadth",
+      "distinct-context-breadth"
+    ]);
   });
 
   it("lets external curriculum data tune transition requirements", () => {
@@ -159,7 +204,7 @@ describe("curriculum configuration", () => {
 
     const decision = evaluateCurriculumBandTransition(strictConfig, {
       bandId: "level-1a",
-      items: [BASE_ITEM],
+      items: createTransitionItems(4),
       recentLapseRate: 0,
       checkpointPassed: false
     });
@@ -169,6 +214,167 @@ describe("curriculum configuration", () => {
       "qualified-exposures",
       "checkpoint"
     ]);
+  });
+
+  it("lets external curriculum data tune percentage breadth requirements", () => {
+    const percentageConfig: CurriculumConfig = {
+      ...DEFAULT_CURRICULUM_CONFIG,
+      bands: DEFAULT_CURRICULUM_CONFIG.bands.map((band) =>
+        band.bandId === "level-1a"
+          ? {
+              ...band,
+              unlockRequirements: {
+                ...band.unlockRequirements,
+                minimumDistinctContextItemRatio: 1,
+                minimumUnassistedItemRatio: 0.75
+              }
+            }
+          : band
+      )
+    };
+
+    const decision = evaluateCurriculumBandTransition(percentageConfig, {
+      bandId: "level-1a",
+      items: createTransitionItems(4, (index) => ({
+        consecutiveUnassistedCount: index < 2 ? 2 : 1,
+        distinctContextCount: index < 3 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual([
+      "distinct-context-breadth",
+      "unassisted-breadth"
+    ]);
+  });
+
+  it("does not let auto-created no-exposure items block progression", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: [
+        ...createTransitionItems(4),
+        createTransitionItem(99, {
+          itemId: "phrase:auto-created",
+          unitRefId: "auto-created",
+          unitType: "phrase",
+          sourceText: "for now",
+          status: "new",
+          qualifiedExposureCount: 0,
+          consecutiveUnassistedCount: 0,
+          distinctContextCount: 0
+        }),
+        createTransitionItem(100, {
+          itemId: "grammar-feature:future:will",
+          unitRefId: "future:will",
+          unitType: "grammar-feature",
+          sourceText: "will",
+          targetText: "",
+          status: "new",
+          qualifiedExposureCount: 0,
+          consecutiveUnassistedCount: 0,
+          distinctContextCount: 0
+        })
+      ],
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision).toMatchObject({
+      eligible: true,
+      unmetRequirements: []
+    });
+  });
+
+  it("does not count assisted-only exposures as progression readiness", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(4, {
+        assistCount: 2,
+        qualifiedExposureCount: 2,
+        consecutiveUnassistedCount: 0,
+        distinctContextCount: 2
+      }),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual([
+      "stable-item-ratio",
+      "evidence-breadth",
+      "distinct-context-breadth",
+      "unassisted-breadth"
+    ]);
+  });
+
+  it("requires four evidence-bearing items", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(3),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["evidence-breadth"]);
+  });
+
+  it("requires three distinct-context-ready items", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(4, (_index) => ({
+        distinctContextCount: _index < 2 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["distinct-context-breadth"]);
+  });
+
+  it("scales distinct-context readiness by evidence-bearing percentage", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(6, (index) => ({
+        distinctContextCount: index < 4 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["distinct-context-breadth"]);
+  });
+
+  it("requires two unassisted-ready items", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(4, (_index) => ({
+        consecutiveUnassistedCount: _index === 0 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["unassisted-breadth"]);
+  });
+
+  it("scales unassisted readiness by evidence-bearing percentage", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: createTransitionItems(8, (index) => ({
+        consecutiveUnassistedCount: index < 3 ? 2 : 1
+      })),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toEqual(["unassisted-breadth"]);
   });
 
   it("resolves active runtime bands from profile data with default fallback", () => {
@@ -213,8 +419,8 @@ describe("curriculum configuration", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         activeContent,
-        lexiconEntry: {
-          lemmaId: "en:house:noun",
+        wordEntry: {
+          lexemeId: "en:house:noun",
           sourceLemma: "house",
           targetLemma: "casa",
           pos: "noun",
@@ -231,13 +437,32 @@ describe("curriculum configuration", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         activeContent,
-        lexiconEntry: {
-          lemmaId: "en:river:noun",
+        wordEntry: {
+          lexemeId: "en:river:noun",
           sourceLemma: "river",
           targetLemma: "rio",
           pos: "noun",
           frequencyRank: 2800,
           confidence: 0.91
+        }
+      })
+    ).toMatchObject({
+      eligible: false,
+      activeBandId: "level-1a",
+      skipReason: "word-rank-outside-content"
+    });
+
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        wordEntry: {
+          lexemeId: "en:river:noun",
+          sourceLemma: "river",
+          targetLemma: "rio",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91,
+          renderUnitMinBand: "level-1a"
         }
       })
     ).toMatchObject({
@@ -257,8 +482,8 @@ describe("curriculum configuration", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         activeContent,
-        lexiconEntry: {
-          lemmaId: "en:telescope:noun",
+        wordEntry: {
+          lexemeId: "en:telescope:noun",
           sourceLemma: "telescope",
           targetLemma: "telescopio",
           pos: "noun",
@@ -271,6 +496,120 @@ describe("curriculum configuration", () => {
       activeBandId: "level-1a",
       matchReason: "beginner-cognate",
       skipReason: null
+    });
+  });
+
+  it("resolves custom pair curriculum content without falling back to en-es gates", () => {
+    const customDefinition: CurriculumDefinition = {
+      config: {
+        ...DEFAULT_CURRICULUM_CONFIG,
+        configId: "en-test-default-v1",
+        targetLanguage: "test",
+        bands: [
+          {
+            ...DEFAULT_CURRICULUM_CONFIG.bands[0]!,
+            bandId: "test-1",
+            label: "Test 1",
+            difficultyLimits: {
+              minimumScore: 0,
+              maximumScore: 0.2
+            }
+          }
+        ],
+        levels: [
+          {
+            levelId: "test-level-1",
+            label: "Test Level 1",
+            order: 1,
+            bandIds: ["test-1"],
+            checkpointRequired: false
+          }
+        ]
+      },
+      content: [
+        {
+          ...DEFAULT_CURRICULUM_CONTENT[0]!,
+          bandId: "test-1",
+          vocabularyDomains: ["synthetic"],
+          vocabularyExamples: ["synthetic -> sintetico"],
+          vocabularyMaxFrequencyRank: 10,
+          phraseChunks: ["synthetic chunk"],
+          phraseInventory: {
+            exactSourceTexts: ["synthetic chunk"],
+            allowedCategories: ["fixed-idiom"],
+            allowedSourceKinds: ["fixed-phrase"]
+          },
+          sentencePolicy: {
+            tokenRange: [2, 4],
+            clausePolicy: "synthetic",
+            targetPolicy: "synthetic target",
+            notes: "Synthetic pair content."
+          }
+        }
+      ]
+    };
+    const activeContent = getActiveCurriculumContent({
+      definition: customDefinition
+    });
+
+    expect(activeContent).toMatchObject({
+      band: expect.objectContaining({ bandId: "test-1" }),
+      config: expect.objectContaining({
+        bands: [expect.objectContaining({ bandId: "test-1" })]
+      }),
+      content: expect.objectContaining({
+        vocabularyDomains: ["synthetic"],
+        vocabularyMaxFrequencyRank: 10
+      })
+    });
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        wordEntry: {
+          lexemeId: "en:synthetic:noun",
+          sourceLemma: "synthetic",
+          targetLemma: "sintetico",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91,
+          renderUnitMinBand: "test-1"
+        }
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "test-1",
+      matchReason: "vocabulary-domain",
+      skipReason: null
+    });
+    expect(
+      evaluatePhraseCurriculumContentInventory({
+        activeContent,
+        sourceText: "unknown synthetic chunk",
+        sourceKind: "chunk",
+        category: "noun-chunk",
+        renderUnitMinBand: "test-1"
+      })
+    ).toMatchObject({
+      eligible: true,
+      activeBandId: "test-1",
+      matchReason: "render-unit-band",
+      skipReason: null
+    });
+    expect(
+      evaluateWordCurriculumContentInventory({
+        activeContent,
+        wordEntry: {
+          lexemeId: "en:telescope:noun",
+          sourceLemma: "telescope",
+          targetLemma: "telescopio",
+          pos: "noun",
+          frequencyRank: 2800,
+          confidence: 0.91
+        }
+      })
+    ).toMatchObject({
+      eligible: false,
+      skipReason: "word-rank-outside-content"
     });
   });
 
@@ -355,3 +694,30 @@ describe("curriculum configuration", () => {
     });
   });
 });
+
+function createTransitionItems(
+  count: number,
+  overrides:
+    | Partial<LearningItem>
+    | ((index: number) => Partial<LearningItem>) = {}
+): LearningItem[] {
+  return Array.from({ length: count }, (_unused, index) =>
+    createTransitionItem(
+      index,
+      typeof overrides === "function" ? overrides(index) : overrides
+    )
+  );
+}
+
+function createTransitionItem(
+  index: number,
+  overrides: Partial<LearningItem> = {}
+): LearningItem {
+  return {
+    ...BASE_ITEM,
+    itemId: `word:lexeme-city-${index}`,
+    unitRefId: `lexeme-city-${index}`,
+    sourceText: `city ${index}`,
+    ...overrides
+  };
+}

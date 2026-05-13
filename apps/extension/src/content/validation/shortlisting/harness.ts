@@ -4,11 +4,9 @@ import {
   isGoldilocksSentence,
   scoreSentenceByKnownWords
 } from "@immersionkit/shared";
-import type { SeedLexiconEntry, VocabStatus } from "@immersionkit/shared";
+import type { WordInventoryEntry, VocabStatus } from "@immersionkit/shared";
 
-import { DEFAULT_SENTENCE_THRESHOLD } from "../../constants";
 import { collectEligibleTextNodes } from "../../dom";
-import { buildLexiconLookup } from "../../lexicon";
 import { normalizeSentenceWords, segmentText } from "../../tokenize";
 import type {
   SentenceObservation,
@@ -27,14 +25,14 @@ const DEFAULT_MAX_SHORTLIST_SIZE = 12;
 
 const POLICY_ORDER: readonly ShortlistingPolicyId[] = [
   "analyze-every-segmented",
-  "current-injected-token-gated",
+  "legacy-injected-token-gated",
   "injected-token-length-dedupe",
   "phrase-aware-shortlist"
 ] as const;
 
 const POLICY_LABELS: Readonly<Record<ShortlistingPolicyId, string>> = {
   "analyze-every-segmented": "Analyze Every Segmented Sentence",
-  "current-injected-token-gated": "Current Injected-Token-Gated Flow",
+  "legacy-injected-token-gated": "Legacy Injected-Token-Gated Flow",
   "injected-token-length-dedupe": "Injected Token + Length + Dedupe",
   "phrase-aware-shortlist": "Phrase-Aware Shortlist"
 };
@@ -86,8 +84,8 @@ export function runSentenceShortlistingBenchmark(
       ? Math.max(1, Math.floor(input.maxShortlistSize))
       : DEFAULT_MAX_SHORTLIST_SIZE;
 
-  const lexiconLookup = buildLexiconLookup([...input.lexicon]);
-  const vocabByLemmaId = normalizeVocabEntries(input.vocabByLemmaId);
+  const wordInventoryLookup = buildShortlistingWordInventoryLookup([...input.wordInventory]);
+  const vocabByLexemeId = normalizeVocabEntries(input.vocabByLexemeId);
   const phraseHintsLowercase = input.phraseHints
     .map((value) => normalizeWhitespace(value).toLowerCase())
     .filter((value) => value.length > 0);
@@ -134,8 +132,8 @@ export function runSentenceShortlistingBenchmark(
       const passAnalysis = withScenarioSandbox(input.document, pass.html, (root) => {
         return analyzeScenarioPass({
           root,
-          lexiconLookup,
-          vocabByLemmaId,
+          wordInventoryLookup,
+          vocabByLexemeId,
           samplingSeed: `${scenario.urlPath}`,
           discoveryRate: input.discoveryRate,
           goldilocksThreshold: input.goldilocksThreshold,
@@ -320,10 +318,38 @@ export function runSentenceShortlistingBenchmark(
   };
 }
 
+function buildShortlistingWordInventoryLookup(
+  entries: readonly WordInventoryEntry[]
+): Map<string, WordInventoryEntry> {
+  const lookup = new Map<string, WordInventoryEntry>();
+
+  for (const entry of entries) {
+    registerShortlistingWordInventoryKey(lookup, entry.sourceLemma, entry);
+    for (const inflection of entry.inflections ?? []) {
+      registerShortlistingWordInventoryKey(lookup, inflection, entry);
+    }
+  }
+
+  return lookup;
+}
+
+function registerShortlistingWordInventoryKey(
+  lookup: Map<string, WordInventoryEntry>,
+  rawKey: string,
+  entry: WordInventoryEntry
+) {
+  const normalized = rawKey.toLowerCase().trim();
+  if (!normalized || lookup.has(normalized)) {
+    return;
+  }
+
+  lookup.set(normalized, entry);
+}
+
 function analyzeScenarioPass(input: {
   root: ParentNode;
-  lexiconLookup: ReadonlyMap<string, SeedLexiconEntry>;
-  vocabByLemmaId: ReadonlyMap<string, VocabStatus>;
+  wordInventoryLookup: ReadonlyMap<string, WordInventoryEntry>;
+  vocabByLexemeId: ReadonlyMap<string, VocabStatus>;
   samplingSeed: string;
   discoveryRate: number;
   goldilocksThreshold: number;
@@ -362,12 +388,12 @@ function analyzeScenarioPass(input: {
         continue;
       }
 
-      const lexiconEntry = input.lexiconLookup.get(segment.normalized);
-      if (!lexiconEntry) {
+      const wordEntry = input.wordInventoryLookup.get(segment.normalized);
+      if (!wordEntry) {
         continue;
       }
 
-      const status = input.vocabByLemmaId.get(lexiconEntry.lemmaId) ?? "new";
+      const status = input.vocabByLexemeId.get(wordEntry.lexemeId) ?? "new";
       if (status === "ignored") {
         continue;
       }
@@ -408,12 +434,12 @@ function analyzeScenarioPass(input: {
       }
 
       const knownWordCount = sentence.words.reduce((count, word) => {
-        const lexiconEntry = input.lexiconLookup.get(word);
-        if (!lexiconEntry) {
+        const wordEntry = input.wordInventoryLookup.get(word);
+        if (!wordEntry) {
           return count + 1;
         }
 
-        const status = input.vocabByLemmaId.get(lexiconEntry.lemmaId) ?? "new";
+        const status = input.vocabByLexemeId.get(wordEntry.lexemeId) ?? "new";
         return status === "known" || status === "learning" ? count + 1 : count;
       }, 0);
 
@@ -441,7 +467,7 @@ function analyzeScenarioPass(input: {
     boundedSentences,
     policyCandidates: {
       "analyze-every-segmented": rawSentences,
-      "current-injected-token-gated": dedupedCurrentCandidates,
+      "legacy-injected-token-gated": dedupedCurrentCandidates,
       "injected-token-length-dedupe": dedupedInjectedLengthCandidates,
       "phrase-aware-shortlist": phraseAwareCandidates
     }
@@ -610,7 +636,7 @@ function buildBenchmarkAssertions(input: {
 }): SentenceShortlistingAssertion[] {
   const policyById = new Map(input.policies.map((policy) => [policy.policyId, policy]));
   const baseline = policyById.get("analyze-every-segmented");
-  const current = policyById.get("current-injected-token-gated");
+  const legacyInjectedToken = policyById.get("legacy-injected-token-gated");
   const injected = policyById.get("injected-token-length-dedupe");
   const phraseAware = policyById.get("phrase-aware-shortlist");
 
@@ -620,18 +646,18 @@ function buildBenchmarkAssertions(input: {
     id: "analysis-calls-reduced-vs-baseline",
     passed:
       (baseline?.estimatedAnalysisCalls ?? 0) >=
-      (current?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER),
+      (legacyInjectedToken?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER),
     message:
-      "Current injected-token-gated flow should not exceed baseline analysis calls."
+      "Legacy injected-token-gated flow should not exceed baseline analysis calls."
   });
 
   assertions.push({
-    id: "length-dedupe-reduces-or-matches-current-calls",
+    id: "length-dedupe-reduces-or-matches-legacy-calls",
     passed:
-      (current?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER) >=
+      (legacyInjectedToken?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER) >=
       (injected?.estimatedAnalysisCalls ?? Number.MAX_SAFE_INTEGER),
     message:
-      "Injected + length + dedupe should not require more analysis calls than current flow."
+      "Injected + length + dedupe should not require more analysis calls than the legacy flow."
   });
 
   assertions.push({
@@ -646,13 +672,13 @@ function buildBenchmarkAssertions(input: {
   const rerenderScenario = input.scenarios.find(
     (scenario) => scenario.scenarioId === "dynamic-rerender-same-hash"
   );
-  const rerenderCurrent = rerenderScenario?.policySummaries.find(
-    (policy) => policy.policyId === "current-injected-token-gated"
+  const rerenderLegacyInjectedToken = rerenderScenario?.policySummaries.find(
+    (policy) => policy.policyId === "legacy-injected-token-gated"
   );
 
   assertions.push({
     id: "rerender-cache-hits-observed",
-    passed: (rerenderCurrent?.cacheHits ?? 0) > 0,
+    passed: (rerenderLegacyInjectedToken?.cacheHits ?? 0) > 0,
     message:
       "Dynamic rerender scenario should show cache hits for repeated sentence hashes."
   });
@@ -701,8 +727,4 @@ function withScenarioSandbox<T>(
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
-}
-
-export function readDefaultGoldilocksThreshold(): number {
-  return DEFAULT_SENTENCE_THRESHOLD;
 }

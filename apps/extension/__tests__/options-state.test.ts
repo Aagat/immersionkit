@@ -3,23 +3,182 @@ import type { LearningItem } from "@immersionkit/shared";
 
 import {
   graduateCheckpoint,
+  loadActiveTabContext,
+  loadFirstRunIntroVisible,
   loadCurriculumDiagnostics,
+  loadSiteSettingsMap,
+  markFirstRunIntroSeen,
+  parseProficiencySeed,
+  proficiencySeedToBandId,
+  createLearningProfileForProficiencySeed,
+  createLearningProfileForBand,
+  getExactActiveBandId,
+  formatCurriculumProgressRequirement,
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
-} from "../src/options/state";
+} from "../src/app-state/settings-state";
+import { getCheckpointStatus } from "../src/options/App";
+import { formatPopupProgressCopy } from "../src/popup/App";
+import {
+  loadUserDataValues,
+  setUserDataValues
+} from "../src/storage/user-data-repository";
 import { installChromeStub } from "./helpers/chrome-stub";
+import { installIndexedDbStub } from "./helpers/indexeddb-stub";
 
 describe("options state", () => {
+  it("loads site settings only from the canonical hostname-keyed map", async () => {
+    const indexedDbStub = installIndexedDbStub();
+
+    try {
+      await setUserDataValues({
+        "site-settings": [
+          {
+            hostname: "legacy.example",
+            enabled: false,
+            discoveryRate: 0.5,
+            updatedAt: "2026-05-08T10:00:00.000Z"
+          }
+        ]
+      });
+      await expect(loadSiteSettingsMap()).resolves.toEqual({});
+
+      await setUserDataValues({
+        "site-settings": {
+          "canonical.example": {
+            hostname: "canonical.example",
+            enabled: false,
+            discoveryRate: 0.25,
+            updatedAt: "2026-05-08T11:00:00.000Z"
+          }
+        }
+      });
+
+      await expect(loadSiteSettingsMap()).resolves.toMatchObject({
+        "canonical.example": {
+          hostname: "canonical.example",
+          enabled: false,
+          discoveryRate: 0.25
+        }
+      });
+    } finally {
+      indexedDbStub.restore();
+    }
+  });
+
+  it("loads supported HTTP(S) active tab context", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      {
+        id: 7,
+        active: true,
+        url: "https://docs.example/guide"
+      } as chrome.tabs.Tab
+    ]);
+
+    try {
+      await expect(loadActiveTabContext()).resolves.toEqual({
+        tabId: 7,
+        hostname: "docs.example",
+        url: "https://docs.example/guide",
+        isSupportedPage: true,
+        supportMessage: "docs.example"
+      });
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("explains unsupported browser or private active tabs", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      {
+        id: 8,
+        active: true,
+        url: "chrome://extensions/"
+      } as chrome.tabs.Tab
+    ]);
+
+    try {
+      const context = await loadActiveTabContext();
+      expect(context).toMatchObject({
+        tabId: 8,
+        hostname: null,
+        url: "chrome://extensions/",
+        isSupportedPage: false
+      });
+      expect(context.supportMessage).toContain("skips browser, private, and extension pages");
+      expect(context.supportMessage).toContain("article, blog, or docs page");
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("explains active tabs without URLs", async () => {
+    const chromeStub = installChromeStub();
+    chromeStub.setTabs([
+      {
+        id: 9,
+        active: true
+      } as chrome.tabs.Tab
+    ]);
+
+    try {
+      const context = await loadActiveTabContext();
+      expect(context).toMatchObject({
+        tabId: 9,
+        hostname: null,
+        url: null,
+        isSupportedPage: false
+      });
+      expect(context.supportMessage).toContain("does not expose a page URL");
+      expect(context.supportMessage).toContain("article, blog, or docs page");
+    } finally {
+      chromeStub.restore();
+    }
+  });
+
+  it("parses friendly proficiency seeds and migrates legacy advanced to intermediate", () => {
+    expect(parseProficiencySeed(undefined)).toBe("false-beginner");
+    expect(parseProficiencySeed("beginner")).toBe("beginner");
+    expect(parseProficiencySeed("false-beginner")).toBe("false-beginner");
+    expect(parseProficiencySeed("intermediate")).toBe("intermediate");
+    expect(parseProficiencySeed("advanced")).toBe("intermediate");
+    expect(proficiencySeedToBandId("beginner")).toBe("level-1a");
+    expect(proficiencySeedToBandId("false-beginner")).toBe("level-1b");
+    expect(proficiencySeedToBandId("intermediate")).toBe("level-2a");
+  });
+
+  it("creates placement profiles from friendly seeds and exact diagnostic bands", () => {
+    expect(createLearningProfileForProficiencySeed("false-beginner")).toMatchObject({
+      activeVocabularyBandId: "level-1b",
+      activePhraseBandId: "level-1b",
+      activeGrammarBandId: "level-1b",
+      unlockedBandIds: ["level-1a", "level-1b"]
+    });
+
+    const exactProfile = createLearningProfileForBand("level-5b");
+    expect(exactProfile).toMatchObject({
+      activeVocabularyBandId: "level-5b",
+      activePhraseBandId: "level-5b",
+      activeGrammarBandId: "level-5b"
+    });
+    expect(exactProfile.unlockedBandIds).toContain("level-1a");
+    expect(exactProfile.unlockedBandIds).toContain("level-5b");
+    expect(getExactActiveBandId(exactProfile)).toBe("level-5b");
+  });
+
   it("parses curriculum profile and last progression diagnostics", async () => {
-    const chromeStub = installChromeStub({
-      "immersionkit.learningProfile": {
+    const indexedDbStub = installIndexedDbStub();
+    await setUserDataValues({
+      "learning-profile": {
         activeVocabularyBandId: "level-1b",
         activePhraseBandId: "level-1b",
         activeGrammarBandId: "level-1a",
         unlockedBandIds: ["level-1a", "level-1b", ""]
       },
-      "immersionkit.curriculum.lastProgressionDecision": {
+      "curriculum-progression-diagnostics": {
         decidedAt: "2026-04-28T12:00:00.000Z",
         configId: "en-es-default-v1",
         previousBandId: "level-1a",
@@ -36,7 +195,7 @@ describe("options state", () => {
     });
 
     try {
-      await expect(loadCurriculumDiagnostics()).resolves.toEqual({
+      await expect(loadCurriculumDiagnostics()).resolves.toMatchObject({
         profile: {
           activeVocabularyBandId: "level-1b",
           activePhraseBandId: "level-1b",
@@ -54,12 +213,15 @@ describe("options state", () => {
             "family",
             "frequency adverbs"
           ],
-          phraseChunks: [
+          phraseChunks: expect.arrayContaining([
             "in the morning",
             "on Monday",
             "at school",
+            "this week",
+            "sometimes",
+            "every week",
             "literal noun chunks with connectors"
-          ],
+          ]),
           currentGrammarKeys: [],
           plannedGrammarKeys: [
             "question:basic-wh",
@@ -71,6 +233,18 @@ describe("options state", () => {
           sentenceTargetPolicy: "0-1 target",
           sentenceNotes: "Low ambiguity with clear time or place anchoring."
         },
+        currentFocus: expect.objectContaining({
+          levelLabel: "Foundations",
+          bandLabel: "Level 1B",
+          learnerTitle: "Time, place, and familiar contexts",
+          grammarFocusLabels: expect.arrayContaining(["basic questions"])
+        }),
+        path: expect.arrayContaining([
+          expect.objectContaining({
+            levelLabel: "Foundations",
+            active: true
+          })
+        ]),
         lastProgressionDecision: {
           decidedAt: "2026-04-28T12:00:00.000Z",
           configId: "en-es-default-v1",
@@ -87,7 +261,32 @@ describe("options state", () => {
         }
       });
     } finally {
-      chromeStub.restore();
+      indexedDbStub.restore();
+    }
+  });
+
+  it("derives curriculum diagnostics from the saved proficiency seed when no profile exists", async () => {
+    const indexedDbStub = installIndexedDbStub();
+    await setUserDataValues({
+      settings: {
+        proficiencySeed: "advanced"
+      }
+    });
+
+    try {
+      await expect(loadCurriculumDiagnostics()).resolves.toMatchObject({
+        profile: {
+          activeVocabularyBandId: "level-2a",
+          activePhraseBandId: "level-2a",
+          activeGrammarBandId: "level-2a",
+          unlockedBandIds: ["level-1a", "level-1b", "level-1c", "level-2a"]
+        },
+        activeContent: {
+          bandId: "level-2a"
+        }
+      });
+    } finally {
+      indexedDbStub.restore();
     }
   });
 
@@ -99,6 +298,13 @@ describe("options state", () => {
     ).toMatchObject({
       bandId: "level-4a",
       bandLabel: "Level 4A",
+      learnerFocus: expect.objectContaining({
+        levelLabel: "Connected Expression",
+        learnerTitle: "Explanation and process",
+        grammarFocusLabels: expect.arrayContaining([
+          "Ongoing result with have been"
+        ])
+      }),
       vocabularyDomains: expect.arrayContaining(["explanation", "systems"]),
       phraseChunks: expect.arrayContaining(["for example"]),
       currentGrammarKeys: ["aspect:have-been"],
@@ -160,24 +366,7 @@ describe("options state", () => {
         activePhraseBandId: "level-1c",
         activeGrammarBandId: "level-1c"
       },
-      items: [
-        createLearningItem({
-          itemId: "word:city",
-          unitRefId: "city",
-          unitType: "word",
-          bandId: "level-1c",
-          status: "reviewing",
-          qualifiedExposureCount: 2
-        }),
-        createLearningItem({
-          itemId: "phrase:used-to",
-          unitRefId: "used-to",
-          unitType: "phrase",
-          bandId: "level-1c",
-          status: "mastered",
-          qualifiedExposureCount: 3
-        })
-      ],
+      items: createProgressionReadyItems("level-1c"),
       now: "2026-04-29T12:00:00.000Z"
     });
 
@@ -214,9 +403,100 @@ describe("options state", () => {
     expect(preview.checkpointIsOnlyBlocker).toBe(false);
     expect(preview.unmetRequirements).toEqual([
       "stable-item-ratio",
-      "qualified-exposures",
+      "evidence-breadth",
+      "distinct-context-breadth",
+      "unassisted-breadth",
       "checkpoint"
     ]);
+  });
+
+  it("formats calibrated progression blockers as learner-facing copy", () => {
+    expect(formatCurriculumProgressRequirement("checkpoint")).toBe(
+      "manual reading-band step"
+    );
+    expect(formatCurriculumProgressRequirement("evidence-breadth")).toBe(
+      "more real-page learning items"
+    );
+    expect(formatCurriculumProgressRequirement("distinct-context-breadth")).toBe(
+      "more varied real-page contexts"
+    );
+    expect(formatCurriculumProgressRequirement("unassisted-breadth")).toBe(
+      "more unassisted successful sightings"
+    );
+  });
+
+  it("formats ready reading-band widening without assessment language", () => {
+    const description = getCheckpointStatus({
+      activeBandId: "level-1c",
+      activeBandLabel: "Level 1C",
+      nextBandId: "level-2a",
+      nextBandLabel: "Level 2A",
+      checkpointBlueprint: null,
+      checkpointScopeLabels: ["Level 1 fixed phrases"],
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: true,
+      unmetRequirements: ["checkpoint"]
+    }).description;
+
+    expect(description).toBe(
+      "You have enough local reading evidence for Level 2A. Widen the reading band when you want the next level."
+    );
+    expect(description).not.toMatch(
+      /\b(checkpoint|quiz|assessment|readiness check)\b/i
+    );
+  });
+
+  it("formats blocked reading-band widening around local evidence", () => {
+    const description = getCheckpointStatus({
+      activeBandId: "level-1c",
+      activeBandLabel: "Level 1C",
+      nextBandId: "level-2a",
+      nextBandLabel: "Level 2A",
+      checkpointBlueprint: null,
+      checkpointScopeLabels: [],
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: false,
+      unmetRequirements: [
+        "evidence-breadth",
+        "distinct-context-breadth",
+        "checkpoint"
+      ]
+    }).description;
+
+    expect(description).toBe(
+      "Keep reading to build more real-page learning items, more varied real-page contexts; the reading band widens after that evidence is ready."
+    );
+    expect(description).not.toContain("next level unlocks");
+  });
+
+  it("formats zero-history popup progress as local reading evidence", () => {
+    const copy = formatPopupProgressCopy({
+      vocabStats: {
+        total: 0,
+        newCount: 0,
+        learning: 0,
+        known: 0,
+        ignored: 0
+      },
+      checkpointPreview: {
+        activeBandId: null,
+        activeBandLabel: null,
+        nextBandId: null,
+        nextBandLabel: null,
+        checkpointBlueprint: null,
+        checkpointScopeLabels: [],
+        checkpointRequired: false,
+        checkpointIsOnlyBlocker: false,
+        unmetRequirements: []
+      }
+    });
+
+    const combinedCopy = Object.values(copy).join(" ");
+    expect(combinedCopy).not.toMatch(/loading your reading progress/i);
+    expect(combinedCopy).not.toMatch(/\b(diagnostic|debug|checkpoint|signal)\b/i);
+    expect(combinedCopy).toMatch(/reading history/i);
+    expect(combinedCopy).toMatch(/local evidence/i);
+    expect(combinedCopy).toMatch(/supported pages/i);
   });
 
   it("requests explicit checkpoint graduation through the background runtime", async () => {
@@ -250,7 +530,67 @@ describe("options state", () => {
       chromeStub.restore();
     }
   });
+
+  it("shows first-run guidance until it is dismissed", async () => {
+    const indexedDbStub = installIndexedDbStub();
+
+    try {
+      await expect(loadFirstRunIntroVisible()).resolves.toBe(true);
+      await markFirstRunIntroSeen();
+      await expect(loadFirstRunIntroVisible()).resolves.toBe(false);
+      await expect(loadUserDataValues(["first-run-intro-visible"])).resolves.toEqual({
+        "first-run-intro-visible": false
+      });
+    } finally {
+      indexedDbStub.restore();
+    }
+  });
 });
+
+function createProgressionReadyItems(bandId: string): LearningItem[] {
+  return [
+    createLearningItem({
+      itemId: "word:city",
+      unitRefId: "city",
+      unitType: "word",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "phrase:used-to",
+      unitRefId: "used-to",
+      unitType: "phrase",
+      bandId,
+      status: "mastered",
+      qualifiedExposureCount: 3,
+      consecutiveUnassistedCount: 3,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "grammar-feature:negation:do-not",
+      unitRefId: "negation:do-not",
+      unitType: "grammar-feature",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    }),
+    createLearningItem({
+      itemId: "word:home",
+      unitRefId: "home",
+      unitType: "word",
+      bandId,
+      status: "reviewing",
+      qualifiedExposureCount: 2,
+      consecutiveUnassistedCount: 2,
+      distinctContextCount: 2
+    })
+  ];
+}
 
 function createLearningItem(
   input: Pick<LearningItem, "itemId" | "unitRefId" | "unitType"> &

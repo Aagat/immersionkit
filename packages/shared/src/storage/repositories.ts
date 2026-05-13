@@ -2,10 +2,8 @@ import type {
   ExtensionSettings,
   IsoTimestamp,
   ResolvedExtensionSettings,
-  SeedLexiconEntry,
   SentenceCacheEntry,
   SiteSetting,
-  SupportedPos,
   UserVocabEntry,
   VocabStatus
 } from "../domain/models";
@@ -13,17 +11,6 @@ import type {
 export type RepositoryReadOptions = {
   signal?: AbortSignal;
 };
-
-export type SeedLexiconQuery = {
-  sourceLemma?: string;
-  pos?: SupportedPos;
-  limit?: number;
-};
-
-export interface SeedLexiconRepository {
-  getByLemmaId(lemmaId: string, options?: RepositoryReadOptions): Promise<SeedLexiconEntry | null>;
-  findEntries(query: SeedLexiconQuery, options?: RepositoryReadOptions): Promise<SeedLexiconEntry[]>;
-}
 
 export interface SettingsRepository {
   getSettings(options?: RepositoryReadOptions): Promise<ResolvedExtensionSettings>;
@@ -39,26 +26,26 @@ export interface SiteSettingsRepository {
 }
 
 export type VocabStatusUpdate = {
-  lemmaId: string;
+  lexemeId: string;
   status: VocabStatus;
   updatedAt: IsoTimestamp;
   lastSeenAt?: IsoTimestamp | null;
 };
 
 export type VocabExposureIncrement = {
-  lemmaId: string;
+  lexemeId: string;
   seenAt: IsoTimestamp;
   incrementBy?: number;
 };
 
 export interface VocabRepository {
-  getEntry(lemmaId: string, options?: RepositoryReadOptions): Promise<UserVocabEntry | null>;
-  getEntries(lemmaIds: readonly string[], options?: RepositoryReadOptions): Promise<UserVocabEntry[]>;
+  getEntry(lexemeId: string, options?: RepositoryReadOptions): Promise<UserVocabEntry | null>;
+  getEntries(lexemeIds: readonly string[], options?: RepositoryReadOptions): Promise<UserVocabEntry[]>;
   upsertEntry(entry: UserVocabEntry): Promise<void>;
   upsertEntries(entries: readonly UserVocabEntry[]): Promise<void>;
   setStatus(update: VocabStatusUpdate): Promise<void>;
   incrementExposure(update: VocabExposureIncrement): Promise<void>;
-  deleteEntry(lemmaId: string): Promise<void>;
+  deleteEntry(lexemeId: string): Promise<void>;
 }
 
 export interface SentenceCacheRepository {

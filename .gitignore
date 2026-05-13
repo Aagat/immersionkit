@@ -1,10 +1,13 @@
 node_modules/
 dist/
+dist-preview/
 coverage/
 .DS_Store
 /release/
 .idea/
 .vscode/
 *.log
+__pycache__/
+*.py[cod]
 tools/importers/outputs/generated/
 .env

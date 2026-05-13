@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Fixture - Spec Workflow Article</title>
+  </head>
+  <body>
+    <header>
+      <nav aria-label="Documentation">
+        <a href="/docs">Docs</a>
+        <a href="/blog">Blog</a>
+        <a href="/reference">Reference</a>
+      </nav>
+    </header>
+
+    <main>
+      <article id="release-maps">
+        <header>
+          <p>Engineering Notes</p>
+          <h1>Release Maps for Small Teams</h1>
+          <p>
+            A practical look at using structured requirements without turning every
+            project into a ceremony.
+          </p>
+        </header>
+
+        <aside>
+          <h2>On this page</h2>
+          <ul>
+            <li><a href="#why">Why teams write maps</a></li>
+            <li><a href="#yaml">A small YAML shape</a></li>
+            <li><a href="#tradeoffs">Reasons this might not fit</a></li>
+          </ul>
+        </aside>
+
+        <section id="why">
+          <h2>Why teams write maps</h2>
+          <p>
+            Teams often start with a loose prompt, then discover that the hard part was
+            not writing code. The hard part was keeping intent stable while the code
+            changed underneath it.
+          </p>
+          <p>
+            This is where a release map helps. It gives the team one place to describe
+            behavior, constraints, and review status before implementation details
+            spread across issues, pull requests, and chat.
+          </p>
+        </section>
+
+        <section id="yaml">
+          <h2>A small YAML shape</h2>
+          <p>
+            A release map can live next to the code as <code>release.yml</code>. The
+            labels are intentionally boring because boring labels survive refactors.
+          </p>
+
+          <pre><code>feature:
+  name: account-export
+checks:
+  EXP-1: Export includes active accounts
+  EXP-2: Export excludes archived accounts
+  EXP-3: Audit log stores the request id</code></pre>
+
+          <p>
+            The point is not to make the file clever. The point is to keep the
+            expectation visible when tests, API handlers, and documentation all change
+            at the same time.
+          </p>
+        </section>
+
+        <section id="tradeoffs">
+          <h2>Reasons this might not fit</h2>
+          <p>Like any workflow, it comes with tradeoffs.</p>
+          <ul>
+            <li>
+              You might not need to write release maps. If your product is low-stakes
+              or simple, keep notes in the ticket and move on.
+            </li>
+            <li>
+              Release maps are opinionated. You should write one map per feature,
+              though the feature boundary or slice is up to you. This keeps review
+              focused when a change touches the frontend, backend, worker queue, and
+              mobile client.
+            </li>
+            <li>
+              Stable labels create zero friction when drafting a new map, but require
+              care when revising an old one. This supports deliberate history instead
+              of accidental drift.
+            </li>
+            <li>
+              The <code>release.yml</code> syntax supports <code>deprecated</code> and
+              <code>replaced_by</code> flags, if you want to maintain a complete map
+              history inline.
+            </li>
+            <li>
+              Dashboards rely on stable numbering in production, staging, and support
+              queues. That sounds rigid, but the real need for traceability shows up
+              when an incident review asks which requirement changed.
+            </li>
+          </ul>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

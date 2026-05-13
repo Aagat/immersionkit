@@ -11,10 +11,10 @@ import {
   detectGrammarCarriersFromAnalyzerOutput,
   detectHighConfidenceChunksFromAnalyzerOutput,
   evaluateContextAwareDecision,
-  getV1AmbiguityGroupForLemma,
+  getV1AmbiguityGroupForWord,
   normalizeAnalyzerToken,
   normalizePhraseText,
-  scorePrototypeSuitability,
+  scoreSentenceSuitability,
   tokenizeForLookup,
   type AnalyzerOutput,
   type ContextualWordCandidate
@@ -67,7 +67,7 @@ describe("unified ambiguity rules", () => {
       observedPos: "modal",
       chunkType: "verb-phrase",
       nearbyContextSignature: ["sentence-initial-modal-question"],
-      ambiguityGroup: getV1AmbiguityGroupForLemma("CAN") ?? "",
+      ambiguityGroup: getV1AmbiguityGroupForWord("CAN") ?? "",
       confidence: 0.98
     };
 
@@ -130,8 +130,8 @@ describe("unified phrase detection helpers", () => {
 });
 
 describe("unified suitability scoring", () => {
-  it("keeps Task 05 presets as the default baseline", () => {
-    const score = scorePrototypeSuitability(
+  it("keeps sentence suitability presets as the default baseline", () => {
+    const score = scoreSentenceSuitability(
       {
         vocabularyFit: 0.9,
         grammarFit: 0.8,

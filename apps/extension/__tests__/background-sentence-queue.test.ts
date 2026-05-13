@@ -12,7 +12,10 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { SentenceProviderClient } from "../src/background/provider-client";
-import { OPENAI_SENTENCE_PROMPT_VERSION } from "../src/background/provider-client";
+import {
+  OPENAI_SENTENCE_PROMPT_VERSION,
+  buildOpenAiSentenceSystemPrompt
+} from "../src/background/provider-client";
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
 import {
   SentenceQueueOrchestrator,
@@ -55,7 +58,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       12
     );
@@ -70,11 +73,48 @@ describe("sentence queue orchestration", () => {
         sentenceHash,
         sourceText,
         translatedText: "La estacion abre temprano por la manana.",
-        learningNote,
-        grammarNote: learningNote.summary
+        learningNote
       }
     ]);
     expect(providerCalls).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse en-es sentence cache rows for another active pair", async () => {
+    const sourceText = "The station opens early in the morning.";
+    const sentenceHash = hashSentence(sourceText);
+    const cache = new InMemorySentenceCache([
+      createCacheEntry({
+        sentenceHash,
+        sourceText,
+        translatedText: "La estacion abre temprano por la manana.",
+        learningNote: createLearningNote("Spanish cached row.")
+      })
+    ]);
+
+    const orchestrator = new SentenceQueueOrchestrator({
+      sentenceCache: cache,
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createReadyConfig({
+            languagePair: "en-fr",
+            sourceLanguage: "en",
+            targetLanguage: "fr"
+          })
+        ),
+      createProviderClient: () => createProviderClientMock([]),
+      flushDelayMs: 0
+    });
+
+    const response = await orchestrator.queueMessage({
+      type: RuntimeMessageType.QueueSentenceCandidates,
+      candidates: [{ sentenceHash, sourceText }]
+    });
+
+    expect(response.cacheHits).toBe(0);
+    expect(response.queued).toBe(1);
   });
 
   it("delivers fresh background translations to the sender tab", async () => {
@@ -120,7 +160,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       27
     );
@@ -140,12 +180,56 @@ describe("sentence queue orchestration", () => {
             sentenceHash,
             sourceText,
             translatedText,
-            learningNote,
-            grammarNote: learningNote.summary
+            learningNote
           }
         ]
       }
     ]);
+  });
+
+  it("passes the active language pair into provider translation requests", async () => {
+    const sourceText = "The city is quiet today.";
+    const sentenceHash = hashSentence(sourceText);
+    const providerInputs: { sourceLanguage: string; targetLanguage: string }[] = [];
+    const orchestrator = new SentenceQueueOrchestrator({
+      sentenceCache: new InMemorySentenceCache(),
+      sentenceAnalysisService: createAnalysisServiceMock([
+        createAnalysisResult(sentenceHash, 0.82)
+      ]),
+      loadRuntimeConfig: () =>
+        Promise.resolve(
+          createReadyConfig({
+            languagePair: "en-fr",
+            sourceLanguage: "en",
+            targetLanguage: "fr"
+          })
+        ),
+      createProviderClient: () => ({
+        providerName: "openai",
+        async translateSentences(input) {
+          providerInputs.push({
+            sourceLanguage: input.sourceLanguage,
+            targetLanguage: input.targetLanguage
+          });
+          return [];
+        }
+      }),
+      flushDelayMs: 0
+    });
+
+    await orchestrator.queueMessage({
+      type: RuntimeMessageType.QueueSentenceCandidates,
+      candidates: [{ sentenceHash, sourceText }]
+    });
+    await waitForMicrotasks();
+
+    expect(providerInputs).toEqual([{ sourceLanguage: "en", targetLanguage: "fr" }]);
+    expect(
+      buildOpenAiSentenceSystemPrompt({
+        sourceLanguage: "en",
+        targetLanguage: "fr"
+      })
+    ).toContain("learner-friendly fr");
   });
 
   it("treats stale prompt-version cache entries as misses and refreshes them", async () => {
@@ -195,7 +279,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       44
     );
@@ -213,6 +297,7 @@ describe("sentence queue orchestration", () => {
 
   it("skips sentence translation work when the feature is disabled", async () => {
     const sourceText = "Neighbors gather in the square each evening.";
+    const sentenceHash = hashSentence(sourceText);
     const cache = new InMemorySentenceCache();
     const providerCalls = vi.fn();
     const notifyCalls = vi.fn();
@@ -236,7 +321,7 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [sourceText]
+        candidates: [{ sentenceHash, sourceText }]
       },
       9
     );
@@ -298,7 +383,10 @@ describe("sentence queue orchestration", () => {
     const response = await orchestrator.queueMessage(
       {
         type: RuntimeMessageType.QueueSentenceCandidates,
-        sentences: [ordinarySentence, dueTargetSentence]
+        candidates: [
+          { sentenceHash: ordinaryHash, sourceText: ordinarySentence },
+          { sentenceHash: dueTargetHash, sourceText: dueTargetSentence }
+        ]
       },
       31
     );
@@ -445,6 +533,108 @@ describe("sentence queue orchestration", () => {
         })
       })
     ]);
+  });
+
+  it("boosts sentence ranking for active curriculum grammar features", () => {
+    const grammarSentence = {
+      sentenceHash: "sentence-grammar-focus",
+      sourceText: "She is going to call today."
+    };
+    const ordinarySentence = {
+      sentenceHash: "sentence-ordinary-focus",
+      sourceText: "She calls today."
+    };
+
+    const ranked = rankCandidatesByAnalysis(
+      [ordinarySentence, grammarSentence],
+      [
+        createAnalysisResult(ordinarySentence.sentenceHash, 0.5),
+        {
+          ...createAnalysisResult(grammarSentence.sentenceHash, 0.5),
+          entry: {
+            ...createAnalysisResult(grammarSentence.sentenceHash, 0.5).entry,
+            grammarFeatures: [createGrammarFeature("future:going-to")]
+          }
+        }
+      ],
+      {
+        config: DEFAULT_CURRICULUM_CONFIG,
+        profile: {
+          activeVocabularyBandId: "level-2b",
+          activePhraseBandId: "level-2b",
+          activeGrammarBandId: "level-2b"
+        }
+      }
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      grammarSentence.sentenceHash,
+      ordinarySentence.sentenceHash
+    ]);
+    expect(ranked.reasons[0]).toMatchObject({
+      sentenceHash: grammarSentence.sentenceHash,
+      rank: 1,
+      primaryReason: "curriculum-grammar-focus",
+      signals: expect.objectContaining({
+        grammarCurriculumValue: 0.86
+      })
+    });
+  });
+
+  it("penalizes overloaded grammar examples in early bands", () => {
+    const cleanSentence = {
+      sentenceHash: "sentence-clean-grammar",
+      sourceText: "She is going to call today."
+    };
+    const denseSentence = {
+      sentenceHash: "sentence-dense-grammar",
+      sourceText: "She is going to call because they should wait."
+    };
+    const cleanAnalysis = createAnalysisResult(cleanSentence.sentenceHash, 0.5);
+    const denseAnalysis = createAnalysisResult(denseSentence.sentenceHash, 0.5);
+
+    const ranked = rankCandidatesByAnalysis(
+      [denseSentence, cleanSentence],
+      [
+        {
+          ...denseAnalysis,
+          entry: {
+            ...denseAnalysis.entry,
+            grammarFeatures: [
+              createGrammarFeature("future:going-to"),
+              createGrammarFeature("modal:should"),
+              createGrammarFeature("modal:have-to")
+            ]
+          }
+        },
+        {
+          ...cleanAnalysis,
+          entry: {
+            ...cleanAnalysis.entry,
+            grammarFeatures: [createGrammarFeature("future:going-to")]
+          }
+        }
+      ],
+      {
+        config: DEFAULT_CURRICULUM_CONFIG,
+        profile: {
+          activeVocabularyBandId: "level-2b",
+          activePhraseBandId: "level-2b",
+          activeGrammarBandId: "level-2b"
+        }
+      }
+    );
+
+    expect(ranked.candidates.map((candidate) => candidate.sentenceHash)).toEqual([
+      cleanSentence.sentenceHash
+    ]);
+    expect(ranked.reasons.find((reason) => reason.sentenceHash === denseSentence.sentenceHash)).toMatchObject({
+      sentenceHash: denseSentence.sentenceHash,
+      rank: 0,
+      signals: expect.objectContaining({
+        grammarOverloadPenalty: 0.28
+      })
+    });
   });
 
   it("skips out-of-band sentence candidates through curriculum policy", () => {
@@ -634,6 +824,12 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 }
 
+function waitForMicrotasks(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 class InMemorySentenceCache implements SentenceCacheRepository {
   private readonly entries = new Map<string, SentenceCacheEntry>();
 
@@ -781,8 +977,8 @@ function createToken(index: number): AnalyzerToken {
 
 function createLearningItem(overrides: Partial<LearningItem> = {}): LearningItem {
   return {
-    itemId: "word:lemma-city",
-    unitRefId: "lemma-city",
+    itemId: "word:lexeme-city",
+    unitRefId: "lexeme-city",
     unitType: "word",
     sourceText: "city",
     targetText: "ciudad",
@@ -872,7 +1068,6 @@ function createCacheEntry(
 ): SentenceCacheEntry {
   return {
     ...input,
-    grammarNote: input.learningNote.summary,
     targetLanguage: "es",
     sourceLanguage: "en",
     model: "cached-model",

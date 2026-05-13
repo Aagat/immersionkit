@@ -7,8 +7,8 @@ import type {
 import type {
   DifficultyBand,
   ProfileLabel,
-  PrototypeSignalContributions,
-  PrototypeSuitabilityScore,
+  SuitabilitySignalContributions,
+  SentenceSuitabilityScore,
   SuitabilitySignals
 } from "./types";
 
@@ -50,10 +50,10 @@ export function classifyDifficultyBand(
   return "defer";
 }
 
-export function scorePrototypeSuitability(
+export function scoreSentenceSuitability(
   signals: SuitabilitySignals,
   preset: DifficultyProfilePreset
-): PrototypeSuitabilityScore {
+): SentenceSuitabilityScore {
   const weights = preset.weights;
   const signalValues = {
     vocabularyFit: clamp01(signals.vocabularyFit),
@@ -68,7 +68,7 @@ export function scorePrototypeSuitability(
     )
   };
 
-  const contributions: PrototypeSignalContributions = {
+  const contributions: SuitabilitySignalContributions = {
     vocabularyFit: weights.vocabularyFit * signalValues.vocabularyFit,
     grammarFit: weights.grammarFit * signalValues.grammarFit,
     structuralSimplicity:
