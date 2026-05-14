@@ -15,7 +15,8 @@
       "@immersionkit/shared": ["packages/shared/src/index.ts"],
       "@immersionkit/shared/*": ["packages/shared/src/*"],
       "@immersionkit/ui": ["packages/ui/src/index.ts"],
-      "@immersionkit/ui/*": ["packages/ui/src/*"]
+      "@immersionkit/ui/*": ["packages/ui/src/*"],
+      "@/*": ["packages/ui/src/*"]
     }
   }
 }

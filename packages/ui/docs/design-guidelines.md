@@ -1,8 +1,7 @@
 # ImmersionKit UI Guidelines
 
-These notes describe the reusable UI surfaces in `@immersionkit/ui`. They are
-kept release-neutral so the same components can continue past the first public
-ship.
+These notes describe the exported UI surfaces in `@immersionkit/ui`. Product
+truth stays in the PRD; this file is only for UI implementation conventions.
 
 ## Surfaces
 
@@ -16,57 +15,28 @@ ship.
 The extension should wire behavior through these state props instead of
 mounting separate screens for each screenshot state.
 
-## Visual Language
+## Component System
 
-- Use quiet white surfaces, thin borders, and compact 8px radii.
-- Keep teal as the active reading color. Use blue only for optional help and
-  explanatory states, amber for recoverable warnings, and red only for blocked
-  validation.
-- Inline language marks should look reversible and low-pressure: subtle fill,
-  clear underline, and no dense decoration.
-- Inline tokens use two independent axes:
-  - `kind`: word, phrase, or sentence.
-  - `status`: new, learning, known, or muted.
-- Status color should stay soft. New uses a warm coral underline, learning uses
-  amber, known uses green, and muted uses gray. Kind changes the mark structure:
-  words get one underline, phrases get a double underline, and sentences get a
-  dotted sentence-level treatment.
-- Popovers should stay close to the selected token and never require scheduler
-  or diagnostics language.
-- The popup prioritizes one site-level control. Secondary controls remain
-  links or low-emphasis buttons.
-- Every button-like control needs visible hover and pressed states. The large
-  site power button should make its current state obvious before interaction:
-  teal means active, muted gray means paused or unavailable.
-- Options pages should feel like browser settings: left navigation, tab row,
-  bordered sections, and practical density.
+- Use generated shadcn/ui components from `src/components/ui`.
+- Preserve `@immersionkit/ui` as the app-specific screen surface package.
+- Do not export custom primitive controls such as `Button`, `Card`, `Badge`,
+  `Icon`, `Toggle`, `Popover`, or `WordMark`.
+- Compose screens with shadcn `Card`, `Button`, `Badge`, `Alert`, `Progress`,
+  `Tabs`, `Sidebar`, `Slider`, `RadioGroup`, `Switch`, `Select`, `Input`, and
+  `Separator`.
+- Keep app-only helpers inside screen modules when they prevent repetition, but
+  do not turn them into a public primitive layer.
 
-## Theme Tokens
+## Content UI
 
-The stylesheet defines the component contract through CSS variables on
-`.ik-ui-frame`. Light mode is the default. Dark mode can be enabled later by
-setting `data-theme="dark"` on the same root without changing component markup.
-
-Important token groups:
-
-- Surface: `--ik-ui-bg`, `--ik-ui-browser`, `--ik-ui-surface`,
-  `--ik-ui-surface-soft`, `--ik-ui-surface-tint`
-- Text: `--ik-ui-ink`, `--ik-ui-text`, `--ik-ui-muted`,
-  `--ik-ui-soft-muted`
-- Borders: `--ik-ui-line`, `--ik-ui-line-strong`
-- Status: `--ik-ui-accent`, `--ik-ui-blue`, `--ik-ui-warning`,
-  `--ik-ui-danger`
-- Shape and depth: `--ik-ui-radius`, `--ik-ui-shadow-sm`,
-  `--ik-ui-shadow-md`
-
-## Copy Rules
-
-- Prefer "reading mode", "reading band", "local signals", and "stored on this
-  device".
-- Avoid internal scheduler terms, confidence scores, provider jargon in normal
-  reading flows, and anything that sounds like a full course or assessment.
-- Sentence help always names provider use as optional and selected-sentence
-  only.
+- Content pages must not receive global Tailwind preflight or shadcn resets.
+- Keep page-injected CSS limited to inline mark styles, sentence source versus
+  translation visibility, active/hover states, and minimal popover host
+  positioning.
+- Render word, phrase, and sentence popovers as React content inside a shadow
+  root. Avoid portalled shadcn primitives in content popovers.
+- Preserve `data-ik-popover`, `data-ik-status-action`, and
+  `data-ik-sentence-action` attributes for runtime behavior and tests.
 
 ## Interaction Rules
 
@@ -76,4 +46,13 @@ Important token groups:
   management.
 - Unsupported pages explain why controls are unavailable and preserve progress
   context.
-- Advanced diagnostics stay collapsed and support-oriented.
+- Advanced diagnostics stay support-oriented and developer-facing.
+
+## Copy Rules
+
+- Prefer "reading mode", "reading band", "local signals", and "stored on this
+  device".
+- Avoid internal scheduler terms, confidence scores, provider jargon in normal
+  reading flows, and anything that sounds like a full course or assessment.
+- Sentence help always names provider use as optional and selected-sentence
+  only.

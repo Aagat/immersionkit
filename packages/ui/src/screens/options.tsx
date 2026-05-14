@@ -1,18 +1,71 @@
 import { useState } from "react";
 import {
-  Badge,
-  Button,
+  ArrowClockwiseIcon,
+  CheckCircleIcon,
+  WarningCircleIcon
+} from "@phosphor-icons/react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
   Card,
-  Icon,
-  ImmersionLogo,
-  ProgressBar,
-  Toggle
-} from "../components/primitives";
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger
+} from "@/components/ui/sidebar";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
+  IkIcon,
   ImmersionFrame,
+  ImmersionLogo,
   MetricStat,
-  SentenceBlock
+  SentenceBlock,
+  StatusBadge
 } from "./screen-primitives";
 import {
   settingsTabs,
@@ -71,98 +124,109 @@ export function ExtensionOptions({
   };
 
   const optionsContent = (
-    <div className="ik-ui-options-layout">
-      <OptionsSidebar active={active} setActive={setActive} tabs={visibleTabs} />
-      <main className="ik-ui-options-main">
-        <OptionsHeader
-          active={active}
-          isSaving={isSaving}
-          isLoading={isLoading}
-          onSave={onSave}
-          onReload={onReload}
-        />
-        {firstRunIntro ? (
-          <Card className="ik-ui-note-card ik-ui-note-card--blue">
-            <Icon name="shield" />
-            <div>
-              <h2>Start with normal reading</h2>
-              <p>
-                ImmersionKit adds small doses of Spanish on supported pages.
-                Progress and reading history stay on this device, you can pause
-                any site, and your starting point and pace stay adjustable.
-                Sentence help is optional and sends selected text only after you
-                turn it on.
-              </p>
-              <Button variant="secondary" size="sm" onClick={onDismissIntro}>
-                Got it
-              </Button>
-            </div>
-          </Card>
-        ) : null}
-        {statusMessage ? (
-          <div className="ik-ui-status-banner ik-ui-status-banner--success">
-            {statusMessage}
-          </div>
-        ) : null}
-        {errorMessage ? (
-          <div className="ik-ui-warning-banner">
-            <Icon name="info" />
-            {errorMessage}
-          </div>
-        ) : null}
-        <div className="ik-ui-tabs" role="tablist" aria-label="Options sections">
-          {visibleTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={tab === active ? "is-active" : ""}
-              aria-pressed={tab === active}
-              onClick={() => setActive(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        {active === "General" ? (
-          <OptionsGeneralPanel
-            discoveryRatePercent={discoveryRatePercent}
-            readingLevel={readingLevel}
-            stats={stats}
-            checkpoint={checkpoint}
-            currentFocus={currentFocus}
-            learningPath={learningPath}
-            siteSummary={siteSummary}
-            pausedSiteCount={pausedSiteCount}
-            savedSiteCount={savedSiteCount}
-            onDiscoveryRateChange={onDiscoveryRateChange}
-            onReadingLevelChange={onReadingLevelChange}
+    <TooltipProvider>
+      <SidebarProvider defaultOpen>
+        <OptionsSidebar active={active} setActive={setActive} tabs={visibleTabs} />
+        <SidebarInset className="min-h-svh">
+          <OptionsHeader
+            active={active}
+            isSaving={isSaving}
+            isLoading={isLoading}
+            onSave={onSave}
+            onReload={onReload}
           />
-        ) : null}
-        {active === "Translation" ? (
-          <OptionsTranslationPanel
-            sentenceHelpEnabled={sentenceHelpEnabled}
-            provider={provider}
-            apiKey={apiKey}
-            apiKeyValid={apiKeyValid}
-            showApiKey={showApiKey}
-            translationSummary={translationSummary}
-            onSentenceHelpChange={onSentenceHelpChange}
-            onProviderChange={onProviderChange}
-            onApiKeyChange={onApiKeyChange}
-            onToggleApiKeyVisibility={onToggleApiKeyVisibility}
-            onClearApiKey={onClearApiKey}
-          />
-        ) : null}
-        {active === "Advanced" ? (
-          <OptionsAdvancedPanel
-            diagnostics={advancedDiagnostics ?? null}
-            exactActiveBandId={exactActiveBandId}
-            bandOptions={bandOptions}
-            onExactBandChange={onExactBandChange}
-          />
-        ) : null}
-      </main>
-    </div>
+          <ScrollArea className="min-h-0 flex-1">
+            <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-4 pt-0 md:p-6 md:pt-0">
+              {firstRunIntro ? (
+                <Alert className="rounded-lg">
+                  <IkIcon name="shield" />
+                  <AlertDescription>
+                    Start with normal reading. ImmersionKit adds small doses of
+                    Spanish on supported pages. Progress and reading history stay
+                    on this device, you can pause any site, and your starting point
+                    and pace stay adjustable. Sentence help is optional and sends
+                    selected text only after you turn it on.
+                  </AlertDescription>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 w-fit"
+                    onClick={onDismissIntro}
+                  >
+                    Got it
+                  </Button>
+                </Alert>
+              ) : null}
+              {statusMessage ? (
+                <Alert className="rounded-lg">
+                  <CheckCircleIcon aria-hidden="true" />
+                  <AlertDescription>{statusMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+              {errorMessage ? (
+                <Alert variant="destructive" className="rounded-lg">
+                  <WarningCircleIcon aria-hidden="true" />
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+              <Tabs
+                value={active}
+                onValueChange={(value) => setActive(value as OptionsSection)}
+                className="flex flex-col gap-5"
+              >
+                <TabsList className="w-fit">
+                  {visibleTabs.map((tab) => (
+                    <TabsTrigger key={tab} value={tab}>
+                      {tab}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <TabsContent value="General" className="m-0">
+                  <OptionsGeneralPanel
+                    discoveryRatePercent={discoveryRatePercent}
+                    readingLevel={readingLevel}
+                    stats={stats}
+                    checkpoint={checkpoint}
+                    currentFocus={currentFocus}
+                    learningPath={learningPath}
+                    siteSummary={siteSummary}
+                    pausedSiteCount={pausedSiteCount}
+                    savedSiteCount={savedSiteCount}
+                    onDiscoveryRateChange={onDiscoveryRateChange}
+                    onReadingLevelChange={onReadingLevelChange}
+                  />
+                </TabsContent>
+                <TabsContent value="Translation" className="m-0">
+                  <OptionsTranslationPanel
+                    sentenceHelpEnabled={sentenceHelpEnabled}
+                    provider={provider}
+                    apiKey={apiKey}
+                    apiKeyValid={apiKeyValid}
+                    showApiKey={showApiKey}
+                    translationSummary={translationSummary}
+                    onSentenceHelpChange={onSentenceHelpChange}
+                    onProviderChange={onProviderChange}
+                    onApiKeyChange={onApiKeyChange}
+                    onToggleApiKeyVisibility={onToggleApiKeyVisibility}
+                    onClearApiKey={onClearApiKey}
+                  />
+                </TabsContent>
+                {showAdvanced ? (
+                  <TabsContent value="Advanced" className="m-0">
+                    <OptionsAdvancedPanel
+                      diagnostics={advancedDiagnostics ?? null}
+                      exactActiveBandId={exactActiveBandId}
+                      bandOptions={bandOptions}
+                      onExactBandChange={onExactBandChange}
+                    />
+                  </TabsContent>
+                ) : null}
+              </Tabs>
+            </main>
+          </ScrollArea>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 
   if (!chromeFrame) {
@@ -192,37 +256,58 @@ function OptionsSidebar({
   tabs?: OptionsSection[];
 }) {
   return (
-    <aside className="ik-ui-options-sidebar">
-      <div className="ik-ui-brand ik-ui-brand--large">
-        <ImmersionLogo />
-        <span>ImmersionKit</span>
-      </div>
-      <nav aria-label="Options navigation">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={tab === active ? "is-active" : ""}
-            onClick={() => setActive(tab)}
-          >
-            <Icon name={tab === "General" ? "gear" : tab === "Translation" ? "link" : "band"} />
-            {tab}
-          </button>
-        ))}
-      </nav>
-      {active === "Advanced" ? (
-        <div className="ik-ui-subnav">
-          <strong>Build profile</strong>
-          <span>Active page</span>
-          <span>Curriculum state</span>
-          <span>Local data</span>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div className="flex items-center gap-2 px-2 py-1">
+          <ImmersionLogo className="size-8" />
+          <div className="grid min-w-0 text-sm leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-medium">ImmersionKit</span>
+            <span className="truncate text-xs text-muted-foreground">Reading settings</span>
+          </div>
         </div>
-      ) : null}
-      <div className="ik-ui-sidebar-note">
-        <Icon name="lock" />
-        <p>{active === "Advanced" ? "Private by default" : "Progress is stored on this device."}</p>
-      </div>
-    </aside>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Options</SidebarGroupLabel>
+          <SidebarMenu aria-label="Options sections">
+            {tabs.map((tab) => (
+              <SidebarMenuItem key={tab}>
+                <SidebarMenuButton
+                  tooltip={tab}
+                  isActive={tab === active}
+                  onClick={() => setActive(tab)}
+                >
+                  <IkIcon name={tab === "General" ? "gear" : tab === "Translation" ? "translate" : "band"} />
+                  <span>{tab}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        {active === "Advanced" ? (
+          <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel>Diagnostics</SidebarGroupLabel>
+            <div className="flex flex-col gap-1 px-3 text-sm text-muted-foreground">
+              <span>Build profile</span>
+              <span>Active page</span>
+              <span>Curriculum state</span>
+              <span>Local data</span>
+            </div>
+          </SidebarGroup>
+        ) : null}
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="flex gap-2 rounded-lg border bg-background p-3 text-sm group-data-[collapsible=icon]:hidden">
+          <IkIcon name="lock" className="mt-0.5 text-muted-foreground" />
+          <p className="text-muted-foreground">
+            {active === "Advanced"
+              ? "Private by default"
+              : "Progress is stored on this device."}
+          </p>
+        </div>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
   );
 }
 
@@ -255,17 +340,20 @@ function OptionsHeader({
   }[active];
 
   return (
-    <header className="ik-ui-options-header">
-      <div>
-        <h1>{copy[0]}</h1>
-        <p>{copy[1]}</p>
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:px-6">
+      <SidebarTrigger className="-ml-1" />
+      <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-base font-medium">{copy[0]}</h1>
+        <p className="truncate text-sm text-muted-foreground">{copy[1]}</p>
       </div>
-      <div className="ik-ui-quiet-actions">
-        <Button variant="primary" disabled={isSaving || isLoading} onClick={onSave}>
-          {isSaving ? "Saving..." : "Save changes"}
-        </Button>
-        <Button variant="secondary" icon="spark" disabled={isSaving} onClick={onReload}>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" disabled={isSaving} onClick={onReload}>
+          <ArrowClockwiseIcon data-icon="inline-start" />
           Reload
+        </Button>
+        <Button disabled={isSaving || isLoading} onClick={onSave}>
+          {isSaving ? "Saving..." : "Save changes"}
         </Button>
       </div>
     </header>
@@ -307,117 +395,185 @@ function OptionsGeneralPanel({
   };
 
   return (
-    <div className="ik-ui-options-panel">
+    <div className="flex flex-col gap-5">
       {currentFocus ? <CurrentFocusCard focus={currentFocus} /> : null}
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <Card>
-          <div className="ik-ui-card-row">
-            <h2>New word pace</h2>
-            <Badge tone="accent">Gentle pace</Badge>
-          </div>
-          <p>Choose how many new Spanish words appear while you read.</p>
-          <div className="ik-ui-slider-row">
-            <input
-              id="settings-discovery-rate"
-              type="range"
-              min={0}
-              max={20}
-              value={discoveryRatePercent}
-              onChange={(event) => {
-                onDiscoveryRateChange?.(Number(event.target.value));
-              }}
-            />
-            <strong>{discoveryRatePercent}%</strong>
-          </div>
-          <div className="ik-ui-scale">
-            <span>Subtle</span>
-            <span>Balanced</span>
-            <span>Bold</span>
-          </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>New word pace</CardTitle>
+            <CardDescription>Choose how many new Spanish words appear while you read.</CardDescription>
+            <CardAction>
+              <StatusBadge>Gentle pace</StatusBadge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel htmlFor="settings-discovery-rate">Discovery rate</FieldLabel>
+                  <span className="text-sm font-medium">{discoveryRatePercent}%</span>
+                </div>
+                <Slider
+                  id="settings-discovery-rate"
+                  min={0}
+                  max={20}
+                  step={1}
+                  value={[discoveryRatePercent]}
+                  onValueChange={(value) => onDiscoveryRateChange?.(value[0] ?? 0)}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Subtle</span>
+                  <span>Balanced</span>
+                  <span>Bold</span>
+                </div>
+              </Field>
+            </FieldGroup>
+          </CardContent>
         </Card>
-        <Card>
-          <h2>Starting point</h2>
-          <p>Pick the option that best matches your current reading in Spanish.</p>
-          <div className="ik-ui-choice-grid ik-ui-choice-grid--three" role="radiogroup" aria-label="Reading level">
-            <Choice
-              title="Beginner"
-              copy="Just starting. Simple words and phrases."
-              selected={resolvedReadingLevel === "Beginner"}
-              onSelect={() => chooseReadingLevel("Beginner")}
-            />
-            <Choice
-              title="False beginner"
-              copy="I know some basics but need more exposure."
-              selected={resolvedReadingLevel === "False beginner"}
-              onSelect={() => chooseReadingLevel("False beginner")}
-            />
-            <Choice
-              title="Intermediate"
-              copy="Comfortable with most everyday reading."
-              selected={resolvedReadingLevel === "Intermediate"}
-              onSelect={() => chooseReadingLevel("Intermediate")}
-            />
-          </div>
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Starting point</CardTitle>
+            <CardDescription>
+              Pick the option that best matches your current reading in Spanish.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldSet>
+              <FieldLegend className="sr-only">Reading level</FieldLegend>
+              <RadioGroup
+                value={resolvedReadingLevel}
+                onValueChange={(value) => chooseReadingLevel(value as ReadingLevel)}
+                className="grid gap-3 md:grid-cols-3"
+              >
+                <ReadingLevelChoice
+                  value="Beginner"
+                  title="Beginner"
+                  copy="Just starting. Simple words and phrases."
+                />
+                <ReadingLevelChoice
+                  value="False beginner"
+                  title="False beginner"
+                  copy="I know some basics but need more exposure."
+                />
+                <ReadingLevelChoice
+                  value="Intermediate"
+                  title="Intermediate"
+                  copy="Comfortable with most everyday reading."
+                />
+              </RadioGroup>
+            </FieldSet>
+          </CardContent>
         </Card>
       </div>
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <Card>
-          <h2>Learning snapshot</h2>
-          <p>Progress starts from normal reading on supported pages and builds local history across sites.</p>
-          <div className="ik-ui-metric-grid ik-ui-metric-grid--four">
-            <MetricStat label="Comfortable" value={stats?.comfortable ?? 0} icon="check" />
-            <MetricStat label="In practice" value={stats?.practice ?? 0} icon="spark" />
-            <MetricStat label="Still new" value={stats?.newCount ?? 0} icon="band" />
-            <MetricStat label="Tracked total" value={stats?.total ?? 0} icon="book" />
-          </div>
-        </Card>
-        <Card>
-          <div className="ik-ui-card-row">
-            <div>
-              <h2>Reading band</h2>
-              <p>Normal reading on supported pages builds the local evidence that widens your reading range.</p>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Learning snapshot</CardTitle>
+            <CardDescription>
+              Progress starts from normal reading on supported pages and builds
+              local history across sites.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricStat label="Comfortable" value={stats?.comfortable ?? 0} icon="check" />
+              <MetricStat label="In practice" value={stats?.practice ?? 0} icon="spark" />
+              <MetricStat label="Still new" value={stats?.newCount ?? 0} icon="band" />
+              <MetricStat label="Tracked total" value={stats?.total ?? 0} icon="book" />
             </div>
-            <span>{checkpoint?.progressLabel ?? "Progress starts as you read"}</span>
-          </div>
-          <ProgressBar value={checkpoint?.progressValue ?? 0} />
-          <div className="ik-ui-band-step">
-            <span>{checkpoint?.currentBand ?? "Starting"}</span>
-            <Icon name="chevron" />
-            <span>{checkpoint?.nextBand ?? "Next band"}</span>
-            <Button
-              variant="secondary"
-              disabled={!checkpoint?.canWiden || checkpoint.isWidening}
-              icon={checkpoint?.canWiden ? "band" : "lock"}
-              onClick={checkpoint?.onWiden}
-            >
-              {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
-            </Button>
-          </div>
-          <p>{checkpoint?.description}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Reading band</CardTitle>
+            <CardDescription>
+              Normal reading on supported pages builds the local evidence that
+              widens your reading range.
+            </CardDescription>
+            <CardAction>
+              <Badge variant="outline" className="rounded-md">
+                {checkpoint?.progressLabel ?? "Progress starts as you read"}
+              </Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Progress value={checkpoint?.progressValue ?? 0} />
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
+              <span className="font-medium">{checkpoint?.currentBand ?? "Starting"}</span>
+              <IkIcon name="chevron" className="text-muted-foreground" />
+              <span className="font-medium">{checkpoint?.nextBand ?? "Next band"}</span>
+              <Button
+                variant="outline"
+                disabled={!checkpoint?.canWiden || checkpoint.isWidening}
+                onClick={checkpoint?.onWiden}
+              >
+                <IkIcon
+                  name={checkpoint?.canWiden ? "band" : "lock"}
+                  dataIcon="inline-start"
+                />
+                {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
+              </Button>
+            </div>
+            {checkpoint?.description ? (
+              <p className="text-sm text-muted-foreground">{checkpoint.description}</p>
+            ) : null}
+          </CardContent>
         </Card>
       </div>
       <LearningPathView path={learningPath} />
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <Card>
-          <h2>Site controls</h2>
-          <p>Pause or resume ImmersionKit per site from the popup on supported pages.</p>
-          <div className="ik-ui-inline-summary">
-            <MetricStat label="saved choices" value={savedSiteCount} icon="link" />
-            <MetricStat label="paused site" value={pausedSiteCount} icon="pause" />
-            <Button variant="secondary">Manage saved sites</Button>
-          </div>
-          {siteSummary ? <p>{siteSummary}</p> : null}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Site controls</CardTitle>
+            <CardDescription>
+              Pause or resume ImmersionKit per site from the popup on supported pages.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricStat label="saved choices" value={savedSiteCount} icon="link" />
+              <MetricStat label="paused site" value={pausedSiteCount} icon="pause" />
+            </div>
+            <Button variant="outline" className="w-fit">Manage saved sites</Button>
+            {siteSummary ? <p className="text-sm text-muted-foreground">{siteSummary}</p> : null}
+          </CardContent>
         </Card>
-        <div className="ik-ui-soft-callout">
-          <Icon name="band" />
-          <div>
-            <strong>Small steps add up.</strong>
-            <p>You can always adjust these settings as your reading grows.</p>
-          </div>
-        </div>
+        <Alert className="rounded-lg">
+          <IkIcon name="band" />
+          <AlertDescription>
+            <span className="block font-medium text-foreground">Small steps add up.</span>
+            You can always adjust these settings as your reading grows.
+          </AlertDescription>
+        </Alert>
       </div>
     </div>
   );
+}
+
+function ReadingLevelChoice({
+  value,
+  title,
+  copy
+}: {
+  value: ReadingLevel;
+  title: string;
+  copy: string;
+}) {
+  return (
+    <FieldLabel className="has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">
+      <Field orientation="horizontal" className="rounded-lg border p-3">
+        <RadioGroupItem value={value} />
+        <FieldContent>
+          <FieldTitle>{title}</FieldTitle>
+          <FieldDescription>{copy}</FieldDescription>
+        </FieldContent>
+      </Field>
+    </FieldLabel>
+  );
+}
+
+function FieldTitle({ children }: { children: string }) {
+  return <span className="text-sm font-medium">{children}</span>;
 }
 
 function CurrentFocusCard({
@@ -426,47 +582,50 @@ function CurrentFocusCard({
   focus: NonNullable<ExtensionOptionsProps["currentFocus"]>;
 }) {
   return (
-    <Card className="ik-ui-current-focus">
-      <div className="ik-ui-card-row">
-        <div>
-          <h2>{focus.levelLabel}: {focus.learnerTitle}</h2>
-          <p>{focus.bandLabel}</p>
+    <Card className="rounded-lg">
+      <CardHeader>
+        <CardTitle>
+          {focus.levelLabel}: {focus.learnerTitle}
+        </CardTitle>
+        <CardDescription>{focus.bandLabel}</CardDescription>
+        <CardAction>
+          <StatusBadge>Current focus</StatusBadge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">{focus.shortGoal}</p>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <FocusList title="Words" items={focus.wordFocusLabels} />
+          <FocusList title="Examples" items={focus.wordExampleLabels ?? []} />
+          <FocusList title="Word patterns" items={focus.wordPatternLabels} />
+          <FocusList title="Phrases" items={focus.phraseFocusExamples} />
+          <FocusList title="Grammar" items={focus.grammarFocusLabels} />
         </div>
-        <Badge tone="accent">Current focus</Badge>
-      </div>
-      <p>{focus.shortGoal}</p>
-      <div className="ik-ui-focus-grid">
-        <FocusList title="Words" items={focus.wordFocusLabels} />
-        <FocusList title="Examples" items={focus.wordExampleLabels ?? []} />
-        <FocusList title="Word patterns" items={focus.wordPatternLabels} />
-        <FocusList title="Phrases" items={focus.phraseFocusExamples} />
-        <FocusList title="Grammar" items={focus.grammarFocusLabels} />
-      </div>
-      <div className="ik-ui-focus-footer">
-        <div>
-          <strong>Sentence style</strong>
-          <span>{focus.sentenceFocusLabel}</span>
-        </div>
-        <div>
-          <strong>Next focus</strong>
-          <span>{focus.nextFocusPreview}</span>
-        </div>
-      </div>
+      </CardContent>
+      <CardFooter className="grid gap-3 border-t pt-4 md:grid-cols-2">
+        <FocusFooter label="Sentence style" value={focus.sentenceFocusLabel} />
+        <FocusFooter label="Next focus" value={focus.nextFocusPreview} />
+      </CardFooter>
     </Card>
   );
 }
 
-function FocusList({
-  title,
-  items
-}: {
-  title: string;
-  items: readonly string[];
-}) {
+function FocusList({ title, items }: { title: string; items: readonly string[] }) {
   return (
-    <div className="ik-ui-focus-list">
-      <strong>{title}</strong>
-      <span>{items.length > 0 ? items.slice(0, 5).join(", ") : "Review and consolidation"}</span>
+    <div className="rounded-lg border bg-muted/30 p-3">
+      <strong className="block text-sm">{title}</strong>
+      <span className="text-sm text-muted-foreground">
+        {items.length > 0 ? items.slice(0, 5).join(", ") : "Review and consolidation"}
+      </span>
+    </div>
+  );
+}
+
+function FocusFooter({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <strong className="block text-sm">{label}</strong>
+      <span className="text-sm text-muted-foreground">{value}</span>
     </div>
   );
 }
@@ -481,43 +640,51 @@ function LearningPathView({
   }
 
   return (
-    <section className="ik-ui-learning-path" aria-label="Learning path">
-      <div className="ik-ui-section-heading">
-        <div>
-          <h2>Learning path</h2>
-          <p>Five reading levels widen vocabulary, phrases, grammar, and sentence complexity.</p>
-        </div>
+    <section className="flex flex-col gap-3" aria-label="Learning path">
+      <div>
+        <h2 className="text-base font-medium">Learning path</h2>
+        <p className="text-sm text-muted-foreground">
+          Five reading levels widen vocabulary, phrases, grammar, and sentence complexity.
+        </p>
       </div>
-      <div className="ik-ui-path-grid">
+      <div className="grid gap-3">
         {path.map((level) => (
           <details
             key={level.levelId}
-            className="ik-ui-path-level"
+            className="rounded-lg border bg-card p-4 text-card-foreground"
             open={level.active}
           >
-            <summary>
-              <span>
-                <strong>{level.levelLabel}</strong>
-                <small>{level.stageSummary}</small>
+            <summary className="flex cursor-pointer items-center justify-between gap-3">
+              <span className="min-w-0">
+                <strong className="block truncate">{level.levelLabel}</strong>
+                <small className="text-muted-foreground">{level.stageSummary}</small>
               </span>
-              <Badge tone={level.active ? "accent" : level.unlocked ? "info" : "muted"}>
+              <Badge
+                variant={level.active ? "default" : level.unlocked ? "outline" : "secondary"}
+                className="rounded-md"
+              >
                 {level.active ? "Now" : level.unlocked ? "Open" : "Later"}
               </Badge>
             </summary>
-            <div className="ik-ui-path-details">
-              <PathDetail label="Words" value={level.vocabularySummary} />
-              <PathDetail label="Phrases" value={level.phraseSummary} />
-              <PathDetail label="Grammar" value={level.grammarSummary} />
-              <PathDetail label="Sentences" value={level.sentenceSummary} />
-              <PathDetail label="Boundary step" value={level.checkpointSummary} />
-              <div className="ik-ui-band-list">
+            <div className="mt-4 grid gap-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <PathDetail label="Words" value={level.vocabularySummary} />
+                <PathDetail label="Phrases" value={level.phraseSummary} />
+                <PathDetail label="Grammar" value={level.grammarSummary} />
+                <PathDetail label="Sentences" value={level.sentenceSummary} />
+                <PathDetail label="Boundary step" value={level.checkpointSummary} />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {level.bands.map((band) => (
                   <div
                     key={band.bandId}
-                    className={band.active ? "is-active" : ""}
+                    className={cn(
+                      "rounded-lg border bg-background p-3",
+                      band.active && "border-primary"
+                    )}
                   >
-                    <strong>{band.bandLabel}</strong>
-                    <span>{band.learnerTitle}</span>
+                    <strong className="block text-sm">{band.bandLabel}</strong>
+                    <span className="text-sm text-muted-foreground">{band.learnerTitle}</span>
                   </div>
                 ))}
               </div>
@@ -531,9 +698,9 @@ function LearningPathView({
 
 function PathDetail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="ik-ui-path-detail">
-      <strong>{label}</strong>
-      <span>{value}</span>
+    <div className="min-w-0 rounded-lg border bg-background p-3">
+      <strong className="block text-sm">{label}</strong>
+      <span className="text-sm text-muted-foreground">{value}</span>
     </div>
   );
 }
@@ -565,108 +732,152 @@ function OptionsTranslationPanel({
   | "onClearApiKey"
 >) {
   return (
-    <div className="ik-ui-options-panel ik-ui-options-panel--translation">
+    <div className="flex flex-col gap-5">
       {!apiKeyValid && provider === "openai" ? (
-        <div className="ik-ui-warning-banner">
-          <Icon name="shield" />
-          Add a valid OpenAI API key before turning sentence help on.
-        </div>
+        <Alert variant="destructive" className="rounded-lg">
+          <IkIcon name="shield" />
+          <AlertDescription>
+            Add a valid OpenAI API key before turning sentence help on.
+          </AlertDescription>
+        </Alert>
       ) : null}
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <div className="ik-ui-settings-stack">
-          <Card className="ik-ui-switch-row">
-            <div>
-              <h2>Sentence help</h2>
-              <p>Show selected sentence translations and short grammar notes after provider setup.</p>
-            </div>
-            <Toggle
-              checked={sentenceHelpEnabled}
-              label="Enable sentence help"
-              onChange={onSentenceHelpChange}
-            />
-            <span>{sentenceHelpEnabled ? "On" : "Off"}</span>
-          </Card>
-          <Card className="ik-ui-note-card ik-ui-note-card--blue">
-            <Icon name="lock" />
-            <p>
-              Selected sentence text is sent to OpenAI only when sentence help is enabled.
-              Page text is not sent automatically.
-            </p>
-          </Card>
-          <Card>
-            <h2>Provider</h2>
-            <p>Choose a provider for sentence help.</p>
-            <label className="ik-ui-field">
-              <select
-                value={provider}
-                onChange={(event) => {
-                  const nextProvider = event.target.value === "openai" ? "openai" : "none";
-                  onProviderChange?.(nextProvider);
-                }}
-              >
-                <option value="none">None</option>
-                <option value="openai">OpenAI</option>
-              </select>
-            </label>
-            {translationSummary ? <p>{translationSummary}</p> : null}
-          </Card>
-          <Card>
-            <div className="ik-ui-card-row">
-              <h2>OpenAI API key</h2>
-              <Badge tone={apiKeyValid ? "accent" : "danger"}>
-                {apiKeyValid ? "Looks valid" : "Needs key"}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="flex flex-col gap-5">
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle>Sentence help</CardTitle>
+              <CardDescription>
+                Show selected sentence translations and short grammar notes after provider setup.
+              </CardDescription>
+              <CardAction>
+                <Switch
+                  checked={sentenceHelpEnabled}
+                  aria-label="Enable sentence help"
+                  onCheckedChange={onSentenceHelpChange}
+                />
+              </CardAction>
+            </CardHeader>
+            <CardFooter className="border-t pt-4">
+              <Badge variant={sentenceHelpEnabled ? "default" : "secondary"} className="rounded-md">
+                {sentenceHelpEnabled ? "On" : "Off"}
               </Badge>
-            </div>
-            <p>Enter your OpenAI API key.</p>
-            <label className="ik-ui-field">
-              <input
-                placeholder="sk-..."
-                type={showApiKey ? "text" : "password"}
-                value={apiKey}
-                autoComplete="off"
-                spellCheck={false}
-                onChange={(event) => {
-                  onApiKeyChange?.(event.target.value);
-                }}
-              />
-            </label>
-            <div className="ik-ui-quiet-actions">
-              <Button variant="secondary" size="sm" onClick={onToggleApiKeyVisibility}>
+            </CardFooter>
+          </Card>
+          <Alert className="rounded-lg">
+            <IkIcon name="lock" />
+            <AlertDescription>
+              Selected sentence text is sent to OpenAI only when sentence help is
+              enabled. Page text is not sent automatically.
+            </AlertDescription>
+          </Alert>
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle>Provider</CardTitle>
+              <CardDescription>Choose a provider for sentence help.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="sentence-provider">Provider</FieldLabel>
+                  <Select
+                    value={provider}
+                    onValueChange={(value) => {
+                      const nextProvider = value === "openai" ? "openai" : "none";
+                      onProviderChange?.(nextProvider);
+                    }}
+                  >
+                    <SelectTrigger id="sentence-provider" className="w-full">
+                      <SelectValue placeholder="Provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="openai">OpenAI</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {translationSummary ? (
+                    <FieldDescription>{translationSummary}</FieldDescription>
+                  ) : null}
+                </Field>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle>OpenAI API key</CardTitle>
+              <CardDescription>Enter your OpenAI API key.</CardDescription>
+              <CardAction>
+                <Badge
+                  variant={apiKeyValid ? "default" : "destructive"}
+                  className="rounded-md"
+                >
+                  {apiKeyValid ? "Looks valid" : "Needs key"}
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup>
+                <Field data-invalid={!apiKeyValid && provider === "openai" ? true : undefined}>
+                  <FieldLabel htmlFor="openai-api-key">API key</FieldLabel>
+                  <Input
+                    id="openai-api-key"
+                    placeholder="sk-..."
+                    type={showApiKey ? "text" : "password"}
+                    value={apiKey}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-invalid={!apiKeyValid && provider === "openai"}
+                    onChange={(event) => onApiKeyChange?.(event.target.value)}
+                  />
+                </Field>
+              </FieldGroup>
+            </CardContent>
+            <CardFooter className="gap-2 border-t pt-4">
+              <Button variant="outline" size="sm" onClick={onToggleApiKeyVisibility}>
                 {showApiKey ? "Hide" : "Show"}
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={!apiKey}
                 onClick={onClearApiKey}
               >
                 Clear
               </Button>
-            </div>
+            </CardFooter>
           </Card>
         </div>
-        <div className="ik-ui-settings-stack">
-          <Card>
-            <h2>Sentence note preview</h2>
-            <p>This is an example of what you'll see.</p>
-            <div className="ik-ui-note-preview">
-              <header>
-                <Icon name="spark" />
-                <span>Sentence help</span>
-                <Icon name="close" />
-              </header>
-              <SentenceBlock label="Original" text="Me tomo un momento para respirar." />
-              <SentenceBlock label="Translation" text="I take a moment to breathe." />
-              <div className="ik-ui-grammar-hint">
-                <Icon name="spark" />
-                <span>Take a moment to + verb is a common pattern for making time for an action.</span>
+        <div className="flex flex-col gap-5">
+          <Card className="rounded-lg">
+            <CardHeader>
+              <CardTitle>Sentence note preview</CardTitle>
+              <CardDescription>This is an example of what you'll see.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+                <header className="flex items-center gap-2 text-sm font-medium">
+                  <IkIcon name="spark" />
+                  <span className="flex-1">Sentence help</span>
+                  <IkIcon name="close" className="text-muted-foreground" />
+                </header>
+                <SentenceBlock label="Original" text="Me tomo un momento para respirar." />
+                <SentenceBlock label="Translation" text="I take a moment to breathe." />
+                <Alert className="rounded-lg">
+                  <IkIcon name="spark" />
+                  <AlertDescription>
+                    Take a moment to + verb is a common pattern for making time for an action.
+                  </AlertDescription>
+                </Alert>
               </div>
-            </div>
+            </CardContent>
           </Card>
-          <div className="ik-ui-soft-callout">
-            <Icon name="check" />
-            <p>You can turn sentence help on or off any time. Vocabulary help will keep working locally.</p>
-          </div>
+          <Alert className="rounded-lg">
+            <IkIcon name="check" />
+            <AlertDescription>
+              You can turn sentence help on or off any time. Vocabulary help will keep working locally.
+            </AlertDescription>
+          </Alert>
         </div>
       </div>
     </div>
@@ -688,142 +899,138 @@ function OptionsAdvancedPanel({
   const storageMetrics = diagnostics?.storageMetrics ?? [];
 
   return (
-    <div className="ik-ui-options-panel">
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <Card>
-          <h2>Build diagnostics</h2>
-          <p>{diagnostics?.diagnosticsEnabled ? "Diagnostics are available in this build." : "Diagnostics are disabled in this build."}</p>
-          <DiagnosticRow
-            title="Build profile"
-            status={diagnostics?.buildProfile ?? "unknown"}
-          />
-          <DiagnosticRow
-            title="Advanced access"
-            status={diagnostics?.diagnosticsEnabled ? "On" : "Off"}
-          />
-          <DiagnosticRow
-            title="Active page updated"
-            detail={diagnostics?.activePageUpdatedAt ?? "not available"}
-          />
+    <div className="flex flex-col gap-5">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Build diagnostics</CardTitle>
+            <CardDescription>
+              {diagnostics?.diagnosticsEnabled
+                ? "Diagnostics are available in this build."
+                : "Diagnostics are disabled in this build."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <DiagnosticRow title="Build profile" status={diagnostics?.buildProfile ?? "unknown"} />
+            <DiagnosticRow title="Advanced access" status={diagnostics?.diagnosticsEnabled ? "On" : "Off"} />
+            <DiagnosticRow title="Active page updated" detail={diagnostics?.activePageUpdatedAt ?? "not available"} />
+          </CardContent>
         </Card>
-        <Card>
-          <h2>Active page</h2>
-          <p>{diagnostics?.activePageMessage ?? "No active-page diagnostics loaded."}</p>
-          {diagnostics?.activePageUrl ? (
-            <div className="ik-ui-info-box">{diagnostics.activePageUrl}</div>
-          ) : null}
-          <div className="ik-ui-metric-grid">
-            {activePageMetrics.map((metric) => (
-              <MetricStat
-                key={metric.label}
-                label={metric.label}
-                value={metric.value}
-                icon="spark"
-              />
-            ))}
-          </div>
-        </Card>
-      </div>
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <Card>
-          <h2>Exact reading band</h2>
-          <p>Diagnostic override for vocabulary, phrase, and grammar placement.</p>
-          <label className="ik-ui-field">
-            <select
-              value={exactActiveBandId ?? ""}
-              onChange={(event) => {
-                if (event.target.value) {
-                  onExactBandChange?.(event.target.value);
-                }
-              }}
-            >
-              <option value="" disabled>
-                Select band
-              </option>
-              {bandOptions.map((band) => (
-                <option key={band.id} value={band.id}>
-                  {band.label}
-                </option>
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Active page</CardTitle>
+            <CardDescription>
+              {diagnostics?.activePageMessage ?? "No active-page diagnostics loaded."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {diagnostics?.activePageUrl ? (
+              <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+                {diagnostics.activePageUrl}
+              </div>
+            ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {activePageMetrics.map((metric) => (
+                <MetricStat key={metric.label} label={metric.label} value={metric.value} icon="spark" />
               ))}
-            </select>
-          </label>
-        </Card>
-        <Card className="ik-ui-note-card">
-          <Icon name="band" />
-          <div>
-            <h2>Placement state</h2>
-            <p>
-              {exactActiveBandId
-                ? `${exactActiveBandId} is active across all curriculum tracks.`
-                : "No exact active band is selected."}
-            </p>
-          </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
-      <div className="ik-ui-settings-grid ik-ui-settings-grid--two">
-        <Card className="ik-ui-note-card">
-          <Icon name="book" />
-          <div>
-            <h2>Curriculum state</h2>
-            <p>{diagnostics?.curriculumSummary ?? "No curriculum diagnostics loaded."}</p>
-            <div className="ik-ui-info-box">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Exact reading band</CardTitle>
+            <CardDescription>
+              Diagnostic override for vocabulary, phrase, and grammar placement.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Reading band</FieldLabel>
+                <Select
+                  value={exactActiveBandId ?? ""}
+                  onValueChange={(value) => {
+                    if (value) {
+                      onExactBandChange?.(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select band" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {bandOptions.map((band) => (
+                        <SelectItem key={band.id} value={band.id}>
+                          {band.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+        <Alert className="rounded-lg">
+          <IkIcon name="band" />
+          <AlertDescription>
+            {exactActiveBandId
+              ? `${exactActiveBandId} is active across all curriculum tracks.`
+              : "No exact active band is selected."}
+          </AlertDescription>
+        </Alert>
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader className="flex-row gap-3">
+            <IkIcon name="book" className="text-muted-foreground" />
+            <div>
+              <CardTitle>Curriculum state</CardTitle>
+              <CardDescription>
+                {diagnostics?.curriculumSummary ?? "No curriculum diagnostics loaded."}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
               {diagnostics?.progressionSummary ?? "No progression decision recorded."}
             </div>
-          </div>
+          </CardContent>
         </Card>
-        <Card className="ik-ui-note-card">
-          <Icon name="lock" />
-          <div>
-            <h2>Local data snapshot</h2>
-            <p>Settings, site choices, vocabulary state, phrases, and review history stay on this device.</p>
-            <div className="ik-ui-metric-grid">
+        <Card className="rounded-lg">
+          <CardHeader className="flex-row gap-3">
+            <IkIcon name="lock" className="text-muted-foreground" />
+            <div>
+              <CardTitle>Local data snapshot</CardTitle>
+              <CardDescription>
+                Settings, site choices, vocabulary state, phrases, and review
+                history stay on this device.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
               {storageMetrics.map((metric) => (
-                <MetricStat
-                  key={metric.label}
-                  label={metric.label}
-                  value={metric.value}
-                  icon="shield"
-                />
+                <MetricStat key={metric.label} label={metric.label} value={metric.value} icon="shield" />
               ))}
             </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
-      <Card className="ik-ui-collapsed">
-        <div>
-          <h2>Advanced diagnostics <Badge tone="accent">Optional</Badge></h2>
-          <p>Use #advanced, ?debug=1, or ?advanced=1 in diagnostic builds.</p>
-        </div>
-        <Icon name="chevron" />
+      <Card className="rounded-lg">
+        <CardHeader>
+          <CardTitle>
+            Advanced diagnostics <Badge className="ml-2 rounded-md">Optional</Badge>
+          </CardTitle>
+          <CardDescription>
+            Use #advanced, ?debug=1, or ?advanced=1 in diagnostic builds.
+          </CardDescription>
+        </CardHeader>
       </Card>
     </div>
-  );
-}
-
-function Choice({
-  title,
-  copy,
-  selected = false,
-  onSelect
-}: {
-  title: ReadingLevel;
-  copy: string;
-  selected?: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`ik-ui-choice${selected ? " is-selected" : ""}`}
-      role="radio"
-      aria-checked={selected}
-      aria-label={title}
-      onClick={onSelect}
-    >
-      <span className="ik-ui-radio" />
-      <strong>{title}</strong>
-      <small>{copy}</small>
-    </button>
   );
 }
 
@@ -837,12 +1044,16 @@ function DiagnosticRow({
   status?: string;
 }) {
   return (
-    <div className="ik-ui-saved-row">
-      <div>
-        <strong>{title}</strong>
-        {detail ? <span>{detail}</span> : null}
+    <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
+      <div className="min-w-0">
+        <strong className="block truncate text-sm">{title}</strong>
+        {detail ? <span className="text-sm text-muted-foreground">{detail}</span> : null}
       </div>
-      {status ? <Badge tone={status === "On" ? "accent" : "warning"}>{status}</Badge> : null}
+      {status ? (
+        <Badge variant={status === "On" ? "default" : "secondary"} className="rounded-md">
+          {status}
+        </Badge>
+      ) : null}
     </div>
   );
 }

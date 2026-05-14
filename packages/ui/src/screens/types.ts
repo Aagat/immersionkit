@@ -1,17 +1,35 @@
-import type { IconName } from "../components/primitives";
-
 export type PopupState = "supported" | "unsupported";
 export type SiteControlState = "on" | "paused";
 export type ArticleState = "supported" | "word" | "phrase" | "sentence";
 export type OptionsSection = "General" | "Translation" | "Advanced";
 export type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
 
+export type MetricIconName =
+  | "band"
+  | "book"
+  | "check"
+  | "chevron"
+  | "close"
+  | "document"
+  | "eyeOff"
+  | "gear"
+  | "info"
+  | "link"
+  | "lock"
+  | "message"
+  | "pause"
+  | "power"
+  | "shield"
+  | "spark"
+  | "translate"
+  | "volume";
+
 export const settingsTabs: OptionsSection[] = ["General", "Translation", "Advanced"];
 
 export type PopupMetric = {
   label: string;
   value: string | number;
-  icon?: IconName;
+  icon?: MetricIconName;
 };
 
 export type OptionsStats = {

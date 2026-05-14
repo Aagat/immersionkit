@@ -211,11 +211,9 @@ describe("extension E2E harness", () => {
     expect(savedSettings.discoveryRate).toBe(0.07);
     expect(savedSettings.proficiencySeed).toBe("intermediate");
 
-    await options
-      .getByLabel("Options sections")
-      .getByRole("button", { name: "Translation" })
-      .click();
-    await options.locator(".ik-ui-field select").selectOption("openai");
+    await options.getByRole("tab", { name: "Translation" }).click();
+    await options.getByRole("combobox", { name: "Provider" }).click();
+    await options.getByRole("option", { name: "OpenAI" }).click();
     await options
       .getByRole("switch", { name: "Enable sentence help" })
       .click();

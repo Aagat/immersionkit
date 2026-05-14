@@ -1,4 +1,4 @@
-const UI_THEME_ATTRIBUTE = "data-ik-ui-theme";
+const UI_THEME_ATTRIBUTE = "data-ik-theme";
 
 type UiTheme = "light" | "dark";
 

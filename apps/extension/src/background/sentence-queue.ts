@@ -87,7 +87,7 @@ export class SentenceQueueOrchestrator {
   private readonly pendingQueue = new Map<string, QueuedSentenceCandidate>();
   private readonly inFlightHashes = new Set<string>();
   private readonly inFlightSenderTabIds = new Map<string, Set<number>>();
-  private flushTimer: number | null = null;
+  private flushTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private isProcessing = false;
 
   constructor(options: SentenceQueueOrchestratorOptions = {}) {

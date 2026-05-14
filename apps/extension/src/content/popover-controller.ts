@@ -12,13 +12,8 @@ import type {
 import { IMMERSIONKIT_TOKEN_STATUS_EVENT } from "./contracts";
 import { IMMERSIONKIT_TOKEN_ATTRIBUTE, IMMERSIONKIT_WORD_SELECTOR } from "./constants";
 import {
-  POPOVER_ACTION_ATTRIBUTE,
-  POPOVER_SENTENCE_ACTION_ATTRIBUTE,
   closePopover,
-  handlePopoverCloseClick,
   mountPopover,
-  readInteractiveStatus,
-  readSentencePopoverAction,
   renderPhrasePopover,
   renderSentencePopover,
   renderWordPopover,
@@ -44,32 +39,11 @@ export function openWordPopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, tokenElement);
 
-  const popover = renderWordPopover(detail);
-  popover.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
+  const popover = renderWordPopover(detail, {
+    onClose: () => closePopover(runtimeState),
+    onStatusAction: (status) => {
+      void handlePopoverStatusAction(runtimeState, detail, status);
     }
-
-    if (handlePopoverCloseClick(runtimeState, event)) {
-      return;
-    }
-
-    const actionButton = event.target.closest<HTMLButtonElement>(
-      `[${POPOVER_ACTION_ATTRIBUTE}]`
-    );
-    if (!actionButton) {
-      return;
-    }
-
-    const status = readInteractiveStatus(
-      actionButton.getAttribute(POPOVER_ACTION_ATTRIBUTE)
-    );
-    if (!status) {
-      return;
-    }
-
-    event.preventDefault();
-    void handlePopoverStatusAction(runtimeState, detail, status);
   });
 
   mountPopover(runtimeState, popover, tokenElement);
@@ -111,54 +85,33 @@ export function openSentenceNotePopover(
       features: deliveredGrammarFeatures
     }) ?? (() => undefined);
 
-  const popover = renderSentencePopover(noteElement, {
+  let popover: HTMLDivElement;
+  popover = renderSentencePopover(noteElement, {
     ...detail,
     grammarCards
-  });
-  popover.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
+  }, {
+    onClose: () => closePopover(runtimeState),
+    onAction: (action) => {
+      if (action === "show-translation") {
+        noteElement.setAttribute("data-ik-source-visible", "false");
+        syncSentencePopoverActions(popover, noteElement);
+        return;
+      }
+
+      if (action === "toggle-source") {
+        noteElement.setAttribute("data-ik-source-visible", "true");
+        syncSentencePopoverActions(popover, noteElement);
+        return;
+      }
+
+      if (action === "details") {
+        popover.setAttribute("data-ik-details-active", "true");
+        syncSentencePopoverActions(popover, noteElement);
+        return;
+      }
+
+      closePopover(runtimeState);
     }
-
-    if (handlePopoverCloseClick(runtimeState, event)) {
-      return;
-    }
-
-    const actionButton = event.target.closest<HTMLButtonElement>(
-      `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}]`
-    );
-    if (!actionButton) {
-      return;
-    }
-
-    const action = readSentencePopoverAction(
-      actionButton.getAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE)
-    );
-    if (!action) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (action === "show-translation") {
-      noteElement.setAttribute("data-ik-source-visible", "false");
-      syncSentencePopoverActions(popover, noteElement);
-      return;
-    }
-
-    if (action === "toggle-source") {
-      noteElement.setAttribute("data-ik-source-visible", "true");
-      syncSentencePopoverActions(popover, noteElement);
-      return;
-    }
-
-    if (action === "details") {
-      popover.setAttribute("data-ik-details-active", "true");
-      syncSentencePopoverActions(popover, noteElement);
-      return;
-    }
-
-    closePopover(runtimeState);
   });
 
   mountPopover(runtimeState, popover, noteElement, stopGrammarDetailDwell);
@@ -231,13 +184,8 @@ export function openPhraseTokenPopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, phraseElement);
 
-  const popover = renderPhrasePopover(detail);
-  popover.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
-    }
-
-    handlePopoverCloseClick(runtimeState, event);
+  const popover = renderPhrasePopover(detail, {
+    onClose: () => closePopover(runtimeState)
   });
   mountPopover(runtimeState, popover, phraseElement);
 }
