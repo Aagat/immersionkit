@@ -1048,11 +1048,15 @@ function createProxyButton(label: string, onClick: () => void): HTMLButtonElemen
 }
 
 function shadowSafeUiStyles(): string {
-  return uiStyles
+  return stripFontFaceRules(uiStyles)
     .replace(/:root\s*\{/g, ":host {")
     .replace(/\.dark\s*\{/g, ":host(.dark) {")
     .replace(/body\s*\{/g, ":host {")
     .replace(/html\s*\{/g, ":host {");
+}
+
+function stripFontFaceRules(styles: string): string {
+  return styles.replace(/@font-face\s*\{[^}]*\}/g, "");
 }
 
 function queryPopoverButtons(
