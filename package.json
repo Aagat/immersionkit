@@ -2,7 +2,7 @@
   "name": "immersionkit",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.17.0",
   "scripts": {
     "dev": "pnpm --filter @immersionkit/extension dev",
     "asset-packs:serve": "node tools/assets/asset-pack-server.mjs",
