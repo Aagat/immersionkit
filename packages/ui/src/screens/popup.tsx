@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
   IkIcon,
@@ -56,7 +55,13 @@ export function ExtensionPopup({
   const enabled = supported && resolvedSiteState === "on";
   const progress = Math.max(0, Math.min(100, progressValue));
   const popupContent = (
-    <div className={chromeFrame ? "absolute right-8 top-8 w-[360px]" : "w-[360px]"}>
+    <div
+      className={
+        chromeFrame
+          ? "absolute inset-x-4 top-4 sm:inset-x-auto sm:right-8 sm:top-8 sm:w-[360px]"
+          : "w-[360px]"
+      }
+    >
       <PopupPanel>
         <PopupHeader onOpenSettings={onOpenSettings} />
         {errorMessage ? (
@@ -223,6 +228,7 @@ function SupportedPopup({
             label={metric.label}
             value={metric.value}
             icon={metric.icon ?? "spark"}
+            compact
           />
         ))}
       </div>

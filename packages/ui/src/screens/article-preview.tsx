@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
   IkIcon,
@@ -176,7 +175,7 @@ function HabitsArticle({ active }: { active: ArticleState }) {
 
 function WordHelpPopover() {
   return (
-    <PopoverFrame className="left-[48%] top-[215px]">
+    <PopoverFrame className="top-[215px] md:left-[48%] md:right-auto md:w-[340px]">
       <header className="flex items-start gap-2">
         <IkIcon name="volume" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">lectura</h3>
@@ -213,7 +212,7 @@ function WordHelpPopover() {
 
 function PhraseHelpPopover() {
   return (
-    <PopoverFrame className="left-[44%] top-[260px]">
+    <PopoverFrame className="top-[260px] md:left-[44%] md:right-auto md:w-[340px]">
       <header className="flex items-start gap-2">
         <IkIcon name="link" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">con calma</h3>
@@ -244,7 +243,7 @@ function PhraseHelpPopover() {
 
 function SentenceHelpPopover() {
   return (
-    <PopoverFrame className="right-8 top-[120px] w-[440px]">
+    <PopoverFrame className="top-[120px] md:left-auto md:right-8 md:w-[440px]">
       <header className="flex items-start gap-2">
         <IkIcon name="book" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">Sentence help</h3>
@@ -255,7 +254,7 @@ function SentenceHelpPopover() {
       <SentenceBlock label="Original" text="A few minutes of lectura can make the day feel slower." />
       <SentenceBlock label="Translation" text="Unos minutos de lectura pueden hacer que el dia se sienta mas lento." />
       <SentenceBlock label="Why this helps" text="Puede + infinitive expresses something can happen." />
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         <Button variant="outline" size="sm">
           <IkIcon name="translate" dataIcon="inline-start" />
           Translation
@@ -290,7 +289,12 @@ function PopoverFrame({
   className: string;
 }) {
   return (
-    <Card className={`absolute z-10 flex w-[340px] flex-col gap-3 rounded-lg p-4 shadow-lg ${className}`}>
+    <Card
+      className={cn(
+        "absolute left-4 right-4 z-10 flex w-auto max-w-[calc(100%-2rem)] flex-col gap-3 rounded-lg p-4 shadow-lg md:max-w-none",
+        className
+      )}
+    >
       {children}
     </Card>
   );

@@ -122,12 +122,23 @@ export function ExtensionOptions({
     setLocalActive(section);
     onSectionChange?.(section);
   };
+  const containedFrame = chromeFrame;
 
   const optionsContent = (
     <TooltipProvider>
-      <SidebarProvider defaultOpen>
-        <OptionsSidebar active={active} setActive={setActive} tabs={visibleTabs} />
-        <SidebarInset className="min-h-svh">
+      <SidebarProvider
+        defaultOpen
+        className={containedFrame ? "h-[720px] min-h-[720px]" : undefined}
+      >
+        <OptionsSidebar
+          active={active}
+          containedFrame={containedFrame}
+          setActive={setActive}
+          tabs={visibleTabs}
+        />
+        <SidebarInset
+          className={containedFrame ? "h-[720px] min-h-0" : "min-h-svh"}
+        >
           <OptionsHeader
             active={active}
             isSaving={isSaving}
@@ -248,15 +259,17 @@ export function ExtensionOptions({
 
 function OptionsSidebar({
   active,
+  containedFrame = false,
   setActive,
   tabs = settingsTabs
 }: {
   active: OptionsSection;
+  containedFrame?: boolean;
   setActive: (section: OptionsSection) => void;
   tabs?: OptionsSection[];
 }) {
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className={containedFrame ? "h-[720px]" : undefined}>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
           <ImmersionLogo className="size-8" />
@@ -340,19 +353,35 @@ function OptionsHeader({
   }[active];
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:px-6">
-      <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-base font-medium">{copy[0]}</h1>
-        <p className="truncate text-sm text-muted-foreground">{copy[1]}</p>
+    <header className="flex min-h-16 shrink-0 flex-col gap-3 border-b p-4 md:h-16 md:flex-row md:items-center md:gap-2 md:px-6 md:py-0">
+      <div className="flex min-w-0 items-center gap-2">
+        <SidebarTrigger className="-ml-1" />
+        <Separator
+          orientation="vertical"
+          className="hidden data-[orientation=vertical]:h-4 md:block"
+        />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-medium">{copy[0]}</h1>
+          <p className="truncate text-sm text-muted-foreground">{copy[1]}</p>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" disabled={isSaving} onClick={onReload}>
+      <div className="flex items-center gap-2 md:ml-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 md:flex-none"
+          disabled={isSaving}
+          onClick={onReload}
+        >
           <ArrowClockwiseIcon data-icon="inline-start" />
           Reload
         </Button>
-        <Button disabled={isSaving || isLoading} onClick={onSave}>
+        <Button
+          size="sm"
+          className="flex-1 md:flex-none"
+          disabled={isSaving || isLoading}
+          onClick={onSave}
+        >
           {isSaving ? "Saving..." : "Save changes"}
         </Button>
       </div>
@@ -443,7 +472,7 @@ function OptionsGeneralPanel({
               <RadioGroup
                 value={resolvedReadingLevel}
                 onValueChange={(value) => chooseReadingLevel(value as ReadingLevel)}
-                className="grid gap-3 md:grid-cols-3"
+                className="grid gap-3"
               >
                 <ReadingLevelChoice
                   value="Beginner"
@@ -559,21 +588,20 @@ function ReadingLevelChoice({
   title: string;
   copy: string;
 }) {
-  return (
-    <FieldLabel className="has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">
-      <Field orientation="horizontal" className="rounded-lg border p-3">
-        <RadioGroupItem value={value} />
-        <FieldContent>
-          <FieldTitle>{title}</FieldTitle>
-          <FieldDescription>{copy}</FieldDescription>
-        </FieldContent>
-      </Field>
-    </FieldLabel>
-  );
-}
+  const id = `reading-level-${value.toLowerCase().replace(/\s+/g, "-")}`;
 
-function FieldTitle({ children }: { children: string }) {
-  return <span className="text-sm font-medium">{children}</span>;
+  return (
+    <Field
+      orientation="horizontal"
+      className="rounded-lg border bg-background p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted"
+    >
+      <RadioGroupItem id={id} value={value} />
+      <FieldContent>
+        <FieldLabel htmlFor={id}>{title}</FieldLabel>
+        <FieldDescription>{copy}</FieldDescription>
+      </FieldContent>
+    </Field>
+  );
 }
 
 function CurrentFocusCard({
@@ -925,7 +953,7 @@ function OptionsAdvancedPanel({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {diagnostics?.activePageUrl ? (
-              <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+              <div className="break-all rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
                 {diagnostics.activePageUrl}
               </div>
             ) : null}
@@ -1047,7 +1075,9 @@ function DiagnosticRow({
     <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
       <div className="min-w-0">
         <strong className="block truncate text-sm">{title}</strong>
-        {detail ? <span className="text-sm text-muted-foreground">{detail}</span> : null}
+        {detail ? (
+          <span className="break-words text-sm text-muted-foreground">{detail}</span>
+        ) : null}
       </div>
       {status ? (
         <Badge variant={status === "On" ? "default" : "secondary"} className="rounded-md">

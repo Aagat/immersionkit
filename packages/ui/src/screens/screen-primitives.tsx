@@ -98,7 +98,7 @@ export function ImmersionFrame({
       className={cn(
         "min-h-svh bg-background text-foreground",
         variant === "popup" && "min-h-0 w-[360px]",
-        variant === "browser" && "p-6",
+        variant === "browser" && "p-4 sm:p-6",
         variant === "settings" && "min-h-svh"
       )}
       data-ik-frame={variant}
@@ -136,8 +136,8 @@ export function BrowserChrome({
         </div>
         <div className="flex min-w-0 max-w-80 items-center gap-2 rounded-t-lg bg-background px-3 py-2 text-sm">
           <ImmersionLogo className="size-5 rounded-md" />
-          <span className="truncate">{title}</span>
-          <XIcon aria-hidden="true" />
+          <span className="min-w-0 truncate">{title}</span>
+          <XIcon aria-hidden="true" className="shrink-0" />
         </div>
       </div>
       <div className="flex h-12 items-center gap-2 border-b px-3">
@@ -148,11 +148,22 @@ export function BrowserChrome({
           <CaretRightIcon />
         </Button>
         <div className="min-w-0 flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-          <span className="truncate">{url}</span>
+          <span className="block truncate">{url}</span>
         </div>
         <ImmersionLogo className="size-7" />
       </div>
-      <div className={cn("relative min-h-[560px]", blurred && "overflow-hidden")}>
+      <div
+        className={cn(
+          "relative",
+          appFrame
+            ? "min-h-[720px]"
+            : blurred
+              ? "min-h-[950px] sm:min-h-[860px]"
+              : "min-h-[640px]",
+          (blurred || appFrame) && "overflow-hidden",
+          appFrame && "transform-gpu"
+        )}
+      >
         {blurred ? <BlurredPage supported={url !== "chrome://settings/privacy"} /> : null}
         {children}
       </div>
@@ -204,18 +215,34 @@ function BlurredPage({ supported }: { supported: boolean }) {
 export function MetricStat({
   label,
   value,
-  icon
+  icon,
+  compact = false
 }: {
   label: string;
   value: string | number;
   icon: MetricIconName;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-lg border bg-background p-3">
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-3 rounded-lg border bg-background p-3",
+        compact && "flex-col items-start gap-2 p-2.5"
+      )}
+    >
       <IkIcon name={icon} className="text-muted-foreground" />
       <div className="min-w-0">
-        <p className="truncate text-base font-medium">{value}</p>
-        <span className="block truncate text-xs text-muted-foreground">{label}</span>
+        <p className={cn("truncate text-base font-medium", compact && "text-sm")}>
+          {value}
+        </p>
+        <span
+          className={cn(
+            "block text-xs text-muted-foreground",
+            compact ? "leading-tight" : "truncate"
+          )}
+        >
+          {label}
+        </span>
       </div>
     </div>
   );
