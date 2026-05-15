@@ -7,26 +7,6 @@ import {
 import "../styles.css";
 import "./preview.css";
 
-const referenceScreens = [
-  ["popup-supported-site", "01-popup-supported-site.png"],
-  ["popup-unsupported-page", "02-popup-unsupported-page.png"],
-  ["supported-page", "03-supported-page.png"],
-  ["inline-word-help", "04-inline-word-help.png"],
-  ["phrase-help", "05-phrase-help.png"],
-  ["sentence-help", "06-sentence-help.png"],
-  ["options-general", "07-options-general.png"],
-  ["options-translation", "08-options-translation.png"],
-  ["recoverability", "09-recoverability.png"]
-] as const;
-
-const designAssets = [
-  [
-    "public-preview-design-system",
-    "ImmersionKit public-preview design system board",
-    "public-preview-design-system-board.png"
-  ]
-] as const;
-
 const liveScreens = [
   ["popup-supported-site", () => <ExtensionPopup state="supported" />],
   ["popup-unsupported-page", () => <ExtensionPopup state="unsupported" />],
@@ -48,55 +28,9 @@ function PreviewApp() {
           <h1>Preview Screens</h1>
         </div>
         <nav aria-label="Preview sections">
-          <a href="#generated">Generated references</a>
           <a href="#live">Live React screens</a>
         </nav>
       </header>
-
-      <section id="design-system" className="ik-preview-section">
-        <div className="ik-preview-section-heading">
-          <h2>Design System</h2>
-          <p>
-            Generated visual reference for the color palette, spacing, shadows,
-            and public-preview component language.
-          </p>
-        </div>
-        <div className="ik-preview-grid ik-preview-grid--wide">
-          {designAssets.map(([id, title, filename]) => (
-            <article key={id} className="ik-preview-card ik-preview-card--wide">
-              <header>
-                <h3>{title}</h3>
-                <span>{filename}</span>
-              </header>
-              <img
-                alt={`${title} generated asset`}
-                src={`/design-assets/${filename}`}
-              />
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="generated" className="ik-preview-section">
-        <div className="ik-preview-section-heading">
-          <h2>Generated References</h2>
-          <p>These are the generated design references used to check the component states.</p>
-        </div>
-        <div className="ik-preview-grid">
-          {referenceScreens.map(([id, filename]) => (
-            <article key={id} className="ik-preview-card">
-              <header>
-                <h3>{formatTitle(id)}</h3>
-                <span>{filename}</span>
-              </header>
-              <img
-                alt={`${formatTitle(id)} generated design reference`}
-                src={`/design-screens/${filename}`}
-              />
-            </article>
-          ))}
-        </div>
-      </section>
 
       <section id="live" className="ik-preview-section">
         <div className="ik-preview-section-heading">

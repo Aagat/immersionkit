@@ -419,6 +419,7 @@ async function clickPopoverAndCapture(page, selector, path, options = {}) {
   await target.scrollIntoViewIfNeeded();
 
   for (const action of [
+    () => clickVisibleClientRect(page, target),
     () => target.click({ force: true }),
     () => dispatchDomClick(page, selector),
     async () => {
@@ -448,6 +449,20 @@ async function clickPopoverAndCapture(page, selector, path, options = {}) {
     screenshot: failScreenshot,
     error: `Popover did not open for selector ${selector}.`
   };
+}
+
+async function clickVisibleClientRect(page, target) {
+  const point = await target.evaluate((element) => {
+    const rects = [...element.getClientRects()].filter(
+      (rect) => rect.width > 0 && rect.height > 0
+    );
+    const rect = rects[0] ?? element.getBoundingClientRect();
+    return {
+      x: rect.left + Math.min(rect.width / 2, 24),
+      y: rect.top + rect.height / 2
+    };
+  });
+  await page.mouse.click(point.x, point.y);
 }
 
 async function dispatchDomClick(page, selector) {

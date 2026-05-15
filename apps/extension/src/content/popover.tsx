@@ -281,7 +281,7 @@ function WordPopoverContent({
       />
       <TokenPair source={detail.sourceToken} target={detail.targetToken} />
       {nativeExample ? (
-        <div className="flex gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
+        <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
           <IkIcon name="message" className="mt-0.5 text-muted-foreground" />
           <span>{nativeExample}</span>
         </div>
@@ -325,7 +325,7 @@ function WordPopoverContent({
           Hide word
         </Button>
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <ImmersionLogo className="size-5 rounded-md" />
+          <ImmersionLogo className="size-5 rounded-xl" />
           ImmersionKit
         </span>
       </CardFooter>
@@ -467,7 +467,7 @@ function SentencePopoverContent({
           Details
         </Button>
       </div>
-      <footer className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      <footer className="flex items-center gap-2 rounded-3xl bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground">
         <IkIcon name="lock" />
         <span>Selected sentence only</span>
       </footer>
@@ -478,7 +478,7 @@ function SentencePopoverContent({
 function GrammarCard({ card }: { card: SentenceGrammarCard }) {
   return (
     <div
-      className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3"
+      className="flex flex-col gap-3 rounded-3xl bg-muted/50 p-4"
       data-ik-grammar-card="true"
       data-ik-grammar-feature-key={card.featureKey}
       data-ik-grammar-status={card.curriculumStatus}
@@ -487,7 +487,7 @@ function GrammarCard({ card }: { card: SentenceGrammarCard }) {
         <IkIcon name="spark" />
         {card.title}
       </h4>
-      <p className="w-fit max-w-full rounded-md bg-background px-2 py-1 text-sm font-medium">
+      <p className="w-fit max-w-full rounded-2xl bg-background px-2.5 py-1 text-sm font-medium shadow-sm ring-1 ring-foreground/5">
         {card.sourceText}
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
@@ -505,7 +505,7 @@ function GrammarCard({ card }: { card: SentenceGrammarCard }) {
 
 function GrammarPattern({ label, value }: { label: string; value: string }) {
   return (
-    <span className="min-w-0 rounded-lg border bg-background p-2 text-sm">
+    <span className="min-w-0 rounded-3xl bg-background p-3 text-sm ring-1 ring-foreground/5">
       <strong className="block text-xs uppercase text-muted-foreground">{label}</strong>
       {value}
     </span>
@@ -514,7 +514,7 @@ function GrammarPattern({ label, value }: { label: string; value: string }) {
 
 function PopoverCard({ children }: { children: ReactNode }) {
   return (
-    <Card className="ik-content-popover-card flex flex-col gap-3 rounded-lg p-4 text-sm shadow-lg">
+    <Card className="ik-content-popover-card flex flex-col gap-3 p-4 text-sm shadow-xl">
       {children}
     </Card>
   );
@@ -537,7 +537,7 @@ function PopoverHeading({
       <CardTitle className="min-w-0 flex-1 break-words text-base">
         {title}
       </CardTitle>
-      <Badge className="rounded-md">{badge}</Badge>
+      <Badge>{badge}</Badge>
       <Button
         type="button"
         variant="ghost"
@@ -555,9 +555,9 @@ function PopoverHeading({
 function TokenPair({ source, target }: { source: string; target: string }) {
   return (
     <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-0">
-      <span className="min-w-0 rounded-lg border bg-muted/40 p-3 text-sm">{source}</span>
+      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{source}</span>
       <IkIcon name="chevron" className="text-muted-foreground" />
-      <span className="min-w-0 rounded-lg border bg-muted/40 p-3 text-sm">{target}</span>
+      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{target}</span>
     </CardContent>
   );
 }
@@ -806,14 +806,16 @@ function positionPopover(
   ];
 
   for (const candidate of candidates) {
-    const left =
-      candidate.placement === "top" || candidate.placement === "bottom"
-        ? clamp(candidate.left, POPOVER_VIEWPORT_MARGIN, maxLeft - popoverWidth)
-        : candidate.left;
-    const top =
-      candidate.placement === "left" || candidate.placement === "right"
-        ? clamp(candidate.top, POPOVER_VIEWPORT_MARGIN, maxTop - popoverHeight)
-        : candidate.top;
+    const left = clamp(
+      candidate.left,
+      POPOVER_VIEWPORT_MARGIN,
+      maxLeft - popoverWidth
+    );
+    const top = clamp(
+      candidate.top,
+      POPOVER_VIEWPORT_MARGIN,
+      maxTop - popoverHeight
+    );
 
     if (
       left < POPOVER_VIEWPORT_MARGIN ||
@@ -835,6 +837,11 @@ function positionPopover(
 }
 
 function getPopoverAnchorRect(anchorElement: HTMLElement): PopoverAnchorRect | null {
+  const clientRect = getBestVisibleClientRect(anchorElement);
+  if (clientRect) {
+    return clientRect;
+  }
+
   const rect = anchorElement.getBoundingClientRect();
   const hasLayoutRect =
     rect.width > 0 ||
@@ -861,6 +868,63 @@ function getPopoverAnchorRect(anchorElement: HTMLElement): PopoverAnchorRect | n
     width: 0,
     height: 0
   };
+}
+
+function getBestVisibleClientRect(element: HTMLElement): PopoverAnchorRect | null {
+  const viewportWidth = Math.max(
+    window.innerWidth,
+    document.documentElement.clientWidth
+  );
+  const viewportHeight = Math.max(
+    window.innerHeight,
+    document.documentElement.clientHeight
+  );
+  const visibleRects = Array.from(element.getClientRects())
+    .filter((rect) => hasUsableRect(rect))
+    .map((rect) => toPopoverAnchorRect(rect))
+    .filter((rect) => isAnchorVisibleInViewport(rect, viewportWidth, viewportHeight));
+
+  if (visibleRects.length === 0) {
+    return null;
+  }
+
+  return visibleRects.reduce((best, rect) =>
+    getVisibleRectArea(rect, viewportWidth, viewportHeight) >
+    getVisibleRectArea(best, viewportWidth, viewportHeight)
+      ? rect
+      : best
+  );
+}
+
+function hasUsableRect(rect: DOMRect): boolean {
+  return rect.width > 0 && rect.height > 0;
+}
+
+function toPopoverAnchorRect(rect: DOMRect): PopoverAnchorRect {
+  return {
+    left: rect.left,
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+    width: rect.width,
+    height: rect.height
+  };
+}
+
+function getVisibleRectArea(
+  rect: PopoverAnchorRect,
+  viewportWidth: number,
+  viewportHeight: number
+): number {
+  const visibleWidth = Math.max(
+    0,
+    Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0)
+  );
+  const visibleHeight = Math.max(
+    0,
+    Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0)
+  );
+  return visibleWidth * visibleHeight;
 }
 
 function isAnchorVisibleInViewport(

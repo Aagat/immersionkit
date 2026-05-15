@@ -34,7 +34,7 @@ export function ReadingPage({ state = "supported" }: { state?: ArticleState }) {
         {state === "phrase" ? <PhraseHelpPopover /> : null}
         {state === "sentence" ? <SentenceHelpPopover /> : null}
         {travel ? (
-          <div className="absolute bottom-5 right-5 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm shadow-md">
+          <div className="absolute bottom-5 right-5 flex items-center gap-2 rounded-3xl bg-card px-4 py-2.5 text-sm shadow-md ring-1 ring-foreground/5">
             <IkIcon name="check" />
             <span>Reading mode is on for this site</span>
             <IkIcon name="close" className="text-muted-foreground" />
@@ -56,7 +56,7 @@ function TravelArticle() {
           <span>Guides</span>
           <span>About</span>
         </nav>
-        <div className="rounded-lg bg-muted px-3 py-2 text-muted-foreground">Search...</div>
+        <div className="rounded-3xl bg-muted px-3 py-2 text-muted-foreground">Search...</div>
       </header>
       <main className="grid gap-8 p-8 lg:grid-cols-[minmax(0,1fr)_260px]">
         <section className="mx-auto flex max-w-3xl flex-col gap-5 text-base leading-7">
@@ -84,10 +84,10 @@ function TravelArticle() {
           <p>
             Kyoto keeps things simple, and that's what <InlineMark status="known">mantiene</InlineMark> its charm.
           </p>
-          <div className="aspect-[16/9] rounded-lg bg-muted" />
+          <div className="aspect-[16/9] rounded-4xl bg-muted" />
         </section>
         <aside className="hidden flex-col gap-4 lg:flex">
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>On this page</CardTitle>
             </CardHeader>
@@ -98,12 +98,12 @@ function TravelArticle() {
               <p>A simple plan</p>
             </CardContent>
           </Card>
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>Simple travel, good stories</CardTitle>
             </CardHeader>
             <CardContent className="flex gap-2">
-              <div className="flex-1 rounded-lg border px-3 py-2 text-sm text-muted-foreground">
+              <div className="flex-1 rounded-3xl bg-muted px-3 py-2 text-sm text-muted-foreground">
                 Email address
               </div>
               <Button size="sm">Subscribe</Button>
@@ -179,12 +179,12 @@ function WordHelpPopover() {
       <header className="flex items-start gap-2">
         <IkIcon name="volume" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">lectura</h3>
-        <Badge className="rounded-md">new</Badge>
+        <Badge>new</Badge>
         <PopoverCloseButton />
       </header>
       <TokenPair source="reading" target="lectura" />
       <p className="text-sm text-muted-foreground">Used for reading or a piece of reading.</p>
-      <div className="flex gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
+      <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
         <IkIcon name="message" className="mt-0.5 text-muted-foreground" />
         <span>A short <strong>lectura</strong> in a cafe can reset the day.</span>
       </div>
@@ -203,7 +203,7 @@ function WordHelpPopover() {
           Hide word
         </Button>
         <span className="flex items-center gap-1 text-muted-foreground">
-          <ImmersionLogo className="size-5 rounded-md" /> ImmersionKit
+          <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit
         </span>
       </footer>
     </PopoverFrame>
@@ -216,7 +216,7 @@ function PhraseHelpPopover() {
       <header className="flex items-start gap-2">
         <IkIcon name="link" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">con calma</h3>
-        <Badge className="rounded-md">phrase</Badge>
+        <Badge>phrase</Badge>
       </header>
       <TokenPair source="with calm" target="con calma" />
       <p className="text-sm text-muted-foreground">
@@ -247,7 +247,7 @@ function SentenceHelpPopover() {
       <header className="flex items-start gap-2">
         <IkIcon name="book" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">Sentence help</h3>
-        <Badge className="rounded-md">optional</Badge>
+        <Badge>optional</Badge>
         <PopoverCloseButton />
       </header>
       <p className="text-sm text-muted-foreground">Uses OpenAI only when enabled.</p>
@@ -291,7 +291,7 @@ function PopoverFrame({
   return (
     <Card
       className={cn(
-        "absolute left-4 right-4 z-10 flex w-auto max-w-[calc(100%-2rem)] flex-col gap-3 rounded-lg p-4 shadow-lg md:max-w-none",
+        "absolute left-4 right-4 z-10 flex w-auto max-w-[calc(100%-2rem)] flex-col gap-3 p-4 shadow-xl md:max-w-none",
         className
       )}
     >
@@ -303,9 +303,9 @@ function PopoverFrame({
 function TokenPair({ source, target }: { source: string; target: string }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-      <span className="min-w-0 rounded-lg border bg-muted/40 p-3 text-sm">{source}</span>
+      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{source}</span>
       <IkIcon name="chevron" className="text-muted-foreground" />
-      <span className="min-w-0 rounded-lg border bg-muted/40 p-3 text-sm">{target}</span>
+      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{target}</span>
     </div>
   );
 }

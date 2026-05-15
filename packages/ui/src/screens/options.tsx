@@ -149,7 +149,7 @@ export function ExtensionOptions({
           <ScrollArea className="min-h-0 flex-1">
             <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-4 pt-0 md:p-6 md:pt-0">
               {firstRunIntro ? (
-                <Alert className="rounded-lg">
+                <Alert>
                   <IkIcon name="shield" />
                   <AlertDescription>
                     Start with normal reading. ImmersionKit adds small doses of
@@ -169,13 +169,13 @@ export function ExtensionOptions({
                 </Alert>
               ) : null}
               {statusMessage ? (
-                <Alert className="rounded-lg">
+                <Alert>
                   <CheckCircleIcon aria-hidden="true" />
                   <AlertDescription>{statusMessage}</AlertDescription>
                 </Alert>
               ) : null}
               {errorMessage ? (
-                <Alert variant="destructive" className="rounded-lg">
+                <Alert variant="destructive">
                   <WarningCircleIcon aria-hidden="true" />
                   <AlertDescription>{errorMessage}</AlertDescription>
                 </Alert>
@@ -310,7 +310,7 @@ function OptionsSidebar({
         ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex gap-2 rounded-lg border bg-background p-3 text-sm group-data-[collapsible=icon]:hidden">
+        <div className="flex gap-2 rounded-3xl bg-card p-3 text-sm shadow-sm ring-1 ring-foreground/5 group-data-[collapsible=icon]:hidden">
           <IkIcon name="lock" className="mt-0.5 text-muted-foreground" />
           <p className="text-muted-foreground">
             {active === "Advanced"
@@ -427,7 +427,7 @@ function OptionsGeneralPanel({
     <div className="flex flex-col gap-5">
       {currentFocus ? <CurrentFocusCard focus={currentFocus} /> : null}
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>New word pace</CardTitle>
             <CardDescription>Choose how many new Spanish words appear while you read.</CardDescription>
@@ -459,7 +459,7 @@ function OptionsGeneralPanel({
             </FieldGroup>
           </CardContent>
         </Card>
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Starting point</CardTitle>
             <CardDescription>
@@ -495,7 +495,7 @@ function OptionsGeneralPanel({
         </Card>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Learning snapshot</CardTitle>
             <CardDescription>
@@ -512,7 +512,7 @@ function OptionsGeneralPanel({
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Reading band</CardTitle>
             <CardDescription>
@@ -520,14 +520,14 @@ function OptionsGeneralPanel({
               widens your reading range.
             </CardDescription>
             <CardAction>
-              <Badge variant="outline" className="rounded-md">
+              <Badge variant="outline">
                 {checkpoint?.progressLabel ?? "Progress starts as you read"}
               </Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Progress value={checkpoint?.progressValue ?? 0} />
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
+            <div className="flex flex-wrap items-center gap-2 rounded-3xl bg-muted/50 p-4">
               <span className="font-medium">{checkpoint?.currentBand ?? "Starting"}</span>
               <IkIcon name="chevron" className="text-muted-foreground" />
               <span className="font-medium">{checkpoint?.nextBand ?? "Next band"}</span>
@@ -551,7 +551,7 @@ function OptionsGeneralPanel({
       </div>
       <LearningPathView path={learningPath} />
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Site controls</CardTitle>
             <CardDescription>
@@ -567,7 +567,7 @@ function OptionsGeneralPanel({
             {siteSummary ? <p className="text-sm text-muted-foreground">{siteSummary}</p> : null}
           </CardContent>
         </Card>
-        <Alert className="rounded-lg">
+        <Alert>
           <IkIcon name="band" />
           <AlertDescription>
             <span className="block font-medium text-foreground">Small steps add up.</span>
@@ -593,7 +593,7 @@ function ReadingLevelChoice({
   return (
     <Field
       orientation="horizontal"
-      className="rounded-lg border bg-background p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted"
+      className="rounded-3xl bg-muted/40 p-4 ring-1 ring-foreground/5 has-data-[state=checked]:bg-card has-data-[state=checked]:ring-primary/40"
     >
       <RadioGroupItem id={id} value={value} />
       <FieldContent>
@@ -610,7 +610,7 @@ function CurrentFocusCard({
   focus: NonNullable<ExtensionOptionsProps["currentFocus"]>;
 }) {
   return (
-    <Card className="rounded-lg">
+    <Card>
       <CardHeader>
         <CardTitle>
           {focus.levelLabel}: {focus.learnerTitle}
@@ -640,7 +640,7 @@ function CurrentFocusCard({
 
 function FocusList({ title, items }: { title: string; items: readonly string[] }) {
   return (
-    <div className="rounded-lg border bg-muted/30 p-3">
+    <div className="rounded-3xl bg-muted/50 p-4">
       <strong className="block text-sm">{title}</strong>
       <span className="text-sm text-muted-foreground">
         {items.length > 0 ? items.slice(0, 5).join(", ") : "Review and consolidation"}
@@ -679,7 +679,7 @@ function LearningPathView({
         {path.map((level) => (
           <details
             key={level.levelId}
-            className="rounded-lg border bg-card p-4 text-card-foreground"
+            className="rounded-4xl bg-card p-5 text-card-foreground shadow-sm ring-1 ring-foreground/5"
             open={level.active}
           >
             <summary className="flex cursor-pointer items-center justify-between gap-3">
@@ -689,7 +689,6 @@ function LearningPathView({
               </span>
               <Badge
                 variant={level.active ? "default" : level.unlocked ? "outline" : "secondary"}
-                className="rounded-md"
               >
                 {level.active ? "Now" : level.unlocked ? "Open" : "Later"}
               </Badge>
@@ -707,8 +706,8 @@ function LearningPathView({
                   <div
                     key={band.bandId}
                     className={cn(
-                      "rounded-lg border bg-background p-3",
-                      band.active && "border-primary"
+                      "rounded-3xl bg-background p-3 ring-1 ring-foreground/5",
+                      band.active && "ring-primary/40"
                     )}
                   >
                     <strong className="block text-sm">{band.bandLabel}</strong>
@@ -726,7 +725,7 @@ function LearningPathView({
 
 function PathDetail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border bg-background p-3">
+    <div className="min-w-0 rounded-3xl bg-background p-3 ring-1 ring-foreground/5">
       <strong className="block text-sm">{label}</strong>
       <span className="text-sm text-muted-foreground">{value}</span>
     </div>
@@ -762,7 +761,7 @@ function OptionsTranslationPanel({
   return (
     <div className="flex flex-col gap-5">
       {!apiKeyValid && provider === "openai" ? (
-        <Alert variant="destructive" className="rounded-lg">
+        <Alert variant="destructive">
           <IkIcon name="shield" />
           <AlertDescription>
             Add a valid OpenAI API key before turning sentence help on.
@@ -771,7 +770,7 @@ function OptionsTranslationPanel({
       ) : null}
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="flex flex-col gap-5">
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>Sentence help</CardTitle>
               <CardDescription>
@@ -786,19 +785,19 @@ function OptionsTranslationPanel({
               </CardAction>
             </CardHeader>
             <CardFooter className="border-t pt-4">
-              <Badge variant={sentenceHelpEnabled ? "default" : "secondary"} className="rounded-md">
+              <Badge variant={sentenceHelpEnabled ? "default" : "secondary"}>
                 {sentenceHelpEnabled ? "On" : "Off"}
               </Badge>
             </CardFooter>
           </Card>
-          <Alert className="rounded-lg">
+          <Alert>
             <IkIcon name="lock" />
             <AlertDescription>
               Selected sentence text is sent to OpenAI only when sentence help is
               enabled. Page text is not sent automatically.
             </AlertDescription>
           </Alert>
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>Provider</CardTitle>
               <CardDescription>Choose a provider for sentence help.</CardDescription>
@@ -831,15 +830,12 @@ function OptionsTranslationPanel({
               </FieldGroup>
             </CardContent>
           </Card>
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>OpenAI API key</CardTitle>
               <CardDescription>Enter your OpenAI API key.</CardDescription>
               <CardAction>
-                <Badge
-                  variant={apiKeyValid ? "default" : "destructive"}
-                  className="rounded-md"
-                >
+                <Badge variant={apiKeyValid ? "default" : "destructive"}>
                   {apiKeyValid ? "Looks valid" : "Needs key"}
                 </Badge>
               </CardAction>
@@ -877,13 +873,13 @@ function OptionsTranslationPanel({
           </Card>
         </div>
         <div className="flex flex-col gap-5">
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>Sentence note preview</CardTitle>
               <CardDescription>This is an example of what you'll see.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+              <div className="flex flex-col gap-3 rounded-4xl bg-muted/50 p-4">
                 <header className="flex items-center gap-2 text-sm font-medium">
                   <IkIcon name="spark" />
                   <span className="flex-1">Sentence help</span>
@@ -891,7 +887,7 @@ function OptionsTranslationPanel({
                 </header>
                 <SentenceBlock label="Original" text="Me tomo un momento para respirar." />
                 <SentenceBlock label="Translation" text="I take a moment to breathe." />
-                <Alert className="rounded-lg">
+                <Alert>
                   <IkIcon name="spark" />
                   <AlertDescription>
                     Take a moment to + verb is a common pattern for making time for an action.
@@ -900,7 +896,7 @@ function OptionsTranslationPanel({
               </div>
             </CardContent>
           </Card>
-          <Alert className="rounded-lg">
+          <Alert>
             <IkIcon name="check" />
             <AlertDescription>
               You can turn sentence help on or off any time. Vocabulary help will keep working locally.
@@ -929,7 +925,7 @@ function OptionsAdvancedPanel({
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Build diagnostics</CardTitle>
             <CardDescription>
@@ -944,7 +940,7 @@ function OptionsAdvancedPanel({
             <DiagnosticRow title="Active page updated" detail={diagnostics?.activePageUpdatedAt ?? "not available"} />
           </CardContent>
         </Card>
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Active page</CardTitle>
             <CardDescription>
@@ -953,7 +949,7 @@ function OptionsAdvancedPanel({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {diagnostics?.activePageUrl ? (
-              <div className="break-all rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+              <div className="break-all rounded-3xl bg-muted/50 p-4 text-sm text-muted-foreground">
                 {diagnostics.activePageUrl}
               </div>
             ) : null}
@@ -966,7 +962,7 @@ function OptionsAdvancedPanel({
         </Card>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Exact reading band</CardTitle>
             <CardDescription>
@@ -1002,7 +998,7 @@ function OptionsAdvancedPanel({
             </FieldGroup>
           </CardContent>
         </Card>
-        <Alert className="rounded-lg">
+        <Alert>
           <IkIcon name="band" />
           <AlertDescription>
             {exactActiveBandId
@@ -1012,7 +1008,7 @@ function OptionsAdvancedPanel({
         </Alert>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader className="flex-row gap-3">
             <IkIcon name="book" className="text-muted-foreground" />
             <div>
@@ -1023,12 +1019,12 @@ function OptionsAdvancedPanel({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+            <div className="rounded-3xl bg-muted/50 p-4 text-sm text-muted-foreground">
               {diagnostics?.progressionSummary ?? "No progression decision recorded."}
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-lg">
+        <Card>
           <CardHeader className="flex-row gap-3">
             <IkIcon name="lock" className="text-muted-foreground" />
             <div>
@@ -1048,10 +1044,10 @@ function OptionsAdvancedPanel({
           </CardContent>
         </Card>
       </div>
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader>
           <CardTitle>
-            Advanced diagnostics <Badge className="ml-2 rounded-md">Optional</Badge>
+            Advanced diagnostics <Badge className="ml-2">Optional</Badge>
           </CardTitle>
           <CardDescription>
             Use #advanced, ?debug=1, or ?advanced=1 in diagnostic builds.
@@ -1072,7 +1068,7 @@ function DiagnosticRow({
   status?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
+    <div className="flex items-center justify-between gap-3 rounded-3xl bg-background p-3 ring-1 ring-foreground/5">
       <div className="min-w-0">
         <strong className="block truncate text-sm">{title}</strong>
         {detail ? (
@@ -1080,7 +1076,7 @@ function DiagnosticRow({
         ) : null}
       </div>
       {status ? (
-        <Badge variant={status === "On" ? "default" : "secondary"} className="rounded-md">
+        <Badge variant={status === "On" ? "default" : "secondary"}>
           {status}
         </Badge>
       ) : null}

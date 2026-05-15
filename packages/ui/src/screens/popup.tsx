@@ -71,7 +71,7 @@ export function ExtensionPopup({
           </Alert>
         ) : null}
         {firstRunIntro ? (
-          <Card className="rounded-lg">
+          <Card>
             <CardHeader className="flex-row gap-3">
               <IkIcon name="shield" className="mt-0.5 text-muted-foreground" />
               <div className="min-w-0">
@@ -178,7 +178,7 @@ function SupportedPopup({
   return (
     <>
       <section className="flex items-center gap-3">
-        <div className="grid size-12 place-items-center rounded-lg border bg-muted">
+        <div className="grid size-12 place-items-center rounded-3xl bg-muted shadow-sm ring-1 ring-foreground/5">
           <IkIcon name="book" />
         </div>
         <div className="min-w-0">
@@ -192,10 +192,10 @@ function SupportedPopup({
         detail={progressDetail}
       />
       <Separator />
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader className="flex-row items-center gap-3">
           <div className="min-w-0 flex-1">
-            <Badge variant={enabled ? "default" : "secondary"} className="rounded-md">
+            <Badge variant={enabled ? "default" : "secondary"}>
               {enabled ? "On for this site" : "Paused for this site"}
             </Badge>
             <CardTitle className="mt-3 text-base">
@@ -262,9 +262,9 @@ function UnsupportedPopup({
 }) {
   return (
     <>
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader>
-          <Badge variant="secondary" className="w-fit rounded-md">
+          <Badge variant="secondary" className="w-fit">
             Unavailable here
           </Badge>
           <CardTitle>This page is not supported</CardTitle>
@@ -277,7 +277,7 @@ function UnsupportedPopup({
           <p className="mt-3 text-sm text-muted-foreground">Controls unavailable</p>
         </CardContent>
       </Card>
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader className="flex-row gap-3">
           <IkIcon name="shield" className="text-muted-foreground" />
           <CardDescription>
@@ -286,7 +286,7 @@ function UnsupportedPopup({
           </CardDescription>
         </CardHeader>
       </Card>
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader>
           <CardTitle>{bandTitle}</CardTitle>
           <CardDescription>{progressLabel}</CardDescription>
@@ -330,7 +330,7 @@ function ProgressBlock({
 
 function PopupPanel({ children }: { children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg border bg-background p-4 shadow-lg">
+    <section className="flex flex-col gap-4 rounded-4xl bg-card p-4 shadow-md ring-1 ring-foreground/5">
       {children}
     </section>
   );

@@ -76,7 +76,7 @@ export function ImmersionLogo({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground",
+        "grid size-8 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm",
         className
       )}
       aria-hidden="true"
@@ -96,7 +96,7 @@ export function ImmersionFrame({
   return (
     <div
       className={cn(
-        "min-h-svh bg-background text-foreground",
+        "min-h-svh bg-muted text-foreground",
         variant === "popup" && "min-h-0 w-[360px]",
         variant === "browser" && "p-4 sm:p-6",
         variant === "settings" && "min-h-svh"
@@ -124,7 +124,7 @@ export function BrowserChrome({
   return (
     <div
       className={cn(
-        "mx-auto overflow-hidden rounded-lg border bg-card text-card-foreground shadow-md",
+        "mx-auto overflow-hidden rounded-4xl bg-background text-foreground shadow-md ring-1 ring-foreground/5",
         appFrame ? "min-h-[720px] max-w-6xl" : "max-w-6xl"
       )}
     >
@@ -134,8 +134,8 @@ export function BrowserChrome({
           <span className="size-3 rounded-full bg-muted-foreground/25" />
           <span className="size-3 rounded-full bg-muted-foreground/20" />
         </div>
-        <div className="flex min-w-0 max-w-80 items-center gap-2 rounded-t-lg bg-background px-3 py-2 text-sm">
-          <ImmersionLogo className="size-5 rounded-md" />
+        <div className="flex min-w-0 max-w-80 items-center gap-2 rounded-t-2xl bg-background px-3 py-2 text-sm shadow-sm ring-1 ring-foreground/5">
+          <ImmersionLogo className="size-5 rounded-xl" />
           <span className="min-w-0 truncate">{title}</span>
           <XIcon aria-hidden="true" className="shrink-0" />
         </div>
@@ -147,7 +147,7 @@ export function BrowserChrome({
         <Button variant="ghost" size="icon-sm" aria-label="Forward">
           <CaretRightIcon />
         </Button>
-        <div className="min-w-0 flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+        <div className="min-w-0 flex-1 rounded-3xl bg-muted px-3 py-2 text-sm text-muted-foreground">
           <span className="block truncate">{url}</span>
         </div>
         <ImmersionLogo className="size-7" />
@@ -185,15 +185,15 @@ function BlurredPage({ supported }: { supported: boolean }) {
             "Languages",
             "Extensions"
           ].map((item) => (
-            <span key={item} className="rounded-md bg-background px-3 py-2">
+            <span key={item} className="rounded-2xl bg-background px-3 py-2 shadow-sm ring-1 ring-foreground/5">
               {item}
             </span>
           ))}
         </div>
         <div className="flex flex-col gap-4">
-          <span className="h-9 w-56 rounded-md bg-background" />
-          <span className="h-28 rounded-md bg-background" />
-          <span className="h-28 rounded-md bg-background" />
+          <span className="h-9 w-56 rounded-2xl bg-background shadow-sm ring-1 ring-foreground/5" />
+          <span className="h-28 rounded-3xl bg-background shadow-sm ring-1 ring-foreground/5" />
+          <span className="h-28 rounded-3xl bg-background shadow-sm ring-1 ring-foreground/5" />
         </div>
       </div>
     );
@@ -205,7 +205,7 @@ function BlurredPage({ supported }: { supported: boolean }) {
         <span className="h-5 w-24 rounded bg-muted" />
         <span className="h-12 w-2/3 rounded bg-muted" />
         <span className="h-5 w-1/2 rounded bg-muted" />
-        <span className="h-48 rounded-lg bg-muted" />
+        <span className="h-48 rounded-4xl bg-muted" />
         <span className="h-24 rounded bg-muted" />
       </div>
     </div>
@@ -226,7 +226,7 @@ export function MetricStat({
   return (
     <div
       className={cn(
-        "flex min-w-0 items-center gap-3 rounded-lg border bg-background p-3",
+        "flex min-w-0 items-center gap-3 rounded-3xl bg-card p-3 shadow-sm ring-1 ring-foreground/5",
         compact && "flex-col items-start gap-2 p-2.5"
       )}
     >
@@ -250,7 +250,7 @@ export function MetricStat({
 
 export function SentenceBlock({ label, text }: { label: string; text: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+    <div className="flex flex-col gap-2 rounded-3xl bg-muted/50 p-4">
       <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
       <span className="text-sm leading-relaxed">{text}</span>
     </div>
@@ -271,7 +271,7 @@ export function LocalFooter({
   return (
     <footer
       className={cn(
-        "flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground",
+        "flex items-center gap-2 rounded-3xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground",
         compact && "text-xs"
       )}
     >
@@ -320,7 +320,7 @@ export function StatusBadge({
   tone?: "default" | "secondary" | "outline" | "destructive";
 }) {
   return (
-    <Badge variant={tone} className="w-fit rounded-md">
+    <Badge variant={tone} className="w-fit">
       {children}
     </Badge>
   );
