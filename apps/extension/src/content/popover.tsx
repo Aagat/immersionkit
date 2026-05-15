@@ -428,33 +428,90 @@ function PhrasePopoverContent({
   onClose: () => void;
 }) {
   const pageSentence = readNonEmptyString(detail.sentence);
+  const phraseReason =
+    readNonEmptyString(detail.curriculumReason) ??
+    "You may see this again when it fits the page.";
+  const phraseExampleSpanish = pageSentence
+    ? replaceFirstPhrase(pageSentence, detail.sourceText, detail.targetText)
+    : null;
+  const phraseExampleEnglish = pageSentence;
+  const canToggleExampleLanguage = Boolean(
+    phraseExampleSpanish &&
+      phraseExampleEnglish &&
+      phraseExampleSpanish !== phraseExampleEnglish
+  );
+  const [rationaleOpen, setRationaleOpen] = useState(false);
+  const [exampleLanguage, setExampleLanguage] =
+    useState<ExampleLanguage>("spanish");
+  const visibleExampleText = canToggleExampleLanguage
+    ? exampleLanguage === "english"
+      ? phraseExampleEnglish
+      : phraseExampleSpanish
+    : phraseExampleSpanish ?? phraseExampleEnglish;
+  const visibleExampleLanguage: ExampleLanguage = canToggleExampleLanguage
+    ? exampleLanguage
+    : phraseExampleSpanish
+      ? "spanish"
+      : "english";
 
   return (
     <PopoverCard>
       <PopoverHeading
+        actions={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Why this phrase appears"
+            aria-expanded={rationaleOpen}
+            data-ik-phrase-rationale-trigger="true"
+            onClick={() => setRationaleOpen((current) => !current)}
+          >
+            <IkIcon name="info" />
+          </Button>
+        }
         icon="link"
         title={detail.targetText}
         badge="phrase"
         onClose={onClose}
       />
+      {rationaleOpen ? (
+        <InfoPanel dataAttribute="data-ik-phrase-rationale">
+          {phraseReason}
+        </InfoPanel>
+      ) : null}
       <TokenPair source={detail.sourceText} target={detail.targetText} />
       <p className="text-sm text-muted-foreground">
         A reusable phrase you may see again when it fits the page.
       </p>
       <Separator />
-      {pageSentence ? (
+      {visibleExampleText ? (
         <>
           <h4 className="flex items-center gap-2 text-sm font-medium">
             <IkIcon name="spark" />
             Example
           </h4>
-          <p className="text-sm">{pageSentence}</p>
+          {canToggleExampleLanguage ? (
+            <LanguageTabs
+              ariaLabel="Phrase example language"
+              value={exampleLanguage}
+              onValueChange={setExampleLanguage}
+              optionAttribute="data-ik-example-language-option"
+            />
+          ) : null}
+          <div
+            className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm"
+            data-ik-example-language={visibleExampleLanguage}
+            data-ik-phrase-example-sentence="true"
+          >
+            <IkIcon
+              name={visibleExampleLanguage === "english" ? "translate" : "message"}
+              className="mt-0.5 shrink-0 text-muted-foreground"
+            />
+            <span>{visibleExampleText}</span>
+          </div>
         </>
       ) : null}
-      <InfoLine>
-        {readNonEmptyString(detail.curriculumReason) ??
-          "You may see this again when it fits the page."}
-      </InfoLine>
       <CardFooter className="justify-between gap-3 border-t pt-4">
         <Button
           type="button"
@@ -467,6 +524,7 @@ function PhrasePopoverContent({
           Hide phrase
         </Button>
         <Button
+          className={INACTIVE_STATUS_BUTTON_CLASS}
           variant="outline"
           size="sm"
           data-ik-popover-close="true"
@@ -494,18 +552,48 @@ function SentencePopoverContent({
     noteElement.getAttribute("data-ik-source-visible") === "true"
   );
   const [detailsActive, setDetailsActive] = useState(false);
+  const [rationaleOpen, setRationaleOpen] = useState(false);
+  const [sentenceLanguage, setSentenceLanguage] =
+    useState<ExampleLanguage>("spanish");
+  const visibleSentenceText =
+    sentenceLanguage === "spanish" ? detail.translatedText : detail.sourceText;
 
   return (
     <PopoverCard>
       <PopoverHeading
+        actions={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Why sentence help appears"
+            aria-expanded={rationaleOpen}
+            data-ik-sentence-rationale-trigger="true"
+            onClick={() => setRationaleOpen((current) => !current)}
+          >
+            <IkIcon name="info" />
+          </Button>
+        }
         icon="book"
         title="Sentence help"
         badge="optional"
         onClose={onClose}
       />
-      <p className="text-sm text-muted-foreground">Uses OpenAI only when enabled.</p>
-      <SentenceBlock label="Original" text={detail.sourceText} />
-      <SentenceBlock label="Translation" text={detail.translatedText} />
+      {rationaleOpen ? (
+        <InfoPanel dataAttribute="data-ik-sentence-rationale">
+          Uses OpenAI only when enabled.
+        </InfoPanel>
+      ) : null}
+      <LanguageTabs
+        ariaLabel="Sentence language"
+        value={sentenceLanguage}
+        onValueChange={setSentenceLanguage}
+        optionAttribute="data-ik-sentence-language-option"
+      />
+      <SentenceBlock
+        label={sentenceLanguage === "spanish" ? "Spanish" : "English"}
+        text={visibleSentenceText}
+      />
       {detail.grammarCards.map((grammarCard) => (
         <GrammarCard key={grammarCard.featureKey} card={grammarCard} />
       ))}
@@ -513,14 +601,16 @@ function SentencePopoverContent({
         label="Why this helps"
         text={sentenceHelpDetail(detail.learningNote)}
       />
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex flex-nowrap justify-center gap-2">
         <Button
           variant={!sourceVisible ? "secondary" : "outline"}
           size="sm"
+          className={sourceVisible ? INACTIVE_STATUS_BUTTON_CLASS : undefined}
           aria-pressed={!sourceVisible}
           data-ik-sentence-action="show-translation"
           onClick={() => {
             setSourceVisible(false);
+            setSentenceLanguage("spanish");
             onAction("show-translation");
           }}
         >
@@ -530,10 +620,12 @@ function SentencePopoverContent({
         <Button
           variant={sourceVisible ? "secondary" : "outline"}
           size="sm"
+          className={sourceVisible ? undefined : INACTIVE_STATUS_BUTTON_CLASS}
           aria-pressed={sourceVisible}
           data-ik-sentence-action="toggle-source"
           onClick={() => {
             setSourceVisible(true);
+            setSentenceLanguage("english");
             onAction("toggle-source");
           }}
         >
@@ -543,6 +635,7 @@ function SentencePopoverContent({
         <Button
           variant={detailsActive ? "secondary" : "outline"}
           size="sm"
+          className={detailsActive ? undefined : INACTIVE_STATUS_BUTTON_CLASS}
           aria-pressed={detailsActive}
           data-ik-sentence-action="details"
           onClick={() => {
@@ -661,6 +754,68 @@ function InfoLine({ children }: { children: ReactNode }) {
       <IkIcon name="info" className="mt-0.5" />
       <span>{children}</span>
     </div>
+  );
+}
+
+function InfoPanel({
+  children,
+  dataAttribute
+}: {
+  children: ReactNode;
+  dataAttribute: string;
+}) {
+  return (
+    <div
+      className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground"
+      {...{ [dataAttribute]: "true" }}
+    >
+      <IkIcon name="info" className="mt-0.5 shrink-0" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function LanguageTabs({
+  ariaLabel,
+  value,
+  onValueChange,
+  optionAttribute
+}: {
+  ariaLabel: string;
+  value: ExampleLanguage;
+  onValueChange: (value: ExampleLanguage) => void;
+  optionAttribute: string;
+}) {
+  return (
+    <Tabs
+      aria-label={ariaLabel}
+      className="w-full"
+      onValueChange={(nextValue) => {
+        if (nextValue === "spanish" || nextValue === "english") {
+          onValueChange(nextValue);
+        }
+      }}
+      value={value}
+    >
+      <TabsList className="h-8 w-full justify-start p-0" variant="line">
+        <TabsTrigger
+          className="flex-none px-2.5 text-xs"
+          onClick={() => onValueChange("spanish")}
+          value="spanish"
+          {...{ [optionAttribute]: "spanish" }}
+        >
+          Spanish
+        </TabsTrigger>
+        <TabsTrigger
+          className="flex-none px-2.5 text-xs"
+          onClick={() => onValueChange("english")}
+          value="english"
+          {...{ [optionAttribute]: "english" }}
+        >
+          English
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -1242,6 +1397,27 @@ function wordStatusLabel(status: VocabStatus): string {
   }
 
   return "new";
+}
+
+function replaceFirstPhrase(
+  sentence: string,
+  sourceText: string,
+  targetText: string
+): string {
+  const source = sourceText.trim();
+  const target = targetText.trim();
+  if (!source || !target) {
+    return sentence;
+  }
+
+  const index = sentence.toLocaleLowerCase().indexOf(source.toLocaleLowerCase());
+  if (index < 0) {
+    return sentence;
+  }
+
+  return `${sentence.slice(0, index)}${target}${sentence.slice(
+    index + source.length
+  )}`;
 }
 
 function readNonEmptyString(value: string | null | undefined): string | null {

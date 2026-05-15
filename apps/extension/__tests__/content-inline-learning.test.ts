@@ -1037,6 +1037,51 @@ describe("content inline learning loop", () => {
               selected: true
             })
           );
+
+          phrase?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+
+          const popover = document.querySelector<HTMLElement>(
+            "[data-ik-popover='true']"
+          );
+          const shadowRoot = popover?.shadowRoot;
+          expect(popover).toBeTruthy();
+          expect(
+            shadowRoot?.querySelector("[data-ik-phrase-rationale-trigger='true']")
+          ).toBeTruthy();
+          expect(shadowRoot?.textContent).not.toContain(
+            "This phrase carries a grammar pattern"
+          );
+
+          const phraseExample = shadowRoot?.querySelector<HTMLElement>(
+            "[data-ik-phrase-example-sentence='true']"
+          );
+          expect(phraseExample?.getAttribute("data-ik-example-language")).toBe(
+            "spanish"
+          );
+          expect(phraseExample?.textContent).toContain("I solia visitar");
+          expect(phraseExample?.textContent).not.toContain("I used to visit");
+
+          const englishExampleOption =
+            shadowRoot?.querySelector<HTMLButtonElement>(
+              "[data-ik-example-language-option='english']"
+            );
+          englishExampleOption?.click();
+          await wait(20);
+
+          const englishPhraseExample = shadowRoot?.querySelector<HTMLElement>(
+            "[data-ik-phrase-example-sentence='true']"
+          );
+          expect(
+            englishPhraseExample?.getAttribute("data-ik-example-language")
+          ).toBe("english");
+          expect(englishPhraseExample?.textContent).toContain("I used to visit");
+          expect(englishPhraseExample?.textContent).not.toContain("I solia visitar");
         } finally {
           chromeStub.restore();
         }
@@ -2164,6 +2209,35 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).toContain(learningNote.grammarFocus);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
           expect(popover?.querySelector("[data-ik-sentence-action]")).toBeTruthy();
+          const shadowRoot = popover?.shadowRoot;
+          expect(shadowRoot?.textContent).not.toContain(
+            "Uses OpenAI only when enabled."
+          );
+          expect(shadowRoot?.textContent).toContain(translatedSentence);
+          expect(shadowRoot?.textContent).not.toContain(sourceSentence);
+
+          const englishSentenceOption =
+            shadowRoot?.querySelector<HTMLButtonElement>(
+              "[data-ik-sentence-language-option='english']"
+            );
+          expect(englishSentenceOption).toBeTruthy();
+          englishSentenceOption?.click();
+          await wait(20);
+          expect(shadowRoot?.textContent).toContain(sourceSentence);
+          expect(shadowRoot?.textContent).not.toContain(translatedSentence);
+
+          const rationaleTrigger = shadowRoot?.querySelector<HTMLButtonElement>(
+            "[data-ik-sentence-rationale-trigger='true']"
+          );
+          expect(rationaleTrigger).toBeTruthy();
+          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("false");
+          rationaleTrigger?.click();
+          await wait(20);
+          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("true");
+          expect(
+            shadowRoot?.querySelector("[data-ik-sentence-rationale='true']")
+              ?.textContent
+          ).toContain("Uses OpenAI only when enabled.");
 
           const translationButton = popover?.querySelector<HTMLButtonElement>(
             "[data-ik-sentence-action='show-translation']"

@@ -23,6 +23,7 @@ import type { ArticleState } from "./types";
 
 const INACTIVE_STATUS_BUTTON_CLASS =
   "ik-status-outline bg-background";
+type ExampleLanguage = "spanish" | "english";
 
 export function ReadingPage({ state = "supported" }: { state?: ArticleState }) {
   const travel = state === "supported";
@@ -277,13 +278,40 @@ function WordHelpPopover() {
 }
 
 function PhraseHelpPopover() {
+  const [rationaleOpen, setRationaleOpen] = useState(false);
+  const [exampleLanguage, setExampleLanguage] =
+    useState<ExampleLanguage>("spanish");
+  const exampleText =
+    exampleLanguage === "spanish"
+      ? "Read con calma when the page feels dense."
+      : "Read with calm when the page feels dense.";
+
   return (
     <PopoverFrame className="top-[260px] md:left-[44%] md:right-auto md:w-[340px]">
       <header className="flex items-start gap-2">
         <IkIcon name="link" className="mt-1 text-muted-foreground" />
-        <h3 className="min-w-0 flex-1 text-base font-medium">con calma</h3>
-        <Badge>phrase</Badge>
+        <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
+          <h3 className="min-w-0 text-base font-medium leading-6">con calma</h3>
+          <Badge className="shrink-0">phrase</Badge>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Why this phrase appears"
+          aria-expanded={rationaleOpen}
+          onClick={() => setRationaleOpen((current) => !current)}
+        >
+          <IkIcon name="info" />
+        </Button>
+        <PopoverCloseButton className="-mr-1 -mt-1 shrink-0" />
       </header>
+      {rationaleOpen ? (
+        <div className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground">
+          <IkIcon name="info" className="mt-0.5 shrink-0" />
+          <span>You may see this again when it fits the page.</span>
+        </div>
+      ) : null}
       <TokenPair source="with calm" target="con calma" />
       <p className="text-sm text-muted-foreground">
         A reusable phrase for doing something at an easy pace.
@@ -292,44 +320,110 @@ function PhraseHelpPopover() {
       <h4 className="flex items-center gap-2 text-sm font-medium">
         <IkIcon name="spark" /> Example
       </h4>
-      <p className="text-sm">Read <strong>con calma</strong> when the page feels dense.</p>
-      <div className="flex gap-2 text-sm text-muted-foreground">
-        <IkIcon name="info" className="mt-0.5" />
-        <span>You may see this again when it fits the page.</span>
+      <LanguageTabs
+        ariaLabel="Phrase example language"
+        value={exampleLanguage}
+        onValueChange={setExampleLanguage}
+      />
+      <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
+        <IkIcon
+          name={exampleLanguage === "english" ? "translate" : "message"}
+          className="mt-0.5 shrink-0 text-muted-foreground"
+        />
+        <span>{exampleText}</span>
       </div>
       <footer className="flex items-center justify-between gap-3">
         <Button type="button" variant="link" size="sm" className="h-auto px-0">
           Hide phrase
         </Button>
-        <Button variant="outline" size="sm">Got it</Button>
+        <Button className={INACTIVE_STATUS_BUTTON_CLASS} variant="outline" size="sm">
+          Got it
+        </Button>
       </footer>
     </PopoverFrame>
   );
 }
 
 function SentenceHelpPopover() {
+  const [rationaleOpen, setRationaleOpen] = useState(false);
+  const [sentenceLanguage, setSentenceLanguage] =
+    useState<ExampleLanguage>("spanish");
+  const [detailsActive, setDetailsActive] = useState(false);
+  const visibleSentenceText =
+    sentenceLanguage === "spanish"
+      ? "Unos minutos de lectura pueden hacer que el dia se sienta mas lento."
+      : "A few minutes of lectura can make the day feel slower.";
+
   return (
     <PopoverFrame className="top-[120px] md:left-auto md:right-8 md:w-[440px]">
       <header className="flex items-start gap-2">
         <IkIcon name="book" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">Sentence help</h3>
         <Badge>optional</Badge>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Why sentence help appears"
+          aria-expanded={rationaleOpen}
+          onClick={() => setRationaleOpen((current) => !current)}
+        >
+          <IkIcon name="info" />
+        </Button>
         <PopoverCloseButton />
       </header>
-      <p className="text-sm text-muted-foreground">Uses OpenAI only when enabled.</p>
-      <SentenceBlock label="Original" text="A few minutes of lectura can make the day feel slower." />
-      <SentenceBlock label="Translation" text="Unos minutos de lectura pueden hacer que el dia se sienta mas lento." />
+      {rationaleOpen ? (
+        <div className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground">
+          <IkIcon name="info" className="mt-0.5 shrink-0" />
+          <span>Uses OpenAI only when enabled.</span>
+        </div>
+      ) : null}
+      <LanguageTabs
+        ariaLabel="Sentence language"
+        value={sentenceLanguage}
+        onValueChange={setSentenceLanguage}
+      />
+      <SentenceBlock
+        label={sentenceLanguage === "spanish" ? "Spanish" : "English"}
+        text={visibleSentenceText}
+      />
       <SentenceBlock label="Why this helps" text="Puede + infinitive expresses something can happen." />
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Button variant="outline" size="sm">
+      <div className="flex flex-nowrap justify-center gap-2">
+        <Button
+          variant={sentenceLanguage === "spanish" ? "secondary" : "outline"}
+          size="sm"
+          className={
+            sentenceLanguage === "spanish"
+              ? undefined
+              : INACTIVE_STATUS_BUTTON_CLASS
+          }
+          aria-pressed={sentenceLanguage === "spanish"}
+          onClick={() => setSentenceLanguage("spanish")}
+        >
           <IkIcon name="translate" dataIcon="inline-start" />
           Translation
         </Button>
-        <Button variant="outline" size="sm">
+        <Button
+          variant={sentenceLanguage === "english" ? "secondary" : "outline"}
+          size="sm"
+          className={
+            sentenceLanguage === "english"
+              ? undefined
+              : INACTIVE_STATUS_BUTTON_CLASS
+          }
+          aria-pressed={sentenceLanguage === "english"}
+          onClick={() => setSentenceLanguage("english")}
+        >
           <IkIcon name="document" dataIcon="inline-start" />
           Original
         </Button>
-        <Button variant="outline" size="sm">
+        <Button
+          variant={detailsActive ? "secondary" : "outline"}
+          size="sm"
+          className={detailsActive ? undefined : INACTIVE_STATUS_BUTTON_CLASS}
+          aria-pressed={detailsActive}
+          onClick={() => setDetailsActive(true)}
+        >
           <IkIcon name="info" dataIcon="inline-start" />
           Details
         </Button>
@@ -350,6 +444,46 @@ function PopoverCloseButton({ className }: { className?: string }) {
     >
       <IkIcon name="close" />
     </Button>
+  );
+}
+
+function LanguageTabs({
+  ariaLabel,
+  value,
+  onValueChange
+}: {
+  ariaLabel: string;
+  value: ExampleLanguage;
+  onValueChange: (value: ExampleLanguage) => void;
+}) {
+  return (
+    <Tabs
+      aria-label={ariaLabel}
+      className="w-full"
+      onValueChange={(nextValue) => {
+        if (nextValue === "spanish" || nextValue === "english") {
+          onValueChange(nextValue);
+        }
+      }}
+      value={value}
+    >
+      <TabsList className="h-8 w-full justify-start p-0" variant="line">
+        <TabsTrigger
+          className="flex-none px-2.5 text-xs"
+          onClick={() => onValueChange("spanish")}
+          value="spanish"
+        >
+          Spanish
+        </TabsTrigger>
+        <TabsTrigger
+          className="flex-none px-2.5 text-xs"
+          onClick={() => onValueChange("english")}
+          value="english"
+        >
+          English
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
 
