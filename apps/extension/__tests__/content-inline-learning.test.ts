@@ -1064,7 +1064,10 @@ describe("content inline learning loop", () => {
           expect(phraseExample?.getAttribute("data-ik-example-language")).toBe(
             "spanish"
           );
-          expect(phraseExample?.textContent).toContain("I solia visitar");
+          expect(phraseExample?.getAttribute("data-ik-translation-available")).toBe(
+            "false"
+          );
+          expect(phraseExample?.textContent).toContain("Translation not available.");
           expect(phraseExample?.textContent).not.toContain("I used to visit");
 
           const englishExampleOption =
@@ -1080,8 +1083,13 @@ describe("content inline learning loop", () => {
           expect(
             englishPhraseExample?.getAttribute("data-ik-example-language")
           ).toBe("english");
+          expect(
+            englishPhraseExample?.getAttribute("data-ik-translation-available")
+          ).toBe("true");
           expect(englishPhraseExample?.textContent).toContain("I used to visit");
-          expect(englishPhraseExample?.textContent).not.toContain("I solia visitar");
+          expect(englishPhraseExample?.textContent).not.toContain(
+            "Translation not available."
+          );
         } finally {
           chromeStub.restore();
         }

@@ -16,7 +16,6 @@ import {
   ImmersionFrame,
   ImmersionLogo,
   InlineMark,
-  LocalFooter,
   SentenceBlock
 } from "./screen-primitives";
 import type { ArticleState } from "./types";
@@ -264,7 +263,7 @@ function WordHelpPopover() {
           Comfortable
         </Button>
       </div>
-      <footer className="flex items-center justify-between gap-3 text-sm">
+      <footer className="flex items-center justify-between gap-3 border-t pt-4 text-sm">
         <Button type="button" variant="link" size="sm" className="h-auto px-0">
           <IkIcon name="eyeOff" dataIcon="inline-start" />
           Hide word
@@ -283,7 +282,7 @@ function PhraseHelpPopover() {
     useState<ExampleLanguage>("spanish");
   const exampleText =
     exampleLanguage === "spanish"
-      ? "Read con calma when the page feels dense."
+      ? "Translation not available."
       : "Read with calm when the page feels dense.";
 
   return (
@@ -313,9 +312,6 @@ function PhraseHelpPopover() {
         </div>
       ) : null}
       <TokenPair source="with calm" target="con calma" />
-      <p className="text-sm text-muted-foreground">
-        A reusable phrase for doing something at an easy pace.
-      </p>
       <Separator />
       <h4 className="flex items-center gap-2 text-sm font-medium">
         <IkIcon name="spark" /> Example
@@ -327,18 +323,19 @@ function PhraseHelpPopover() {
       />
       <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
         <IkIcon
-          name={exampleLanguage === "english" ? "translate" : "message"}
+          name={exampleLanguage === "english" ? "message" : "translate"}
           className="mt-0.5 shrink-0 text-muted-foreground"
         />
         <span>{exampleText}</span>
       </div>
-      <footer className="flex items-center justify-between gap-3">
+      <footer className="flex items-center justify-between gap-3 border-t pt-4">
         <Button type="button" variant="link" size="sm" className="h-auto px-0">
+          <IkIcon name="eyeOff" dataIcon="inline-start" />
           Hide phrase
         </Button>
-        <Button className={INACTIVE_STATUS_BUTTON_CLASS} variant="outline" size="sm">
-          Got it
-        </Button>
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit
+        </span>
       </footer>
     </PopoverFrame>
   );
@@ -428,7 +425,15 @@ function SentenceHelpPopover() {
           Details
         </Button>
       </div>
-      <LocalFooter text="Selected sentence only" compact />
+      <footer className="flex items-center justify-between gap-3 border-t pt-4 text-sm">
+        <Button type="button" variant="link" size="sm" className="h-auto px-0">
+          <IkIcon name="close" dataIcon="inline-start" />
+          Close help
+        </Button>
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit
+        </span>
+      </footer>
     </PopoverFrame>
   );
 }

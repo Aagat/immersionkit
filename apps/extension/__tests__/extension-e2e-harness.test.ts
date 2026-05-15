@@ -160,8 +160,9 @@ describe("extension E2E harness", () => {
 
     await page.keyboard.press("Escape").catch(() => undefined);
     await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
-    const phrasePopoverText = await page.locator("[data-ik-popover='true']").innerText();
-    expect(phrasePopoverText).toContain("A reusable phrase you may see again");
+    const phrasePopoverText = await readPopoverText(page);
+    expect(phrasePopoverText).toContain("Translation not available");
+    expect(phrasePopoverText).not.toContain("A reusable phrase you may see again");
     expect(phrasePopoverText).not.toMatch(/learning queue|review due|confidence/);
 
     const diagnostics = await readPageDiagnostics(serviceWorker, fixtureUrl);
@@ -341,6 +342,12 @@ async function openFirstPopover(page: Page, selector: string): Promise<void> {
 async function expectPopover(page: Page): Promise<void> {
   await page.waitForSelector("[data-ik-popover='true']", { timeout: 5_000 });
   await expect.poll(() => page.locator("[data-ik-popover='true']").isVisible()).toBe(true);
+}
+
+async function readPopoverText(page: Page): Promise<string> {
+  return page.locator("[data-ik-popover='true']").evaluate((node) => {
+    return node.shadowRoot?.textContent ?? node.textContent ?? "";
+  });
 }
 
 async function readPageDiagnostics(

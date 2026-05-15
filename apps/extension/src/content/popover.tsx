@@ -78,6 +78,7 @@ const STATUS_BUTTONS: readonly {
 ] as const;
 const INACTIVE_STATUS_BUTTON_CLASS =
   "ik-status-outline bg-background";
+const TRANSLATION_UNAVAILABLE_TEXT = "Translation not available.";
 
 const CONTENT_POPOVER_STYLES = `
   :host {
@@ -218,7 +219,8 @@ export function renderSentencePopover(
         "Why this helps",
         sentenceHelpDetail(detail.learningNote),
         "Details",
-        "Selected sentence only"
+        "Close help",
+        "ImmersionKit"
       ],
       sentenceActions: [
         {
@@ -256,12 +258,12 @@ export function renderPhrasePopover(
       textMirror: [
         detail.sourceText,
         detail.targetText,
-        "A reusable phrase you may see again when it fits the page.",
+        TRANSLATION_UNAVAILABLE_TEXT,
         readNonEmptyString(detail.sentence),
         readNonEmptyString(detail.curriculumReason) ??
           "You may see this again when it fits the page.",
         "Hide phrase",
-        "Got it"
+        "ImmersionKit"
       ]
     }
   );
@@ -411,10 +413,7 @@ function WordPopoverContent({
           <IkIcon name="eyeOff" dataIcon="inline-start" />
           Hide word
         </Button>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <ImmersionLogo className="size-5 rounded-xl" />
-          ImmersionKit
-        </span>
+        <PopoverBrand />
       </CardFooter>
     </PopoverCard>
   );
@@ -431,28 +430,14 @@ function PhrasePopoverContent({
   const phraseReason =
     readNonEmptyString(detail.curriculumReason) ??
     "You may see this again when it fits the page.";
-  const phraseExampleSpanish = pageSentence
-    ? replaceFirstPhrase(pageSentence, detail.sourceText, detail.targetText)
-    : null;
   const phraseExampleEnglish = pageSentence;
-  const canToggleExampleLanguage = Boolean(
-    phraseExampleSpanish &&
-      phraseExampleEnglish &&
-      phraseExampleSpanish !== phraseExampleEnglish
-  );
   const [rationaleOpen, setRationaleOpen] = useState(false);
   const [exampleLanguage, setExampleLanguage] =
     useState<ExampleLanguage>("spanish");
-  const visibleExampleText = canToggleExampleLanguage
-    ? exampleLanguage === "english"
+  const visibleExampleText =
+    exampleLanguage === "english"
       ? phraseExampleEnglish
-      : phraseExampleSpanish
-    : phraseExampleSpanish ?? phraseExampleEnglish;
-  const visibleExampleLanguage: ExampleLanguage = canToggleExampleLanguage
-    ? exampleLanguage
-    : phraseExampleSpanish
-      ? "spanish"
-      : "english";
+      : TRANSLATION_UNAVAILABLE_TEXT;
 
   return (
     <PopoverCard>
@@ -481,31 +466,29 @@ function PhrasePopoverContent({
         </InfoPanel>
       ) : null}
       <TokenPair source={detail.sourceText} target={detail.targetText} />
-      <p className="text-sm text-muted-foreground">
-        A reusable phrase you may see again when it fits the page.
-      </p>
       <Separator />
-      {visibleExampleText ? (
+      {phraseExampleEnglish ? (
         <>
           <h4 className="flex items-center gap-2 text-sm font-medium">
             <IkIcon name="spark" />
             Example
           </h4>
-          {canToggleExampleLanguage ? (
-            <LanguageTabs
-              ariaLabel="Phrase example language"
-              value={exampleLanguage}
-              onValueChange={setExampleLanguage}
-              optionAttribute="data-ik-example-language-option"
-            />
-          ) : null}
+          <LanguageTabs
+            ariaLabel="Phrase example language"
+            value={exampleLanguage}
+            onValueChange={setExampleLanguage}
+            optionAttribute="data-ik-example-language-option"
+          />
           <div
             className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm"
-            data-ik-example-language={visibleExampleLanguage}
+            data-ik-example-language={exampleLanguage}
             data-ik-phrase-example-sentence="true"
+            data-ik-translation-available={
+              exampleLanguage === "english" ? "true" : "false"
+            }
           >
             <IkIcon
-              name={visibleExampleLanguage === "english" ? "translate" : "message"}
+              name={exampleLanguage === "english" ? "message" : "translate"}
               className="mt-0.5 shrink-0 text-muted-foreground"
             />
             <span>{visibleExampleText}</span>
@@ -521,17 +504,10 @@ function PhrasePopoverContent({
           data-ik-popover-close="true"
           onClick={onClose}
         >
+          <IkIcon name="eyeOff" dataIcon="inline-start" />
           Hide phrase
         </Button>
-        <Button
-          className={INACTIVE_STATUS_BUTTON_CLASS}
-          variant="outline"
-          size="sm"
-          data-ik-popover-close="true"
-          onClick={onClose}
-        >
-          Got it
-        </Button>
+        <PopoverBrand />
       </CardFooter>
     </PopoverCard>
   );
@@ -647,10 +623,20 @@ function SentencePopoverContent({
           Details
         </Button>
       </div>
-      <footer className="flex items-center gap-2 rounded-3xl bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground">
-        <IkIcon name="lock" />
-        <span>Selected sentence only</span>
-      </footer>
+      <CardFooter className="justify-between gap-3 border-t pt-4">
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="h-auto px-0"
+          data-ik-popover-close="true"
+          onClick={onClose}
+        >
+          <IkIcon name="close" dataIcon="inline-start" />
+          Close help
+        </Button>
+        <PopoverBrand />
+      </CardFooter>
     </PopoverCard>
   );
 }
@@ -735,6 +721,15 @@ function PopoverHeading({
         <IkIcon name="close" />
       </Button>
     </CardHeader>
+  );
+}
+
+function PopoverBrand() {
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+      <ImmersionLogo className="size-5 rounded-xl" />
+      ImmersionKit
+    </span>
   );
 }
 
@@ -1397,27 +1392,6 @@ function wordStatusLabel(status: VocabStatus): string {
   }
 
   return "new";
-}
-
-function replaceFirstPhrase(
-  sentence: string,
-  sourceText: string,
-  targetText: string
-): string {
-  const source = sourceText.trim();
-  const target = targetText.trim();
-  if (!source || !target) {
-    return sentence;
-  }
-
-  const index = sentence.toLocaleLowerCase().indexOf(source.toLocaleLowerCase());
-  if (index < 0) {
-    return sentence;
-  }
-
-  return `${sentence.slice(0, index)}${target}${sentence.slice(
-    index + source.length
-  )}`;
 }
 
 function readNonEmptyString(value: string | null | undefined): string | null {
