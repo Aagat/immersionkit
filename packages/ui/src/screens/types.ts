@@ -32,6 +32,14 @@ export type PopupMetric = {
   icon?: MetricIconName;
 };
 
+export type PopupLearningStats = {
+  comfortable: number;
+  practice: number;
+  newCount: number;
+  ignored?: number;
+  total: number;
+};
+
 export type OptionsStats = {
   comfortable: string | number;
   practice: string | number;
@@ -165,11 +173,10 @@ export type ExtensionPopupProps = {
   progressLabel?: string;
   progressDetail?: string;
   metrics?: PopupMetric[];
-  localFooterText?: string;
+  learningStats?: PopupLearningStats;
   unsupportedMessage?: string;
   firstRunIntro?: boolean;
   errorMessage?: string | null;
-  sentenceHelpSummary?: string;
   isSavingSite?: boolean;
   onSiteToggle?: () => void;
   onOpenSettings?: () => void;

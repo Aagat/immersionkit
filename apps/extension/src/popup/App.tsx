@@ -151,7 +151,6 @@ export function PopupApp() {
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
       ?.label ?? "False beginner";
-  const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
   const progressCopy = formatPopupProgressCopy({
     checkpointPreview,
@@ -169,21 +168,17 @@ export function PopupApp() {
         progressValue={estimateProgressValue(checkpointPreview)}
         progressLabel={progressCopy.progressLabel}
         progressDetail={progressCopy.progressDetail}
-        localFooterText={progressCopy.localFooterText}
         unsupportedMessage={activeTab.supportMessage}
         firstRunIntro={showFirstRunIntro}
         errorMessage={errorMessage}
         isSavingSite={isSavingSite}
-        metrics={[
-          { label: "Comfortable", value: formatCount(vocabStats.known), icon: "check" },
-          { label: "In practice", value: formatCount(vocabStats.learning), icon: "pause" },
-          { label: "Tracked words", value: formatCount(vocabStats.total), icon: "spark" }
-        ]}
-        sentenceHelpSummary={
-          translationEnabled
-            ? "Stored on this device. Sentence help is enabled."
-            : "Stored on this device. Sentence help is off."
-        }
+        learningStats={{
+          comfortable: vocabStats.known,
+          practice: vocabStats.learning,
+          newCount: vocabStats.newCount,
+          ignored: vocabStats.ignored,
+          total: vocabStats.total
+        }}
         onSiteToggle={() => {
           void handleSiteToggle();
         }}
@@ -221,24 +216,19 @@ export function formatPopupProgressCopy(input: {
 }): {
   progressLabel: string;
   progressDetail: string;
-  localFooterText: string;
 } {
   if (input.vocabStats.total === 0 || !input.checkpointPreview.activeBandId) {
     return {
       progressLabel: "Progress starts as you read",
       progressDetail:
-        "Reading history and local evidence build on this device while you browse supported pages.",
-      localFooterText:
-        "Stored on this device. Sentence help is off unless you turn it on."
+        "Reading history and local evidence build while you browse supported pages."
     };
   }
 
   const progressDetail = formatPopupCheckpointHint(input.checkpointPreview);
   return {
     progressLabel: progressDetail,
-    progressDetail,
-    localFooterText:
-      "Stored on this device. Sentence help is off unless you turn it on."
+    progressDetail
   };
 }
 
