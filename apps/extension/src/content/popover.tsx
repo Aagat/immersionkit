@@ -16,7 +16,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   IkIcon,
@@ -466,7 +465,6 @@ function PhrasePopoverContent({
         </InfoPanel>
       ) : null}
       <TokenPair source={detail.sourceText} target={detail.targetText} />
-      <Separator />
       {phraseExampleEnglish ? (
         <>
           <LanguageTabs

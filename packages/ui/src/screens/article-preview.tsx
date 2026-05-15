@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -312,7 +311,6 @@ function PhraseHelpPopover() {
         </div>
       ) : null}
       <TokenPair source="with calm" target="con calma" />
-      <Separator />
       <LanguageTabs
         ariaLabel="Phrase example language"
         value={exampleLanguage}
