@@ -469,10 +469,6 @@ function PhrasePopoverContent({
       <Separator />
       {phraseExampleEnglish ? (
         <>
-          <h4 className="flex items-center gap-2 text-sm font-medium">
-            <IkIcon name="spark" />
-            Example
-          </h4>
           <LanguageTabs
             ariaLabel="Phrase example language"
             value={exampleLanguage}
