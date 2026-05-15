@@ -21,6 +21,9 @@ import {
 } from "./screen-primitives";
 import type { ArticleState } from "./types";
 
+const INACTIVE_STATUS_BUTTON_CLASS =
+  "ik-status-outline bg-background";
+
 export function ReadingPage({ state = "supported" }: { state?: ArticleState }) {
   const travel = state === "supported";
 
@@ -215,14 +218,14 @@ function WordHelpPopover() {
       >
         <TabsList className="h-8 w-full justify-start p-0" variant="line">
           <TabsTrigger
-            className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+            className="flex-none px-2.5 text-xs"
             onClick={() => setExampleLanguage("spanish")}
             value="spanish"
           >
             Spanish
           </TabsTrigger>
           <TabsTrigger
-            className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+            className="flex-none px-2.5 text-xs"
             onClick={() => setExampleLanguage("english")}
             value="english"
           >
@@ -238,9 +241,27 @@ function WordHelpPopover() {
         <span>{exampleText}</span>
       </div>
       <div className="flex flex-nowrap justify-center gap-2">
-        <Button variant="outline" size="xs">Still new</Button>
-        <Button variant="outline" size="xs">Practicing</Button>
-        <Button variant="outline" size="xs">Comfortable</Button>
+        <Button
+          className={INACTIVE_STATUS_BUTTON_CLASS}
+          variant="outline"
+          size="xs"
+        >
+          Still new
+        </Button>
+        <Button
+          className={INACTIVE_STATUS_BUTTON_CLASS}
+          variant="outline"
+          size="xs"
+        >
+          Practicing
+        </Button>
+        <Button
+          className={INACTIVE_STATUS_BUTTON_CLASS}
+          variant="outline"
+          size="xs"
+        >
+          Comfortable
+        </Button>
       </div>
       <footer className="flex items-center justify-between gap-3 text-sm">
         <Button type="button" variant="link" size="sm" className="h-auto px-0">

@@ -76,6 +76,8 @@ const STATUS_BUTTONS: readonly {
   { status: "learning", label: "Practicing" },
   { status: "known", label: "Comfortable" }
 ] as const;
+const INACTIVE_STATUS_BUTTON_CLASS =
+  "ik-status-outline bg-background";
 
 const CONTENT_POPOVER_STYLES = `
   :host {
@@ -339,7 +341,7 @@ function WordPopoverContent({
         >
           <TabsList className="h-8 w-full justify-start p-0" variant="line">
             <TabsTrigger
-              className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+              className="flex-none px-2.5 text-xs"
               data-ik-example-language-option="spanish"
               onClick={() => setExampleLanguage("spanish")}
               value="spanish"
@@ -347,7 +349,7 @@ function WordPopoverContent({
               Spanish
             </TabsTrigger>
             <TabsTrigger
-              className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+              className="flex-none px-2.5 text-xs"
               data-ik-example-language-option="english"
               onClick={() => setExampleLanguage("english")}
               value="english"
@@ -371,7 +373,12 @@ function WordPopoverContent({
         </div>
       ) : null}
       <div className="flex flex-nowrap justify-center gap-2">
-        <Button variant="outline" size="xs" disabled={detail.status === "new"}>
+        <Button
+          className={INACTIVE_STATUS_BUTTON_CLASS}
+          variant="outline"
+          size="xs"
+          disabled={detail.status === "new"}
+        >
           Still new
         </Button>
         {STATUS_BUTTONS.map((action) => (
@@ -379,6 +386,11 @@ function WordPopoverContent({
             key={action.status}
             variant={action.status === detail.status ? "secondary" : "outline"}
             size="xs"
+            className={
+              action.status === detail.status
+                ? undefined
+                : INACTIVE_STATUS_BUTTON_CLASS
+            }
             aria-pressed={action.status === detail.status}
             data-ik-status-action={action.status}
             onClick={() => onStatusAction(action.status)}

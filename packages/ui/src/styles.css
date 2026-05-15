@@ -131,3 +131,16 @@
     @apply font-mono;
     }
 }
+
+@layer components {
+  [data-slot="tabs-list"][data-variant="line"] > [data-slot="tabs-trigger"]:where(
+    [data-state="active"],
+    [data-active]:not([data-active="false"])
+  ) {
+    box-shadow: inset 0 -2px 0 0 currentColor;
+  }
+
+  .ik-status-outline {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 40%, transparent);
+  }
+}
