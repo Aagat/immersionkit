@@ -1,15 +1,13 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { WarningCircleIcon } from "@phosphor-icons/react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
@@ -47,7 +45,7 @@ export function ExtensionPopup({
   bandSubtitle = "Words + phrases",
   progressValue = 38,
   progressLabel = "42 / 120 reading evidence items",
-  progressDetail = "A few more reading evidence items will widen your band.",
+  progressDetail = "A few more reading evidence items will widen your range.",
   metrics,
   learningStats,
   unsupportedMessage = "Open a normal HTTP(S) article, blog, or docs page to use reading mode.",
@@ -74,7 +72,7 @@ export function ExtensionPopup({
       }
     >
       <PopupPanel>
-        <PopupHeader onOpenSettings={onOpenSettings} />
+        <PopupHeader />
         {errorMessage ? (
           <Alert>
             <WarningCircleIcon aria-hidden="true" />
@@ -82,32 +80,28 @@ export function ExtensionPopup({
           </Alert>
         ) : null}
         {firstRunIntro ? (
-          <Card>
-            <CardHeader className="flex-row gap-3">
-              <IkIcon name="shield" className="mt-0.5 text-muted-foreground" />
-              <div className="min-w-0">
-                <CardTitle>Read normally with small doses of Spanish.</CardTitle>
-                <CardDescription>
-                  Words and phrases appear gently on supported pages. Progress
-                  and reading history stay on this device. Pause any site, adjust
-                  your starting point or pace in settings, and turn sentence help
-                  on only when you want it.
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardFooter>
-              <Button variant="outline" size="sm" onClick={onDismissIntro}>
+          <Alert>
+            <IkIcon name="shield" />
+            <AlertTitle>Read normally with small doses of Spanish.</AlertTitle>
+            <AlertDescription>
+              Words and phrases appear gently on supported pages. Pause any site
+              or adjust your pace in settings.
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-fit"
+                onClick={onDismissIntro}
+              >
                 Got it
               </Button>
-            </CardFooter>
-          </Card>
+            </AlertDescription>
+          </Alert>
         ) : null}
         {supported ? (
           <SupportedPopup
             bandTitle={bandTitle}
             bandSubtitle={bandSubtitle}
             progress={progress}
-            progressLabel={progressLabel}
             progressDetail={progressDetail}
             enabled={enabled}
             metrics={metrics}
@@ -156,11 +150,10 @@ function SupportedPopup({
   bandTitle,
   bandSubtitle,
   progress,
-  progressLabel,
   progressDetail,
-  enabled,
   metrics,
   learningStats,
+  enabled,
   isSavingSite,
   onSiteToggle,
   onAdjustPace
@@ -168,11 +161,10 @@ function SupportedPopup({
   bandTitle: string;
   bandSubtitle: string;
   progress: number;
-  progressLabel: string;
   progressDetail: string;
-  enabled: boolean;
   metrics: ExtensionPopupProps["metrics"];
   learningStats: ExtensionPopupProps["learningStats"];
+  enabled: boolean;
   isSavingSite: boolean;
   onSiteToggle: () => void;
   onAdjustPace?: () => void;
@@ -181,52 +173,44 @@ function SupportedPopup({
 
   return (
     <>
-      <section className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid size-12 shrink-0 place-items-center rounded-3xl bg-muted shadow-sm ring-1 ring-foreground/5">
-            <IkIcon name="book" />
-          </div>
-          <div className="min-w-0">
-            <Badge variant={enabled ? "default" : "secondary"} className="mb-2 w-fit">
-              {enabled ? "On for this site" : "Paused for this site"}
-            </Badge>
-            <h2 className="truncate text-lg font-medium">{bandTitle}</h2>
-            <p className="truncate text-sm text-muted-foreground">{bandSubtitle}</p>
-          </div>
-        </div>
+      <LearningReportCard
+        bandTitle={bandTitle}
+        bandSubtitle={bandSubtitle}
+        progress={progress}
+        progressDetail={progressDetail}
+        stats={stats}
+      />
+      <div className="grid grid-cols-2 gap-2">
         <Button
           type="button"
-          variant={enabled ? "default" : "outline"}
-          size="icon-lg"
+          variant={enabled ? "outline" : "default"}
           aria-label={enabled ? "Pause reading mode" : "Resume reading mode"}
           aria-pressed={enabled}
           disabled={isSavingSite}
           onClick={onSiteToggle}
         >
-          <IkIcon name="power" />
+          <IkIcon name="power" dataIcon="inline-start" />
+          {enabled ? "Turn off" : "Turn on"}
         </Button>
-      </section>
-      <LearningReportCard
-        progress={progress}
-        progressLabel={progressLabel}
-        progressDetail={progressDetail}
-        stats={stats}
-      />
-      <Button variant="link" className="h-auto px-0" onClick={onAdjustPace}>
-        Adjust pace
-      </Button>
+        <Button type="button" variant="secondary" onClick={onAdjustPace}>
+          <IkIcon name="gear" dataIcon="inline-start" />
+          Adjust pace
+        </Button>
+      </div>
     </>
   );
 }
 
 function LearningReportCard({
+  bandTitle,
+  bandSubtitle,
   progress,
-  progressLabel,
   progressDetail,
   stats
 }: {
+  bandTitle: string;
+  bandSubtitle: string;
   progress: number;
-  progressLabel: string;
   progressDetail: string;
   stats: PopupLearningStats;
 }) {
@@ -253,74 +237,66 @@ function LearningReportCard({
     }
   ].filter((segment) => segment.value > 0);
   const total = Math.max(stats.total, 0);
-  const reportDescription =
-    progressLabel === progressDetail
-      ? "Local vocabulary and band readiness."
-      : progressLabel;
-
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>Reading report</CardTitle>
-        <CardDescription>{reportDescription}</CardDescription>
-        <CardAction>
-          <Badge variant="outline">{formatStatCount(total)} tracked</Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-[112px_1fr] gap-3">
-          <ProgressRing value={progress} />
-          <div className="flex min-w-0 flex-col justify-center gap-2">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                Reading band
-              </span>
-              <p className="text-sm leading-snug">{progressDetail}</p>
-            </div>
-            <div className="rounded-3xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-              {total > 0
-                ? `${formatStatCount(stats.comfortable + stats.practice)} words have usable evidence.`
-                : "Word stats start after supported reading."}
-            </div>
+    <section className="flex flex-col gap-4">
+      <header className="flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="truncate text-lg font-medium">Reading report</h2>
+          <Badge variant="outline" className="shrink-0">
+            {formatStatCount(total)} tracked
+          </Badge>
+        </div>
+        <p className="truncate text-sm text-muted-foreground">
+          {bandTitle} · {bandSubtitle}
+        </p>
+      </header>
+      <div className="grid grid-cols-[112px_1fr] gap-3">
+        <ProgressRing value={progress} />
+        <div className="flex min-w-0 flex-col justify-center gap-2">
+          <p className="text-sm leading-snug">{progressDetail}</p>
+          <div className="rounded-3xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            {total > 0
+              ? `${formatStatCount(stats.comfortable + stats.practice)} words have usable evidence.`
+              : "Word stats start after supported reading."}
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <div
-            className="flex h-4 overflow-hidden rounded-full bg-muted"
-            aria-label={`Vocabulary mix: ${formatStatCount(stats.comfortable)} comfortable, ${formatStatCount(stats.practice)} practicing, ${formatStatCount(stats.newCount)} new`}
-          >
-            {segments.length > 0 ? (
-              segments.map((segment) => (
-                <span
-                  key={segment.key}
-                  className={segment.barClassName}
-                  style={{
-                    width: `${Math.max(6, (segment.value / Math.max(total, 1)) * 100)}%`
-                  }}
-                />
-              ))
-            ) : (
-              <span className="w-full bg-muted-foreground/20" />
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {[
-              { label: "Comfortable", value: stats.comfortable, className: "bg-chart-1" },
-              { label: "Practicing", value: stats.practice, className: "bg-chart-2" },
-              { label: "New", value: stats.newCount, className: "bg-chart-3" },
-              { label: "Muted", value: stats.ignored ?? 0, className: "bg-chart-5" }
-            ].map((item) => (
-              <span key={item.label} className="flex min-w-0 items-center gap-2">
-                <span className={cn("size-2 shrink-0 rounded-full", item.className)} />
-                <span className="truncate">
-                  {item.label}: {formatStatCount(item.value)}
-                </span>
-              </span>
-            ))}
-          </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div
+          className="flex h-4 overflow-hidden rounded-full bg-muted"
+          aria-label={`Vocabulary mix: ${formatStatCount(stats.comfortable)} comfortable, ${formatStatCount(stats.practice)} practicing, ${formatStatCount(stats.newCount)} new`}
+        >
+          {segments.length > 0 ? (
+            segments.map((segment) => (
+              <span
+                key={segment.key}
+                className={segment.barClassName}
+                style={{
+                  width: `${Math.max(6, (segment.value / Math.max(total, 1)) * 100)}%`
+                }}
+              />
+            ))
+          ) : (
+            <span className="w-full bg-muted-foreground/20" />
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {[
+            { label: "Comfortable", value: stats.comfortable, className: "bg-chart-1" },
+            { label: "Practicing", value: stats.practice, className: "bg-chart-2" },
+            { label: "New", value: stats.newCount, className: "bg-chart-3" },
+            { label: "Muted", value: stats.ignored ?? 0, className: "bg-chart-5" }
+          ].map((item) => (
+            <span key={item.label} className="flex min-w-0 items-center gap-2">
+              <span className={cn("size-2 shrink-0 rounded-full", item.className)} />
+              <span className="truncate">
+                {item.label}: {formatStatCount(item.value)}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -334,7 +310,7 @@ function ProgressRing({ value }: { value: number }) {
     <div
       className="relative grid size-28 place-items-center"
       role="img"
-      aria-label={`${Math.round(percent)} percent reading band progress`}
+      aria-label={`${Math.round(percent)} percent reading readiness`}
     >
       <svg className="size-28 -rotate-90" viewBox="0 0 112 112" aria-hidden="true">
         <circle
@@ -362,7 +338,7 @@ function ProgressRing({ value }: { value: number }) {
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
           <div className="text-2xl font-medium leading-none">{Math.round(percent)}%</div>
-          <div className="mt-1 text-xs text-muted-foreground">band</div>
+          <div className="mt-1 text-xs text-muted-foreground">ready</div>
         </div>
       </div>
     </div>
@@ -527,22 +503,13 @@ function PopupPanel({ children }: { children: ReactNode }) {
   );
 }
 
-function PopupHeader({ onOpenSettings }: { onOpenSettings?: () => void }) {
+function PopupHeader() {
   return (
-    <header className="flex items-center justify-between gap-3">
+    <header className="flex items-center gap-2">
       <div className="flex min-w-0 items-center gap-2">
         <ImmersionLogo className="size-7" />
         <span className="truncate font-medium">ImmersionKit</span>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Open settings"
-        onClick={onOpenSettings}
-      >
-        <IkIcon name="gear" />
-      </Button>
     </header>
   );
 }

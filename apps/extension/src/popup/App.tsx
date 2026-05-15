@@ -237,25 +237,22 @@ function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): strin
     return "Next step: build reading history on supported pages.";
   }
 
-  const activeBand = preview.activeBandLabel ?? preview.activeBandId;
-  const nextBand = preview.nextBandLabel ?? preview.nextBandId;
-
   if (preview.checkpointIsOnlyBlocker) {
-    return `Next step: ${activeBand} is ready to widen the reading band in settings.`;
+    return "Ready to widen your reading range in settings.";
   }
 
   if (preview.unmetRequirements.length > 0) {
     const missingCount = preview.unmetRequirements.filter(
       (requirement) => requirement !== "checkpoint"
     ).length;
-    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading evidence item${missingCount === 1 ? "" : "s"} left.`;
+    return `${formatCount(missingCount)} reading evidence item${missingCount === 1 ? "" : "s"} left before the next range.`;
   }
 
-  if (nextBand) {
-    return `Next step: keep building ${activeBand} toward ${nextBand}.`;
+  if (preview.nextBandId) {
+    return "Keep reading to widen your range.";
   }
 
-  return `Next step: ${activeBand} is the latest available level.`;
+  return "You are at the latest available range.";
 }
 
 function estimateProgressValue(preview: CheckpointEligibilityPreview): number {
