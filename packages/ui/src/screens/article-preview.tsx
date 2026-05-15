@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
@@ -174,6 +175,14 @@ function HabitsArticle({ active }: { active: ArticleState }) {
 }
 
 function WordHelpPopover() {
+  const [exampleLanguage, setExampleLanguage] = useState<"spanish" | "english">(
+    "spanish"
+  );
+  const exampleText =
+    exampleLanguage === "spanish"
+      ? "Una lectura corta en un cafe puede reiniciar el dia."
+      : "A short reading in a cafe can reset the day.";
+
   return (
     <PopoverFrame className="top-[215px] md:left-[48%] md:right-auto md:w-[340px]">
       <header className="flex items-start gap-2">
@@ -194,9 +203,28 @@ function WordHelpPopover() {
       </header>
       <TokenPair source="reading" target="lectura" />
       <p className="text-sm text-muted-foreground">Used for reading or a piece of reading.</p>
+      <ToggleGroup
+        aria-label="Example sentence language"
+        className="self-start"
+        onValueChange={(value) => {
+          if (value === "spanish" || value === "english") {
+            setExampleLanguage(value);
+          }
+        }}
+        size="sm"
+        type="single"
+        value={exampleLanguage}
+        variant="outline"
+      >
+        <ToggleGroupItem value="spanish">Spanish</ToggleGroupItem>
+        <ToggleGroupItem value="english">English</ToggleGroupItem>
+      </ToggleGroup>
       <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
-        <IkIcon name="message" className="mt-0.5 text-muted-foreground" />
-        <span>A short <strong>lectura</strong> in a cafe can reset the day.</span>
+        <IkIcon
+          name={exampleLanguage === "english" ? "translate" : "message"}
+          className="mt-0.5 shrink-0 text-muted-foreground"
+        />
+        <span>{exampleText}</span>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm">Still new</Button>

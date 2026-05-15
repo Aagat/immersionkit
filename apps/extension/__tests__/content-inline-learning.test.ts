@@ -201,6 +201,43 @@ describe("content inline learning loop", () => {
           );
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
           const shadowRoot = popover?.shadowRoot;
+          const exampleCard = shadowRoot?.querySelector<HTMLElement>(
+            "[data-ik-example-sentence='true']"
+          );
+          expect(exampleCard?.getAttribute("data-ik-example-language")).toBe(
+            "spanish"
+          );
+          expect(exampleCard?.textContent).toContain(
+            "La ciudad recibe a los visitantes cada primavera."
+          );
+          expect(exampleCard?.textContent).not.toContain(
+            "The city welcomes visitors every spring."
+          );
+          const englishExampleOption =
+            shadowRoot?.querySelector<HTMLButtonElement>(
+              "[data-ik-example-language-option='english']"
+            );
+          expect(englishExampleOption).toBeTruthy();
+
+          englishExampleOption?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+          const englishExampleCard = shadowRoot?.querySelector<HTMLElement>(
+            "[data-ik-example-sentence='true']"
+          );
+          expect(englishExampleCard?.getAttribute("data-ik-example-language")).toBe(
+            "english"
+          );
+          expect(englishExampleCard?.textContent).toContain(
+            "The city welcomes visitors every spring."
+          );
+          expect(englishExampleCard?.textContent).not.toContain(
+            "La ciudad recibe a los visitantes cada primavera."
+          );
           expect(shadowRoot?.textContent).not.toContain(
             "This word fits your current reading band"
           );

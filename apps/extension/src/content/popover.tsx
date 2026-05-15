@@ -17,6 +17,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   IkIcon,
   ImmersionLogo,
@@ -42,6 +43,7 @@ export type SentencePopoverAction =
   | "close";
 
 type PopoverPlacement = "right" | "left" | "top" | "bottom";
+type ExampleLanguage = "spanish" | "english";
 type PopoverAnchorRect = {
   left: number;
   top: number;
@@ -279,6 +281,19 @@ function WordPopoverContent({
     readNonEmptyString(detail.curriculumReason) ??
     "Opening this helps ImmersionKit adapt.";
   const [rationaleOpen, setRationaleOpen] = useState(false);
+  const [exampleLanguage, setExampleLanguage] =
+    useState<ExampleLanguage>("spanish");
+  const canToggleExampleLanguage = Boolean(nativeExample && englishExample);
+  const visibleExampleText = canToggleExampleLanguage
+    ? exampleLanguage === "english"
+      ? englishExample
+      : nativeExample
+    : nativeExample ?? englishExample ?? pageSentence;
+  const visibleExampleLanguage: ExampleLanguage = canToggleExampleLanguage
+    ? exampleLanguage
+    : nativeExample
+      ? "spanish"
+      : "english";
 
   return (
     <PopoverCard>
@@ -311,16 +326,46 @@ function WordPopoverContent({
         </div>
       ) : null}
       <TokenPair source={detail.sourceToken} target={detail.targetToken} />
-      {nativeExample ? (
-        <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
-          <IkIcon name="message" className="mt-0.5 text-muted-foreground" />
-          <span>{nativeExample}</span>
-        </div>
+      {canToggleExampleLanguage ? (
+        <ToggleGroup
+          aria-label="Example sentence language"
+          className="self-start"
+          onValueChange={(value) => {
+            if (value === "spanish" || value === "english") {
+              setExampleLanguage(value);
+            }
+          }}
+          size="sm"
+          type="single"
+          value={exampleLanguage}
+          variant="outline"
+        >
+          <ToggleGroupItem
+            data-ik-example-language-option="spanish"
+            value="spanish"
+          >
+            Spanish
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            data-ik-example-language-option="english"
+            value="english"
+          >
+            English
+          </ToggleGroupItem>
+        </ToggleGroup>
       ) : null}
-      {englishExample ? (
-        <p className="text-sm text-muted-foreground">{englishExample}</p>
-      ) : pageSentence ? (
-        <p className="text-sm text-muted-foreground">{pageSentence}</p>
+      {visibleExampleText ? (
+        <div
+          className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm"
+          data-ik-example-language={visibleExampleLanguage}
+          data-ik-example-sentence="true"
+        >
+          <IkIcon
+            name={visibleExampleLanguage === "english" ? "translate" : "message"}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
+          <span>{visibleExampleText}</span>
+        </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" disabled={detail.status === "new"}>
