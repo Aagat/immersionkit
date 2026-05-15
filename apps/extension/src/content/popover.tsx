@@ -426,7 +426,6 @@ function PhrasePopoverContent({
     readNonEmptyString(detail.curriculumReason) ??
     "You may see this again when it fits the page.";
   const phraseExampleEnglish = pageSentence;
-  const [rationaleOpen, setRationaleOpen] = useState(false);
   const [exampleLanguage, setExampleLanguage] =
     useState<ExampleLanguage>("spanish");
   const visibleExampleText =
@@ -438,28 +437,19 @@ function PhrasePopoverContent({
     <PopoverCard>
       <PopoverHeading
         actions={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
+          <RationaleHoverAction
             aria-label="Why this phrase appears"
-            aria-expanded={rationaleOpen}
-            data-ik-phrase-rationale-trigger="true"
-            onClick={() => setRationaleOpen((current) => !current)}
+            contentAttribute="data-ik-phrase-rationale"
+            triggerAttribute="data-ik-phrase-rationale-trigger"
           >
-            <IkIcon name="info" />
-          </Button>
+            {phraseReason}
+          </RationaleHoverAction>
         }
         icon="link"
         title={detail.targetText}
         badge="phrase"
         onClose={onClose}
       />
-      {rationaleOpen ? (
-        <InfoPanel dataAttribute="data-ik-phrase-rationale">
-          {phraseReason}
-        </InfoPanel>
-      ) : null}
       <TokenPair source={detail.sourceText} target={detail.targetText} />
       {phraseExampleEnglish ? (
         <>
@@ -518,7 +508,6 @@ function SentencePopoverContent({
     noteElement.getAttribute("data-ik-source-visible") === "true"
   );
   const [detailsActive, setDetailsActive] = useState(false);
-  const [rationaleOpen, setRationaleOpen] = useState(false);
   const [sentenceLanguage, setSentenceLanguage] =
     useState<ExampleLanguage>("spanish");
   const visibleSentenceText =
@@ -528,28 +517,19 @@ function SentencePopoverContent({
     <PopoverCard>
       <PopoverHeading
         actions={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
+          <RationaleHoverAction
             aria-label="Why sentence help appears"
-            aria-expanded={rationaleOpen}
-            data-ik-sentence-rationale-trigger="true"
-            onClick={() => setRationaleOpen((current) => !current)}
+            contentAttribute="data-ik-sentence-rationale"
+            triggerAttribute="data-ik-sentence-rationale-trigger"
           >
-            <IkIcon name="info" />
-          </Button>
+            Uses OpenAI only when enabled.
+          </RationaleHoverAction>
         }
         icon="book"
         title="Sentence help"
         badge="optional"
         onClose={onClose}
       />
-      {rationaleOpen ? (
-        <InfoPanel dataAttribute="data-ik-sentence-rationale">
-          Uses OpenAI only when enabled.
-        </InfoPanel>
-      ) : null}
       <LanguageTabs
         ariaLabel="Sentence language"
         value={sentenceLanguage}
@@ -790,24 +770,6 @@ function RationaleHoverAction({
         <span>{children}</span>
       </HoverCardContent>
     </HoverCard>
-  );
-}
-
-function InfoPanel({
-  children,
-  dataAttribute
-}: {
-  children: ReactNode;
-  dataAttribute: string;
-}) {
-  return (
-    <div
-      className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground"
-      {...{ [dataAttribute]: "true" }}
-    >
-      <IkIcon name="info" className="mt-0.5 shrink-0" />
-      <span>{children}</span>
-    </div>
   );
 }
 

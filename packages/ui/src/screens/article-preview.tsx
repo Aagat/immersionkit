@@ -277,7 +277,6 @@ function WordHelpPopover() {
 }
 
 function PhraseHelpPopover() {
-  const [rationaleOpen, setRationaleOpen] = useState(false);
   const [exampleLanguage, setExampleLanguage] =
     useState<ExampleLanguage>("spanish");
   const exampleText =
@@ -293,24 +292,11 @@ function PhraseHelpPopover() {
           <h3 className="min-w-0 text-base font-medium leading-6">con calma</h3>
           <Badge className="shrink-0">phrase</Badge>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Why this phrase appears"
-          aria-expanded={rationaleOpen}
-          onClick={() => setRationaleOpen((current) => !current)}
-        >
-          <IkIcon name="info" />
-        </Button>
+        <RationaleHoverAction aria-label="Why this phrase appears">
+          You may see this again when it fits the page.
+        </RationaleHoverAction>
         <PopoverCloseButton className="-mr-1 -mt-1 shrink-0" />
       </header>
-      {rationaleOpen ? (
-        <div className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground">
-          <IkIcon name="info" className="mt-0.5 shrink-0" />
-          <span>You may see this again when it fits the page.</span>
-        </div>
-      ) : null}
       <TokenPair source="with calm" target="con calma" />
       <LanguageTabs
         ariaLabel="Phrase example language"
@@ -338,7 +324,6 @@ function PhraseHelpPopover() {
 }
 
 function SentenceHelpPopover() {
-  const [rationaleOpen, setRationaleOpen] = useState(false);
   const [sentenceLanguage, setSentenceLanguage] =
     useState<ExampleLanguage>("spanish");
   const [detailsActive, setDetailsActive] = useState(false);
@@ -353,24 +338,11 @@ function SentenceHelpPopover() {
         <IkIcon name="book" className="mt-1 text-muted-foreground" />
         <h3 className="min-w-0 flex-1 text-base font-medium">Sentence help</h3>
         <Badge>optional</Badge>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Why sentence help appears"
-          aria-expanded={rationaleOpen}
-          onClick={() => setRationaleOpen((current) => !current)}
-        >
-          <IkIcon name="info" />
-        </Button>
+        <RationaleHoverAction aria-label="Why sentence help appears">
+          Uses OpenAI only when enabled.
+        </RationaleHoverAction>
         <PopoverCloseButton />
       </header>
-      {rationaleOpen ? (
-        <div className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground">
-          <IkIcon name="info" className="mt-0.5 shrink-0" />
-          <span>Uses OpenAI only when enabled.</span>
-        </div>
-      ) : null}
       <LanguageTabs
         ariaLabel="Sentence language"
         value={sentenceLanguage}

@@ -1050,12 +1050,26 @@ describe("content inline learning loop", () => {
           );
           const shadowRoot = popover?.shadowRoot;
           expect(popover).toBeTruthy();
+          const rationaleTrigger = shadowRoot?.querySelector<HTMLButtonElement>(
+            "[data-ik-phrase-rationale-trigger='true']"
+          );
+          expect(rationaleTrigger).toBeTruthy();
           expect(
-            shadowRoot?.querySelector("[data-ik-phrase-rationale-trigger='true']")
-          ).toBeTruthy();
+            shadowRoot?.querySelector("[data-ik-phrase-rationale='true']")
+          ).toBeNull();
           expect(shadowRoot?.textContent).not.toContain(
             "This phrase carries a grammar pattern"
           );
+          rationaleTrigger?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+          expect(
+            shadowRoot?.querySelector("[data-ik-phrase-rationale='true']")
+          ).toBeNull();
 
           const phraseExample = shadowRoot?.querySelector<HTMLElement>(
             "[data-ik-phrase-example-sentence='true']"
@@ -2237,14 +2251,19 @@ describe("content inline learning loop", () => {
             "[data-ik-sentence-rationale-trigger='true']"
           );
           expect(rationaleTrigger).toBeTruthy();
-          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("false");
-          rationaleTrigger?.click();
-          await wait(20);
-          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("true");
           expect(
             shadowRoot?.querySelector("[data-ik-sentence-rationale='true']")
-              ?.textContent
-          ).toContain("Uses OpenAI only when enabled.");
+          ).toBeNull();
+          rationaleTrigger?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+          expect(
+            shadowRoot?.querySelector("[data-ik-sentence-rationale='true']")
+          ).toBeNull();
 
           const translationButton = popover?.querySelector<HTMLButtonElement>(
             "[data-ik-sentence-action='show-translation']"
