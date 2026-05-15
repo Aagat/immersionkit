@@ -434,7 +434,7 @@ async function clickPopoverAndCapture(page, selector, path, options = {}) {
       await page.screenshot({ path, fullPage: false });
       return {
         ok: true,
-        text: await page.locator("[data-ik-popover='true']").first().innerText(),
+        text: await readPopoverText(page),
         screenshot: path,
         error: null
       };
@@ -449,6 +449,14 @@ async function clickPopoverAndCapture(page, selector, path, options = {}) {
     screenshot: failScreenshot,
     error: `Popover did not open for selector ${selector}.`
   };
+}
+
+async function readPopoverText(page) {
+  return page.locator("[data-ik-popover='true']").first().evaluate((popover) => {
+    const lightDomText = popover.textContent ?? "";
+    const shadowText = popover.shadowRoot?.textContent ?? "";
+    return `${shadowText} ${lightDomText}`.replace(/\s+/g, " ").trim();
+  });
 }
 
 async function clickVisibleClientRect(page, target) {

@@ -1059,6 +1059,7 @@ function appendLightDomMirror(
   if (mirrorText) {
     const mirror = document.createElement("span");
     mirror.slot = "ik-popover-text-mirror";
+    mirror.hidden = true;
     mirror.setAttribute("aria-hidden", "true");
     mirror.textContent = mirrorText;
     popover.append(mirror);

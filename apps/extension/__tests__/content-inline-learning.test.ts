@@ -183,6 +183,11 @@ describe("content inline learning loop", () => {
 
           const popover = document.querySelector<HTMLElement>("[data-ik-popover='true']");
           expect(popover).toBeTruthy();
+          const textMirror = popover?.querySelector<HTMLElement>(
+            "[slot='ik-popover-text-mirror']"
+          );
+          expect(textMirror?.hidden).toBe(true);
+          expect(textMirror?.getAttribute("aria-hidden")).toBe("true");
           expect(popover?.textContent).toContain("city");
           expect(popover?.textContent).toContain("ciudad");
           expect(popover?.textContent).toContain(
