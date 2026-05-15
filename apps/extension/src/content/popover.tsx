@@ -83,6 +83,11 @@ const CONTENT_POPOVER_STYLES = `
     max-width: calc(100vw - 20px);
     max-height: min(62vh, calc(100vh - 20px), 560px);
     margin: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    outline: none;
     z-index: 2147483647;
   }
 
@@ -270,15 +275,41 @@ function WordPopoverContent({
   const nativeExample = readNonEmptyString(detail.exampleSentenceNative);
   const englishExample = readNonEmptyString(detail.exampleSentenceEnglish);
   const pageSentence = readNonEmptyString(detail.sentence);
+  const curriculumReason =
+    readNonEmptyString(detail.curriculumReason) ??
+    "Opening this helps ImmersionKit adapt.";
+  const [rationaleOpen, setRationaleOpen] = useState(false);
 
   return (
     <PopoverCard>
       <PopoverHeading
+        actions={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Why this word appears"
+            aria-expanded={rationaleOpen}
+            data-ik-word-rationale-trigger="true"
+            onClick={() => setRationaleOpen((current) => !current)}
+          >
+            <IkIcon name="info" />
+          </Button>
+        }
         icon="volume"
         title={detail.targetToken}
         badge={wordStatusLabel(detail.status)}
         onClose={onClose}
       />
+      {rationaleOpen ? (
+        <div
+          className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground"
+          data-ik-word-rationale="true"
+        >
+          <IkIcon name="info" className="mt-0.5 shrink-0" />
+          <span>{curriculumReason}</span>
+        </div>
+      ) : null}
       <TokenPair source={detail.sourceToken} target={detail.targetToken} />
       {nativeExample ? (
         <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
@@ -291,10 +322,6 @@ function WordPopoverContent({
       ) : pageSentence ? (
         <p className="text-sm text-muted-foreground">{pageSentence}</p>
       ) : null}
-      <InfoLine>
-        {readNonEmptyString(detail.curriculumReason) ??
-          "Opening this helps ImmersionKit adapt."}
-      </InfoLine>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" disabled={detail.status === "new"}>
           Still new
@@ -521,27 +548,33 @@ function PopoverCard({ children }: { children: ReactNode }) {
 }
 
 function PopoverHeading({
+  actions,
   icon,
   title,
   badge,
   onClose
 }: {
+  actions?: ReactNode;
   icon: "book" | "link" | "volume";
   title: string;
   badge: string;
   onClose: () => void;
 }) {
   return (
-    <CardHeader className="flex-row items-start gap-2 p-0">
-      <IkIcon name={icon} className="mt-1 text-muted-foreground" />
-      <CardTitle className="min-w-0 flex-1 break-words text-base">
-        {title}
-      </CardTitle>
-      <Badge>{badge}</Badge>
+    <CardHeader className="flex flex-row items-start gap-2 p-0">
+      <IkIcon name={icon} className="mt-1 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
+        <CardTitle className="min-w-0 break-words text-base leading-6">
+          {title}
+        </CardTitle>
+        <Badge className="shrink-0">{badge}</Badge>
+      </div>
+      {actions}
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
+        className="-mr-1 -mt-1 shrink-0"
         aria-label="Close help"
         data-ik-popover-close="true"
         onClick={onClose}

@@ -177,20 +177,26 @@ function WordHelpPopover() {
   return (
     <PopoverFrame className="top-[215px] md:left-[48%] md:right-auto md:w-[340px]">
       <header className="flex items-start gap-2">
-        <IkIcon name="volume" className="mt-1 text-muted-foreground" />
-        <h3 className="min-w-0 flex-1 text-base font-medium">lectura</h3>
-        <Badge>new</Badge>
-        <PopoverCloseButton />
+        <IkIcon name="volume" className="mt-1 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
+          <h3 className="min-w-0 text-base font-medium leading-6">lectura</h3>
+          <Badge className="shrink-0">new</Badge>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Why this word appears"
+        >
+          <IkIcon name="info" />
+        </Button>
+        <PopoverCloseButton className="-mr-1 -mt-1 shrink-0" />
       </header>
       <TokenPair source="reading" target="lectura" />
       <p className="text-sm text-muted-foreground">Used for reading or a piece of reading.</p>
       <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
         <IkIcon name="message" className="mt-0.5 text-muted-foreground" />
         <span>A short <strong>lectura</strong> in a cafe can reset the day.</span>
-      </div>
-      <div className="flex gap-2 text-sm text-muted-foreground">
-        <IkIcon name="info" className="mt-0.5" />
-        <span>Opening this helps ImmersionKit adapt.</span>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm">Still new</Button>
@@ -273,9 +279,15 @@ function SentenceHelpPopover() {
   );
 }
 
-function PopoverCloseButton() {
+function PopoverCloseButton({ className }: { className?: string }) {
   return (
-    <Button type="button" variant="ghost" size="icon-sm" aria-label="Close help">
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Close help"
+      className={className}
+    >
       <IkIcon name="close" />
     </Button>
   );

@@ -200,6 +200,29 @@ describe("content inline learning loop", () => {
             "The city is important for every visitor."
           );
           expect(popover?.getAttribute("data-immersionkit-ignore")).toBe("true");
+          const shadowRoot = popover?.shadowRoot;
+          expect(shadowRoot?.textContent).not.toContain(
+            "This word fits your current reading band"
+          );
+          const rationaleTrigger = shadowRoot?.querySelector<HTMLButtonElement>(
+            "[data-ik-word-rationale-trigger='true']"
+          );
+          expect(rationaleTrigger).toBeTruthy();
+          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("false");
+
+          rationaleTrigger?.dispatchEvent(
+            new window.MouseEvent("click", {
+              bubbles: true,
+              cancelable: true
+            })
+          );
+          await wait(20);
+          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("true");
+          expect(
+            shadowRoot?.querySelector("[data-ik-word-rationale='true']")?.textContent
+          ).toContain(
+            "This word fits your current reading band and appeared in a safe local context."
+          );
 
           window.dispatchEvent(new window.Event("scroll"));
           await wait(20);
