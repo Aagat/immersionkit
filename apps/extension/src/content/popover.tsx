@@ -17,7 +17,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   IkIcon,
   ImmersionLogo,
@@ -327,32 +327,35 @@ function WordPopoverContent({
       ) : null}
       <TokenPair source={detail.sourceToken} target={detail.targetToken} />
       {canToggleExampleLanguage ? (
-        <ToggleGroup
+        <Tabs
           aria-label="Example sentence language"
-          className="self-start"
+          className="w-full"
           onValueChange={(value) => {
             if (value === "spanish" || value === "english") {
               setExampleLanguage(value);
             }
           }}
-          size="sm"
-          type="single"
           value={exampleLanguage}
-          variant="outline"
         >
-          <ToggleGroupItem
-            data-ik-example-language-option="spanish"
-            value="spanish"
-          >
-            Spanish
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            data-ik-example-language-option="english"
-            value="english"
-          >
-            English
-          </ToggleGroupItem>
-        </ToggleGroup>
+          <TabsList className="h-8 w-full justify-start p-0" variant="line">
+            <TabsTrigger
+              className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+              data-ik-example-language-option="spanish"
+              onClick={() => setExampleLanguage("spanish")}
+              value="spanish"
+            >
+              Spanish
+            </TabsTrigger>
+            <TabsTrigger
+              className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+              data-ik-example-language-option="english"
+              onClick={() => setExampleLanguage("english")}
+              value="english"
+            >
+              English
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       ) : null}
       {visibleExampleText ? (
         <div
@@ -367,15 +370,15 @@ function WordPopoverContent({
           <span>{visibleExampleText}</span>
         </div>
       ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" disabled={detail.status === "new"}>
+      <div className="flex flex-nowrap justify-center gap-2">
+        <Button variant="outline" size="xs" disabled={detail.status === "new"}>
           Still new
         </Button>
         {STATUS_BUTTONS.map((action) => (
           <Button
             key={action.status}
             variant={action.status === detail.status ? "secondary" : "outline"}
-            size="sm"
+            size="xs"
             aria-pressed={action.status === detail.status}
             data-ik-status-action={action.status}
             onClick={() => onStatusAction(action.status)}

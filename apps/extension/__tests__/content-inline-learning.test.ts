@@ -219,12 +219,7 @@ describe("content inline learning loop", () => {
             );
           expect(englishExampleOption).toBeTruthy();
 
-          englishExampleOption?.dispatchEvent(
-            new window.MouseEvent("click", {
-              bubbles: true,
-              cancelable: true
-            })
-          );
+          englishExampleOption?.click();
           await wait(20);
           const englishExampleCard = shadowRoot?.querySelector<HTMLElement>(
             "[data-ik-example-sentence='true']"

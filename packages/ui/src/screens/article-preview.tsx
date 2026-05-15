@@ -8,7 +8,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
@@ -203,22 +203,33 @@ function WordHelpPopover() {
       </header>
       <TokenPair source="reading" target="lectura" />
       <p className="text-sm text-muted-foreground">Used for reading or a piece of reading.</p>
-      <ToggleGroup
+      <Tabs
         aria-label="Example sentence language"
-        className="self-start"
+        className="w-full"
         onValueChange={(value) => {
           if (value === "spanish" || value === "english") {
             setExampleLanguage(value);
           }
         }}
-        size="sm"
-        type="single"
         value={exampleLanguage}
-        variant="outline"
       >
-        <ToggleGroupItem value="spanish">Spanish</ToggleGroupItem>
-        <ToggleGroupItem value="english">English</ToggleGroupItem>
-      </ToggleGroup>
+        <TabsList className="h-8 w-full justify-start p-0" variant="line">
+          <TabsTrigger
+            className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+            onClick={() => setExampleLanguage("spanish")}
+            value="spanish"
+          >
+            Spanish
+          </TabsTrigger>
+          <TabsTrigger
+            className="flex-none rounded-none px-2.5 text-xs data-[state=active]:border-b-2 data-[state=active]:border-b-foreground!"
+            onClick={() => setExampleLanguage("english")}
+            value="english"
+          >
+            English
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
         <IkIcon
           name={exampleLanguage === "english" ? "translate" : "message"}
@@ -226,10 +237,10 @@ function WordHelpPopover() {
         />
         <span>{exampleText}</span>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm">Still new</Button>
-        <Button variant="outline" size="sm">Practicing</Button>
-        <Button variant="outline" size="sm">Comfortable</Button>
+      <div className="flex flex-nowrap justify-center gap-2">
+        <Button variant="outline" size="xs">Still new</Button>
+        <Button variant="outline" size="xs">Practicing</Button>
+        <Button variant="outline" size="xs">Comfortable</Button>
       </div>
       <footer className="flex items-center justify-between gap-3 text-sm">
         <Button type="button" variant="link" size="sm" className="h-auto px-0">
