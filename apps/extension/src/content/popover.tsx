@@ -1,4 +1,9 @@
-import { useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useState,
+  type ComponentProps,
+  type ReactNode
+} from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import type {
@@ -16,6 +21,11 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger
+} from "@/components/ui/hover-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   IkIcon,
@@ -283,7 +293,6 @@ function WordPopoverContent({
   const curriculumReason =
     readNonEmptyString(detail.curriculumReason) ??
     "Opening this helps ImmersionKit adapt.";
-  const [rationaleOpen, setRationaleOpen] = useState(false);
   const [exampleLanguage, setExampleLanguage] =
     useState<ExampleLanguage>("spanish");
   const canToggleExampleLanguage = Boolean(nativeExample && englishExample);
@@ -302,32 +311,19 @@ function WordPopoverContent({
     <PopoverCard>
       <PopoverHeading
         actions={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
+          <RationaleHoverAction
             aria-label="Why this word appears"
-            aria-expanded={rationaleOpen}
-            data-ik-word-rationale-trigger="true"
-            onClick={() => setRationaleOpen((current) => !current)}
+            contentAttribute="data-ik-word-rationale"
+            triggerAttribute="data-ik-word-rationale-trigger"
           >
-            <IkIcon name="info" />
-          </Button>
+            {curriculumReason}
+          </RationaleHoverAction>
         }
         icon="volume"
         title={detail.targetToken}
         badge={wordStatusLabel(detail.status)}
         onClose={onClose}
       />
-      {rationaleOpen ? (
-        <div
-          className="flex gap-2 rounded-3xl bg-muted/50 p-3 text-xs text-muted-foreground"
-          data-ik-word-rationale="true"
-        >
-          <IkIcon name="info" className="mt-0.5 shrink-0" />
-          <span>{curriculumReason}</span>
-        </div>
-      ) : null}
       <TokenPair source={detail.sourceToken} target={detail.targetToken} />
       {canToggleExampleLanguage ? (
         <Tabs
@@ -743,6 +739,57 @@ function InfoLine({ children }: { children: ReactNode }) {
       <IkIcon name="info" className="mt-0.5" />
       <span>{children}</span>
     </div>
+  );
+}
+
+function RationaleHoverAction({
+  children,
+  contentAttribute,
+  triggerAttribute,
+  ...triggerProps
+}: {
+  children: ReactNode;
+  contentAttribute: string;
+  triggerAttribute: string;
+} & Pick<ComponentProps<typeof Button>, "aria-label">) {
+  const [portalContainer, setPortalContainer] =
+    useState<ComponentProps<typeof HoverCardContent>["container"]>(undefined);
+  const handleTriggerRef = useCallback((node: HTMLButtonElement | null) => {
+    if (!node) {
+      return;
+    }
+
+    const root = node.getRootNode();
+    if (typeof ShadowRoot !== "undefined" && root instanceof ShadowRoot) {
+      setPortalContainer(root);
+    }
+  }, []);
+
+  return (
+    <HoverCard openDelay={10} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <Button
+          ref={handleTriggerRef}
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          {...triggerProps}
+          {...{ [triggerAttribute]: "true" }}
+        >
+          <IkIcon name="info" />
+        </Button>
+      </HoverCardTrigger>
+      <HoverCardContent
+        align="end"
+        side="top"
+        className="flex w-64 gap-2 p-3 text-xs text-muted-foreground"
+        container={portalContainer}
+        {...{ [contentAttribute]: "true" }}
+      >
+        <IkIcon name="info" className="mt-0.5 shrink-0" />
+        <span>{children}</span>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 

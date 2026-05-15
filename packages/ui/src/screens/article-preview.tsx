@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,6 +7,11 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger
+} from "@/components/ui/hover-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -193,14 +198,10 @@ function WordHelpPopover() {
           <h3 className="min-w-0 text-base font-medium leading-6">lectura</h3>
           <Badge className="shrink-0">new</Badge>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Why this word appears"
-        >
-          <IkIcon name="info" />
-        </Button>
+        <RationaleHoverAction aria-label="Why this word appears">
+          This word fits your current reading band and appeared in a safe local
+          context.
+        </RationaleHoverAction>
         <PopoverCloseButton className="-mr-1 -mt-1 shrink-0" />
       </header>
       <TokenPair source="reading" target="lectura" />
@@ -444,6 +445,36 @@ function PopoverCloseButton({ className }: { className?: string }) {
     >
       <IkIcon name="close" />
     </Button>
+  );
+}
+
+function RationaleHoverAction({
+  children,
+  ...triggerProps
+}: {
+  children: ReactNode;
+} & Pick<ComponentProps<typeof Button>, "aria-label">) {
+  return (
+    <HoverCard openDelay={10} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          {...triggerProps}
+        >
+          <IkIcon name="info" />
+        </Button>
+      </HoverCardTrigger>
+      <HoverCardContent
+        align="end"
+        side="top"
+        className="flex w-64 gap-2 p-3 text-xs text-muted-foreground"
+      >
+        <IkIcon name="info" className="mt-0.5 shrink-0" />
+        <span>{children}</span>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 

@@ -240,7 +240,9 @@ describe("content inline learning loop", () => {
             "[data-ik-word-rationale-trigger='true']"
           );
           expect(rationaleTrigger).toBeTruthy();
-          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("false");
+          expect(
+            shadowRoot?.querySelector("[data-ik-word-rationale='true']")
+          ).toBeNull();
 
           rationaleTrigger?.dispatchEvent(
             new window.MouseEvent("click", {
@@ -249,12 +251,9 @@ describe("content inline learning loop", () => {
             })
           );
           await wait(20);
-          expect(rationaleTrigger?.getAttribute("aria-expanded")).toBe("true");
           expect(
-            shadowRoot?.querySelector("[data-ik-word-rationale='true']")?.textContent
-          ).toContain(
-            "This word fits your current reading band and appeared in a safe local context."
-          );
+            shadowRoot?.querySelector("[data-ik-word-rationale='true']")
+          ).toBeNull();
 
           window.dispatchEvent(new window.Event("scroll"));
           await wait(20);
