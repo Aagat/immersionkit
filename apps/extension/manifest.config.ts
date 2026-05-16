@@ -7,14 +7,18 @@ export default defineManifest({
   description: "English-to-Spanish browsing immersion extension MVP.",
   permissions: ["activeTab", "scripting", "storage"],
   host_permissions: ["http://*/*", "https://*/*"],
-  action: {
-    default_popup: "popup.html"
-  },
+  action: {},
   options_page: "options.html",
   background: {
     service_worker: "src/background/index.ts",
     type: "module"
   },
+  web_accessible_resources: [
+    {
+      resources: ["popup.html", "assets/*"],
+      matches: ["http://*/*", "https://*/*"]
+    }
+  ],
   content_scripts: [
     {
       matches: ["http://*/*", "https://*/*"],
@@ -23,4 +27,3 @@ export default defineManifest({
     }
   ]
 });
-

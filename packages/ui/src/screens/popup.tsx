@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { WarningCircleIcon } from "@phosphor-icons/react";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,17 +12,20 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  ChartContainer,
+  type ChartConfig
+} from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
   IkIcon,
   ImmersionFrame,
-  ImmersionLogo,
   LocalFooter
 } from "./screen-primitives";
 import type {
   ExtensionPopupProps,
+  PopupLearningDayStats,
   PopupLearningStats,
   SiteControlState
 } from "./types";
@@ -33,6 +37,35 @@ const DEFAULT_POPUP_LEARNING_STATS: PopupLearningStats = {
   ignored: 0,
   total: 42
 };
+
+const DEFAULT_POPUP_LEARNING_DAYS: readonly PopupLearningDayStats[] = [
+  { label: "Mon", comfortable: 4, practice: 3, newCount: 2, ignored: 0, total: 9 },
+  { label: "Tue", comfortable: 3, practice: 4, newCount: 1, ignored: 0, total: 8 },
+  { label: "Wed", comfortable: 6, practice: 5, newCount: 2, ignored: 1, total: 14 },
+  { label: "Thu", comfortable: 5, practice: 6, newCount: 1, ignored: 0, total: 12 },
+  { label: "Fri", comfortable: 7, practice: 5, newCount: 2, ignored: 0, total: 14 },
+  { label: "Sat", comfortable: 3, practice: 4, newCount: 2, ignored: 0, total: 9 },
+  { label: "Sun", comfortable: 5, practice: 3, newCount: 1, ignored: 0, total: 9 }
+];
+
+const weeklyWordsChartConfig = {
+  comfortable: {
+    label: "Comfortable",
+    color: "var(--chart-1)"
+  },
+  practice: {
+    label: "Practicing",
+    color: "var(--chart-2)"
+  },
+  newCount: {
+    label: "New",
+    color: "var(--chart-3)"
+  },
+  ignored: {
+    label: "Muted",
+    color: "var(--chart-5)"
+  }
+} satisfies ChartConfig;
 
 export function ExtensionPopup({
   state = "supported",
@@ -48,13 +81,13 @@ export function ExtensionPopup({
   progressDetail = "A few more reading evidence items will widen your range.",
   metrics,
   learningStats,
+  learningDays,
   unsupportedMessage = "Open a normal HTTP(S) article, blog, or docs page to use reading mode.",
   firstRunIntro = false,
   errorMessage = null,
   isSavingSite = false,
   onSiteToggle,
   onOpenSettings,
-  onAdjustPace,
   onDismissIntro
 }: ExtensionPopupProps) {
   const [localSiteState, setLocalSiteState] =
@@ -67,12 +100,12 @@ export function ExtensionPopup({
     <div
       className={
         chromeFrame
-          ? "absolute inset-x-4 top-4 sm:inset-x-auto sm:right-8 sm:top-8 sm:w-[360px]"
-          : "w-[360px]"
+          ? "absolute inset-x-4 top-4 sm:inset-x-auto sm:right-8 sm:top-8 sm:w-[392px]"
+          : "w-[392px]"
       }
     >
       <PopupPanel>
-        <PopupHeader />
+        <PopupHeader onOpenSettings={onOpenSettings} />
         {errorMessage ? (
           <Alert>
             <WarningCircleIcon aria-hidden="true" />
@@ -106,6 +139,7 @@ export function ExtensionPopup({
             enabled={enabled}
             metrics={metrics}
             learningStats={learningStats}
+            learningDays={learningDays}
             isSavingSite={isSavingSite}
             onSiteToggle={() => {
               if (onSiteToggle) {
@@ -114,7 +148,6 @@ export function ExtensionPopup({
               }
               setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
             }}
-            onAdjustPace={onAdjustPace ?? onOpenSettings}
           />
         ) : (
           <UnsupportedPopup
@@ -153,10 +186,10 @@ function SupportedPopup({
   progressDetail,
   metrics,
   learningStats,
+  learningDays,
   enabled,
   isSavingSite,
-  onSiteToggle,
-  onAdjustPace
+  onSiteToggle
 }: {
   bandTitle: string;
   bandSubtitle: string;
@@ -164,12 +197,13 @@ function SupportedPopup({
   progressDetail: string;
   metrics: ExtensionPopupProps["metrics"];
   learningStats: ExtensionPopupProps["learningStats"];
+  learningDays: ExtensionPopupProps["learningDays"];
   enabled: boolean;
   isSavingSite: boolean;
   onSiteToggle: () => void;
-  onAdjustPace?: () => void;
 }) {
   const stats = resolvePopupLearningStats(learningStats, metrics);
+  const days = resolvePopupLearningDays(learningDays);
 
   return (
     <>
@@ -179,24 +213,19 @@ function SupportedPopup({
         progress={progress}
         progressDetail={progressDetail}
         stats={stats}
+        days={days}
       />
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant={enabled ? "outline" : "default"}
-          aria-label={enabled ? "Pause reading mode" : "Resume reading mode"}
-          aria-pressed={enabled}
-          disabled={isSavingSite}
-          onClick={onSiteToggle}
-        >
-          <IkIcon name="power" dataIcon="inline-start" />
-          {enabled ? "Turn off" : "Turn on"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onAdjustPace}>
-          <IkIcon name="gear" dataIcon="inline-start" />
-          Adjust pace
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant={enabled ? "outline" : "default"}
+        aria-label={enabled ? "Pause reading mode" : "Resume reading mode"}
+        aria-pressed={enabled}
+        disabled={isSavingSite}
+        onClick={onSiteToggle}
+      >
+        <IkIcon name="power" dataIcon="inline-start" />
+        {enabled ? "Turn off" : "Turn on"}
+      </Button>
     </>
   );
 }
@@ -206,141 +235,146 @@ function LearningReportCard({
   bandSubtitle,
   progress,
   progressDetail,
-  stats
+  stats,
+  days
 }: {
   bandTitle: string;
   bandSubtitle: string;
   progress: number;
   progressDetail: string;
   stats: PopupLearningStats;
+  days: readonly PopupLearningDayStats[];
 }) {
-  const segments = [
-    {
-      key: "comfortable",
-      value: stats.comfortable,
-      barClassName: "bg-chart-1"
-    },
-    {
-      key: "practice",
-      value: stats.practice,
-      barClassName: "bg-chart-2"
-    },
-    {
-      key: "new",
-      value: stats.newCount,
-      barClassName: "bg-chart-3"
-    },
-    {
-      key: "ignored",
-      value: stats.ignored ?? 0,
-      barClassName: "bg-chart-5"
-    }
-  ].filter((segment) => segment.value > 0);
+  const today = normalizeLearningDay(days[days.length - 1] ?? {
+    label: "Today",
+    comfortable: 0,
+    practice: 0,
+    newCount: 0,
+    ignored: 0,
+    total: 0
+  });
   const total = Math.max(stats.total, 0);
+
   return (
-    <section className="flex flex-col gap-4">
-      <header className="flex flex-col gap-1">
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="truncate text-lg font-medium">Reading report</h2>
-          <Badge variant="outline" className="shrink-0">
+    <section className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 items-center gap-4">
+          <h2 className="shrink-0 text-2xl font-semibold">Reading report</h2>
+          <Badge
+            variant="outline"
+            className="shrink-0 rounded-xl px-3 py-1 text-sm font-normal"
+          >
             {formatStatCount(total)} tracked
           </Badge>
         </div>
-        <p className="truncate text-sm text-muted-foreground">
+        <p className="truncate text-base text-muted-foreground">
           {bandTitle} · {bandSubtitle}
         </p>
-      </header>
-      <div className="grid grid-cols-[112px_1fr] gap-3">
-        <ProgressRing value={progress} />
-        <div className="flex min-w-0 flex-col justify-center gap-2">
-          <p className="text-sm leading-snug">{progressDetail}</p>
-          <div className="rounded-3xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            {total > 0
-              ? `${formatStatCount(stats.comfortable + stats.practice)} words have usable evidence.`
-              : "Word stats start after supported reading."}
-          </div>
-        </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <div
-          className="flex h-4 overflow-hidden rounded-full bg-muted"
-          aria-label={`Vocabulary mix: ${formatStatCount(stats.comfortable)} comfortable, ${formatStatCount(stats.practice)} practicing, ${formatStatCount(stats.newCount)} new`}
-        >
-          {segments.length > 0 ? (
-            segments.map((segment) => (
-              <span
-                key={segment.key}
-                className={segment.barClassName}
-                style={{
-                  width: `${Math.max(6, (segment.value / Math.max(total, 1)) * 100)}%`
-                }}
-              />
-            ))
-          ) : (
-            <span className="w-full bg-muted-foreground/20" />
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          {[
-            { label: "Comfortable", value: stats.comfortable, className: "bg-chart-1" },
-            { label: "Practicing", value: stats.practice, className: "bg-chart-2" },
-            { label: "New", value: stats.newCount, className: "bg-chart-3" },
-            { label: "Muted", value: stats.ignored ?? 0, className: "bg-chart-5" }
-          ].map((item) => (
-            <span key={item.label} className="flex min-w-0 items-center gap-2">
-              <span className={cn("size-2 shrink-0 rounded-full", item.className)} />
-              <span className="truncate">
-                {item.label}: {formatStatCount(item.value)}
-              </span>
-            </span>
-          ))}
-        </div>
-      </div>
+      <WeeklyWordBars days={days} />
+      <TodayStats stats={today} />
+      <BandProgress value={progress} detail={progressDetail} />
     </section>
   );
 }
 
-function ProgressRing({ value }: { value: number }) {
-  const radius = 42;
-  const circumference = 2 * Math.PI * radius;
-  const percent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
-  const dashOffset = circumference - (percent / 100) * circumference;
+function WeeklyWordBars({ days }: { days: readonly PopupLearningDayStats[] }) {
+  const chartData = days.map(normalizeLearningDay);
+  const maxTotal = Math.max(1, ...chartData.map((day) => day.total));
 
   return (
-    <div
-      className="relative grid size-28 place-items-center"
-      role="img"
-      aria-label={`${Math.round(percent)} percent reading readiness`}
+    <ChartContainer
+      config={weeklyWordsChartConfig}
+      className="h-56 w-full"
+      initialDimension={{ width: 344, height: 224 }}
     >
-      <svg className="size-28 -rotate-90" viewBox="0 0 112 112" aria-hidden="true">
-        <circle
-          className="text-muted"
-          cx="56"
-          cy="56"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="14"
+      <BarChart
+        accessibilityLayer
+        data={chartData}
+        margin={{ left: 0, right: 0, top: 6, bottom: 0 }}
+        barSize={22}
+      >
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={10}
+          interval={0}
         />
-        <circle
-          className="text-chart-1"
-          cx="56"
-          cy="56"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="14"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
+        <YAxis hide domain={[0, maxTotal]} />
+        <Bar
+          dataKey="comfortable"
+          stackId="words"
+          fill="var(--color-comfortable)"
+          radius={[0, 0, 5, 5]}
+          isAnimationActive={false}
         />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center text-center">
-        <div>
-          <div className="text-2xl font-medium leading-none">{Math.round(percent)}%</div>
-          <div className="mt-1 text-xs text-muted-foreground">ready</div>
-        </div>
+        <Bar
+          dataKey="practice"
+          stackId="words"
+          fill="var(--color-practice)"
+          radius={0}
+          isAnimationActive={false}
+        />
+        <Bar
+          dataKey="newCount"
+          stackId="words"
+          fill="var(--color-newCount)"
+          radius={0}
+          isAnimationActive={false}
+        />
+        <Bar
+          dataKey="ignored"
+          stackId="words"
+          fill="var(--color-ignored)"
+          radius={[2, 2, 0, 0]}
+          isAnimationActive={false}
+        />
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
+function TodayStats({ stats }: { stats: PopupLearningDayStats }) {
+  return (
+    <div className="flex flex-col gap-4" aria-label="Today's words">
+      <span className="text-base text-muted-foreground">Today</span>
+      <div className="grid grid-cols-4 text-center">
+        {[
+          { label: "Comfort", value: stats.comfortable, className: "text-chart-1" },
+          { label: "Practice", value: stats.practice, className: "text-chart-2" },
+          { label: "New", value: stats.newCount, className: "text-chart-3" },
+          { label: "Muted", value: stats.ignored ?? 0, className: "text-chart-5" }
+        ].map((item) => (
+          <div
+            key={item.label}
+            className="min-w-0 border-l border-border first:border-l-0"
+          >
+            <div className={`truncate text-3xl font-medium leading-none ${item.className}`}>
+              {formatStatCount(item.value)}
+            </div>
+            <div className="mt-2 truncate text-sm text-foreground">{item.label}</div>
+          </div>
+        ))}
       </div>
+    </div>
+  );
+}
+
+function BandProgress({ value, detail }: { value: number; detail: string }) {
+  const percent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3 text-base">
+        <span className="font-medium">Band progress</span>
+        <span>{Math.round(percent)}%</span>
+      </div>
+      <Progress
+        value={percent}
+        className="h-2.5 bg-muted [&_[data-slot=progress-indicator]]:bg-chart-1"
+      />
+      <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </div>
   );
 }
@@ -451,6 +485,25 @@ function resolvePopupLearningStats(
   });
 }
 
+function resolvePopupLearningDays(
+  learningDays: ExtensionPopupProps["learningDays"]
+): readonly PopupLearningDayStats[] {
+  if (learningDays && learningDays.length > 0) {
+    return learningDays.slice(-7).map(normalizeLearningDay);
+  }
+
+  return DEFAULT_POPUP_LEARNING_DAYS;
+}
+
+function normalizeLearningDay(day: PopupLearningDayStats): PopupLearningDayStats {
+  const normalized = normalizeLearningStats(day);
+  return {
+    ...normalized,
+    date: day.date,
+    label: day.label
+  };
+}
+
 function normalizeLearningStats(stats: PopupLearningStats): PopupLearningStats {
   const comfortable = clampStatCount(stats.comfortable);
   const practice = clampStatCount(stats.practice);
@@ -497,19 +550,34 @@ function formatStatCount(value: number): string {
 
 function PopupPanel({ children }: { children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-4xl bg-card p-4 shadow-md ring-1 ring-foreground/5">
+    <section className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-xl ring-1 ring-foreground/10">
       {children}
     </section>
   );
 }
 
-function PopupHeader() {
+function PopupHeader({ onOpenSettings }: { onOpenSettings?: () => void }) {
   return (
-    <header className="flex items-center gap-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <ImmersionLogo className="size-7" />
-        <span className="truncate font-medium">ImmersionKit</span>
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-lg font-semibold text-primary-foreground shadow-sm"
+          aria-hidden="true"
+        >
+          IK
+        </span>
+        <span className="truncate text-lg font-medium">ImmersionKit</span>
       </div>
-    </header>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-lg"
+        className="size-12 shrink-0 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+        aria-label="Open settings"
+        onClick={onOpenSettings}
+      >
+        <IkIcon name="gear" />
+      </Button>
+    </div>
   );
 }

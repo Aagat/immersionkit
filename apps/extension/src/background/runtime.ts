@@ -46,6 +46,10 @@ import { ContentContextService } from "./content-context";
 import { isRecord } from "../storage/serialization";
 import { diagnosticInfo } from "../shared/logger";
 import {
+  POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE,
+  type PopupOverlayToggleResponse
+} from "../shared/popup-overlay";
+import {
   IndexedDbUserDataRepository,
   IndexedDbUserVocabRepository,
   loadUserDataValues,
@@ -203,6 +207,10 @@ export class BackgroundRuntimeCoordinator {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) =>
       this.dispatchRuntimeMessage(message, sender, sendResponse)
     );
+
+    chrome.action?.onClicked.addListener((tab) => {
+      void this.handleActionClick(tab);
+    });
   }
 
   private dispatchRuntimeMessage(
@@ -267,6 +275,28 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "refresh-active-tab-failed"
+      });
+    }
+  }
+
+  private async handleActionClick(tab: chrome.tabs.Tab): Promise<void> {
+    if (!isHttpTab(tab) || typeof tab.id !== "number") {
+      diagnosticInfo("ImmersionKit popup overlay skipped.", {
+        reason: "unsupported-tab",
+        url: tab.url ?? null
+      });
+      return;
+    }
+
+    let sent = await sendPopupOverlayToggleMessageToTab(tab.id);
+    if (!sent && (await injectContentScriptsIntoTab(tab.id))) {
+      sent = await sendPopupOverlayToggleMessageToTab(tab.id);
+    }
+
+    if (!sent) {
+      diagnosticInfo("ImmersionKit popup overlay skipped.", {
+        reason: "toggle-delivery-failed",
+        tabId: tab.id
       });
     }
   }
@@ -691,6 +721,10 @@ function isExtensionPageSender(sender: chrome.runtime.MessageSender): boolean {
   );
 }
 
+function isHttpTab(tab: chrome.tabs.Tab): boolean {
+  return typeof tab.url === "string" && /^https?:\/\//i.test(tab.url);
+}
+
 async function getActiveTabId(): Promise<number | null> {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -703,6 +737,42 @@ async function getActiveTabId(): Promise<number | null> {
       resolve(typeof activeTabId === "number" ? activeTabId : null);
     });
   });
+}
+
+async function sendPopupOverlayToggleMessageToTab(tabId: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      { type: POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE },
+      (response?: PopupOverlayToggleResponse) => {
+        resolve(!chrome.runtime.lastError && Boolean(response?.ok));
+      }
+    );
+  });
+}
+
+async function injectContentScriptsIntoTab(tabId: number): Promise<boolean> {
+  const files = (chrome.runtime.getManifest().content_scripts ?? [])
+    .flatMap((script) => script.js ?? [])
+    .filter((file): file is string => typeof file === "string" && file.length > 0);
+
+  if (!chrome.scripting?.executeScript || !files || files.length === 0) {
+    return false;
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files
+    });
+    return true;
+  } catch (error) {
+    diagnosticInfo("ImmersionKit popup overlay injection failed.", {
+      tabId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return false;
+  }
 }
 
 async function sendRefreshMessageToTab(

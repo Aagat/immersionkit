@@ -40,6 +40,11 @@ export type PopupLearningStats = {
   total: number;
 };
 
+export type PopupLearningDayStats = PopupLearningStats & {
+  date?: string;
+  label: string;
+};
+
 export type OptionsStats = {
   comfortable: string | number;
   practice: string | number;
@@ -174,12 +179,12 @@ export type ExtensionPopupProps = {
   progressDetail?: string;
   metrics?: PopupMetric[];
   learningStats?: PopupLearningStats;
+  learningDays?: readonly PopupLearningDayStats[];
   unsupportedMessage?: string;
   firstRunIntro?: boolean;
   errorMessage?: string | null;
   isSavingSite?: boolean;
   onSiteToggle?: () => void;
   onOpenSettings?: () => void;
-  onAdjustPace?: () => void;
   onDismissIntro?: () => void;
 };

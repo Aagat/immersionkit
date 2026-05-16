@@ -14,6 +14,7 @@ import {
   createLearningProfileForBand,
   getExactActiveBandId,
   formatCurriculumProgressRequirement,
+  loadVocabStats,
   summarizeActiveCurriculumContent,
   summarizeCheckpointEligibilityPreview,
   summarizeGrammarEvidenceStats
@@ -21,6 +22,7 @@ import {
 import { getCheckpointStatus } from "../src/options/App";
 import { formatPopupProgressCopy } from "../src/popup/App";
 import {
+  IndexedDbUserVocabRepository,
   loadUserDataValues,
   setUserDataValues
 } from "../src/storage/user-data-repository";
@@ -359,6 +361,79 @@ describe("options state", () => {
     });
   });
 
+  it("loads vocabulary totals with seven-day reading report buckets", async () => {
+    const indexedDbStub = installIndexedDbStub();
+    const repository = new IndexedDbUserVocabRepository();
+    const today = createLocalNoonTimestamp(0);
+    const yesterday = createLocalNoonTimestamp(-1);
+    const olderThanReportWindow = createLocalNoonTimestamp(-8);
+
+    try {
+      await repository.upsertEntry({
+        lexemeId: "word:known-today",
+        status: "known",
+        lastSeenAt: today,
+        exposureCount: 3,
+        updatedAt: today,
+        createdAt: today
+      });
+      await repository.upsertEntry({
+        lexemeId: "word:learning-today",
+        status: "learning",
+        lastSeenAt: today,
+        exposureCount: 2,
+        updatedAt: today,
+        createdAt: today
+      });
+      await repository.upsertEntry({
+        lexemeId: "word:new-yesterday",
+        status: "new",
+        lastSeenAt: yesterday,
+        exposureCount: 1,
+        updatedAt: yesterday,
+        createdAt: yesterday
+      });
+      await repository.upsertEntry({
+        lexemeId: "word:ignored-old",
+        status: "ignored",
+        lastSeenAt: olderThanReportWindow,
+        exposureCount: 1,
+        updatedAt: olderThanReportWindow,
+        createdAt: olderThanReportWindow
+      });
+
+      const stats = await loadVocabStats();
+      const todayBucket = stats.daily.at(-1);
+      const yesterdayBucket = stats.daily.at(-2);
+
+      expect(stats).toMatchObject({
+        total: 4,
+        known: 1,
+        learning: 1,
+        newCount: 1,
+        ignored: 1
+      });
+      expect(stats.daily).toHaveLength(7);
+      expect(todayBucket).toMatchObject({
+        comfortable: 1,
+        practice: 1,
+        newCount: 0,
+        ignored: 0,
+        total: 2
+      });
+      expect(yesterdayBucket).toMatchObject({
+        comfortable: 0,
+        practice: 0,
+        newCount: 1,
+        ignored: 0,
+        total: 1
+      });
+      expect(stats.daily.reduce((sum, day) => sum + day.total, 0)).toBe(3);
+    } finally {
+      indexedDbStub.restore();
+    }
+  });
+
   it("previews checkpoint-only curriculum blockers without advancing bands", () => {
     const preview = summarizeCheckpointEligibilityPreview({
       profile: {
@@ -476,7 +551,8 @@ describe("options state", () => {
         newCount: 0,
         learning: 0,
         known: 0,
-        ignored: 0
+        ignored: 0,
+        daily: []
       },
       checkpointPreview: {
         activeBandId: null,
@@ -546,6 +622,13 @@ describe("options state", () => {
     }
   });
 });
+
+function createLocalNoonTimestamp(dayOffset: number): string {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  return date.toISOString();
+}
 
 function createProgressionReadyItems(bandId: string): LearningItem[] {
   return [

@@ -46,7 +46,8 @@ const EMPTY_STATS: VocabStats = {
   newCount: 0,
   learning: 0,
   known: 0,
-  ignored: 0
+  ignored: 0,
+  daily: []
 };
 
 const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {

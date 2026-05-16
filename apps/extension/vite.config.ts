@@ -19,6 +19,14 @@ export default defineConfig({
       ).pathname
     }
   },
+  build: {
+    rollupOptions: {
+      input: {
+        options: new URL("./options.html", import.meta.url).pathname,
+        popup: new URL("./popup.html", import.meta.url).pathname
+      }
+    }
+  },
   server: {
     port: 5173,
     strictPort: true,
