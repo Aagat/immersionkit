@@ -97,7 +97,7 @@ export function ImmersionFrame({
     <div
       className={cn(
         "min-h-svh bg-muted text-foreground",
-        variant === "popup" && "h-[760px] w-[392px]",
+        variant === "popup" && "h-[760px] w-[392px] bg-transparent",
         variant === "browser" && "p-4 sm:p-6",
         variant === "settings" && "min-h-svh"
       )}
