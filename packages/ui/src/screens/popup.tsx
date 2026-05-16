@@ -17,7 +17,6 @@ import {
   type ChartConfig
 } from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
   IkIcon,
@@ -102,10 +101,10 @@ export function ExtensionPopup({
       className={
         chromeFrame
           ? "absolute inset-x-4 top-4 sm:inset-x-auto sm:right-8 sm:top-8 sm:w-[392px]"
-          : "h-full w-[392px]"
+          : "w-[392px]"
       }
     >
-      <PopupPanel className={chromeFrame ? undefined : "h-full"}>
+      <PopupPanel>
         <PopupHeader onOpenSettings={onOpenSettings} />
         {errorMessage ? (
           <Alert>
@@ -549,20 +548,9 @@ function formatStatCount(value: number): string {
   return clampStatCount(value).toLocaleString();
 }
 
-function PopupPanel({
-  children,
-  className
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+function PopupPanel({ children }: { children: ReactNode }) {
   return (
-    <section
-      className={cn(
-        "flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-xl ring-1 ring-foreground/10",
-        className
-      )}
-    >
+    <section className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-xl ring-1 ring-foreground/10">
       {children}
     </section>
   );

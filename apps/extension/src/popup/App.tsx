@@ -18,6 +18,7 @@ import {
   type SiteSettingsMap,
   type VocabStats
 } from "../app-state/settings-state";
+import { POPUP_OVERLAY_RESIZE_MESSAGE_TYPE } from "../shared/popup-overlay";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -60,6 +61,7 @@ export function PopupApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  usePopupOverlayResizeBridge();
 
   const loadSnapshot = useCallback(async () => {
     const tabContext = await loadActiveTabContext();
@@ -191,6 +193,66 @@ export function PopupApp() {
       />
     </>
   );
+}
+
+function usePopupOverlayResizeBridge(): void {
+  useEffect(() => {
+    if (window.parent === window || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    let animationFrameId: number | null = null;
+    const root = document.getElementById("root");
+
+    const postHeight = () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        const rootHeight = root
+          ? Math.max(root.scrollHeight, root.getBoundingClientRect().height)
+          : 0;
+        const height = Math.ceil(
+          Math.max(
+            rootHeight,
+            document.body.scrollHeight
+          )
+        );
+
+        window.parent.postMessage(
+          {
+            type: POPUP_OVERLAY_RESIZE_MESSAGE_TYPE,
+            height
+          },
+          "*"
+        );
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(postHeight);
+    if (root) {
+      resizeObserver.observe(root);
+    }
+    resizeObserver.observe(document.body);
+
+    postHeight();
+    const timeoutIds = [
+      window.setTimeout(postHeight, 50),
+      window.setTimeout(postHeight, 250)
+    ];
+
+    return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      for (const timeoutId of timeoutIds) {
+        window.clearTimeout(timeoutId);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
 }
 
 function describeDiscoveryRate(rate: number): string {

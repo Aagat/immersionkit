@@ -1,4 +1,5 @@
 import {
+  isPopupOverlayResizeMessage,
   isPopupOverlayToggleMessage,
   type PopupOverlayToggleResponse
 } from "../shared/popup-overlay";
@@ -7,7 +8,7 @@ const POPUP_OVERLAY_HOST_ID = "immersionkit-popup-overlay";
 const POPUP_OVERLAY_IGNORE_ATTRIBUTE = "data-immersionkit-ignore";
 
 let messageHookInstalled = false;
-let removeEscapeListener: (() => void) | null = null;
+let removeOverlayListeners: (() => void) | null = null;
 
 export function setupPopupOverlayMessageHook(): void {
   if (
@@ -149,12 +150,16 @@ function createPopupOverlayHost(): HTMLElement {
 
   panel.append(iframe);
   shadowRoot.append(style, backdrop, panel);
-  installEscapeListener(host);
+  installOverlayListeners(host, panel, iframe);
   return host;
 }
 
-function installEscapeListener(host: HTMLElement): void {
-  removeEscapeListener?.();
+function installOverlayListeners(
+  host: HTMLElement,
+  panel: HTMLElement,
+  iframe: HTMLIFrameElement
+): void {
+  removeOverlayListeners?.();
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
@@ -162,14 +167,31 @@ function installEscapeListener(host: HTMLElement): void {
     }
   };
 
+  const handleMessage = (event: MessageEvent) => {
+    if (event.source !== iframe.contentWindow) {
+      return;
+    }
+
+    if (!isPopupOverlayResizeMessage(event.data)) {
+      return;
+    }
+
+    const maxHeight = Math.max(360, window.innerHeight - 32);
+    const nextHeight = Math.min(maxHeight, Math.max(360, event.data.height));
+    panel.style.height = `${Math.ceil(nextHeight)}px`;
+  };
+
   document.addEventListener("keydown", handleKeyDown, true);
-  removeEscapeListener = () => {
+  window.addEventListener("message", handleMessage);
+
+  removeOverlayListeners = () => {
     document.removeEventListener("keydown", handleKeyDown, true);
-    removeEscapeListener = null;
+    window.removeEventListener("message", handleMessage);
+    removeOverlayListeners = null;
   };
 }
 
 function removePopupOverlay(host: Element): void {
-  removeEscapeListener?.();
+  removeOverlayListeners?.();
   host.remove();
 }
