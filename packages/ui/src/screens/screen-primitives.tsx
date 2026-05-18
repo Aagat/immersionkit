@@ -299,13 +299,16 @@ export function InlineMark({
     <span
       className={cn(
         `ik-ui-mark ik-ui-mark--${kind}`,
-        "rounded-sm px-0.5 font-semibold underline decoration-primary decoration-2 underline-offset-4",
-        kind === "phrase" && "decoration-double",
-        kind === "sentence" && "border-b border-dotted border-primary no-underline",
-        status === "muted" && "text-muted-foreground decoration-muted-foreground"
+        kind === "sentence" && "ik-sentence-note"
       )}
       data-kind={kind}
+      data-ik-unit-kind={kind === "sentence" ? undefined : kind}
+      data-ik-sentence-note={kind === "sentence" ? "true" : undefined}
+      data-ik-source-visible={kind === "sentence" ? "false" : undefined}
+      data-ik-token-id={kind === "sentence" ? undefined : "preview-inline-mark"}
       data-status={status}
+      role="button"
+      tabIndex={0}
     >
       {children}
     </span>

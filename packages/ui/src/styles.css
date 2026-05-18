@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/jetbrains-mono";
+@import "./content-markers.css";
 
 @source "./";
 @source "../../../apps/extension/src";
