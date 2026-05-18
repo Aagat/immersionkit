@@ -281,7 +281,7 @@ export function renderPhrasePopover(
         readNonEmptyString(detail.sentence),
         readNonEmptyString(detail.curriculumReason) ??
           "You may see this again when it fits the page.",
-        "Hide phrase",
+        "Close help",
         "ImmersionKit"
       ]
     }
@@ -494,8 +494,8 @@ function PhrasePopoverContent({
           data-ik-popover-close="true"
           onClick={onClose}
         >
-          <IkIcon name="eyeOff" dataIcon="inline-start" />
-          Hide phrase
+          <IkIcon name="close" dataIcon="inline-start" />
+          Close help
         </Button>
         <PopoverBrand />
       </CardFooter>

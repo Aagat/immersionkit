@@ -312,8 +312,8 @@ function PhraseHelpPopover() {
       </div>
       <footer className="flex items-center justify-between gap-3 border-t pt-4">
         <Button type="button" variant="link" size="sm" className="h-auto px-0">
-          <IkIcon name="eyeOff" dataIcon="inline-start" />
-          Hide phrase
+          <IkIcon name="close" dataIcon="inline-start" />
+          Close help
         </Button>
         <span className="flex items-center gap-1 text-muted-foreground">
           <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit

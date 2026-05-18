@@ -162,6 +162,8 @@ describe("extension E2E harness", () => {
     await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
     const phrasePopoverText = await readPopoverText(page);
     expect(phrasePopoverText).toContain("Translation not available");
+    expect(phrasePopoverText).toContain("Close help");
+    expect(phrasePopoverText).not.toContain("Hide phrase");
     expect(phrasePopoverText).not.toContain("A reusable phrase you may see again");
     expect(phrasePopoverText).not.toMatch(/learning queue|review due|confidence/);
 

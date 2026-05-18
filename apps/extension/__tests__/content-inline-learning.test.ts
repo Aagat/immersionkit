@@ -754,6 +754,8 @@ describe("content inline learning loop", () => {
           expect(popover?.textContent).not.toContain("grammar carrier");
           expect(popover?.textContent).not.toContain("review due");
           expect(popover?.textContent).not.toContain("confidence");
+          expect(popover?.textContent).toContain("Close help");
+          expect(popover?.textContent).not.toContain("Hide phrase");
           expect(popover?.textContent).toContain(sourceSentence);
           expect(popover?.querySelector("[data-ik-status-action]")).toBeNull();
 
