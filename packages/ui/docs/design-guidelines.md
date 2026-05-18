@@ -9,8 +9,8 @@ truth stays in the PRD; this file is only for UI implementation conventions.
   Supported pages must expose both site states: on and paused.
 - `ReadingPage` demonstrates inline reading states: supported page, word help,
   phrase help, and optional sentence help.
-- `ExtensionOptions` owns the settings shell and switches between General,
-  Translation, and Advanced sections.
+- `ExtensionOptions` owns the settings shell and switches between Overview,
+  Reading, Curriculum, Stats, Sites, Translation, and Advanced sections.
 
 The extension should wire behavior through these state props instead of
 mounting separate screens for each screenshot state.

@@ -246,15 +246,71 @@ const scenarios: readonly WorkshopScenario[] = [
   },
   {
     id: "options-general",
-    title: "Options General",
+    title: "Options Overview",
     group: "Options",
     viewport: "desktop",
-    description: "Primary settings surface with progress and reading controls.",
+    description: "Top-level Options overview with page-level navigation.",
     render: () => (
       <ExtensionOptions
         {...baseOptionsProps}
-        initialSection="General"
-        activeSection="General"
+        initialSection="Overview"
+        activeSection="Overview"
+      />
+    )
+  },
+  {
+    id: "options-reading",
+    title: "Options Reading",
+    group: "Options",
+    viewport: "desktop",
+    description: "Reading pace, starting point, and density preview.",
+    render: () => (
+      <ExtensionOptions
+        {...baseOptionsProps}
+        initialSection="Reading"
+        activeSection="Reading"
+      />
+    )
+  },
+  {
+    id: "options-curriculum",
+    title: "Options Curriculum",
+    group: "Options",
+    viewport: "desktop",
+    description: "Current focus, reading band, and learning path.",
+    render: () => (
+      <ExtensionOptions
+        {...baseOptionsProps}
+        initialSection="Curriculum"
+        activeSection="Curriculum"
+      />
+    )
+  },
+  {
+    id: "options-stats",
+    title: "Options Stats",
+    group: "Options",
+    viewport: "desktop",
+    description: "Local reading progress snapshot.",
+    render: () => (
+      <ExtensionOptions
+        {...baseOptionsProps}
+        initialSection="Stats"
+        activeSection="Stats"
+      />
+    )
+  },
+  {
+    id: "options-sites",
+    title: "Options Sites",
+    group: "Options",
+    viewport: "desktop",
+    description: "Saved site controls and exclusions.",
+    render: () => (
+      <ExtensionOptions
+        {...baseOptionsProps}
+        initialSection="Sites"
+        activeSection="Sites"
       />
     )
   },
@@ -336,8 +392,8 @@ const scenarios: readonly WorkshopScenario[] = [
     render: () => (
       <ExtensionOptions
         {...baseOptionsProps}
-        initialSection="General"
-        activeSection="General"
+        initialSection="Overview"
+        activeSection="Overview"
         firstRunIntro
       />
     )
@@ -351,8 +407,8 @@ const scenarios: readonly WorkshopScenario[] = [
     render: () => (
       <ExtensionOptions
         {...baseOptionsProps}
-        initialSection="General"
-        activeSection="General"
+        initialSection="Overview"
+        activeSection="Overview"
         isSaving
       />
     )
@@ -366,8 +422,8 @@ const scenarios: readonly WorkshopScenario[] = [
     render: () => (
       <ExtensionOptions
         {...baseOptionsProps}
-        initialSection="General"
-        activeSection="General"
+        initialSection="Overview"
+        activeSection="Overview"
         isLoading
         errorMessage="Local settings are temporarily unavailable."
       />

@@ -46,6 +46,7 @@ import {
   IkIcon,
   ImmersionFrame,
   ImmersionLogo,
+  InlineMark,
   SentenceBlock,
   StatusBadge
 } from "./screen-primitives";
@@ -58,7 +59,7 @@ import {
 } from "./types";
 
 export function ExtensionOptions({
-  initialSection = "General",
+  initialSection = "Overview",
   activeSection,
   chromeFrame = false,
   showAdvanced = true,
@@ -167,19 +168,44 @@ export function ExtensionOptions({
                 </TabsTrigger>
               ))}
             </TabsList>
-            <TabsContent value="General" className="m-0">
-              <OptionsGeneralPanel
+            <TabsContent value="Overview" className="m-0">
+              <OptionsOverviewPanel
                 discoveryRatePercent={discoveryRatePercent}
                 readingLevel={readingLevel}
                 stats={stats}
                 checkpoint={checkpoint}
                 currentFocus={currentFocus}
-                learningPath={learningPath}
                 siteSummary={siteSummary}
                 pausedSiteCount={pausedSiteCount}
                 savedSiteCount={savedSiteCount}
+                sentenceHelpEnabled={sentenceHelpEnabled}
+                provider={provider}
+                onOpenSection={setActive}
+              />
+            </TabsContent>
+            <TabsContent value="Reading" className="m-0">
+              <OptionsReadingPanel
+                discoveryRatePercent={discoveryRatePercent}
+                readingLevel={readingLevel}
                 onDiscoveryRateChange={onDiscoveryRateChange}
                 onReadingLevelChange={onReadingLevelChange}
+              />
+            </TabsContent>
+            <TabsContent value="Curriculum" className="m-0">
+              <OptionsCurriculumPanel
+                checkpoint={checkpoint}
+                currentFocus={currentFocus}
+                learningPath={learningPath}
+              />
+            </TabsContent>
+            <TabsContent value="Stats" className="m-0">
+              <OptionsStatsPanel stats={stats} />
+            </TabsContent>
+            <TabsContent value="Sites" className="m-0">
+              <OptionsSitesPanel
+                siteSummary={siteSummary}
+                pausedSiteCount={pausedSiteCount}
+                savedSiteCount={savedSiteCount}
               />
             </TabsContent>
             <TabsContent value="Translation" className="m-0">
@@ -244,9 +270,25 @@ function OptionsHeader({
   onReload?: () => void;
 }) {
   const copy = {
-    General: [
+    Overview: [
       "Options",
-      "Reading pace, starting point, progress, and site choices."
+      "Quick status across reading, curriculum, stats, and sites."
+    ],
+    Reading: [
+      "Reading",
+      "Spanish density, starting point, and inline preview."
+    ],
+    Curriculum: [
+      "Curriculum",
+      "Current focus, reading band, and learning path."
+    ],
+    Stats: [
+      "Stats",
+      "Local progress built from supported pages."
+    ],
+    Sites: [
+      "Sites",
+      "Saved site choices and exclusions."
     ],
     Translation: [
       "Sentence help",
@@ -294,18 +336,18 @@ function OptionsHeader({
   );
 }
 
-function OptionsGeneralPanel({
+function OptionsOverviewPanel({
   discoveryRatePercent = 8,
   readingLevel,
   stats,
   checkpoint,
   currentFocus,
-  learningPath = [],
   siteSummary,
   pausedSiteCount = 0,
   savedSiteCount = 0,
-  onDiscoveryRateChange,
-  onReadingLevelChange
+  sentenceHelpEnabled,
+  provider,
+  onOpenSection
 }: Pick<
   ExtensionOptionsProps,
   | "discoveryRatePercent"
@@ -313,10 +355,141 @@ function OptionsGeneralPanel({
   | "stats"
   | "checkpoint"
   | "currentFocus"
-  | "learningPath"
   | "siteSummary"
   | "pausedSiteCount"
   | "savedSiteCount"
+  | "sentenceHelpEnabled"
+  | "provider"
+> & {
+  onOpenSection: (section: OptionsSection) => void;
+}) {
+  const readingLevelLabel = readingLevel ?? "False beginner";
+  const sentenceHelpLabel =
+    provider === "openai"
+      ? sentenceHelpEnabled
+        ? "Sentence help on"
+        : "Provider selected"
+      : "Sentence help off";
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Overview</CardTitle>
+          <CardDescription>
+            The main loop stays in the browser; these pages control pace,
+            curriculum, local stats, and site behavior.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <OverviewTile
+            title="Reading"
+            value={`${discoveryRatePercent}% new word pace`}
+            detail={`${readingLevelLabel} starting point with a density preview.`}
+            icon="book"
+            action="Open Reading"
+            onAction={() => onOpenSection("Reading")}
+          />
+          <OverviewTile
+            title="Curriculum"
+            value={checkpoint?.currentBand ?? "Starting"}
+            detail={
+              currentFocus
+                ? `${currentFocus.levelLabel}: ${currentFocus.learnerTitle}`
+                : "Current focus appears after curriculum loads."
+            }
+            icon="band"
+            action="Open Curriculum"
+            onAction={() => onOpenSection("Curriculum")}
+          />
+          <OverviewTile
+            title="Stats"
+            value={`${stats?.total ?? 0} tracked`}
+            detail={`${stats?.comfortable ?? 0} comfortable, ${stats?.practice ?? 0} in practice.`}
+            icon="check"
+            action="Open Stats"
+            onAction={() => onOpenSection("Stats")}
+          />
+          <OverviewTile
+            title="Sites"
+            value={`${pausedSiteCount} paused`}
+            detail={`${savedSiteCount} saved site choices. ${siteSummary ?? ""}`.trim()}
+            icon="link"
+            action="Open Sites"
+            onAction={() => onOpenSection("Sites")}
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Preview state</CardTitle>
+          <CardDescription>
+            Quick release-facing checks before final screenshots.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <CompactMetric
+            label="Reading band"
+            value={checkpoint?.nextBand ?? "Next band"}
+            icon="band"
+          />
+          <CompactMetric
+            label="Sentence help"
+            value={sentenceHelpLabel}
+            icon="translate"
+          />
+          <CompactMetric
+            label="Site choices"
+            value={savedSiteCount}
+            icon="link"
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function OverviewTile({
+  title,
+  value,
+  detail,
+  icon,
+  action,
+  onAction
+}: {
+  title: string;
+  value: string | number;
+  detail: string;
+  icon: MetricIconName;
+  action: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-3 rounded-lg border bg-background p-3">
+      <div className="flex min-w-0 items-start gap-2">
+        <IkIcon name={icon} className="mt-0.5 text-muted-foreground" />
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium">{title}</h3>
+          <p className="text-sm font-medium">{value}</p>
+          <p className="text-sm text-muted-foreground">{detail}</p>
+        </div>
+      </div>
+      <Button variant="outline" size="sm" className="w-fit" onClick={onAction}>
+        {action}
+      </Button>
+    </div>
+  );
+}
+
+function OptionsReadingPanel({
+  discoveryRatePercent = 8,
+  readingLevel,
+  onDiscoveryRateChange,
+  onReadingLevelChange
+}: Pick<
+  ExtensionOptionsProps,
+  | "discoveryRatePercent"
+  | "readingLevel"
   | "onDiscoveryRateChange"
   | "onReadingLevelChange"
 >) {
@@ -330,15 +503,16 @@ function OptionsGeneralPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>Reading controls</CardTitle>
+            <CardTitle>Reading pace</CardTitle>
             <CardDescription>
-              Set the Spanish dose and starting level for normal browsing.
+              Set the Spanish dose for normal browsing and preview the expected
+              inline density.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.9fr)]">
+          <CardContent className="flex flex-col gap-5">
             <FieldGroup className="min-w-0">
               <Field>
                 <div className="flex items-center justify-between gap-3">
@@ -360,8 +534,19 @@ function OptionsGeneralPanel({
                 </div>
               </Field>
             </FieldGroup>
+            <DensityPreview discoveryRatePercent={discoveryRatePercent} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Starting point</CardTitle>
+            <CardDescription>
+              Choose the current reading band seed. You can adjust this later.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <FieldSet>
-              <FieldLegend>Starting point</FieldLegend>
+              <FieldLegend className="sr-only">Starting point</FieldLegend>
               <RadioGroup
                 value={resolvedReadingLevel}
                 onValueChange={(value) => chooseReadingLevel(value as ReadingLevel)}
@@ -386,78 +571,190 @@ function OptionsGeneralPanel({
             </FieldSet>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Reading band</CardTitle>
-            <CardDescription>
-              Local reading evidence widens the active range.
-            </CardDescription>
-            <CardAction>
-              <Badge variant="outline">
-                {checkpoint?.progressLabel ?? "Progress starts as you read"}
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Progress value={checkpoint?.progressValue ?? 0} />
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium">{checkpoint?.currentBand ?? "Starting"}</span>
-              <IkIcon name="chevron" className="text-muted-foreground" />
-              <span className="font-medium">{checkpoint?.nextBand ?? "Next band"}</span>
-            </div>
-            {checkpoint?.description ? (
-              <p className="text-sm text-muted-foreground">{checkpoint.description}</p>
-            ) : null}
-            <Button
-              variant="outline"
-              className="w-fit"
-              disabled={!checkpoint?.canWiden || checkpoint.isWidening}
-              onClick={checkpoint?.onWiden}
-            >
-              <IkIcon
-                name={checkpoint?.canWiden ? "band" : "lock"}
-                dataIcon="inline-start"
-              />
-              {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
-            </Button>
-          </CardContent>
-        </Card>
       </div>
+    </div>
+  );
+}
+
+function OptionsCurriculumPanel({
+  checkpoint,
+  currentFocus,
+  learningPath = []
+}: Pick<ExtensionOptionsProps, "checkpoint" | "currentFocus" | "learningPath">) {
+  return (
+    <div className="flex flex-col gap-4">
+      <ReadingBandCard checkpoint={checkpoint} />
       {currentFocus ? <CurrentFocusCard focus={currentFocus} /> : null}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.65fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Learning snapshot</CardTitle>
-            <CardDescription>
-              Progress builds from normal reading on supported pages.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2">
-            <CompactMetric label="Comfortable" value={stats?.comfortable ?? 0} icon="check" />
-            <CompactMetric label="In practice" value={stats?.practice ?? 0} icon="spark" />
-            <CompactMetric label="Still new" value={stats?.newCount ?? 0} icon="band" />
-            <CompactMetric label="Tracked total" value={stats?.total ?? 0} icon="book" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Site controls</CardTitle>
-            <CardDescription>
-              Pause or resume per site from the popup.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-              <CompactMetric label="Saved choices" value={savedSiteCount} icon="link" />
-              <CompactMetric label="Paused sites" value={pausedSiteCount} icon="pause" />
-            </div>
-            {siteSummary ? <p className="text-sm text-muted-foreground">{siteSummary}</p> : null}
-            <Button variant="outline" className="w-fit">Manage saved sites</Button>
-          </CardContent>
-        </Card>
-      </div>
       <LearningPathView path={learningPath} />
     </div>
+  );
+}
+
+function OptionsStatsPanel({
+  stats
+}: Pick<ExtensionOptionsProps, "stats">) {
+  return <LearningSnapshotCard stats={stats} />;
+}
+
+function OptionsSitesPanel({
+  siteSummary,
+  pausedSiteCount = 0,
+  savedSiteCount = 0
+}: Pick<
+  ExtensionOptionsProps,
+  "siteSummary" | "pausedSiteCount" | "savedSiteCount"
+>) {
+  return (
+    <SiteControlsCard
+      siteSummary={siteSummary}
+      pausedSiteCount={pausedSiteCount}
+      savedSiteCount={savedSiteCount}
+    />
+  );
+}
+
+function DensityPreview({
+  discoveryRatePercent
+}: {
+  discoveryRatePercent: number;
+}) {
+  const densityLabel =
+    discoveryRatePercent <= 4
+      ? "Subtle"
+      : discoveryRatePercent >= 14
+        ? "Bold"
+        : "Balanced";
+  const showBalanced = discoveryRatePercent >= 6;
+  const showBold = discoveryRatePercent >= 12;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-medium">Density preview</h3>
+        <Badge variant="outline">{densityLabel}</Badge>
+      </div>
+      <div className="flex flex-col gap-3 text-sm leading-relaxed">
+        <p>
+          The morning{" "}
+          <InlineMark status="learning">rutina</InlineMark>{" "}
+          stays readable while the page introduces a few useful words.
+        </p>
+        <p>
+          You can follow the main idea, notice a familiar{" "}
+          {showBalanced ? (
+            <InlineMark kind="phrase" status="learning">frase</InlineMark>
+          ) : (
+            "phrase"
+          )}
+          , and keep moving through the article.
+        </p>
+        <p>
+          At a {densityLabel.toLowerCase()} pace,{" "}
+          {showBold ? (
+            <InlineMark status="new">palabras nuevas</InlineMark>
+          ) : (
+            "new words"
+          )}{" "}
+          still appear only when context looks safe.
+        </p>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Real pages may be sparser when ambiguity, forms, code, or sensitive
+        areas are skipped.
+      </p>
+    </div>
+  );
+}
+
+function ReadingBandCard({
+  checkpoint
+}: Pick<ExtensionOptionsProps, "checkpoint">) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Reading band</CardTitle>
+        <CardDescription>
+          Local reading evidence widens the active range.
+        </CardDescription>
+        <CardAction>
+          <Badge variant="outline">
+            {checkpoint?.progressLabel ?? "Progress starts as you read"}
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Progress value={checkpoint?.progressValue ?? 0} />
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">{checkpoint?.currentBand ?? "Starting"}</span>
+          <IkIcon name="chevron" className="text-muted-foreground" />
+          <span className="font-medium">{checkpoint?.nextBand ?? "Next band"}</span>
+        </div>
+        {checkpoint?.description ? (
+          <p className="text-sm text-muted-foreground">{checkpoint.description}</p>
+        ) : null}
+        <Button
+          variant="outline"
+          className="w-fit"
+          disabled={!checkpoint?.canWiden || checkpoint.isWidening}
+          onClick={checkpoint?.onWiden}
+        >
+          <IkIcon
+            name={checkpoint?.canWiden ? "band" : "lock"}
+            dataIcon="inline-start"
+          />
+          {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LearningSnapshotCard({
+  stats
+}: Pick<ExtensionOptionsProps, "stats">) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Learning snapshot</CardTitle>
+        <CardDescription>
+          Local progress from normal reading on supported pages.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2 sm:grid-cols-2">
+        <CompactMetric label="Comfortable" value={stats?.comfortable ?? 0} icon="check" />
+        <CompactMetric label="In practice" value={stats?.practice ?? 0} icon="spark" />
+        <CompactMetric label="Still new" value={stats?.newCount ?? 0} icon="band" />
+        <CompactMetric label="Tracked total" value={stats?.total ?? 0} icon="book" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function SiteControlsCard({
+  siteSummary,
+  pausedSiteCount = 0,
+  savedSiteCount = 0
+}: Pick<
+  ExtensionOptionsProps,
+  "siteSummary" | "pausedSiteCount" | "savedSiteCount"
+>) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Site controls</CardTitle>
+        <CardDescription>
+          Pause or resume ImmersionKit per site from the popup.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <CompactMetric label="Saved choices" value={savedSiteCount} icon="link" />
+          <CompactMetric label="Paused sites" value={pausedSiteCount} icon="pause" />
+        </div>
+        {siteSummary ? <p className="text-sm text-muted-foreground">{siteSummary}</p> : null}
+        <Button variant="outline" className="w-fit">Manage saved sites</Button>
+      </CardContent>
+    </Card>
   );
 }
 

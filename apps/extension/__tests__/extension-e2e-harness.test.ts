@@ -93,7 +93,9 @@ describe("extension E2E harness", () => {
       .toBe(false);
 
     await options.reload({ waitUntil: "domcontentloaded" });
-    await options.waitForSelector("text=New word pace", { timeout: 10_000 });
+    await options.waitForSelector("text=Quick status across reading", {
+      timeout: 10_000
+    });
     expect(await options.locator("text=Start with normal reading").count()).toBe(0);
 
     const popup = await context.newPage();
@@ -196,10 +198,14 @@ describe("extension E2E harness", () => {
     await options.goto(`chrome-extension://${extensionId}/options.html`, {
       waitUntil: "domcontentloaded"
     });
-    await options.waitForSelector("text=New word pace", { timeout: 10_000 });
+    await options.waitForSelector("text=Quick status across reading", {
+      timeout: 10_000
+    });
     await expect
       .poll(() => options.getByRole("button", { name: "Save changes" }).isEnabled())
       .toBe(true);
+    await options.getByRole("tab", { name: "Reading" }).click();
+    await options.waitForSelector("text=Density preview", { timeout: 5_000 });
     const discoveryRateInput = options.locator("#settings-discovery-rate");
     await discoveryRateInput.focus();
     await options.keyboard.press("Home");

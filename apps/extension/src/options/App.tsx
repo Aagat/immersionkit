@@ -62,7 +62,14 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   unmetRequirements: []
 };
 
-type OptionsTab = "general" | "translation" | "advanced";
+type OptionsTab =
+  | "overview"
+  | "reading"
+  | "curriculum"
+  | "stats"
+  | "sites"
+  | "translation"
+  | "advanced";
 
 export function OptionsApp() {
   const [settingsState, setSettingsState] = useState<SettingsState | null>(null);
@@ -76,7 +83,7 @@ export function OptionsApp() {
   const [activePageDiagnostics, setActivePageDiagnostics] =
     useState<ActivePageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>(
-    showAdvancedTab ? "advanced" : "general"
+    showAdvancedTab ? "advanced" : "overview"
   );
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -357,7 +364,7 @@ export function OptionsApp() {
 
   useEffect(() => {
     if (!showAdvancedTab && activeTab === "advanced") {
-      setActiveTab("general");
+      setActiveTab("overview");
     }
   }, [activeTab, showAdvancedTab]);
 
@@ -465,6 +472,22 @@ function formatCount(value: number): string {
 }
 
 function toUiOptionsSection(tab: OptionsTab): OptionsSection {
+  if (tab === "reading") {
+    return "Reading";
+  }
+
+  if (tab === "curriculum") {
+    return "Curriculum";
+  }
+
+  if (tab === "stats") {
+    return "Stats";
+  }
+
+  if (tab === "sites") {
+    return "Sites";
+  }
+
   if (tab === "translation") {
     return "Translation";
   }
@@ -473,10 +496,26 @@ function toUiOptionsSection(tab: OptionsTab): OptionsSection {
     return "Advanced";
   }
 
-  return "General";
+  return "Overview";
 }
 
 function toLocalOptionsTab(section: OptionsSection): OptionsTab {
+  if (section === "Reading") {
+    return "reading";
+  }
+
+  if (section === "Curriculum") {
+    return "curriculum";
+  }
+
+  if (section === "Stats") {
+    return "stats";
+  }
+
+  if (section === "Sites") {
+    return "sites";
+  }
+
   if (section === "Translation") {
     return "translation";
   }
@@ -485,7 +524,7 @@ function toLocalOptionsTab(section: OptionsSection): OptionsTab {
     return "advanced";
   }
 
-  return "general";
+  return "overview";
 }
 
 function toUiReadingLevel(seed: ProficiencySeed | undefined) {

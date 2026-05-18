@@ -1,7 +1,14 @@
 export type PopupState = "supported" | "unsupported";
 export type SiteControlState = "on" | "paused";
 export type ArticleState = "supported" | "word" | "phrase" | "sentence";
-export type OptionsSection = "General" | "Translation" | "Advanced";
+export type OptionsSection =
+  | "Overview"
+  | "Reading"
+  | "Curriculum"
+  | "Stats"
+  | "Sites"
+  | "Translation"
+  | "Advanced";
 export type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
 
 export type MetricIconName =
@@ -24,7 +31,15 @@ export type MetricIconName =
   | "translate"
   | "volume";
 
-export const settingsTabs: OptionsSection[] = ["General", "Translation", "Advanced"];
+export const settingsTabs: OptionsSection[] = [
+  "Overview",
+  "Reading",
+  "Curriculum",
+  "Stats",
+  "Sites",
+  "Translation",
+  "Advanced"
+];
 
 export type PopupMetric = {
   label: string;
