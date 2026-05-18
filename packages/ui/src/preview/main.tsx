@@ -52,6 +52,7 @@ import "./preview.css";
 
 type ScenarioGroup = "Popup" | "Reading" | "Popovers" | "Options" | "Components";
 type ViewportKind = "popup" | "desktop" | "mobile" | "popover" | "free";
+type PreviewTheme = "light" | "dark";
 
 type WorkshopScenario = {
   id: string;
@@ -391,26 +392,34 @@ const groups: readonly ScenarioGroup[] = [
 ] as const;
 
 function PreviewApp() {
-  const scenarioId = new URLSearchParams(window.location.search).get("scenario");
+  const params = new URLSearchParams(window.location.search);
+  const scenarioId = params.get("scenario");
+  const theme = readPreviewTheme(params);
   const focusedScenario = scenarioId
     ? scenarios.find((scenario) => scenario.id === scenarioId)
     : null;
   const visibleScenarios = focusedScenario ? [focusedScenario] : scenarios;
 
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.dataset.previewTheme = theme;
+
   return (
-    <main className="ik-workshop-shell">
+    <main className="ik-workshop-shell" data-preview-theme={theme}>
       <header className="ik-workshop-header">
         <div>
           <p>ImmersionKit UI Workshop</p>
           <h1>Fast Browser Review Surface</h1>
         </div>
-        <nav aria-label="Workshop groups">
-          {groups.map((group) => (
-            <a key={group} href={`#${group.toLowerCase()}`}>
-              {group}
-            </a>
-          ))}
-        </nav>
+        <div className="ik-workshop-header-actions">
+          <ThemeNav theme={theme} scenarioId={focusedScenario?.id ?? null} />
+          <nav aria-label="Workshop groups">
+            {groups.map((group) => (
+              <a key={group} href={`#${group.toLowerCase()}`}>
+                {group}
+              </a>
+            ))}
+          </nav>
+        </div>
       </header>
 
       {focusedScenario ? (
@@ -420,7 +429,7 @@ function PreviewApp() {
             title={focusedScenario.title}
             description={`Focused scenario: ${focusedScenario.id}`}
           />
-          <ScenarioCard scenario={focusedScenario} focused />
+          <ScenarioCard scenario={focusedScenario} focused theme={theme} />
         </section>
       ) : (
         groups.map((group) => (
@@ -434,13 +443,68 @@ function PreviewApp() {
               {visibleScenarios
                 .filter((scenario) => scenario.group === group)
                 .map((scenario) => (
-                  <ScenarioCard key={scenario.id} scenario={scenario} />
+                  <ScenarioCard key={scenario.id} scenario={scenario} theme={theme} />
                 ))}
             </div>
           </section>
         ))
       )}
     </main>
+  );
+}
+
+function readPreviewTheme(params: URLSearchParams): PreviewTheme {
+  return params.get("theme") === "dark" ? "dark" : "light";
+}
+
+function buildWorkshopUrl({
+  scenarioId,
+  theme
+}: {
+  scenarioId: string | null;
+  theme: PreviewTheme;
+}): string {
+  const params = new URLSearchParams();
+  if (scenarioId) {
+    params.set("scenario", scenarioId);
+  }
+  if (theme === "dark") {
+    params.set("theme", "dark");
+  }
+  const query = params.toString();
+  return query ? `?${query}` : window.location.pathname;
+}
+
+function focusScenarioUrl(scenarioId: string, theme: PreviewTheme): string {
+  const params = new URLSearchParams({ scenario: scenarioId });
+  if (theme === "dark") {
+    params.set("theme", "dark");
+  }
+  return `?${params.toString()}`;
+}
+
+function ThemeNav({
+  scenarioId,
+  theme
+}: {
+  scenarioId: string | null;
+  theme: PreviewTheme;
+}) {
+  return (
+    <nav className="ik-workshop-theme-nav" aria-label="Preview theme">
+      <a
+        href={buildWorkshopUrl({ scenarioId, theme: "light" })}
+        aria-current={theme === "light" ? "page" : undefined}
+      >
+        Light
+      </a>
+      <a
+        href={buildWorkshopUrl({ scenarioId, theme: "dark" })}
+        aria-current={theme === "dark" ? "page" : undefined}
+      >
+        Dark
+      </a>
+    </nav>
   );
 }
 
@@ -463,10 +527,12 @@ function SectionHeading({
 
 function ScenarioCard({
   scenario,
-  focused = false
+  focused = false,
+  theme
 }: {
   scenario: WorkshopScenario;
   focused?: boolean;
+  theme: PreviewTheme;
 }) {
   return (
     <article
@@ -481,7 +547,7 @@ function ScenarioCard({
         </div>
         <div className="ik-workshop-card-actions">
           <a href={`#${scenario.id}`}>#{scenario.id}</a>
-          <a href={`?scenario=${scenario.id}`}>Focus</a>
+          <a href={focusScenarioUrl(scenario.id, theme)}>Focus</a>
         </div>
       </header>
       <ViewportFrame viewport={scenario.viewport}>{scenario.render()}</ViewportFrame>

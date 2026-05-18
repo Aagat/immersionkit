@@ -1,12 +1,13 @@
 :root {
-  color: hsl(224 28% 12%);
-  background: hsl(210 22% 94%);
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--background) 94%, var(--muted));
   font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace,
     SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 body {
   margin: 0;
+  background: color-mix(in oklab, var(--background) 94%, var(--muted));
 }
 
 .ik-workshop-shell {
@@ -24,9 +25,9 @@ body {
   justify-content: space-between;
   gap: 18px;
   padding: 16px 18px;
-  border: 1px solid hsl(224 18% 82%);
-  background: hsl(0 0% 100% / 88%);
-  box-shadow: 0 14px 40px hsl(224 20% 20% / 10%);
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  box-shadow: 0 14px 40px color-mix(in oklab, var(--foreground) 10%, transparent);
   backdrop-filter: blur(18px);
 }
 
@@ -40,7 +41,7 @@ body {
 }
 
 .ik-workshop-header p {
-  color: hsl(178 70% 28%);
+  color: color-mix(in oklab, var(--foreground) 74%, var(--muted-foreground));
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -52,22 +53,45 @@ body {
   line-height: 1.1;
 }
 
-.ik-workshop-header nav,
+.ik-workshop-header-actions,
+.ik-workshop-header-actions nav,
 .ik-workshop-card-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
+.ik-workshop-header-actions {
+  justify-content: flex-end;
+}
+
 .ik-workshop-header a,
 .ik-workshop-card-actions a {
   padding: 8px 10px;
-  border: 1px solid hsl(224 18% 86%);
-  color: hsl(224 28% 12%);
-  background: hsl(0 0% 100%);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  background: var(--background);
   font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
+}
+
+.ik-workshop-theme-nav {
+  padding: 3px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.ik-workshop-theme-nav a {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.ik-workshop-theme-nav a[aria-current="page"] {
+  border-color: var(--border);
+  background: var(--background);
+  color: var(--foreground);
 }
 
 .ik-workshop-section {
@@ -87,7 +111,7 @@ body {
 
 .ik-workshop-section-heading p,
 .ik-workshop-card header p {
-  color: hsl(224 12% 40%);
+  color: var(--muted-foreground);
 }
 
 .ik-workshop-grid {
@@ -97,9 +121,10 @@ body {
 
 .ik-workshop-card {
   overflow: clip;
-  border: 1px solid hsl(224 18% 84%);
-  background: hsl(0 0% 100%);
-  box-shadow: 0 18px 48px hsl(224 20% 20% / 8%);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 18px 48px color-mix(in oklab, var(--foreground) 8%, transparent);
   scroll-margin-top: 116px;
 }
 
@@ -109,7 +134,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  border-bottom: 1px solid hsl(224 18% 88%);
+  border-bottom: 1px solid var(--border);
 }
 
 .ik-workshop-card h3 {
@@ -118,7 +143,7 @@ body {
 
 .ik-workshop-viewport {
   overflow: auto;
-  background: hsl(210 22% 96%);
+  background: color-mix(in oklab, var(--background) 88%, var(--muted));
 }
 
 .ik-workshop-viewport[data-viewport="popup"] {
@@ -138,7 +163,7 @@ body {
 .ik-workshop-viewport[data-viewport="mobile"] {
   width: min(390px, 100%);
   max-height: 760px;
-  border-right: 1px solid hsl(224 18% 84%);
+  border-right: 1px solid var(--border);
 }
 
 .ik-workshop-viewport[data-viewport="popover"] {
@@ -170,6 +195,10 @@ body {
   .ik-workshop-card > header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .ik-workshop-header-actions {
+    justify-content: flex-start;
   }
 
   .ik-workshop-header {
