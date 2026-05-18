@@ -1,5 +1,4 @@
-import { useState, type ComponentProps, type ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -7,26 +6,19 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger
-} from "@/components/ui/hover-card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import {
+  PhraseHelpPopoverContent,
+  SentenceHelpPopoverContent,
+  WordHelpPopoverContent
+} from "./content-popovers";
 import {
   BrowserChrome,
   IkIcon,
   ImmersionFrame,
-  ImmersionLogo,
   InlineMark,
-  SentenceBlock
 } from "./screen-primitives";
 import type { ArticleState } from "./types";
-
-const INACTIVE_STATUS_BUTTON_CLASS =
-  "ik-status-outline bg-background";
-type ExampleLanguage = "spanish" | "english";
 
 export function ReadingPage({ state = "supported" }: { state?: ArticleState }) {
   const travel = state === "supported";
@@ -182,311 +174,45 @@ function HabitsArticle({ active }: { active: ArticleState }) {
 }
 
 function WordHelpPopover() {
-  const [exampleLanguage, setExampleLanguage] = useState<"spanish" | "english">(
-    "spanish"
-  );
-  const exampleText =
-    exampleLanguage === "spanish"
-      ? "Una lectura corta en un cafe puede reiniciar el dia."
-      : "A short reading in a cafe can reset the day.";
-
   return (
     <PopoverFrame className="top-[215px] md:left-[48%] md:right-auto md:w-[340px]">
-      <header className="flex items-start gap-2">
-        <IkIcon name="volume" className="mt-1 shrink-0 text-muted-foreground" />
-        <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
-          <h3 className="min-w-0 text-base font-medium leading-6">lectura</h3>
-          <Badge className="shrink-0">new</Badge>
-        </div>
-        <RationaleHoverAction aria-label="Why this word appears">
-          This word fits your current reading band and appeared in a safe local
-          context.
-        </RationaleHoverAction>
-        <PopoverCloseButton className="-mr-1 -mt-1 shrink-0" />
-      </header>
-      <TokenPair source="reading" target="lectura" />
-      <p className="text-sm text-muted-foreground">Used for reading or a piece of reading.</p>
-      <Tabs
-        aria-label="Example sentence language"
-        className="w-full"
-        onValueChange={(value) => {
-          if (value === "spanish" || value === "english") {
-            setExampleLanguage(value);
-          }
-        }}
-        value={exampleLanguage}
-      >
-        <TabsList className="h-8 w-full justify-start p-0" variant="line">
-          <TabsTrigger
-            className="flex-none px-2.5 text-xs"
-            onClick={() => setExampleLanguage("spanish")}
-            value="spanish"
-          >
-            Spanish
-          </TabsTrigger>
-          <TabsTrigger
-            className="flex-none px-2.5 text-xs"
-            onClick={() => setExampleLanguage("english")}
-            value="english"
-          >
-            English
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
-        <IkIcon
-          name={exampleLanguage === "english" ? "translate" : "message"}
-          className="mt-0.5 shrink-0 text-muted-foreground"
-        />
-        <span>{exampleText}</span>
-      </div>
-      <div className="flex flex-nowrap justify-center gap-2">
-        <Button
-          className={INACTIVE_STATUS_BUTTON_CLASS}
-          variant="outline"
-          size="xs"
-        >
-          Still new
-        </Button>
-        <Button
-          className={INACTIVE_STATUS_BUTTON_CLASS}
-          variant="outline"
-          size="xs"
-        >
-          Practicing
-        </Button>
-        <Button
-          className={INACTIVE_STATUS_BUTTON_CLASS}
-          variant="outline"
-          size="xs"
-        >
-          Comfortable
-        </Button>
-      </div>
-      <footer className="flex items-center justify-between gap-3 border-t pt-4 text-sm">
-        <Button type="button" variant="link" size="sm" className="h-auto px-0">
-          <IkIcon name="eyeOff" dataIcon="inline-start" />
-          Hide word
-        </Button>
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit
-        </span>
-      </footer>
+      <WordHelpPopoverContent
+        sourceText="reading"
+        targetText="lectura"
+        status="new"
+        rationale="This word fits your current reading band and appeared in a safe local context."
+        nativeExample="Una lectura corta en un cafe puede reiniciar el dia."
+        englishExample="A short reading in a cafe can reset the day."
+      />
     </PopoverFrame>
   );
 }
 
 function PhraseHelpPopover() {
-  const [exampleLanguage, setExampleLanguage] =
-    useState<ExampleLanguage>("spanish");
-  const exampleText =
-    exampleLanguage === "spanish"
-      ? "Translation not available."
-      : "Read with calm when the page feels dense.";
-
   return (
     <PopoverFrame className="top-[260px] md:left-[44%] md:right-auto md:w-[340px]">
-      <header className="flex items-start gap-2">
-        <IkIcon name="link" className="mt-1 text-muted-foreground" />
-        <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
-          <h3 className="min-w-0 text-base font-medium leading-6">con calma</h3>
-          <Badge className="shrink-0">phrase</Badge>
-        </div>
-        <RationaleHoverAction aria-label="Why this phrase appears">
-          You may see this again when it fits the page.
-        </RationaleHoverAction>
-        <PopoverCloseButton className="-mr-1 -mt-1 shrink-0" />
-      </header>
-      <TokenPair source="with calm" target="con calma" />
-      <LanguageTabs
-        ariaLabel="Phrase example language"
-        value={exampleLanguage}
-        onValueChange={setExampleLanguage}
+      <PhraseHelpPopoverContent
+        sourceText="with calm"
+        targetText="con calma"
+        rationale="You may see this again when it fits the page."
+        sentence="Read with calm when the page feels dense."
       />
-      <div className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm">
-        <IkIcon
-          name={exampleLanguage === "english" ? "message" : "translate"}
-          className="mt-0.5 shrink-0 text-muted-foreground"
-        />
-        <span>{exampleText}</span>
-      </div>
-      <footer className="flex items-center justify-between gap-3 border-t pt-4">
-        <Button type="button" variant="link" size="sm" className="h-auto px-0">
-          <IkIcon name="close" dataIcon="inline-start" />
-          Close help
-        </Button>
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit
-        </span>
-      </footer>
     </PopoverFrame>
   );
 }
 
 function SentenceHelpPopover() {
-  const [sentenceLanguage, setSentenceLanguage] =
-    useState<ExampleLanguage>("spanish");
-  const [detailsActive, setDetailsActive] = useState(false);
-  const visibleSentenceText =
-    sentenceLanguage === "spanish"
-      ? "Unos minutos de lectura pueden hacer que el dia se sienta mas lento."
-      : "A few minutes of lectura can make the day feel slower.";
-
   return (
     <PopoverFrame className="top-[120px] md:left-auto md:right-8 md:w-[440px]">
-      <header className="flex items-start gap-2">
-        <IkIcon name="book" className="mt-1 text-muted-foreground" />
-        <h3 className="min-w-0 flex-1 text-base font-medium">Sentence help</h3>
-        <Badge>optional</Badge>
-        <RationaleHoverAction aria-label="Why sentence help appears">
-          Uses OpenAI only when enabled.
-        </RationaleHoverAction>
-        <PopoverCloseButton />
-      </header>
-      <LanguageTabs
-        ariaLabel="Sentence language"
-        value={sentenceLanguage}
-        onValueChange={setSentenceLanguage}
+      <SentenceHelpPopoverContent
+        sourceText="A few minutes of lectura can make the day feel slower."
+        translatedText="Unos minutos de lectura pueden hacer que el dia se sienta mas lento."
+        learningNote={{
+          summary: "Puede + infinitive expresses something can happen.",
+          grammarFocus: "Puede + infinitive expresses something can happen."
+        }}
       />
-      <SentenceBlock
-        label={sentenceLanguage === "spanish" ? "Spanish" : "English"}
-        text={visibleSentenceText}
-      />
-      <SentenceBlock label="Why this helps" text="Puede + infinitive expresses something can happen." />
-      <div className="flex flex-nowrap justify-center gap-2">
-        <Button
-          variant={sentenceLanguage === "spanish" ? "secondary" : "outline"}
-          size="sm"
-          className={
-            sentenceLanguage === "spanish"
-              ? undefined
-              : INACTIVE_STATUS_BUTTON_CLASS
-          }
-          aria-pressed={sentenceLanguage === "spanish"}
-          onClick={() => setSentenceLanguage("spanish")}
-        >
-          <IkIcon name="translate" dataIcon="inline-start" />
-          Translation
-        </Button>
-        <Button
-          variant={sentenceLanguage === "english" ? "secondary" : "outline"}
-          size="sm"
-          className={
-            sentenceLanguage === "english"
-              ? undefined
-              : INACTIVE_STATUS_BUTTON_CLASS
-          }
-          aria-pressed={sentenceLanguage === "english"}
-          onClick={() => setSentenceLanguage("english")}
-        >
-          <IkIcon name="document" dataIcon="inline-start" />
-          Original
-        </Button>
-        <Button
-          variant={detailsActive ? "secondary" : "outline"}
-          size="sm"
-          className={detailsActive ? undefined : INACTIVE_STATUS_BUTTON_CLASS}
-          aria-pressed={detailsActive}
-          onClick={() => setDetailsActive(true)}
-        >
-          <IkIcon name="info" dataIcon="inline-start" />
-          Details
-        </Button>
-      </div>
-      <footer className="flex items-center justify-between gap-3 border-t pt-4 text-sm">
-        <Button type="button" variant="link" size="sm" className="h-auto px-0">
-          <IkIcon name="close" dataIcon="inline-start" />
-          Close help
-        </Button>
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <ImmersionLogo className="size-5 rounded-xl" /> ImmersionKit
-        </span>
-      </footer>
     </PopoverFrame>
-  );
-}
-
-function PopoverCloseButton({ className }: { className?: string }) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      aria-label="Close help"
-      className={className}
-    >
-      <IkIcon name="close" />
-    </Button>
-  );
-}
-
-function RationaleHoverAction({
-  children,
-  ...triggerProps
-}: {
-  children: ReactNode;
-} & Pick<ComponentProps<typeof Button>, "aria-label">) {
-  return (
-    <HoverCard openDelay={10} closeDelay={100}>
-      <HoverCardTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          {...triggerProps}
-        >
-          <IkIcon name="info" />
-        </Button>
-      </HoverCardTrigger>
-      <HoverCardContent
-        align="end"
-        side="top"
-        className="flex w-64 gap-2 p-3 text-xs text-muted-foreground"
-      >
-        <IkIcon name="info" className="mt-0.5 shrink-0" />
-        <span>{children}</span>
-      </HoverCardContent>
-    </HoverCard>
-  );
-}
-
-function LanguageTabs({
-  ariaLabel,
-  value,
-  onValueChange
-}: {
-  ariaLabel: string;
-  value: ExampleLanguage;
-  onValueChange: (value: ExampleLanguage) => void;
-}) {
-  return (
-    <Tabs
-      aria-label={ariaLabel}
-      className="w-full"
-      onValueChange={(nextValue) => {
-        if (nextValue === "spanish" || nextValue === "english") {
-          onValueChange(nextValue);
-        }
-      }}
-      value={value}
-    >
-      <TabsList className="h-8 w-full justify-start p-0" variant="line">
-        <TabsTrigger
-          className="flex-none px-2.5 text-xs"
-          onClick={() => onValueChange("spanish")}
-          value="spanish"
-        >
-          Spanish
-        </TabsTrigger>
-        <TabsTrigger
-          className="flex-none px-2.5 text-xs"
-          onClick={() => onValueChange("english")}
-          value="english"
-        >
-          English
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
   );
 }
 

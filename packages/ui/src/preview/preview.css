@@ -1,161 +1,183 @@
 :root {
-  color: #06183d;
-  background: #eef4f8;
-  font-family: "Inter", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  color: hsl(224 28% 12%);
+  background: hsl(210 22% 94%);
+  font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace,
+    SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 body {
   margin: 0;
 }
 
-.ik-preview-shell {
+.ik-workshop-shell {
   display: grid;
-  gap: 32px;
-  padding: 28px;
+  gap: 28px;
+  padding: 24px;
 }
 
-.ik-preview-header {
+.ik-workshop-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px 20px;
-  border: 1px solid rgba(6, 24, 61, 0.1);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 50px rgba(6, 24, 61, 0.08);
+  padding: 16px 18px;
+  border: 1px solid hsl(224 18% 82%);
+  background: hsl(0 0% 100% / 88%);
+  box-shadow: 0 14px 40px hsl(224 20% 20% / 10%);
   backdrop-filter: blur(18px);
 }
 
-.ik-preview-header p,
-.ik-preview-header h1,
-.ik-preview-section-heading h2,
-.ik-preview-section-heading p,
-.ik-preview-card h3,
-.ik-preview-live-card h3 {
+.ik-workshop-header p,
+.ik-workshop-header h1,
+.ik-workshop-section-heading h2,
+.ik-workshop-section-heading p,
+.ik-workshop-card h3,
+.ik-workshop-card p {
   margin: 0;
 }
 
-.ik-preview-header p {
-  color: #00897f;
-  font-size: 0.78rem;
-  font-weight: 850;
-  letter-spacing: 0.12em;
+.ik-workshop-header p {
+  color: hsl(178 70% 28%);
+  font-size: 0.76rem;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
-.ik-preview-header h1 {
+.ik-workshop-header h1 {
   margin-top: 4px;
-  font-size: 1.8rem;
+  font-size: 1.55rem;
   line-height: 1.1;
 }
 
-.ik-preview-header nav {
+.ik-workshop-header nav,
+.ik-workshop-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
-.ik-preview-header a {
-  padding: 9px 12px;
-  border: 1px solid #dfe6ef;
-  border-radius: 999px;
-  color: #06183d;
-  background: #fff;
-  font-weight: 800;
+.ik-workshop-header a,
+.ik-workshop-card-actions a {
+  padding: 8px 10px;
+  border: 1px solid hsl(224 18% 86%);
+  color: hsl(224 28% 12%);
+  background: hsl(0 0% 100%);
+  font-size: 0.82rem;
+  font-weight: 700;
   text-decoration: none;
 }
 
-.ik-preview-section {
+.ik-workshop-section {
   display: grid;
-  gap: 18px;
+  gap: 16px;
+  scroll-margin-top: 110px;
 }
 
-.ik-preview-section-heading {
+.ik-workshop-section-heading {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
-.ik-preview-section-heading h2 {
-  font-size: 1.35rem;
+.ik-workshop-section-heading h2 {
+  font-size: 1.3rem;
 }
 
-.ik-preview-section-heading p {
-  color: #63708a;
+.ik-workshop-section-heading p,
+.ik-workshop-card header p {
+  color: hsl(224 12% 40%);
 }
 
-.ik-preview-grid {
+.ik-workshop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 18px;
+  gap: 20px;
 }
 
-.ik-preview-grid--wide {
-  grid-template-columns: 1fr;
+.ik-workshop-card {
+  overflow: clip;
+  border: 1px solid hsl(224 18% 84%);
+  background: hsl(0 0% 100%);
+  box-shadow: 0 18px 48px hsl(224 20% 20% / 8%);
+  scroll-margin-top: 116px;
 }
 
-.ik-preview-card,
-.ik-preview-live-card {
-  overflow: hidden;
-  border: 1px solid rgba(6, 24, 61, 0.1);
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 20px 58px rgba(6, 24, 61, 0.08);
-}
-
-.ik-preview-card header,
-.ik-preview-live-card header {
+.ik-workshop-card > header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   padding: 14px 16px;
-  border-bottom: 1px solid #e8eef5;
+  border-bottom: 1px solid hsl(224 18% 88%);
 }
 
-.ik-preview-card span {
-  color: #63708a;
-  font-size: 0.78rem;
+.ik-workshop-card h3 {
+  font-size: 1rem;
 }
 
-.ik-preview-card img {
-  display: block;
-  width: 100%;
-  height: 420px;
-  object-fit: contain;
-  background: #f7fafd;
+.ik-workshop-viewport {
+  overflow: auto;
+  background: hsl(210 22% 96%);
 }
 
-.ik-preview-card--wide img {
-  height: auto;
-  max-height: 820px;
-}
-
-.ik-preview-live-stack {
+.ik-workshop-viewport[data-viewport="popup"] {
   display: grid;
-  gap: 24px;
+  justify-content: start;
+  padding: 18px;
 }
 
-.ik-preview-live-viewport {
-  overflow: hidden;
-  background: #f6f9fc;
+.ik-workshop-viewport[data-viewport="popup"] > [data-ik-frame="popup"] {
+  width: 392px;
 }
 
-@media (max-width: 720px) {
-  .ik-preview-shell {
-    padding: 16px;
+.ik-workshop-viewport[data-viewport="desktop"] {
+  min-height: 760px;
+}
+
+.ik-workshop-viewport[data-viewport="mobile"] {
+  width: min(390px, 100%);
+  max-height: 760px;
+  border-right: 1px solid hsl(224 18% 84%);
+}
+
+.ik-workshop-viewport[data-viewport="popover"] {
+  display: grid;
+  justify-content: start;
+  padding: 18px;
+}
+
+.ik-workshop-viewport[data-viewport="popover"] > * {
+  width: min(420px, calc(100vw - 72px));
+}
+
+.ik-workshop-viewport[data-viewport="free"] {
+  padding: 0;
+}
+
+.ik-component-catalog {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+@media (max-width: 760px) {
+  .ik-workshop-shell {
+    padding: 14px;
   }
 
-  .ik-preview-header {
-    position: static;
+  .ik-workshop-header,
+  .ik-workshop-card > header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .ik-preview-grid {
-    grid-template-columns: 1fr;
+  .ik-workshop-header {
+    position: static;
+  }
+
+  .ik-workshop-section,
+  .ik-workshop-card {
+    scroll-margin-top: 16px;
   }
 }
