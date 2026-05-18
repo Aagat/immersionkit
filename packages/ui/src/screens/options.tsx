@@ -47,8 +47,7 @@ import {
   ImmersionFrame,
   ImmersionLogo,
   InlineMark,
-  SentenceBlock,
-  StatusBadge
+  SentenceBlock
 } from "./screen-primitives";
 import {
   type MetricIconName,
@@ -198,9 +197,6 @@ export function ExtensionOptions({
                 learningPath={learningPath}
               />
             </TabsContent>
-            <TabsContent value="Stats" className="m-0">
-              <OptionsStatsPanel stats={stats} />
-            </TabsContent>
             <TabsContent value="Sites" className="m-0">
               <OptionsSitesPanel
                 siteSummary={siteSummary}
@@ -272,7 +268,7 @@ function OptionsHeader({
   const copy = {
     Overview: [
       "Options",
-      "Quick status across reading, curriculum, stats, and sites."
+      "Quick status across reading, curriculum, sites, and local progress."
     ],
     Reading: [
       "Reading",
@@ -280,11 +276,7 @@ function OptionsHeader({
     ],
     Curriculum: [
       "Curriculum",
-      "Current focus, reading band, and learning path."
-    ],
-    Stats: [
-      "Stats",
-      "Local progress built from supported pages."
+      "Roadmap through the current focus and next band."
     ],
     Sites: [
       "Sites",
@@ -378,10 +370,10 @@ function OptionsOverviewPanel({
           <CardTitle>Overview</CardTitle>
           <CardDescription>
             The main loop stays in the browser; these pages control pace,
-            curriculum, local stats, and site behavior.
+            curriculum, local progress, and site behavior.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
+        <CardContent className="grid gap-3 md:grid-cols-3">
           <OverviewTile
             title="Reading"
             value={`${discoveryRatePercent}% new word pace`}
@@ -403,14 +395,6 @@ function OptionsOverviewPanel({
             onAction={() => onOpenSection("Curriculum")}
           />
           <OverviewTile
-            title="Stats"
-            value={`${stats?.total ?? 0} tracked`}
-            detail={`${stats?.comfortable ?? 0} comfortable, ${stats?.practice ?? 0} in practice.`}
-            icon="check"
-            action="Open Stats"
-            onAction={() => onOpenSection("Stats")}
-          />
-          <OverviewTile
             title="Sites"
             value={`${pausedSiteCount} paused`}
             detail={`${savedSiteCount} saved site choices. ${siteSummary ?? ""}`.trim()}
@@ -420,31 +404,34 @@ function OptionsOverviewPanel({
           />
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Preview state</CardTitle>
-          <CardDescription>
-            Quick release-facing checks before final screenshots.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <CompactMetric
-            label="Reading band"
-            value={checkpoint?.nextBand ?? "Next band"}
-            icon="band"
-          />
-          <CompactMetric
-            label="Sentence help"
-            value={sentenceHelpLabel}
-            icon="translate"
-          />
-          <CompactMetric
-            label="Site choices"
-            value={savedSiteCount}
-            icon="link"
-          />
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-4">
+        <LearningSnapshotCard stats={stats} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Preview state</CardTitle>
+            <CardDescription>
+              Quick release-facing checks before final screenshots.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <CompactMetric
+              label="Reading band"
+              value={checkpoint?.nextBand ?? "Next band"}
+              icon="band"
+            />
+            <CompactMetric
+              label="Sentence help"
+              value={sentenceHelpLabel}
+              icon="translate"
+            />
+            <CompactMetric
+              label="Site choices"
+              value={savedSiteCount}
+              icon="link"
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -581,19 +568,23 @@ function OptionsCurriculumPanel({
   currentFocus,
   learningPath = []
 }: Pick<ExtensionOptionsProps, "checkpoint" | "currentFocus" | "learningPath">) {
+  const activeLevel = learningPath.find((level) => level.active);
+
   return (
     <div className="flex flex-col gap-4">
-      <ReadingBandCard checkpoint={checkpoint} />
-      {currentFocus ? <CurrentFocusCard focus={currentFocus} /> : null}
-      <LearningPathView path={learningPath} />
+      <CurrentFocusSummaryCard
+        checkpoint={checkpoint}
+        currentFocus={currentFocus}
+        activeLevel={activeLevel}
+      />
+      <UnlockRoadmapCard
+        checkpoint={checkpoint}
+        currentFocus={currentFocus}
+        learningPath={learningPath}
+        activeLevel={activeLevel}
+      />
     </div>
   );
-}
-
-function OptionsStatsPanel({
-  stats
-}: Pick<ExtensionOptionsProps, "stats">) {
-  return <LearningSnapshotCard stats={stats} />;
 }
 
 function OptionsSitesPanel({
@@ -663,49 +654,6 @@ function DensityPreview({
         areas are skipped.
       </p>
     </div>
-  );
-}
-
-function ReadingBandCard({
-  checkpoint
-}: Pick<ExtensionOptionsProps, "checkpoint">) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Reading band</CardTitle>
-        <CardDescription>
-          Local reading evidence widens the active range.
-        </CardDescription>
-        <CardAction>
-          <Badge variant="outline">
-            {checkpoint?.progressLabel ?? "Progress starts as you read"}
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <Progress value={checkpoint?.progressValue ?? 0} />
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">{checkpoint?.currentBand ?? "Starting"}</span>
-          <IkIcon name="chevron" className="text-muted-foreground" />
-          <span className="font-medium">{checkpoint?.nextBand ?? "Next band"}</span>
-        </div>
-        {checkpoint?.description ? (
-          <p className="text-sm text-muted-foreground">{checkpoint.description}</p>
-        ) : null}
-        <Button
-          variant="outline"
-          className="w-fit"
-          disabled={!checkpoint?.canWiden || checkpoint.isWidening}
-          onClick={checkpoint?.onWiden}
-        >
-          <IkIcon
-            name={checkpoint?.canWiden ? "band" : "lock"}
-            dataIcon="inline-start"
-          />
-          {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
-        </Button>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -803,132 +751,424 @@ function CompactMetric({
   );
 }
 
-function CurrentFocusCard({
-  focus
-}: {
-  focus: NonNullable<ExtensionOptionsProps["currentFocus"]>;
+type CurriculumLevel = NonNullable<ExtensionOptionsProps["learningPath"]>[number];
+type RoadmapState = "completed" | "current" | "gate" | "locked" | "later";
+type RoadmapMilestoneData = {
+  id: string;
+  state: RoadmapState;
+  label: string;
+  badge: string;
+  title: string;
+  detail: string;
+  showProgress?: boolean;
+};
+
+function CurrentFocusSummaryCard({
+  checkpoint,
+  currentFocus,
+  activeLevel
+}: Pick<ExtensionOptionsProps, "checkpoint" | "currentFocus"> & {
+  activeLevel?: CurriculumLevel;
 }) {
+  const currentTitle = currentFocus
+    ? `${currentFocus.levelLabel}: ${currentFocus.learnerTitle}`
+    : "Start reading to set a focus";
+  const currentBand = currentFocus?.bandLabel ?? checkpoint?.currentBand ?? "Starting";
+  const wordSummary = compactSummary(
+    currentFocus?.allowedPartOfSpeechPolicy ?? activeLevel?.vocabularySummary,
+    "Word categories unlock from safe local evidence."
+  ).replace(/\s+only$/i, "");
+  const phraseSummary = compactSummary(
+    activeLevel?.phraseSummary,
+    "Fixed reusable chunks."
+  );
+  const grammarSummary = compactSummary(
+    activeLevel?.grammarSummary ?? currentFocus?.grammarFocusLabels.join(", "),
+    "Core sentence patterns."
+  );
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          {focus.levelLabel}: {focus.learnerTitle}
-        </CardTitle>
-        <CardDescription>{focus.bandLabel}</CardDescription>
+        <CardTitle>Current focus</CardTitle>
+        <CardDescription>
+          {currentTitle}
+        </CardDescription>
         <CardAction>
-          <StatusBadge>Current focus</StatusBadge>
+          <Badge variant="outline">{currentBand}</Badge>
         </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{focus.shortGoal}</p>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-          <FocusList title="Words" items={focus.wordFocusLabels} />
-          <FocusList title="Examples" items={focus.wordExampleLabels ?? []} />
-          <FocusList title="Word patterns" items={focus.wordPatternLabels} />
-          <FocusList title="Phrases" items={focus.phraseFocusExamples} />
-          <FocusList title="Grammar" items={focus.grammarFocusLabels} />
+      <CardContent className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,0.75fr))]">
+        <div className="min-w-0 rounded-lg border bg-background p-3">
+          <h3 className="text-sm font-medium">{currentBand}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {currentFocus?.shortGoal ?? "Supported pages create the first local evidence."}
+          </p>
         </div>
+        <FocusCategory label="Words" value={wordSummary} />
+        <FocusCategory label="Phrases" value={phraseSummary} />
+        <FocusCategory label="Grammar" value={grammarSummary} />
       </CardContent>
-      <CardFooter className="grid gap-3 border-t pt-3 md:grid-cols-2">
-        <FocusFooter label="Sentence style" value={focus.sentenceFocusLabel} />
-        <FocusFooter label="Next focus" value={focus.nextFocusPreview} />
-      </CardFooter>
     </Card>
   );
 }
 
-function FocusList({ title, items }: { title: string; items: readonly string[] }) {
-  return (
-    <div className="rounded-lg bg-muted/40 p-3">
-      <strong className="block text-sm">{title}</strong>
-      <span className="text-sm text-muted-foreground">
-        {items.length > 0 ? items.slice(0, 5).join(", ") : "Review and consolidation"}
-      </span>
-    </div>
-  );
-}
-
-function FocusFooter({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <strong className="block text-sm">{label}</strong>
-      <span className="text-sm text-muted-foreground">{value}</span>
-    </div>
-  );
-}
-
-function LearningPathView({
-  path
-}: {
-  path: NonNullable<ExtensionOptionsProps["learningPath"]>;
-}) {
-  if (path.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="flex flex-col gap-3" aria-label="Learning path">
-      <div>
-        <h2 className="text-base font-medium">Learning path</h2>
-        <p className="text-sm text-muted-foreground">
-          Reading levels widen vocabulary, phrases, grammar, and sentence complexity.
-        </p>
-      </div>
-      <div className="grid gap-3">
-        {path.map((level) => (
-          <details
-            key={level.levelId}
-            className="rounded-lg border bg-card p-4 text-card-foreground"
-            open={level.active}
-          >
-            <summary className="flex cursor-pointer items-center justify-between gap-3">
-              <span className="min-w-0">
-                <strong className="block truncate">{level.levelLabel}</strong>
-                <small className="text-muted-foreground">{level.stageSummary}</small>
-              </span>
-              <Badge
-                variant={level.active ? "default" : level.unlocked ? "outline" : "secondary"}
-              >
-                {level.active ? "Now" : level.unlocked ? "Open" : "Later"}
-              </Badge>
-            </summary>
-            <div className="mt-3 grid gap-3">
-              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-                <PathDetail label="Words" value={level.vocabularySummary} />
-                <PathDetail label="Phrases" value={level.phraseSummary} />
-                <PathDetail label="Grammar" value={level.grammarSummary} />
-                <PathDetail label="Sentences" value={level.sentenceSummary} />
-                <PathDetail label="Boundary step" value={level.checkpointSummary} />
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {level.bands.map((band) => (
-                  <div
-                    key={band.bandId}
-                    className={cn(
-                      "rounded-lg border bg-background p-3",
-                      band.active && "border-primary/50"
-                    )}
-                  >
-                    <strong className="block text-sm">{band.bandLabel}</strong>
-                    <span className="text-sm text-muted-foreground">{band.learnerTitle}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </details>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function PathDetail({ label, value }: { label: string; value: string }) {
+function FocusCategory({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg border bg-background p-3">
-      <strong className="block text-sm">{label}</strong>
-      <span className="text-sm text-muted-foreground">{value}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <p className="mt-1 text-sm font-medium">{value}</p>
     </div>
   );
+}
+
+function UnlockRoadmapCard({
+  checkpoint,
+  currentFocus,
+  learningPath,
+  activeLevel
+}: {
+  checkpoint?: ExtensionOptionsProps["checkpoint"];
+  currentFocus?: ExtensionOptionsProps["currentFocus"];
+  learningPath: NonNullable<ExtensionOptionsProps["learningPath"]>;
+  activeLevel?: CurriculumLevel;
+}) {
+  const milestones = buildRoadmapMilestones({
+    checkpoint,
+    currentFocus,
+    learningPath,
+    activeLevel
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Roadmap</CardTitle>
+        <CardDescription>
+          Reading bands unlock through local evidence.
+        </CardDescription>
+        <CardAction>
+          <Badge variant="outline">
+            {checkpoint?.progressLabel ?? "Progress starts as you read"}
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <ol className="relative flex flex-col gap-3">
+          <span
+            aria-hidden="true"
+            className="absolute left-8 top-5 bottom-5 w-px bg-border"
+          />
+          {milestones.map((milestone) => (
+            <RoadmapMilestone
+              key={milestone.id}
+              milestone={milestone}
+              checkpoint={checkpoint}
+            />
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RoadmapMilestone({
+  milestone,
+  checkpoint
+}: {
+  milestone: RoadmapMilestoneData;
+  checkpoint?: ExtensionOptionsProps["checkpoint"];
+}) {
+  const isGate = milestone.state === "gate";
+
+  return (
+    <li
+      className={cn(
+        "relative grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-4",
+        isGate ? "min-h-24" : "min-h-20"
+      )}
+    >
+      <div className="relative flex justify-center">
+        <RoadmapMarker
+          state={milestone.state}
+          progressLabel={isGate ? compactProgressMarkerLabel(milestone.badge) : undefined}
+        />
+      </div>
+      <div
+        className={cn(
+          "rounded-lg border bg-background p-3",
+          milestone.state === "current" && "border-primary/50"
+        )}
+      >
+        {isGate ? (
+          <div className="grid gap-4 md:grid-cols-[9rem_minmax(0,1fr)_minmax(16rem,0.7fr)] md:items-center">
+            <RoadmapMilestoneCopy milestone={milestone} showBadge={false} />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <Progress value={checkpoint?.progressValue ?? 0} />
+                <span className="shrink-0 text-sm text-muted-foreground">
+                  {milestone.badge}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                disabled={!checkpoint?.canWiden || checkpoint.isWidening}
+                onClick={checkpoint?.onWiden}
+              >
+                <IkIcon
+                  name={checkpoint?.canWiden ? "band" : "lock"}
+                  dataIcon="inline-start"
+                />
+                {checkpoint?.isWidening ? "Widening..." : "Widen reading band"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-[9rem_minmax(0,1fr)] md:items-center">
+            <RoadmapMilestoneCopy milestone={milestone} />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function RoadmapMilestoneCopy({
+  milestone,
+  showBadge = true
+}: {
+  milestone: RoadmapMilestoneData;
+  showBadge?: boolean;
+}) {
+  return (
+    <>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-medium">{milestone.label}</h3>
+          {showBadge ? (
+            <Badge
+              variant={
+                milestone.state === "current"
+                  ? "default"
+                  : milestone.state === "locked" || milestone.state === "later"
+                    ? "secondary"
+                    : "outline"
+              }
+            >
+              {milestone.badge}
+            </Badge>
+          ) : null}
+        </div>
+      </div>
+      <div className="min-w-0 md:border-l md:pl-5">
+        <p className="text-sm font-medium">{milestone.title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{milestone.detail}</p>
+      </div>
+    </>
+  );
+}
+
+function RoadmapMarker({
+  state,
+  progressLabel
+}: {
+  state: RoadmapState;
+  progressLabel?: string;
+}) {
+  const icon: MetricIconName =
+    state === "completed"
+      ? "check"
+      : state === "locked" || state === "later"
+        ? "lock"
+        : state === "gate"
+          ? "band"
+          : "spark";
+
+  return (
+    <span
+      className={cn(
+        "relative z-10 flex items-center justify-center rounded-full border bg-background",
+        state === "gate" ? "size-14" : "size-9",
+        state === "current" && "border-primary bg-primary text-primary-foreground",
+        state === "completed" && "bg-primary text-primary-foreground",
+        (state === "locked" || state === "later") && "bg-muted text-muted-foreground",
+        state === "gate" && "border-primary/50"
+      )}
+    >
+      {state === "gate" && progressLabel ? (
+        <span className="text-sm font-medium">{progressLabel}</span>
+      ) : (
+        <IkIcon name={icon} />
+      )}
+    </span>
+  );
+}
+
+function buildRoadmapMilestones({
+  checkpoint,
+  currentFocus,
+  learningPath,
+  activeLevel
+}: {
+  checkpoint?: ExtensionOptionsProps["checkpoint"];
+  currentFocus?: ExtensionOptionsProps["currentFocus"];
+  learningPath: NonNullable<ExtensionOptionsProps["learningPath"]>;
+  activeLevel?: CurriculumLevel;
+}) {
+  const flattenedBands = learningPath.flatMap((level) =>
+    level.bands.map((band) => ({
+      band
+    }))
+  );
+
+  if (flattenedBands.length === 0) {
+    return buildFallbackRoadmapMilestones({ checkpoint, currentFocus, activeLevel });
+  }
+
+  const activeIndex = flattenedBands.findIndex(({ band }) => band.active);
+  const firstLockedIndex = flattenedBands.findIndex(
+    ({ band }, index) => !band.unlocked && index > activeIndex
+  );
+  const milestones: RoadmapMilestoneData[] = flattenedBands.flatMap(({ band }, index) => {
+    const isCurrent = band.active;
+    const isCompleted = band.unlocked && !band.active;
+    const isNextLocked = index === firstLockedIndex;
+    const state: RoadmapState = isCurrent
+      ? "current"
+      : isCompleted
+        ? "completed"
+        : isNextLocked
+          ? "locked"
+          : "later";
+    const badge = isCurrent
+      ? "Now"
+      : isCompleted
+        ? "Completed"
+        : isNextLocked
+          ? "Locked"
+          : "Later";
+    const title = isCurrent
+      ? currentFocus?.learnerTitle ?? band.learnerTitle
+      : band.learnerTitle;
+    const detail = isCurrent
+      ? currentFocus?.shortGoal ?? band.learnerSummary
+      : band.learnerSummary;
+    const rows: RoadmapMilestoneData[] = [
+      {
+        id: band.bandId,
+        state,
+        label: band.bandLabel,
+        badge,
+        title,
+        detail
+      }
+    ];
+
+    if (isCurrent) {
+      rows.push(createEvidenceGateMilestone(checkpoint));
+    }
+
+    return rows;
+  });
+
+  if (milestones.some((milestone) => milestone.state === "gate")) {
+    return milestones;
+  }
+
+  const insertionIndex =
+    firstLockedIndex > 0 ? firstLockedIndex : Math.min(1, milestones.length);
+  return [
+    ...milestones.slice(0, insertionIndex),
+    createEvidenceGateMilestone(checkpoint),
+    ...milestones.slice(insertionIndex)
+  ];
+}
+
+function buildFallbackRoadmapMilestones({
+  checkpoint,
+  currentFocus,
+  activeLevel
+}: {
+  checkpoint?: ExtensionOptionsProps["checkpoint"];
+  currentFocus?: ExtensionOptionsProps["currentFocus"];
+  activeLevel?: CurriculumLevel;
+}) {
+  const activeBand = findActiveBand(activeLevel);
+  const completedBand = findCompletedBand(activeLevel);
+
+  return [
+    {
+      id: "completed-band",
+      state: "completed" as const,
+      label: completedBand?.bandLabel ?? "1A",
+      badge: "Completed",
+      title: completedBand?.learnerTitle ?? "First contact",
+      detail: completedBand?.learnerSummary ?? "Foundation material is already open."
+    },
+    {
+      id: "current-band",
+      state: "current" as const,
+      label: activeBand?.bandLabel ?? shortBandLabel(currentFocus?.bandLabel ?? checkpoint?.currentBand) ?? "1B",
+      badge: "Now",
+      title: currentFocus?.learnerTitle ?? activeBand?.learnerTitle ?? "Current focus",
+      detail: currentFocus?.shortGoal ?? activeBand?.learnerSummary ?? "Keep reading supported pages."
+    },
+    createEvidenceGateMilestone(checkpoint),
+    {
+      id: "locked-band",
+      state: "locked" as const,
+      label: shortBandLabel(checkpoint?.nextBand) ?? "2A",
+      badge: "Locked",
+      title: "Next band",
+      detail: "Unlocks when the evidence gate is ready."
+    },
+    {
+      id: "later-level",
+      state: "later" as const,
+      label: "Level 2",
+      badge: "Later",
+      title: "Broader contexts",
+      detail: "Later levels widen vocabulary, phrases, and sentence complexity."
+    }
+  ];
+}
+
+function createEvidenceGateMilestone(
+  checkpoint?: ExtensionOptionsProps["checkpoint"]
+) {
+  return {
+    id: "evidence-gate",
+    state: "gate" as const,
+    label: "Evidence gate",
+    badge: checkpoint?.progressLabel ?? "0%",
+    title: `${checkpoint?.currentBand ?? "Current band"} -> ${checkpoint?.nextBand ?? "Next band"}`,
+    detail: checkpoint?.description ?? "Read supported pages to widen the active band.",
+    showProgress: true
+  };
+}
+
+function findActiveBand(level?: CurriculumLevel) {
+  return level?.bands.find((band) => band.active);
+}
+
+function findCompletedBand(level?: CurriculumLevel) {
+  return level?.bands.find((band) => band.unlocked && !band.active);
+}
+
+function shortBandLabel(label?: string) {
+  return label?.replace(/^Band\s+/i, "").trim();
+}
+
+function compactSummary(value: string | undefined, fallback: string) {
+  const summary = value?.trim() || fallback;
+  return summary.replace(/\.$/, "");
+}
+
+function compactProgressMarkerLabel(label: string) {
+  const trimmed = label.trim();
+  return /^\d{1,3}%$/.test(trimmed) ? trimmed : undefined;
 }
 
 function OptionsTranslationPanel({

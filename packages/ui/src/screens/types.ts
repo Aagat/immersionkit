@@ -5,7 +5,6 @@ export type OptionsSection =
   | "Overview"
   | "Reading"
   | "Curriculum"
-  | "Stats"
   | "Sites"
   | "Translation"
   | "Advanced";
@@ -35,7 +34,6 @@ export const settingsTabs: OptionsSection[] = [
   "Overview",
   "Reading",
   "Curriculum",
-  "Stats",
   "Sites",
   "Translation",
   "Advanced"

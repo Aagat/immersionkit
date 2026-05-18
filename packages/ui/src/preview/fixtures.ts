@@ -55,10 +55,10 @@ export const optionsStats: NonNullable<ExtensionOptionsProps["stats"]> = {
 };
 
 export const checkpoint: NonNullable<ExtensionOptionsProps["checkpoint"]> = {
-  currentBand: "Band 1B",
-  nextBand: "Band 2A",
+  currentBand: "Level 1B",
+  nextBand: "Level 1C",
   progressValue: 68,
-  progressLabel: "68%",
+  progressLabel: "4 reading evidence items left",
   description:
     "Local reading evidence is building across words, phrases, and sentence assists.",
   canWiden: false,
@@ -67,7 +67,7 @@ export const checkpoint: NonNullable<ExtensionOptionsProps["checkpoint"]> = {
 
 export const currentFocus: NonNullable<ExtensionOptionsProps["currentFocus"]> = {
   levelLabel: "False beginner",
-  bandLabel: "Band 1B",
+  bandLabel: "Level 1B",
   learnerTitle: "Everyday reading support",
   shortGoal: "Keep pages readable while adding reliable Spanish contact.",
   wordFocusLabels: ["daily nouns", "stable adjectives", "common adverbs"],
@@ -83,7 +83,7 @@ export const currentFocus: NonNullable<ExtensionOptionsProps["currentFocus"]> = 
 export const learningPath: NonNullable<ExtensionOptionsProps["learningPath"]> = [
   {
     levelId: "level-1",
-    levelLabel: "Level 1",
+    levelLabel: "Foundations",
     active: true,
     unlocked: true,
     stageSummary: "Foundation reading",
@@ -95,25 +95,36 @@ export const learningPath: NonNullable<ExtensionOptionsProps["learningPath"]> = 
     bands: [
       {
         bandId: "level-1a",
-        bandLabel: "1A",
-        learnerTitle: "First contact",
-        learnerSummary: "Safest words and fixed phrases.",
+        bandLabel: "Level 1A",
+        learnerTitle: "First Spanish on the page",
+        learnerSummary:
+          "Concrete everyday words, familiar-looking pairs, and a few useful short phrases.",
         active: false,
         unlocked: true
       },
       {
         bandId: "level-1b",
-        bandLabel: "1B",
-        learnerTitle: "Daily reading",
-        learnerSummary: "More everyday nouns and reusable phrases.",
+        bandLabel: "Level 1B",
+        learnerTitle: "Time, place, and familiar contexts",
+        learnerSummary:
+          "Places, days, time words, family, weather, and simple time/place phrases.",
         active: true,
         unlocked: true
+      },
+      {
+        bandId: "level-1c",
+        bandLabel: "Level 1C",
+        learnerTitle: "Foundation review before Level 2",
+        learnerSummary:
+          "Consolidate simple vocabulary and add easy word-family patterns.",
+        active: false,
+        unlocked: false
       }
     ]
   },
   {
     levelId: "level-2",
-    levelLabel: "Level 2",
+    levelLabel: "Everyday Patterns",
     active: false,
     unlocked: false,
     stageSummary: "Broader contexts",
@@ -125,9 +136,133 @@ export const learningPath: NonNullable<ExtensionOptionsProps["learningPath"]> = 
     bands: [
       {
         bandId: "level-2a",
-        bandLabel: "2A",
-        learnerTitle: "Broader pages",
-        learnerSummary: "More content domains after local evidence.",
+        bandLabel: "Level 2A",
+        learnerTitle: "A1 to A2 reading support",
+        learnerSummary:
+          "Routines, events, planning, comparison, and community words.",
+        active: false,
+        unlocked: false
+      },
+      {
+        bandId: "level-2b",
+        bandLabel: "Level 2B",
+        learnerTitle: "Everyday obligations and plans",
+        learnerSummary:
+          "Going to, have to, should, and common routine phrases.",
+        active: false,
+        unlocked: false
+      },
+      {
+        bandId: "level-2c",
+        bandLabel: "Level 2C",
+        learnerTitle: "Everyday pattern checkpoint",
+        learnerSummary:
+          "Review time anchors, comparison, and everyday sentence patterns.",
+        active: false,
+        unlocked: false
+      }
+    ]
+  },
+  {
+    levelId: "level-3",
+    levelLabel: "Narrative and Description",
+    active: false,
+    unlocked: false,
+    stageSummary: "A2 to early B1 reading support.",
+    vocabularySummary: "Narrative, cause/effect, time sequence, and descriptive vocabulary.",
+    phraseSummary: "Connectors, purpose chunks, and narrative phrases.",
+    grammarSummary: "When, because, used to, purpose, and progressive recognition.",
+    sentenceSummary: "Short connected contexts with light subordination.",
+    checkpointSummary: "Connected sentence meaning.",
+    bands: [
+      {
+        bandId: "level-3a",
+        bandLabel: "Level 3A",
+        learnerTitle: "Narrative links",
+        learnerSummary:
+          "Sequence, cause/effect, and short connected descriptions.",
+        active: false,
+        unlocked: false
+      },
+      {
+        bandId: "level-3b",
+        bandLabel: "Level 3B",
+        learnerTitle: "Past habits and descriptions",
+        learnerSummary:
+          "Used to, when, because, and light descriptive clauses.",
+        active: false,
+        unlocked: false
+      },
+      {
+        bandId: "level-3c",
+        bandLabel: "Level 3C",
+        learnerTitle: "Narrative checkpoint",
+        learnerSummary:
+          "Review connected sentence meaning before wider explanation prose.",
+        active: false,
+        unlocked: false
+      }
+    ]
+  },
+  {
+    levelId: "level-4",
+    levelLabel: "Connected Expression",
+    active: false,
+    unlocked: false,
+    stageSummary: "B1 to B2 reading support.",
+    vocabularySummary: "Explanation, opinion, evidence, process, and abstract vocabulary.",
+    phraseSummary: "Argument and explanation markers.",
+    grammarSummary: "Have been, present perfect, passive basics, conditionals, and concession.",
+    sentenceSummary: "Multi-clause explanation prose with overload controls.",
+    checkpointSummary: "Richer native prose and abstract reasoning.",
+    bands: [
+      {
+        bandId: "level-4a",
+        bandLabel: "Level 4A",
+        learnerTitle: "Explanation prose",
+        learnerSummary:
+          "Opinion, evidence, process, and abstract vocabulary.",
+        active: false,
+        unlocked: false
+      },
+      {
+        bandId: "level-4b",
+        bandLabel: "Level 4B",
+        learnerTitle: "Connected expression checkpoint",
+        learnerSummary:
+          "Present perfect, passive basics, conditionals, and concession.",
+        active: false,
+        unlocked: false
+      }
+    ]
+  },
+  {
+    levelId: "level-5",
+    levelLabel: "Broad Native Reading",
+    active: false,
+    unlocked: false,
+    stageSummary: "B2+ reading support.",
+    vocabularySummary: "Broad domain and specialized vocabulary.",
+    phraseSummary: "Discourse markers and dense native chunks.",
+    grammarSummary: "Embedded clauses, reported speech, advanced conditionals, and adaptive review.",
+    sentenceSummary: "Longer native sentences when ranking keeps them readable.",
+    checkpointSummary: "Adaptive review.",
+    bands: [
+      {
+        bandId: "level-5a",
+        bandLabel: "Level 5A",
+        learnerTitle: "Broad native contexts",
+        learnerSummary:
+          "Specialized vocabulary and dense native chunks.",
+        active: false,
+        unlocked: false
+      },
+      {
+        bandId: "level-5b",
+        bandLabel: "Level 5B",
+        learnerTitle: "Broad native reading",
+        learnerSummary:
+          "Adaptive review across long native sentences and weak points.",
         active: false,
         unlocked: false
       }

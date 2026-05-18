@@ -277,26 +277,12 @@ const scenarios: readonly WorkshopScenario[] = [
     title: "Options Curriculum",
     group: "Options",
     viewport: "desktop",
-    description: "Current focus, reading band, and learning path.",
+    description: "Curriculum roadmap with current focus and next band.",
     render: () => (
       <ExtensionOptions
         {...baseOptionsProps}
         initialSection="Curriculum"
         activeSection="Curriculum"
-      />
-    )
-  },
-  {
-    id: "options-stats",
-    title: "Options Stats",
-    group: "Options",
-    viewport: "desktop",
-    description: "Local reading progress snapshot.",
-    render: () => (
-      <ExtensionOptions
-        {...baseOptionsProps}
-        initialSection="Stats"
-        activeSection="Stats"
       />
     )
   },

@@ -66,7 +66,6 @@ type OptionsTab =
   | "overview"
   | "reading"
   | "curriculum"
-  | "stats"
   | "sites"
   | "translation"
   | "advanced";
@@ -480,10 +479,6 @@ function toUiOptionsSection(tab: OptionsTab): OptionsSection {
     return "Curriculum";
   }
 
-  if (tab === "stats") {
-    return "Stats";
-  }
-
   if (tab === "sites") {
     return "Sites";
   }
@@ -506,10 +501,6 @@ function toLocalOptionsTab(section: OptionsSection): OptionsTab {
 
   if (section === "Curriculum") {
     return "curriculum";
-  }
-
-  if (section === "Stats") {
-    return "stats";
   }
 
   if (section === "Sites") {
