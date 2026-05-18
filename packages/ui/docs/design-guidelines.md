@@ -46,6 +46,9 @@ mounting separate screens for each screenshot state.
   management.
 - Unsupported pages explain why controls are unavailable and preserve progress
   context.
+- Options Curriculum keeps long reading-band roadmaps focused: when more than
+  five bands exist, show the current window with gradient fades for hidden bands
+  and a reveal control for the full path.
 - Advanced diagnostics stay support-oriented and developer-facing.
 
 ## Copy Rules
