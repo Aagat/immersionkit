@@ -52,6 +52,9 @@
 }
 
 :root {
+    --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --font-sans: var(--font-mono);
+    --font-heading: var(--font-mono);
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -123,6 +126,12 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    }
+  html,
+  body,
+  #root,
+  [data-ik-frame] {
+    font-family: var(--font-mono);
     }
   body {
     @apply bg-background text-foreground;

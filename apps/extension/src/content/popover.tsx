@@ -91,6 +91,10 @@ const TRANSLATION_UNAVAILABLE_TEXT = "Translation not available.";
 
 const CONTENT_POPOVER_STYLES = `
   :host {
+    --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace,
+      SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+      monospace;
+    --font-heading: var(--font-mono);
     box-sizing: border-box;
     display: block;
     width: clamp(260px, 28vw, 340px);
@@ -101,8 +105,14 @@ const CONTENT_POPOVER_STYLES = `
     padding: 0;
     background: transparent;
     color: inherit;
+    font-family: var(--font-mono);
     outline: none;
     z-index: 2147483647;
+  }
+
+  :host *,
+  :host ::slotted(*) {
+    font-family: var(--font-mono);
   }
 
   :host([data-ik-popover-kind="sentence"]) {
