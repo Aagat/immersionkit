@@ -19,6 +19,8 @@
     "smoke:extension": "node tools/smoke/extension-runtime-smoke.mjs",
     "smoke:extension:build": "pnpm build:local-assets && pnpm smoke:extension",
     "smoke:extension:production": "pnpm build:production:local-assets && IMMERSIONKIT_EXPECT_PRODUCTION_BUILD=1 pnpm smoke:extension",
+    "smoke:preview": "node tools/smoke/public-preview-acceptance.mjs",
+    "smoke:preview:build": "pnpm build:local-assets && pnpm smoke:preview",
     "benchmark": "node tools/benchmarks/run-browser-validation-suite.mjs",
     "benchmark:validation": "pnpm benchmark",
     "benchmark:nlp-performance": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",
