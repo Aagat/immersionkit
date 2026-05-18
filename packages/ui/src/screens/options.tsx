@@ -833,12 +833,30 @@ function UnlockRoadmapCard({
   learningPath: NonNullable<ExtensionOptionsProps["learningPath"]>;
   activeLevel?: CurriculumLevel;
 }) {
+  const [showFullRoadmap, setShowFullRoadmap] = useState(false);
   const milestones = buildRoadmapMilestones({
     checkpoint,
     currentFocus,
     learningPath,
     activeLevel
   });
+  const bandCount = countLearningPathBands(learningPath);
+  const shouldCollapseRoadmap = bandCount > 5;
+  const visibleWindow = getRoadmapVisibleWindow({
+    milestones,
+    shouldCollapseRoadmap,
+    showFullRoadmap
+  });
+  const visibleMilestones = milestones.slice(
+    visibleWindow.start,
+    visibleWindow.end
+  );
+  const hasHiddenBefore =
+    shouldCollapseRoadmap && !showFullRoadmap && visibleWindow.start > 0;
+  const hasHiddenAfter =
+    shouldCollapseRoadmap &&
+    !showFullRoadmap &&
+    visibleWindow.end < milestones.length;
 
   return (
     <Card>
@@ -854,20 +872,59 @@ function UnlockRoadmapCard({
         </CardAction>
       </CardHeader>
       <CardContent>
-        <ol className="relative flex flex-col gap-3">
-          <span
-            aria-hidden="true"
-            className="absolute left-8 top-5 bottom-5 w-px bg-border"
-          />
-          {milestones.map((milestone) => (
-            <RoadmapMilestone
-              key={milestone.id}
-              milestone={milestone}
-              checkpoint={checkpoint}
+        <div className="relative overflow-hidden">
+          <ol className="relative flex flex-col gap-3">
+            <span
+              aria-hidden="true"
+              className="absolute left-8 top-5 bottom-5 w-px bg-border"
             />
-          ))}
-        </ol>
+            {visibleMilestones.map((milestone) => (
+              <RoadmapMilestone
+                key={milestone.id}
+                milestone={milestone}
+                checkpoint={checkpoint}
+              />
+            ))}
+          </ol>
+          {hasHiddenBefore ? (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 z-20 h-14 bg-gradient-to-b from-card via-card/90 to-transparent"
+            />
+          ) : null}
+          {hasHiddenAfter ? (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-card via-card/90 to-transparent"
+            />
+          ) : null}
+        </div>
       </CardContent>
+      {shouldCollapseRoadmap ? (
+        <CardFooter className="flex-wrap justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            {showFullRoadmap
+              ? `Showing all ${bandCount} bands`
+              : `${bandCount} bands total`}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-expanded={showFullRoadmap}
+            onClick={() => setShowFullRoadmap((value) => !value)}
+          >
+            <IkIcon
+              name="chevron"
+              dataIcon="inline-start"
+              className={cn(
+                "transition-transform",
+                showFullRoadmap ? "-rotate-90" : "rotate-90"
+              )}
+            />
+            {showFullRoadmap ? "Show current window" : "Show full roadmap"}
+          </Button>
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }
@@ -1169,6 +1226,49 @@ function compactSummary(value: string | undefined, fallback: string) {
 function compactProgressMarkerLabel(label: string) {
   const trimmed = label.trim();
   return /^\d{1,3}%$/.test(trimmed) ? trimmed : undefined;
+}
+
+function countLearningPathBands(
+  learningPath: NonNullable<ExtensionOptionsProps["learningPath"]>
+) {
+  return learningPath.reduce((count, level) => count + level.bands.length, 0);
+}
+
+function getRoadmapVisibleWindow({
+  milestones,
+  shouldCollapseRoadmap,
+  showFullRoadmap
+}: {
+  milestones: RoadmapMilestoneData[];
+  shouldCollapseRoadmap: boolean;
+  showFullRoadmap: boolean;
+}) {
+  if (!shouldCollapseRoadmap || showFullRoadmap || milestones.length <= 5) {
+    return {
+      start: 0,
+      end: milestones.length
+    };
+  }
+
+  const gateIndex = milestones.findIndex(
+    (milestone) => milestone.state === "gate"
+  );
+  const currentIndex = milestones.findIndex(
+    (milestone) => milestone.state === "current"
+  );
+  const anchorIndex = gateIndex >= 0 ? gateIndex : Math.max(currentIndex, 0);
+  const windowSize = 5;
+  const maxStart = Math.max(0, milestones.length - windowSize);
+  const start = clamp(anchorIndex - 2, 0, maxStart);
+
+  return {
+    start,
+    end: Math.min(milestones.length, start + windowSize)
+  };
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function OptionsTranslationPanel({
