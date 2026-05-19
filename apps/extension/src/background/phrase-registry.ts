@@ -137,6 +137,7 @@ export function mergePhraseOccurrence(
       targetText: occurrence.targetText ?? "",
       sourceKind: occurrence.sourceKind,
       category: occurrence.category,
+      minBand: occurrence.phraseMinBand ?? occurrence.renderUnitMinBand,
       confidence: occurrence.confidence,
       firstSeenAt: now,
       lastSeenAt: now,
@@ -151,6 +152,7 @@ export function mergePhraseOccurrence(
   return {
     ...existing,
     category: existing.category,
+    minBand: occurrence.phraseMinBand ?? occurrence.renderUnitMinBand ?? existing.minBand,
     confidence: Math.max(existing.confidence, occurrence.confidence),
     canonicalTargetText:
       occurrence.targetText && occurrence.targetText.trim().length > 0
@@ -195,6 +197,7 @@ function normalizePhraseRegistryEntry(value: unknown): PhraseRegistryEntry | nul
     normalizedSourceText,
     canonicalTargetText,
     normalizedTargetText,
+    minBand: readString(value.minBand) ?? undefined,
     sourceKind,
     category,
     provenance: value.provenance === "curated" ? "curated" : "runtime",
@@ -234,7 +237,8 @@ function ensurePhraseLearningItem(
     learningItems[itemId] = {
       ...existing,
       sourceText: entry.normalizedSourceText,
-      targetText: entry.canonicalTargetText
+      targetText: entry.canonicalTargetText,
+      bandId: entry.minBand ?? existing.bandId
     };
     return;
   }
@@ -245,6 +249,7 @@ function ensurePhraseLearningItem(
     unitType: "phrase",
     sourceText: entry.normalizedSourceText,
     targetText: entry.canonicalTargetText,
+    bandId: entry.minBand,
     status: "new",
     introducedAt: now,
     nextReviewAt: now,

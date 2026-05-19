@@ -142,6 +142,7 @@ export type PhraseActivationInput = {
   sourceKind: CachedPhraseMatch["sourceKind"];
   category: CachedPhraseMatch["category"];
   renderUnitMinBand?: string;
+  phraseMinBand?: string;
   isDueForReview: boolean;
 };
 
@@ -444,6 +445,7 @@ function selectPhraseRenderCandidates(input: {
           sourceKind: match.sourceKind,
           category: match.category,
           renderUnitMinBand: match.renderUnitMinBand,
+          phraseMinBand: match.phraseMinBand,
           isDueForReview
         });
         if (!curriculumDecision.eligible) {

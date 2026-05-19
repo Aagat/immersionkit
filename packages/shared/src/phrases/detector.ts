@@ -39,6 +39,7 @@ type BuildCandidateInput = {
   ruleId: string;
   targetText?: string;
   normalizedTargetText?: string;
+  minBand?: string;
   confidence: number;
   startToken: number;
   endToken: number;
@@ -227,6 +228,7 @@ export function detectFixedPhraseLane(
           ruleId: phrase.phraseId,
           targetText: phrase.targetText,
           normalizedTargetText: phrase.normalizedTargetText,
+          minBand: phrase.minBand,
           confidence: phrase.confidence,
           startToken,
           endToken: startToken + phraseLength,
@@ -555,6 +557,7 @@ function buildPhraseCandidate(input: BuildCandidateInput): PhraseCandidate {
     normalizedSourceText,
     targetText: input.targetText,
     normalizedTargetText: input.normalizedTargetText,
+    minBand: input.minBand,
     canonicalPhraseKey,
     confidence: input.confidence,
     ruleStrength: input.confidence,

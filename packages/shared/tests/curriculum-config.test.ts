@@ -1,6 +1,7 @@
 import {
   DEFAULT_CURRICULUM_CONFIG,
   DEFAULT_CURRICULUM_CONTENT,
+  CURATED_PHRASE_TARGET_LEXICON,
   FIXED_PHRASE_LEXICON,
   evaluateCurriculumBandTransition,
   evaluateCurriculumEligibility,
@@ -80,48 +81,41 @@ describe("curriculum configuration", () => {
     });
   });
 
-  it("backs conservative curriculum phrase chunks with fixed phrase targets", () => {
-    const fixedPhraseTargets = new Set(
-      FIXED_PHRASE_LEXICON.map((entry) => normalizePhraseText(entry.sourceText))
-    );
-    const curriculumFixedPhrases = [
-      "at home",
-      "right now",
-      "a lot",
-      "in the morning",
-      "at school",
-      "of course",
-      "for now",
-      "every day",
-      "on the way",
-      "next week",
-      "take care of",
-      "make sure",
-      "more than",
-      "a few",
-      "the same as",
-      "in the middle of",
-      "because of",
-      "after that",
-      "at the end",
-      "in order to",
-      "as soon as",
-      "for example",
-      "as a result",
-      "in fact",
-      "at least",
-      "as well as",
-      "on the other hand",
-      "in terms of",
-      "with respect to",
-      "to some extent",
-      "as opposed to",
-      "in light of",
-      "for the sake of"
-    ];
+  it("backs every default curriculum exact phrase with a curated detector target", () => {
+    const backedTargets = new Set([
+      ...FIXED_PHRASE_LEXICON.map((entry) => normalizePhraseText(entry.sourceText)),
+      ...CURATED_PHRASE_TARGET_LEXICON.map((entry) => normalizePhraseText(entry.sourceText))
+    ]);
 
-    for (const phrase of curriculumFixedPhrases) {
-      expect(fixedPhraseTargets.has(normalizePhraseText(phrase))).toBe(true);
+    for (const content of DEFAULT_CURRICULUM_CONTENT) {
+      expect(content.phraseInventory.exactSourceTexts.length).toBeGreaterThanOrEqual(5);
+      for (const phrase of content.phraseInventory.exactSourceTexts) {
+        expect(backedTargets.has(normalizePhraseText(phrase))).toBe(true);
+      }
+    }
+  });
+
+  it("assigns curated and fixed phrase targets to real curriculum bands", () => {
+    const bandIds = new Set(DEFAULT_CURRICULUM_CONFIG.bands.map((band) => band.bandId));
+
+    for (const entry of CURATED_PHRASE_TARGET_LEXICON) {
+      expect(bandIds.has(entry.minBand)).toBe(true);
+    }
+
+    expect(FIXED_PHRASE_LEXICON.length).toBeGreaterThanOrEqual(250);
+    for (const entry of FIXED_PHRASE_LEXICON) {
+      expect(bandIds.has(entry.minBand)).toBe(true);
+    }
+
+    const fixedCountsByBand = new Map<string, number>();
+    for (const entry of FIXED_PHRASE_LEXICON) {
+      fixedCountsByBand.set(
+        entry.minBand,
+        (fixedCountsByBand.get(entry.minBand) ?? 0) + 1
+      );
+    }
+    for (const band of DEFAULT_CURRICULUM_CONFIG.bands) {
+      expect(fixedCountsByBand.get(band.bandId) ?? 0).toBeGreaterThan(0);
     }
   });
 

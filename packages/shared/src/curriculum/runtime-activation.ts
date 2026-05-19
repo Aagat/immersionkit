@@ -49,6 +49,7 @@ export type PhraseRuntimeActivationInput = {
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
   renderUnitMinBand?: string;
+  phraseMinBand?: string;
   isDueForReview: boolean;
 };
 
@@ -156,6 +157,23 @@ export function evaluatePhraseRuntimeActivation(
     }
   }
 
+  if (input.phraseMinBand) {
+    const phraseTargetBandDecision = evaluatePhraseCurriculumContentInventory({
+      sourceText: input.sourceText,
+      sourceKind: input.sourceKind,
+      category: input.category,
+      phraseMinBand: input.phraseMinBand,
+      activeContent
+    });
+    if (!phraseTargetBandDecision.eligible) {
+      return {
+        eligible: false,
+        activeBandId: phraseTargetBandDecision.activeBandId,
+        skipReason: phraseTargetBandDecision.skipReason
+      };
+    }
+  }
+
   if (input.isDueForReview) {
     return { eligible: true };
   }
@@ -175,6 +193,7 @@ export function evaluatePhraseRuntimeActivation(
     sourceKind: input.sourceKind,
     category: input.category,
     renderUnitMinBand: input.renderUnitMinBand,
+    phraseMinBand: input.phraseMinBand,
     activeContent
   });
   if (!inventoryDecision.eligible) {

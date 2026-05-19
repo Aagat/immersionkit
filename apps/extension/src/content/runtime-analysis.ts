@@ -30,6 +30,7 @@ export type CachedPhraseMatch = Pick<
   | "phraseId"
   | "renderUnitId"
   | "renderUnitMinBand"
+  | "phraseMinBand"
   | "renderPolicy"
   | "sentenceHash"
   | "sourceText"
@@ -324,6 +325,7 @@ function normalizeCachedPhraseMatch(
     phraseId: input.phraseId,
     renderUnitId: input.renderUnitId,
     renderUnitMinBand: input.renderUnitMinBand,
+    phraseMinBand: input.phraseMinBand,
     renderPolicy: input.renderPolicy,
     sentenceHash: input.sentenceHash || fallbackSentenceHash,
     sourceText: input.sourceText,

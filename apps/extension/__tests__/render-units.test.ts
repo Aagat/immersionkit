@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_CURRICULUM_CONFIG,
   buildRenderUnitRuntimeIndex,
   normalizeToken,
   resolveRenderUnitPhraseTarget
@@ -172,6 +173,34 @@ describe("render unit assets", () => {
       });
 
     expect(mismatches).toEqual([]);
+  });
+
+  it("keeps every bundled phrase render unit banded and target-resolvable when renderable", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const bandIds = new Set(DEFAULT_CURRICULUM_CONFIG.bands.map((band) => band.bandId));
+    const failures = renderUnits
+      .filter((entry) => entry.kind !== "single-token")
+      .flatMap((entry) => {
+        const messages: string[] = [];
+        if (!bandIds.has(entry.minBand)) {
+          messages.push(`${entry.renderUnitId}: unknown minBand ${entry.minBand}`);
+        }
+        if (entry.renderPolicy === "inline" || entry.renderPolicy === "phrase-only") {
+          if (!entry.targetText?.trim() || !entry.normalizedTargetText?.trim()) {
+            messages.push(`${entry.renderUnitId}: missing renderable phrase target`);
+          }
+          if (entry.sourcePattern.matchMode === "exact") {
+            const resolved = resolveRenderUnitPhraseTarget(runtimeIndex, entry.sourceText);
+            if (resolved?.targetText !== entry.targetText) {
+              messages.push(`${entry.renderUnitId}: unresolved phrase target`);
+            }
+          }
+        }
+        return messages;
+      });
+
+    expect(failures).toEqual([]);
   });
 
   it("models time as duration by default with occurrence-specific vez phrases", () => {

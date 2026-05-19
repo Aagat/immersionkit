@@ -21,6 +21,7 @@ import {
   type ContextChunkType,
   type ContextualWordCandidate,
   type CuratedPhraseTargetEntry,
+  type FixedPhraseLexiconEntry,
   type LanguagePairDefinition,
   type LanguagePairId,
   type ObservedContextPos,
@@ -116,6 +117,7 @@ type WordRenderLookup = RenderUnitRuntimeIndex;
 type ResolvedPhraseTarget = {
   targetText: string;
   normalizedTargetText: string;
+  minBand?: string;
 };
 
 type PhraseTargetResolver = (input: {
@@ -195,9 +197,13 @@ export class SentenceAnalysisService {
       getLanguagePairDefinition(languagePair) ??
       createFallbackLanguagePairDefinition(languagePair);
     const renderUnits = assetContext.renderUnits;
-    const analysisVersion = buildRenderUnitAnalysisVersion(
+    const curatedPhraseTargets =
+      this.phraseTargetsByLanguagePair.get(languagePair) ?? [];
+    const analysisVersion = buildSentenceAnalysisVersion(
       analyzer.analyzerVersion,
       renderUnits,
+      curatedPhraseTargets,
+      pairDefinition.fixedPhraseLexicon,
       languagePair
     );
     const normalizedCandidates = normalizeAnalysisCandidates(candidates);
@@ -245,7 +251,7 @@ export class SentenceAnalysisService {
         now,
         renderUnits,
         pairDefinition,
-        this.phraseTargetsByLanguagePair.get(languagePair) ?? []
+        curatedPhraseTargets
       );
       entriesToPersist.push(entry);
       results.push({
@@ -498,6 +504,7 @@ function buildPhraseOccurrences(
       normalizedSourceText: candidate.normalizedSourceText,
       targetText: resolvedTarget?.targetText,
       normalizedTargetText: resolvedTarget?.normalizedTargetText,
+      phraseMinBand: resolvedTarget?.minBand,
       sourceKind: candidate.sourceKind,
       category: candidate.category,
       ruleId: candidate.ruleId,
@@ -526,7 +533,8 @@ function resolveDetectedPhraseTarget(
   if (candidateTargetText && candidateNormalizedTargetText) {
     return {
       targetText: candidateTargetText,
-      normalizedTargetText: candidateNormalizedTargetText
+      normalizedTargetText: candidateNormalizedTargetText,
+      minBand: candidate.minBand
     };
   }
 
@@ -538,18 +546,16 @@ function resolveDetectedPhraseTarget(
   });
 }
 
-function buildRenderUnitAnalysisVersion(
+function buildSentenceAnalysisVersion(
   analyzerVersion: string,
   renderUnits: readonly RenderUnitEntry[],
+  curatedPhraseTargets: readonly CuratedPhraseTargetEntry[],
+  fixedPhraseLexicon: readonly FixedPhraseLexiconEntry[],
   languagePair: LanguagePairId = DEFAULT_LANGUAGE_PAIR_ID
 ): string {
-  if (renderUnits.length === 0) {
-    return `${analyzerVersion}+pair:${languagePair}`;
-  }
-
-  const signature = renderUnits
+  const renderUnitSignature = renderUnits
     .map((unit) =>
-      stableSerializeRenderUnitSignature({
+      stableSerializeAnalysisSignature({
         renderUnitId: unit.renderUnitId,
         kind: unit.kind,
         renderPolicy: unit.renderPolicy,
@@ -568,17 +574,52 @@ function buildRenderUnitAnalysisVersion(
     )
     .sort()
     .join("|");
+  const phraseTargetSignature = curatedPhraseTargets
+    .map((entry) =>
+      stableSerializeAnalysisSignature({
+        sourceText: entry.sourceText,
+        normalizedSourceText: entry.normalizedSourceText,
+        targetText: entry.targetText,
+        normalizedTargetText: entry.normalizedTargetText,
+        sourceKind: entry.sourceKind,
+        category: entry.category,
+        minBand: entry.minBand,
+        confidence: entry.confidence
+      })
+    )
+    .sort()
+    .join("|");
+  const fixedPhraseSignature = fixedPhraseLexicon
+    .map((entry) =>
+      stableSerializeAnalysisSignature({
+        phraseId: entry.phraseId,
+        sourceText: entry.sourceText,
+        targetText: entry.targetText,
+        minBand: entry.minBand,
+        category: entry.category,
+        confidence: entry.confidence,
+        normalizedTokens: entry.normalizedTokens,
+        normalizedTargetText: entry.normalizedTargetText
+      })
+    )
+    .sort()
+    .join("|");
+  const signature = stableSerializeAnalysisSignature({
+    renderUnits: renderUnitSignature,
+    fixedPhrases: fixedPhraseSignature,
+    phraseTargets: phraseTargetSignature
+  });
 
-  return `${analyzerVersion}+pair:${languagePair}+render-units:${hashSentence(signature).slice(0, 12)}`;
+  return `${analyzerVersion}+pair:${languagePair}+assets:${hashSentence(signature).slice(0, 12)}`;
 }
 
-function stableSerializeRenderUnitSignature(input: unknown): string {
+function stableSerializeAnalysisSignature(input: unknown): string {
   if (input === null || typeof input !== "object") {
     return JSON.stringify(input);
   }
 
   if (Array.isArray(input)) {
-    return `[${input.map((item) => stableSerializeRenderUnitSignature(item)).join(",")}]`;
+    return `[${input.map((item) => stableSerializeAnalysisSignature(item)).join(",")}]`;
   }
 
   const entries = Object.entries(input)
@@ -587,7 +628,7 @@ function stableSerializeRenderUnitSignature(input: unknown): string {
   return `{${entries
     .map(
       ([key, value]) =>
-        `${JSON.stringify(key)}:${stableSerializeRenderUnitSignature(value)}`
+        `${JSON.stringify(key)}:${stableSerializeAnalysisSignature(value)}`
     )
     .join(",")}}`;
 }
@@ -721,7 +762,8 @@ function buildRenderUnitPhraseTargetResolver(
     if (curatedTarget) {
       return {
         targetText: curatedTarget.targetText,
-        normalizedTargetText: curatedTarget.normalizedTargetText
+        normalizedTargetText: curatedTarget.normalizedTargetText,
+        minBand: curatedTarget.minBand
       };
     }
 
@@ -750,12 +792,20 @@ function parsePhraseTargetAsset(
     const targetText = readString(entry.targetText);
     const sourceKind = readPhraseTargetSourceKind(entry.sourceKind);
     const category = readPhraseCategory(entry.category);
+    const minBand = readString(entry.minBand);
     const confidence =
       typeof entry.confidence === "number" && Number.isFinite(entry.confidence)
         ? Math.max(0, Math.min(1, entry.confidence))
         : null;
 
-    if (!sourceText || !targetText || !sourceKind || !category || confidence === null) {
+    if (
+      !sourceText ||
+      !targetText ||
+      !sourceKind ||
+      !category ||
+      !minBand ||
+      confidence === null
+    ) {
       return [];
     }
 
@@ -765,6 +815,7 @@ function parsePhraseTargetAsset(
         targetText,
         sourceKind,
         category,
+        minBand,
         confidence,
         normalizedSourceText: normalizeToken(sourceText),
         normalizedTargetText: normalizeToken(targetText)

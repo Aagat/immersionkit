@@ -136,6 +136,32 @@ describe("runtime curriculum activation", () => {
       skipReason: "render-unit-band-locked"
     });
   });
+
+  it("does not let due curated phrase targets bypass active phrase target band gates", () => {
+    const decision = evaluatePhraseRuntimeActivation({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: { activePhraseBandId: "level-2a" },
+      phraseId: "phrase:chunk:public-health-care-system:sistema-publico-de-salud",
+      sourceText: "public health care system",
+      learningItem: createLearningItem({
+        itemId: "phrase:phrase:chunk:public-health-care-system:sistema-publico-de-salud",
+        unitRefId: "phrase:chunk:public-health-care-system:sistema-publico-de-salud",
+        unitType: "phrase",
+        bandId: "level-4a",
+        nextReviewAt: "2026-04-18T09:00:00.000Z"
+      }),
+      sourceKind: "chunk",
+      category: "noun-chunk",
+      phraseMinBand: "level-4a",
+      isDueForReview: true
+    });
+
+    expect(decision).toMatchObject({
+      eligible: false,
+      activeBandId: "level-2a",
+      skipReason: "phrase-target-band-locked"
+    });
+  });
 });
 
 describe("checkpoint summaries", () => {

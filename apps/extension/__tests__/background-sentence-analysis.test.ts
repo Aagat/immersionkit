@@ -57,7 +57,13 @@ describe("background sentence analysis service", () => {
     expect(analyze).toHaveBeenCalledTimes(1);
     expect(first[0]?.cacheHit).toBe(false);
     expect(second[0]?.cacheHit).toBe(true);
-    expect(await cache.get(sentenceHash, "fixture-v1+pair:en-es")).toBeTruthy();
+    expect(first[0]?.entry.analyzerVersion).toMatch(
+      /^fixture-v1\+pair:en-es\+assets:/
+    );
+    expect(
+      await cache.get(sentenceHash, first[0]?.entry.analyzerVersion ?? "")
+    ).toBeTruthy();
+    expect(await cache.get(sentenceHash, "fixture-v1+pair:en-es")).toBeNull();
     expect(await cache.get(sentenceHash, "fixture-v2")).toBeNull();
   });
 
@@ -370,6 +376,7 @@ describe("background sentence analysis service", () => {
       {
         sourceText: "the quiet city center",
         targetText: "le centre-ville calme",
+        minBand: "level-2a",
         sourceKind: "chunk",
         category: "noun-chunk",
         confidence: 0.92,
@@ -396,7 +403,8 @@ describe("background sentence analysis service", () => {
         expect.objectContaining({
           sourceText: "the quiet city center",
           targetText: "le centre-ville calme",
-          normalizedTargetText: "le centre ville calme"
+          normalizedTargetText: "le centre ville calme",
+          phraseMinBand: "level-2a"
         })
       ])
     );
@@ -929,6 +937,7 @@ describe("background sentence analysis service", () => {
       category: "noun-chunk",
       targetText: "sistema público de salud",
       normalizedTargetText: "sistema publico de salud",
+      phraseMinBand: "level-4a",
       phraseId:
         "phrase:chunk:public-health-care-system:sistema-publico-de-salud"
     });
@@ -963,6 +972,7 @@ describe("background sentence analysis service", () => {
       category: "noun-chunk",
       targetText: "plan del sistema de transporte público",
       normalizedTargetText: "plan del sistema de transporte publico",
+      phraseMinBand: "level-3c",
       phraseId:
         "phrase:chunk:public-transport-system-plan:plan-del-sistema-de-transporte-publico"
     });
@@ -993,6 +1003,7 @@ describe("background sentence analysis service", () => {
       category: "noun-chunk",
       targetText: "plan de proyecto de energía renovable",
       normalizedTargetText: "plan de proyecto de energia renovable",
+      phraseMinBand: "level-5a",
       phraseId:
         "phrase:chunk:renewable-energy-project-plan:plan-de-proyecto-de-energia-renovable"
     });
@@ -1023,6 +1034,7 @@ describe("background sentence analysis service", () => {
       category: "noun-chunk",
       targetText: "calendario de reuniones de la junta escolar",
       normalizedTargetText: "calendario de reuniones de la junta escolar",
+      phraseMinBand: "level-3c",
       phraseId:
         "phrase:chunk:school-board-meeting-schedule:calendario-de-reuniones-de-la-junta-escolar"
     });

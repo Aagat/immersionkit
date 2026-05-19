@@ -323,6 +323,7 @@ export type PhraseRegistryEntry = {
   normalizedSourceText: string;
   canonicalTargetText: string;
   normalizedTargetText: string;
+  minBand?: string;
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
   provenance: "curated" | "runtime";
@@ -345,6 +346,7 @@ export type PhraseOccurrence = {
   normalizedSourceText: string;
   targetText?: string;
   normalizedTargetText?: string;
+  phraseMinBand?: string;
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
   ruleId: string;
