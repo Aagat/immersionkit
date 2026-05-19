@@ -927,14 +927,14 @@ describe("background sentence analysis service", () => {
     expect(chunkPhrase).toMatchObject({
       sourceKind: "chunk",
       category: "noun-chunk",
-      targetText: "sistema de salud pública",
-      normalizedTargetText: "sistema de salud publica",
+      targetText: "sistema público de salud",
+      normalizedTargetText: "sistema publico de salud",
       phraseId:
-        "phrase:chunk:public-health-care-system:sistema-de-salud-publica"
+        "phrase:chunk:public-health-care-system:sistema-publico-de-salud"
     });
     await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
-      canonicalTargetText: "sistema de salud pública",
-      normalizedTargetText: "sistema de salud publica"
+      canonicalTargetText: "sistema público de salud",
+      normalizedTargetText: "sistema publico de salud"
     });
   });
 
@@ -991,10 +991,10 @@ describe("background sentence analysis service", () => {
     expect(chunkPhrase).toMatchObject({
       sourceKind: "chunk",
       category: "noun-chunk",
-      targetText: "plan de proyectos de energía renovable",
-      normalizedTargetText: "plan de proyectos de energia renovable",
+      targetText: "plan de proyecto de energía renovable",
+      normalizedTargetText: "plan de proyecto de energia renovable",
       phraseId:
-        "phrase:chunk:renewable-energy-project-plan:plan-de-proyectos-de-energia-renovable"
+        "phrase:chunk:renewable-energy-project-plan:plan-de-proyecto-de-energia-renovable"
     });
   });
 

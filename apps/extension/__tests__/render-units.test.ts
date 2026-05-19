@@ -225,8 +225,31 @@ describe("render unit assets", () => {
   it("does not keep context-sensitive discourse words as exact inline units", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
     const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const demotedIds = renderUnits
+      .filter((entry) => entry.renderPolicy === "sentence-help-only")
+      .map((entry) => entry.renderUnitId);
 
-    expect(runtimeIndex.preferredWordByNormalizedForm.get("as")).toBeUndefined();
-    expect(runtimeIndex.preferredWordByNormalizedForm.get("so")).toBeUndefined();
+    for (const unsafeSource of [
+      "a",
+      "as",
+      "so",
+      "that",
+      "there",
+      "like",
+      "over",
+      "party",
+      "paper",
+      "script"
+    ]) {
+      expect(runtimeIndex.preferredWordByNormalizedForm.get(unsafeSource)).toBeUndefined();
+    }
+    expect(demotedIds).toEqual(
+      expect.arrayContaining([
+        "ru:a:adjective:exact",
+        "ru:that:adjective:analyzer-pattern",
+        "ru:paper:noun:exact",
+        "ru:script:single-token"
+      ])
+    );
   });
 });

@@ -562,7 +562,7 @@ function createCuratedPhraseTargetEntry(
 export const CURATED_PHRASE_TARGET_LEXICON: readonly CuratedPhraseTargetEntry[] = [
   createCuratedPhraseTargetEntry(
     "public health care system",
-    "sistema de salud pública",
+    "sistema público de salud",
     "chunk",
     "noun-chunk",
     0.93
@@ -583,21 +583,21 @@ export const CURATED_PHRASE_TARGET_LEXICON: readonly CuratedPhraseTargetEntry[] 
   ),
   createCuratedPhraseTargetEntry(
     "used to",
-    "solía",
+    "soler + infinitivo",
     "pattern-match",
     "grammar-carrier",
     0.9
   ),
   createCuratedPhraseTargetEntry(
     "going to",
-    "va a",
+    "ir a + infinitivo",
     "pattern-match",
     "grammar-carrier",
     0.9
   ),
   createCuratedPhraseTargetEntry(
     "have to",
-    "tener que",
+    "tener que + infinitivo",
     "pattern-match",
     "grammar-carrier",
     0.9

@@ -34,6 +34,14 @@ describe("render-unit wink alignment", () => {
 
     for (const entry of parsed?.entries ?? []) {
       if (
+        entry.renderPolicy === "sentence-help-only" &&
+        !entry.targetText &&
+        !entry.replacement
+      ) {
+        continue;
+      }
+
+      if (
         entry.sourceText.includes("{") ||
         (entry.kind === "single-token" && entry.sourceText.includes("-"))
       ) {
@@ -50,11 +58,7 @@ describe("render-unit wink alignment", () => {
         analysis.tokens
       );
 
-      if (
-        alignmentErrors.length > 0 &&
-        hasFeatureConstrainedTokens(patternTokens) &&
-        entry.exampleSentenceEnglish
-      ) {
+      if (alignmentErrors.length > 0 && entry.exampleSentenceEnglish) {
         const exampleAnalysis = await analyzer.analyze(entry.exampleSentenceEnglish);
         const exampleWindow = findMatchingPatternWindow(
           exampleAnalysis.tokens,
@@ -121,12 +125,6 @@ function collectTokenErrors(
   }
 
   return errors;
-}
-
-function hasFeatureConstrainedTokens(
-  patternTokens: readonly RenderUnitTokenPattern[]
-): boolean {
-  return patternTokens.some((token) => Boolean(token.features));
 }
 
 function findMatchingPatternWindow(

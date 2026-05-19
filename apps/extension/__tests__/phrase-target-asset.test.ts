@@ -35,7 +35,7 @@ describe("phrase target asset", () => {
       expect.arrayContaining([
         expect.objectContaining({
           sourceText: "renewable energy project plan",
-          targetText: "plan de proyectos de energía renovable",
+          targetText: "plan de proyecto de energía renovable",
           sourceKind: "chunk",
           category: "noun-chunk"
         }),
@@ -74,6 +74,18 @@ describe("phrase target asset", () => {
           targetText: "orientación de salud pública",
           sourceKind: "chunk",
           category: "noun-chunk"
+        }),
+        expect.objectContaining({
+          sourceText: "going to",
+          targetText: "ir a + infinitivo",
+          sourceKind: "pattern-match",
+          category: "grammar-carrier"
+        }),
+        expect.objectContaining({
+          sourceText: "used to",
+          targetText: "soler + infinitivo",
+          sourceKind: "pattern-match",
+          category: "grammar-carrier"
         })
       ])
     );
