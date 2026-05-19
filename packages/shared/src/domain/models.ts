@@ -43,6 +43,19 @@ export const VOCAB_STATUS_VALUES = [
   "ignored"
 ] as const;
 export const PROVIDER_VALUES = ["openai", "none"] as const;
+export const TTS_VOICE_IDS = [
+  "es_ES-davefx-medium",
+  "es_ES-carlfm-x_low",
+  "es_AR-daniela-high",
+  "es_MX-claude-high",
+  "es_ES-sharvard-medium-m",
+  "es_ES-sharvard-medium-f"
+] as const;
+export const TTS_FALLBACK_BEHAVIOR_VALUES = [
+  "piper-with-system-fallback",
+  "piper-only",
+  "system-only"
+] as const;
 export const ANALYZER_CHUNK_TYPES = [
   "noun-phrase",
   "verb-phrase",
@@ -149,6 +162,9 @@ export type SupportedPos = (typeof SUPPORTED_POS_VALUES)[number];
 export type SafeInjectionPos = (typeof SAFE_INJECTION_POS_VALUES)[number];
 export type VocabStatus = (typeof VOCAB_STATUS_VALUES)[number];
 export type ProviderName = (typeof PROVIDER_VALUES)[number];
+export type TtsVoiceId = (typeof TTS_VOICE_IDS)[number];
+export type TtsFallbackBehavior =
+  (typeof TTS_FALLBACK_BEHAVIOR_VALUES)[number];
 export type IsoTimestamp = string;
 export type AnalyzerChunkType = (typeof ANALYZER_CHUNK_TYPES)[number];
 export type AnalyzerId = (typeof ANALYZER_IDS)[number];
@@ -571,12 +587,21 @@ export type SiteSetting = {
   updatedAt: IsoTimestamp;
 };
 
+export type TtsPlaybackRateSettings = {
+  word: number;
+  phrase: number;
+  sentence: number;
+};
+
 export type ExtensionSettings = {
   languagePair?: LanguagePairId;
   discoveryRate: number;
   targetLanguage: SupportedTargetLanguage;
   sentenceTranslationEnabled: boolean;
   provider: ProviderName;
+  ttsVoiceId: TtsVoiceId;
+  ttsFallbackBehavior: TtsFallbackBehavior;
+  ttsPlaybackRates: TtsPlaybackRateSettings;
   enabled?: boolean;
   sourceLanguage?: SupportedSourceLanguage;
   goldilocksThreshold?: number;
@@ -602,6 +627,13 @@ export const DEFAULT_EXTENSION_SETTINGS: ResolvedExtensionSettings = {
   sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
   sentenceTranslationEnabled: false,
   provider: "none",
+  ttsVoiceId: "es_ES-sharvard-medium-m",
+  ttsFallbackBehavior: "piper-with-system-fallback",
+  ttsPlaybackRates: {
+    word: 0.8,
+    phrase: 1,
+    sentence: 1
+  },
   goldilocksThreshold: 0.6,
   sentenceBatchSize: 3
 };
@@ -623,6 +655,17 @@ export function clampSentenceBatchSize(
   }
 
   return Math.min(5, Math.max(1, Math.round(value)));
+}
+
+export function clampTtsPlaybackRate(
+  value: number | undefined,
+  fallback = 1
+): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.round(Math.min(1.25, Math.max(0.5, value)) * 100) / 100;
 }
 
 export function createSentenceLearningNote(
@@ -679,6 +722,13 @@ export function resolveExtensionSettings(
       draft.sentenceTranslationEnabled ??
       DEFAULT_EXTENSION_SETTINGS.sentenceTranslationEnabled,
     provider: draft.provider ?? DEFAULT_EXTENSION_SETTINGS.provider,
+    ttsVoiceId: isTtsVoiceId(draft.ttsVoiceId)
+      ? draft.ttsVoiceId
+      : DEFAULT_EXTENSION_SETTINGS.ttsVoiceId,
+    ttsFallbackBehavior: isTtsFallbackBehavior(draft.ttsFallbackBehavior)
+      ? draft.ttsFallbackBehavior
+      : DEFAULT_EXTENSION_SETTINGS.ttsFallbackBehavior,
+    ttsPlaybackRates: resolveTtsPlaybackRates(draft.ttsPlaybackRates),
     goldilocksThreshold: clampUnitInterval(
       draft.goldilocksThreshold,
       DEFAULT_EXTENSION_SETTINGS.goldilocksThreshold
@@ -698,6 +748,27 @@ function resolveSettingsLanguagePair(
     settings.sourceLanguage ?? DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
     settings.targetLanguage ?? DEFAULT_EXTENSION_SETTINGS.targetLanguage
   );
+}
+
+export function isTtsVoiceId(value: unknown): value is TtsVoiceId {
+  return TTS_VOICE_IDS.includes(value as TtsVoiceId);
+}
+
+export function isTtsFallbackBehavior(
+  value: unknown
+): value is TtsFallbackBehavior {
+  return TTS_FALLBACK_BEHAVIOR_VALUES.includes(value as TtsFallbackBehavior);
+}
+
+function resolveTtsPlaybackRates(
+  input: Partial<TtsPlaybackRateSettings> | undefined
+): TtsPlaybackRateSettings {
+  const defaults = DEFAULT_EXTENSION_SETTINGS.ttsPlaybackRates;
+  return {
+    word: clampTtsPlaybackRate(input?.word, defaults.word),
+    phrase: clampTtsPlaybackRate(input?.phrase, defaults.phrase),
+    sentence: clampTtsPlaybackRate(input?.sentence, defaults.sentence)
+  };
 }
 
 function normalizeLearningNoteField(value: string | undefined): string {

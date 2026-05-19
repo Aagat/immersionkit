@@ -1,6 +1,8 @@
 import {
+  RuntimeMessageType,
   resolveSentenceGrammarCards,
   type SentenceGrammarCard,
+  type SpeakTextSurface,
   type UserVocabEntry
 } from "@immersionkit/shared";
 import { applyTokenStatusUpdate } from "./annotate";
@@ -25,6 +27,7 @@ import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { persistVocabStatus } from "./storage";
 import type { CachedGrammarFeature } from "./runtime-analysis";
 import type { RuntimeState } from "./state";
+import { sendRuntimeMessage } from "../runtime-client";
 
 export function openWordPopover(
   runtimeState: RuntimeState,
@@ -43,6 +46,9 @@ export function openWordPopover(
     onClose: () => closePopover(runtimeState),
     onStatusAction: (status) => {
       void handlePopoverStatusAction(runtimeState, detail, status);
+    },
+    onSpeak: (text) => {
+      return speakPopoverText("word", text);
     }
   });
 
@@ -111,6 +117,9 @@ export function openSentenceNotePopover(
       }
 
       closePopover(runtimeState);
+    },
+    onSpeak: (text) => {
+      return speakPopoverText("sentence", text);
     }
   });
 
@@ -185,9 +194,32 @@ export function openPhraseTokenPopover(
   setActiveToken(runtimeState, phraseElement);
 
   const popover = renderPhrasePopover(detail, {
-    onClose: () => closePopover(runtimeState)
+    onClose: () => closePopover(runtimeState),
+    onSpeak: (text) => {
+      return speakPopoverText("phrase", text);
+    }
   });
   mountPopover(runtimeState, popover, phraseElement);
+}
+
+async function speakPopoverText(
+  surface: SpeakTextSurface,
+  text: string
+): Promise<void> {
+  const trimmedText = text.trim();
+  if (!trimmedText) {
+    return;
+  }
+
+  const response = await sendRuntimeMessage({
+    type: RuntimeMessageType.SpeakText,
+    text: trimmedText,
+    language: "es-ES",
+    surface
+  });
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "tts-unavailable");
+  }
 }
 
 export function applyStatusToLexemeTokens(update: TokenStatusUpdatedDetail) {

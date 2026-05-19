@@ -39,5 +39,8 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   sourceLanguage: DEFAULT_EXTENSION_SETTINGS.sourceLanguage,
   targetLanguage: DEFAULT_EXTENSION_SETTINGS.targetLanguage,
   sentenceTranslationEnabled: false,
-  provider: "none"
+  provider: "none",
+  ttsVoiceId: DEFAULT_EXTENSION_SETTINGS.ttsVoiceId,
+  ttsFallbackBehavior: DEFAULT_EXTENSION_SETTINGS.ttsFallbackBehavior,
+  ttsPlaybackRates: DEFAULT_EXTENSION_SETTINGS.ttsPlaybackRates
 };

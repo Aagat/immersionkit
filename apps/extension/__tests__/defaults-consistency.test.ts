@@ -15,6 +15,15 @@ describe("default settings consistency", () => {
       expect(DEFAULT_SETTINGS.discoveryRate).toBe(
         DEFAULT_EXTENSION_SETTINGS.discoveryRate
       );
+      expect(DEFAULT_SETTINGS.ttsVoiceId).toBe(
+        DEFAULT_EXTENSION_SETTINGS.ttsVoiceId
+      );
+      expect(DEFAULT_SETTINGS.ttsFallbackBehavior).toBe(
+        DEFAULT_EXTENSION_SETTINGS.ttsFallbackBehavior
+      );
+      expect(DEFAULT_SETTINGS.ttsPlaybackRates).toEqual(
+        DEFAULT_EXTENSION_SETTINGS.ttsPlaybackRates
+      );
       expect(normalizeDiscoveryRate(Number.NaN)).toBe(
         DEFAULT_EXTENSION_SETTINGS.discoveryRate
       );
@@ -28,6 +37,17 @@ describe("default settings consistency", () => {
       expect(settingsState.settings.discoveryRate).toBe(
         DEFAULT_EXTENSION_SETTINGS.discoveryRate
       );
+      expect(settingsState.settings.ttsVoiceId).toBe(
+        "es_ES-sharvard-medium-m"
+      );
+      expect(settingsState.settings.ttsFallbackBehavior).toBe(
+        "piper-with-system-fallback"
+      );
+      expect(settingsState.settings.ttsPlaybackRates).toEqual({
+        word: 0.8,
+        phrase: 1,
+        sentence: 1
+      });
     } finally {
       chromeStub.restore();
     }

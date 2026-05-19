@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter @immersionkit/extension dev",
     "asset-packs:serve": "node tools/assets/asset-pack-server.mjs",
+    "assets:pull-tts-models": "node tools/assets/pull-tts-models.mjs",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "build:local-assets": "VITE_IMMERSIONKIT_ASSET_BASE_URL=http://127.0.0.1:8787/assets pnpm build",
     "build:production": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build:production",

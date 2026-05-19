@@ -3,6 +3,8 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
+import { getPlaywrightTestModeArgs } from "../browser-launch-mode.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../..");
@@ -49,7 +51,8 @@ async function main() {
       "test",
       playwrightSpecPath,
       "--reporter=line",
-      "--workers=1"
+      "--workers=1",
+      ...getPlaywrightTestModeArgs()
     ]);
 
     await runCommand(pnpmBinary, [

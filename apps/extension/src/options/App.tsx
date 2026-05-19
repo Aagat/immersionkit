@@ -4,7 +4,13 @@ import {
   type OptionsAdvancedDiagnostics,
   type OptionsSection
 } from "@immersionkit/ui";
-import type { ProviderName } from "@immersionkit/shared";
+import {
+  clampTtsPlaybackRate,
+  type ProviderName,
+  type TtsFallbackBehavior,
+  type TtsPlaybackRateSettings,
+  type TtsVoiceId
+} from "@immersionkit/shared";
 import {
   loadActivePageDiagnostics,
   isProviderKeyValid,
@@ -255,6 +261,69 @@ export function OptionsApp() {
     });
   }, []);
 
+  const handleTtsVoiceChange = useCallback((ttsVoiceId: TtsVoiceId) => {
+    setSettingsState((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        settings: {
+          ...current.settings,
+          ttsVoiceId
+        }
+      };
+    });
+    setStatusMessage(null);
+    setErrorMessage(null);
+  }, []);
+
+  const handleTtsFallbackBehaviorChange = useCallback(
+    (ttsFallbackBehavior: TtsFallbackBehavior) => {
+      setSettingsState((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          settings: {
+            ...current.settings,
+            ttsFallbackBehavior
+          }
+        };
+      });
+      setStatusMessage(null);
+      setErrorMessage(null);
+    },
+    []
+  );
+
+  const handleTtsPlaybackRateChange = useCallback(
+    (surface: keyof TtsPlaybackRateSettings, rate: number) => {
+      setSettingsState((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          settings: {
+            ...current.settings,
+            ttsPlaybackRates: {
+              ...current.settings.ttsPlaybackRates,
+              [surface]: clampTtsPlaybackRate(rate)
+            }
+          }
+        };
+      });
+      setStatusMessage(null);
+      setErrorMessage(null);
+    },
+    []
+  );
+
   const handleSave = useCallback(async () => {
     if (!settingsState) {
       return;
@@ -428,6 +497,14 @@ export function OptionsApp() {
       apiKeyValid={providerKeyValid}
       showApiKey={showApiKey}
       translationSummary={translationSummary.description}
+      ttsVoiceId={
+        settingsState?.settings.ttsVoiceId ?? "es_ES-sharvard-medium-m"
+      }
+      ttsFallbackBehavior={
+        settingsState?.settings.ttsFallbackBehavior ??
+        "piper-with-system-fallback"
+      }
+      ttsPlaybackRates={settingsState?.settings.ttsPlaybackRates}
       savedSiteCount={formatCount(siteEntries.length)}
       pausedSiteCount={formatCount(disabledSiteCount)}
       advancedDiagnostics={advancedDiagnostics}
@@ -462,6 +539,9 @@ export function OptionsApp() {
         setShowApiKey((current) => !current);
       }}
       onClearApiKey={handleClearApiKey}
+      onTtsVoiceChange={handleTtsVoiceChange}
+      onTtsFallbackBehaviorChange={handleTtsFallbackBehaviorChange}
+      onTtsPlaybackRateChange={handleTtsPlaybackRateChange}
     />
   );
 }

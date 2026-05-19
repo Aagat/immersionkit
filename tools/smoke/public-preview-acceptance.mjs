@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureLinuxHeadedBrowserDisplay } from "../headed-browser-display.mjs";
 import { startAssetPackServer } from "../assets/asset-pack-server.mjs";
+import { getExtensionLaunchOptions } from "../browser-launch-mode.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
@@ -158,15 +158,10 @@ if (!address || typeof address === "string") {
   throw new Error("Failed to start local public-preview fixture server.");
 }
 
-ensureLinuxHeadedBrowserDisplay();
-
-const context = await chromium.launchPersistentContext(userDataDir, {
-  headless: false,
-  args: [
-    `--disable-extensions-except=${extensionPath}`,
-    `--load-extension=${extensionPath}`
-  ]
-});
+const context = await chromium.launchPersistentContext(
+  userDataDir,
+  getExtensionLaunchOptions(extensionPath)
+);
 
 const screenshots = [];
 const fixtureSummaries = [];
@@ -843,7 +838,7 @@ async function writeUserData(serviceWorker, key, value) {
 
       async function openImmersionKitDatabaseForUserData() {
         return new Promise((resolveOpen, rejectOpen) => {
-          const request = indexedDB.open("immersionkit-extension", 7);
+          const request = indexedDB.open("immersionkit-extension", 8);
           request.onupgradeneeded = () => {
             ensureExtensionStores(request.result, request.transaction);
           };
@@ -913,6 +908,11 @@ async function writeUserData(serviceWorker, key, value) {
         ensureIndex(lexemes, "languagePairBandId", ["languagePair", "bandId"]);
         ensureIndex(lexemes, "assetVersion", "assetVersion");
         ensureIndex(lexemes, "lexemeId", "lexemeId");
+        const ttsVoices = ensureStore(database, transaction, "tts-voices", {
+          keyPath: "voiceId"
+        });
+        ensureIndex(ttsVoices, "languagePair", "languagePair");
+        ensureIndex(ttsVoices, "assetVersion", "assetVersion");
       }
 
       function ensureStore(database, transaction, storeName, options) {

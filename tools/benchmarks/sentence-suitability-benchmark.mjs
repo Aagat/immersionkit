@@ -10,6 +10,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { getBrowserLaunchOptions } from "../browser-launch-mode.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../..");
@@ -51,7 +53,7 @@ try {
 
   const playwright = await loadPlaywright();
   const { chromium } = playwright;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch(getBrowserLaunchOptions());
 
   const captured = await runValidationInBrowser(browser, validationUrl);
   await browser.close();

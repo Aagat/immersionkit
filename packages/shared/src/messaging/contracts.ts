@@ -33,6 +33,7 @@ export enum RuntimeMessageType {
   GraduateCheckpoint = "curriculum/graduate-checkpoint",
   QueueSentenceCandidates = "sentence/queue-candidates",
   SentenceTranslationResult = "sentence/translation-result",
+  SpeakText = "tts/speak-text",
   AssistEvent = "evidence/assist-event",
   QualifiedExposureEvent = "evidence/qualified-exposure-event"
 }
@@ -173,6 +174,15 @@ export type SentenceTranslationResultMessage = {
   results: SentenceTranslationResult[];
 };
 
+export type SpeakTextSurface = "word" | "phrase" | "sentence";
+
+export type SpeakTextMessage = {
+  type: RuntimeMessageType.SpeakText;
+  text: string;
+  language: "es-ES";
+  surface: SpeakTextSurface;
+};
+
 export type AssistEventMessage = AssistEvent & {
   type: RuntimeMessageType.AssistEvent;
 };
@@ -200,6 +210,7 @@ export type RuntimeMessage =
   | GraduateCheckpointMessage
   | QueueSentenceCandidatesMessage
   | SentenceTranslationResultMessage
+  | SpeakTextMessage
   | AssistEventMessage
   | QualifiedExposureEventMessage;
 
@@ -393,6 +404,13 @@ export type EvidenceEventResponse =
     }
   | RuntimeErrorResponse;
 
+export type SpeakTextResponse =
+  | {
+      ok: true;
+      engine: "piper" | "chrome-tts";
+    }
+  | RuntimeErrorResponse;
+
 export type RuntimeResponseByType = {
   [RuntimeMessageType.Ping]: PingResponse;
   [RuntimeMessageType.RefreshActiveTab]: RefreshActiveTabResponse | RuntimeErrorResponse;
@@ -409,6 +427,7 @@ export type RuntimeResponseByType = {
   [RuntimeMessageType.GraduateCheckpoint]: GraduateCheckpointResponse;
   [RuntimeMessageType.QueueSentenceCandidates]: QueueSentenceCandidatesResponse;
   [RuntimeMessageType.SentenceTranslationResult]: RuntimeOkResponse | RuntimeErrorResponse;
+  [RuntimeMessageType.SpeakText]: SpeakTextResponse;
   [RuntimeMessageType.AssistEvent]: EvidenceEventResponse;
   [RuntimeMessageType.QualifiedExposureEvent]: EvidenceEventResponse;
 };

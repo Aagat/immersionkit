@@ -54,6 +54,7 @@ type ReactPopoverHost = HTMLDivElement & {
 const POPOVER_ATTRIBUTE = "data-ik-popover";
 export const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
 export const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
+export const POPOVER_SPEAK_ACTION_ATTRIBUTE = "data-ik-speak-action";
 const POPOVER_CLOSE_ATTRIBUTE = "data-ik-popover-close";
 const POPOVER_VIEWPORT_MARGIN = 10;
 const POPOVER_ANCHOR_OFFSET = 12;
@@ -139,6 +140,7 @@ export function renderWordPopover(
   callbacks: {
     onClose: () => void;
     onStatusAction: (status: InteractiveVocabStatus) => void;
+    onSpeak?: (text: string) => void | Promise<void>;
   }
 ): HTMLDivElement {
   const nativeExample = readNonEmptyString(detail.exampleSentenceNative);
@@ -160,6 +162,7 @@ export function renderWordPopover(
       pageSentence={pageSentence}
       onClose={callbacks.onClose}
       onStatusAction={callbacks.onStatusAction}
+      onSpeak={callbacks.onSpeak}
     />,
     {
       textMirror: [
@@ -187,7 +190,13 @@ export function renderWordPopover(
           pressed: detail.status === "ignored",
           onClick: () => callbacks.onStatusAction("ignored")
         }
-      ]
+      ],
+      speakAction: callbacks.onSpeak
+        ? {
+            label: "Play pronunciation",
+            onClick: () => callbacks.onSpeak?.(detail.targetToken)
+          }
+        : undefined
     }
   );
 }
@@ -198,6 +207,7 @@ export function renderSentencePopover(
   callbacks: {
     onClose: () => void;
     onAction: (action: SentencePopoverAction) => void;
+    onSpeak?: (text: string) => void | Promise<void>;
   }
 ): HTMLDivElement {
   return createReactPopover(
@@ -212,6 +222,7 @@ export function renderSentencePopover(
       }
       onClose={callbacks.onClose}
       onAction={callbacks.onAction}
+      onSpeak={callbacks.onSpeak}
     />,
     {
       textMirror: [
@@ -257,14 +268,23 @@ export function renderSentencePopover(
           onClick: () => callbacks.onAction("details")
         }
       ],
-      grammarCards: detail.grammarCards
+      grammarCards: detail.grammarCards,
+      speakAction: callbacks.onSpeak
+        ? {
+            label: "Play pronunciation",
+            onClick: () => callbacks.onSpeak?.(detail.translatedText)
+          }
+        : undefined
     }
   );
 }
 
 export function renderPhrasePopover(
   detail: PhraseActivatedDetail,
-  callbacks: { onClose: () => void }
+  callbacks: {
+    onClose: () => void;
+    onSpeak?: (text: string) => void | Promise<void>;
+  }
 ): HTMLDivElement {
   return createReactPopover(
     "phrase",
@@ -277,6 +297,7 @@ export function renderPhrasePopover(
       }
       sentence={readNonEmptyString(detail.sentence)}
       onClose={callbacks.onClose}
+      onSpeak={callbacks.onSpeak}
     />,
     {
       textMirror: [
@@ -288,7 +309,13 @@ export function renderPhrasePopover(
           "You may see this again when it fits the page.",
         "Close help",
         "ImmersionKit"
-      ]
+      ],
+      speakAction: callbacks.onSpeak
+        ? {
+            label: "Play pronunciation",
+            onClick: () => callbacks.onSpeak?.(detail.targetText)
+          }
+        : undefined
     }
   );
 }
@@ -724,6 +751,10 @@ function createReactPopover(
       pressed?: boolean;
       onClick: () => void;
     }[];
+    speakAction?: {
+      label: string;
+      onClick: () => void;
+    };
   } = {}
 ): HTMLDivElement {
   const popover = document.createElement("div") as ReactPopoverHost;
@@ -773,6 +804,10 @@ function appendLightDomMirror(
       pressed?: boolean;
       onClick: () => void;
     }[];
+    speakAction?: {
+      label: string;
+      onClick: () => void;
+    };
   }
 ) {
   const mirrorText = (options.textMirror ?? [])
@@ -818,6 +853,15 @@ function appendLightDomMirror(
     const button = createProxyButton(action.label, action.onClick);
     button.setAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE, action.action);
     button.setAttribute("aria-pressed", action.pressed ? "true" : "false");
+    popover.append(button);
+  }
+
+  if (options.speakAction) {
+    const button = createProxyButton(
+      options.speakAction.label,
+      options.speakAction.onClick
+    );
+    button.setAttribute(POPOVER_SPEAK_ACTION_ATTRIBUTE, "true");
     popover.append(button);
   }
 }

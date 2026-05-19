@@ -30,7 +30,9 @@ import type {
   LoadContentContextMessage,
   LoadContentContextResponse,
   MutateUserDataResponse,
-  SentenceTranslationResultMessage
+  SentenceTranslationResultMessage,
+  SpeakTextMessage,
+  SpeakTextResponse
 } from "@immersionkit/shared";
 
 import { getBackgroundAssetPackService } from "./asset-packs";
@@ -57,6 +59,7 @@ import {
   setUserDataValues,
   USER_DATA_KEYS
 } from "../storage/user-data-repository";
+import { BackgroundTextToSpeechService } from "./tts";
 
 type BackgroundHandledRuntimeMessage = Exclude<
   RuntimeMessage,
@@ -86,6 +89,7 @@ export class BackgroundRuntimeCoordinator {
   private readonly userVocab: IndexedDbUserVocabRepository;
   private readonly contentContext: ContentContextService;
   private readonly assetPacks = getBackgroundAssetPackService();
+  private readonly tts = new BackgroundTextToSpeechService();
   private readonly runtimeMessageHandlers: RuntimeMessageHandlerMap = {
     [RuntimeMessageType.Ping]: (_message, _sender, sendResponse) => {
       sendResponse({
@@ -157,6 +161,10 @@ export class BackgroundRuntimeCoordinator {
       sendResponse
     ) => {
       void this.handleQueueSentenceCandidates(message, sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.SpeakText]: (message, _sender, sendResponse) => {
+      void this.handleSpeakText(message, sendResponse);
       return true;
     },
     [RuntimeMessageType.AssistEvent]: (message, _sender, sendResponse) => {
@@ -314,6 +322,21 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "sentence-queue-failed"
+      });
+    }
+  }
+
+  private async handleSpeakText(
+    message: SpeakTextMessage,
+    sendResponse: (response: SpeakTextResponse) => void
+  ) {
+    try {
+      sendResponse(await this.tts.speak(message));
+    } catch (error) {
+      console.warn("ImmersionKit TTS handling failed.", error);
+      sendResponse({
+        ok: false,
+        error: "tts-failed"
       });
     }
   }

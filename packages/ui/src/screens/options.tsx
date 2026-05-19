@@ -54,8 +54,15 @@ import {
   settingsTabs,
   type ExtensionOptionsProps,
   type OptionsSection,
-  type ReadingLevel
+  type ReadingLevel,
+  type TtsPlaybackRateSettings
 } from "./types";
+
+const DEFAULT_TTS_PLAYBACK_RATES: TtsPlaybackRateSettings = {
+  word: 0.8,
+  phrase: 1,
+  sentence: 1
+};
 
 export function ExtensionOptions({
   initialSection = "Overview",
@@ -79,6 +86,9 @@ export function ExtensionOptions({
   apiKeyValid = false,
   showApiKey = false,
   translationSummary,
+  ttsVoiceId = "es_ES-sharvard-medium-m",
+  ttsFallbackBehavior = "piper-with-system-fallback",
+  ttsPlaybackRates = DEFAULT_TTS_PLAYBACK_RATES,
   siteSummary,
   pausedSiteCount = 0,
   savedSiteCount = 0,
@@ -96,7 +106,10 @@ export function ExtensionOptions({
   onProviderChange,
   onApiKeyChange,
   onToggleApiKeyVisibility,
-  onClearApiKey
+  onClearApiKey,
+  onTtsVoiceChange,
+  onTtsFallbackBehaviorChange,
+  onTtsPlaybackRateChange
 }: ExtensionOptionsProps) {
   const [localActive, setLocalActive] = useState<OptionsSection>(initialSection);
   const active = activeSection ?? localActive;
@@ -212,11 +225,17 @@ export function ExtensionOptions({
                 apiKeyValid={apiKeyValid}
                 showApiKey={showApiKey}
                 translationSummary={translationSummary}
+                ttsVoiceId={ttsVoiceId}
+                ttsFallbackBehavior={ttsFallbackBehavior}
+                ttsPlaybackRates={ttsPlaybackRates}
                 onSentenceHelpChange={onSentenceHelpChange}
                 onProviderChange={onProviderChange}
                 onApiKeyChange={onApiKeyChange}
                 onToggleApiKeyVisibility={onToggleApiKeyVisibility}
                 onClearApiKey={onClearApiKey}
+                onTtsVoiceChange={onTtsVoiceChange}
+                onTtsFallbackBehaviorChange={onTtsFallbackBehaviorChange}
+                onTtsPlaybackRateChange={onTtsPlaybackRateChange}
               />
             </TabsContent>
             {showAdvanced ? (
@@ -1278,11 +1297,17 @@ function OptionsTranslationPanel({
   apiKeyValid = false,
   showApiKey = false,
   translationSummary,
+  ttsVoiceId = "es_ES-sharvard-medium-m",
+  ttsFallbackBehavior = "piper-with-system-fallback",
+  ttsPlaybackRates = DEFAULT_TTS_PLAYBACK_RATES,
   onSentenceHelpChange,
   onProviderChange,
   onApiKeyChange,
   onToggleApiKeyVisibility,
-  onClearApiKey
+  onClearApiKey,
+  onTtsVoiceChange,
+  onTtsFallbackBehaviorChange,
+  onTtsPlaybackRateChange
 }: Pick<
   ExtensionOptionsProps,
   | "sentenceHelpEnabled"
@@ -1291,11 +1316,17 @@ function OptionsTranslationPanel({
   | "apiKeyValid"
   | "showApiKey"
   | "translationSummary"
+  | "ttsVoiceId"
+  | "ttsFallbackBehavior"
+  | "ttsPlaybackRates"
   | "onSentenceHelpChange"
   | "onProviderChange"
   | "onApiKeyChange"
   | "onToggleApiKeyVisibility"
   | "onClearApiKey"
+  | "onTtsVoiceChange"
+  | "onTtsFallbackBehaviorChange"
+  | "onTtsPlaybackRateChange"
 >) {
   return (
     <div className="flex flex-col gap-4">
@@ -1404,6 +1435,114 @@ function OptionsTranslationPanel({
               </Button>
             </CardFooter>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Speech</CardTitle>
+              <CardDescription>
+                Speaker buttons use the selected local Piper voice.
+              </CardDescription>
+              <CardAction>
+                <Badge variant="secondary">Local</Badge>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="tts-voice">Voice</FieldLabel>
+                  <Select
+                    value={ttsVoiceId}
+                    onValueChange={(value) => {
+                      if (
+                        value === "es_ES-davefx-medium" ||
+                        value === "es_ES-carlfm-x_low" ||
+                        value === "es_AR-daniela-high" ||
+                        value === "es_MX-claude-high" ||
+                        value === "es_ES-sharvard-medium-m" ||
+                        value === "es_ES-sharvard-medium-f"
+                      ) {
+                        onTtsVoiceChange?.(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="tts-voice" className="w-full">
+                      <SelectValue placeholder="Voice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="es_ES-davefx-medium">
+                          DaveFX, Spain, medium
+                        </SelectItem>
+                        <SelectItem value="es_ES-carlfm-x_low">
+                          CarlFM, Spain, x-low
+                        </SelectItem>
+                        <SelectItem value="es_AR-daniela-high">
+                          Daniela, Argentina, high
+                        </SelectItem>
+                        <SelectItem value="es_MX-claude-high">
+                          Claude, Mexico, high
+                        </SelectItem>
+                        <SelectItem value="es_ES-sharvard-medium-m">
+                          Sharvard M, Spain, medium
+                        </SelectItem>
+                        <SelectItem value="es_ES-sharvard-medium-f">
+                          Sharvard F, Spain, medium
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="tts-fallback">Fallback</FieldLabel>
+                  <Select
+                    value={ttsFallbackBehavior}
+                    onValueChange={(value) => {
+                      if (
+                        value === "piper-with-system-fallback" ||
+                        value === "piper-only" ||
+                        value === "system-only"
+                      ) {
+                        onTtsFallbackBehaviorChange?.(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="tts-fallback" className="w-full">
+                      <SelectValue placeholder="Fallback" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="piper-with-system-fallback">
+                          Piper, then system voice
+                        </SelectItem>
+                        <SelectItem value="piper-only">Piper only</SelectItem>
+                        <SelectItem value="system-only">System voice only</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    System voice uses Chrome TTS when available.
+                  </FieldDescription>
+                </Field>
+                <SpeechRateControl
+                  id="tts-word-speed"
+                  label="Word speed"
+                  value={ttsPlaybackRates.word}
+                  onChange={(rate) => onTtsPlaybackRateChange?.("word", rate)}
+                />
+                <SpeechRateControl
+                  id="tts-phrase-speed"
+                  label="Phrase speed"
+                  value={ttsPlaybackRates.phrase}
+                  onChange={(rate) => onTtsPlaybackRateChange?.("phrase", rate)}
+                />
+                <SpeechRateControl
+                  id="tts-sentence-speed"
+                  label="Sentence speed"
+                  value={ttsPlaybackRates.sentence}
+                  onChange={(rate) => onTtsPlaybackRateChange?.("sentence", rate)}
+                />
+              </FieldGroup>
+            </CardContent>
+          </Card>
         </div>
         <div className="flex flex-col gap-4">
           <Card>
@@ -1438,6 +1577,42 @@ function OptionsTranslationPanel({
         </div>
       </div>
     </div>
+  );
+}
+
+function SpeechRateControl({
+  id,
+  label,
+  value,
+  onChange
+}: {
+  id: string;
+  label: string;
+  value: number;
+  onChange?: (value: number) => void;
+}) {
+  const percent = Math.round(value * 100);
+
+  return (
+    <Field>
+      <div className="flex items-center justify-between gap-3">
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        <span className="text-sm font-medium">{percent}%</span>
+      </div>
+      <Slider
+        id={id}
+        min={50}
+        max={125}
+        step={5}
+        value={[percent]}
+        onValueChange={(values) => onChange?.((values[0] ?? 100) / 100)}
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>Slower</span>
+        <span>Normal</span>
+        <span>Faster</span>
+      </div>
+    </Field>
   );
 }
 

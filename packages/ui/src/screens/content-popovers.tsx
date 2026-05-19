@@ -60,6 +60,7 @@ export type WordHelpPopoverProps = {
   pageSentence?: string | null;
   onClose?: () => void;
   onStatusAction?: (status: WordHelpAction) => void;
+  onSpeak?: (text: string) => void | Promise<void>;
 };
 
 export type PhraseHelpPopoverProps = {
@@ -68,6 +69,7 @@ export type PhraseHelpPopoverProps = {
   rationale: string;
   sentence?: string | null;
   onClose?: () => void;
+  onSpeak?: (text: string) => void | Promise<void>;
 };
 
 export type SentenceHelpPopoverProps = {
@@ -78,6 +80,7 @@ export type SentenceHelpPopoverProps = {
   initialSourceVisible?: boolean;
   onClose?: () => void;
   onAction?: (action: SentenceHelpAction) => void;
+  onSpeak?: (text: string) => void | Promise<void>;
 };
 
 const INACTIVE_STATUS_BUTTON_CLASS =
@@ -100,7 +103,8 @@ export function WordHelpPopoverContent({
   englishExample,
   pageSentence,
   onClose,
-  onStatusAction
+  onStatusAction,
+  onSpeak
 }: WordHelpPopoverProps) {
   const [exampleLanguage, setExampleLanguage] =
     useState<ExampleLanguage>("spanish");
@@ -115,6 +119,7 @@ export function WordHelpPopoverContent({
     : nativeExample
       ? "spanish"
       : "english";
+  const speechAction = useSpeechAction(targetText, onSpeak);
 
   return (
     <PopoverCard>
@@ -129,6 +134,7 @@ export function WordHelpPopoverContent({
           </RationaleHoverAction>
         }
         icon="volume"
+        speechAction={speechAction}
         title={targetText}
         badge={wordStatusLabel(status)}
         onClose={onClose}
@@ -205,12 +211,14 @@ export function PhraseHelpPopoverContent({
   targetText,
   rationale,
   sentence,
-  onClose
+  onClose,
+  onSpeak
 }: PhraseHelpPopoverProps) {
   const [exampleLanguage, setExampleLanguage] =
     useState<ExampleLanguage>("spanish");
   const visibleExampleText =
     exampleLanguage === "english" ? sentence : TRANSLATION_UNAVAILABLE_TEXT;
+  const speechAction = useSpeechAction(targetText, onSpeak);
 
   return (
     <PopoverCard>
@@ -225,6 +233,7 @@ export function PhraseHelpPopoverContent({
           </RationaleHoverAction>
         }
         icon="link"
+        speechAction={speechAction}
         title={targetText}
         badge="phrase"
         onClose={onClose}
@@ -279,7 +288,8 @@ export function SentenceHelpPopoverContent({
   grammarCards = [],
   initialSourceVisible = false,
   onClose,
-  onAction
+  onAction,
+  onSpeak
 }: SentenceHelpPopoverProps) {
   const [sourceVisible, setSourceVisible] = useState(initialSourceVisible);
   const [detailsActive, setDetailsActive] = useState(false);
@@ -287,6 +297,7 @@ export function SentenceHelpPopoverContent({
     useState<ExampleLanguage>("spanish");
   const visibleSentenceText =
     sentenceLanguage === "spanish" ? translatedText : sourceText;
+  const speechAction = useSpeechAction(translatedText, onSpeak);
 
   return (
     <PopoverCard>
@@ -301,6 +312,7 @@ export function SentenceHelpPopoverContent({
           </RationaleHoverAction>
         }
         icon="book"
+        speechAction={speechAction}
         title="Sentence help"
         badge="optional"
         onClose={onClose}
@@ -434,19 +446,25 @@ function PopoverCard({ children }: { children: ReactNode }) {
 function PopoverHeading({
   actions,
   icon,
+  speechAction,
   title,
   badge,
   onClose
 }: {
   actions?: ReactNode;
   icon: "book" | "link" | "volume";
+  speechAction?: ReactNode;
   title: string;
   badge: string;
   onClose?: () => void;
 }) {
+  const leadingIcon = speechAction ?? (
+    <IkIcon name={icon} className="mt-1 shrink-0 text-muted-foreground" />
+  );
+
   return (
     <CardHeader className="flex flex-row items-start gap-2 p-0">
-      <IkIcon name={icon} className="mt-1 shrink-0 text-muted-foreground" />
+      {leadingIcon}
       <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
         <CardTitle className="min-w-0 break-words text-base leading-6">
           {title}
@@ -466,6 +484,59 @@ function PopoverHeading({
         <IkIcon name="close" />
       </Button>
     </CardHeader>
+  );
+}
+
+function useSpeechAction(
+  text: string,
+  onSpeak?: (text: string) => void | Promise<void>
+): ReactNode {
+  const [speechStatus, setSpeechStatus] = useState<"idle" | "loading" | "error">(
+    "idle"
+  );
+
+  if (!onSpeak) {
+    return null;
+  }
+
+  const label =
+    speechStatus === "loading"
+      ? "Playing pronunciation"
+      : speechStatus === "error"
+        ? "Retry pronunciation"
+        : "Play pronunciation";
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-xs"
+      className={
+        speechStatus === "error"
+          ? "mt-0.5 shrink-0 text-destructive"
+          : "mt-0.5 shrink-0"
+      }
+      aria-label={label}
+      aria-busy={speechStatus === "loading"}
+      title={label}
+      data-ik-speak-action="true"
+      data-ik-speak-status={speechStatus}
+      disabled={speechStatus === "loading"}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setSpeechStatus("loading");
+        void Promise.resolve(onSpeak(text))
+          .then(() => {
+            setSpeechStatus("idle");
+          })
+          .catch(() => {
+            setSpeechStatus("error");
+          });
+      }}
+    >
+      <IkIcon name="volume" />
+    </Button>
   );
 }
 

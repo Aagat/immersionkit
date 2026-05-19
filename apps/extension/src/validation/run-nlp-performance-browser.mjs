@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { createServer } from "vite";
 
+import { getBrowserLaunchOptions } from "../../../../tools/browser-launch-mode.mjs";
+
 const scriptFile = fileURLToPath(import.meta.url);
 const validationDirectory = path.dirname(scriptFile);
 const extensionDirectory = path.resolve(validationDirectory, "../..");
@@ -33,9 +35,7 @@ async function run() {
 
   await server.listen();
 
-  const browser = await chromium.launch({
-    headless: true
-  });
+  const browser = await chromium.launch(getBrowserLaunchOptions());
 
   try {
     const page = await browser.newPage();

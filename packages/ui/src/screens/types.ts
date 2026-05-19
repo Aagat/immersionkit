@@ -9,6 +9,22 @@ export type OptionsSection =
   | "Translation"
   | "Advanced";
 export type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
+export type TtsVoiceId =
+  | "es_ES-davefx-medium"
+  | "es_ES-carlfm-x_low"
+  | "es_AR-daniela-high"
+  | "es_MX-claude-high"
+  | "es_ES-sharvard-medium-m"
+  | "es_ES-sharvard-medium-f";
+export type TtsFallbackBehavior =
+  | "piper-with-system-fallback"
+  | "piper-only"
+  | "system-only";
+export type TtsPlaybackRateSettings = {
+  word: number;
+  phrase: number;
+  sentence: number;
+};
 
 export type MetricIconName =
   | "band"
@@ -158,6 +174,9 @@ export type ExtensionOptionsProps = {
   apiKeyValid?: boolean;
   showApiKey?: boolean;
   translationSummary?: string;
+  ttsVoiceId?: TtsVoiceId;
+  ttsFallbackBehavior?: TtsFallbackBehavior;
+  ttsPlaybackRates?: TtsPlaybackRateSettings;
   siteSummary?: string;
   pausedSiteCount?: string | number;
   savedSiteCount?: string | number;
@@ -176,6 +195,12 @@ export type ExtensionOptionsProps = {
   onApiKeyChange?: (apiKey: string) => void;
   onToggleApiKeyVisibility?: () => void;
   onClearApiKey?: () => void;
+  onTtsVoiceChange?: (voiceId: TtsVoiceId) => void;
+  onTtsFallbackBehaviorChange?: (behavior: TtsFallbackBehavior) => void;
+  onTtsPlaybackRateChange?: (
+    surface: keyof TtsPlaybackRateSettings,
+    rate: number
+  ) => void;
 };
 
 export type ExtensionPopupProps = {

@@ -11,6 +11,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { getBrowserLaunchOptions } from "../browser-launch-mode.mjs";
+
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectory = path.dirname(currentFilePath);
 const projectRoot = path.resolve(currentDirectory, "../..");
@@ -234,9 +236,7 @@ function requestStatusCode(url) {
 
 async function runBrowserValidation(playwrightModule, url) {
   const { chromium } = playwrightModule;
-  const launchOptions = {
-    headless: true
-  };
+  const launchOptions = getBrowserLaunchOptions();
 
   const executablePath = resolveBrowserExecutable();
   if (executablePath) {

@@ -45,7 +45,7 @@ type StorageSchemaDefinition = {
 export const STORAGE_SCHEMA = {
   database: {
     name: "immersionkit-extension",
-    version: 7
+    version: 8
   },
   recordVersions: {
     userData: 1,
@@ -233,6 +233,26 @@ export const STORAGE_SCHEMA = {
       retention: "refresh-from-assets",
       recordType: "StoredAssetLexemeRow",
       owner: "apps/extension/src/background/asset-packs.ts"
+    },
+    ttsVoices: {
+      name: "tts-voices",
+      keyPath: "voiceId",
+      indexes: [
+        {
+          name: "languagePair",
+          keyPath: "languagePair",
+          unique: false
+        },
+        {
+          name: "assetVersion",
+          keyPath: "assetVersion",
+          unique: false
+        }
+      ],
+      classification: "asset-cache",
+      retention: "refresh-from-assets",
+      recordType: "StoredTtsVoiceAsset",
+      owner: "apps/extension/src/background/tts-assets.ts"
     }
   }
 } as const satisfies StorageSchemaDefinition;

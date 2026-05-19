@@ -8,8 +8,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chromium, type BrowserContext, type Page, type Worker } from "playwright";
-import { ensureLinuxHeadedBrowserDisplay } from "../../../tools/headed-browser-display.mjs";
 import { startAssetPackServer } from "../../../tools/assets/asset-pack-server.mjs";
+import { getExtensionLaunchOptions } from "../../../tools/browser-launch-mode.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -304,18 +304,13 @@ async function launchBuiltExtension(): Promise<{
   extensionId: string;
   serviceWorker: Worker;
 }> {
-  ensureLinuxHeadedBrowserDisplay();
-
   const userDataDir = await mkdtemp(join(tmpdir(), "ik-extension-e2e-"));
   userDataDirs.push(userDataDir);
 
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
-    args: [
-      `--disable-extensions-except=${extensionPath}`,
-      `--load-extension=${extensionPath}`
-    ]
-  });
+  const context = await chromium.launchPersistentContext(
+    userDataDir,
+    getExtensionLaunchOptions(extensionPath)
+  );
   contexts.push(context);
 
   let serviceWorker = context.serviceWorkers()[0];
@@ -478,7 +473,7 @@ async function writeUserData(
 
       async function openImmersionKitDatabaseForUserData(): Promise<IDBDatabase> {
         return new Promise((resolveOpen, rejectOpen) => {
-          const request = indexedDB.open("immersionkit-extension", 7);
+          const request = indexedDB.open("immersionkit-extension", 8);
           request.onupgradeneeded = () => {
             ensureExtensionStores(request.result, request.transaction!);
           };
@@ -539,6 +534,11 @@ async function writeUserData(
         ensureIndex(lexemes, "languagePairBandId", ["languagePair", "bandId"]);
         ensureIndex(lexemes, "assetVersion", "assetVersion");
         ensureIndex(lexemes, "lexemeId", "lexemeId");
+        const ttsVoices = ensureStore(database, transaction, "tts-voices", {
+          keyPath: "voiceId"
+        });
+        ensureIndex(ttsVoices, "languagePair", "languagePair");
+        ensureIndex(ttsVoices, "assetVersion", "assetVersion");
       }
 
       function ensureStore(

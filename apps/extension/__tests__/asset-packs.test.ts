@@ -6,7 +6,9 @@ import {
   type LexemeEntry,
   type RenderUnitEntry
 } from "@immersionkit/shared";
-import { describe, expect, it } from "vitest";
+import type { Server } from "node:http";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { startAssetPackServer } from "../../../tools/assets/asset-pack-server.mjs";
 
 import {
   BackgroundAssetPackService,
@@ -20,9 +22,20 @@ import {
   type AssetPackRepository,
   type StoredAssetPack
 } from "../src/background/asset-packs";
+import {
+  buildPiperVoiceManifestUrl,
+  PiperVoiceAssetClient,
+  resolvePiperVoiceAssetUrls,
+  validatePiperTtsManifest,
+  type TtsVoiceAssetRepository
+} from "../src/background/tts-assets";
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
 
 describe("background asset packs", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("resolves previous/current/next band windows and unions diverged word and phrase bands", () => {
     expect(resolveActiveAssetBandWindow(DEFAULT_CURRICULUM_CONFIG, {})).toEqual([
       "level-1a",
@@ -89,6 +102,190 @@ describe("background asset packs", () => {
         lexemes: []
       })
     ).toBeNull();
+  });
+
+  it("resolves first-party Piper TTS asset URLs from the configured asset base URL", async () => {
+    const urls = resolvePiperVoiceAssetUrls({
+      assetBaseUrl: "https://cdn.example/assets/"
+    });
+    expect(urls).toEqual({
+      manifestUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_ES-sharvard-medium/manifest.json",
+      modelUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_ES-sharvard-medium/es_ES-sharvard-medium.onnx",
+      configUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_ES-sharvard-medium/es_ES-sharvard-medium.onnx.json"
+    });
+    expect(buildPiperVoiceManifestUrl("https://cdn.example/assets/")).toBe(
+      urls.manifestUrl
+    );
+    expect(
+      resolvePiperVoiceAssetUrls({
+        assetBaseUrl: "https://cdn.example/assets/",
+        voiceId: "es_AR-daniela-high"
+      })
+    ).toEqual({
+      manifestUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_AR-daniela-high/manifest.json",
+      modelUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_AR-daniela-high/es_AR-daniela-high.onnx",
+      configUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_AR-daniela-high/es_AR-daniela-high.onnx.json"
+    });
+    expect(
+      resolvePiperVoiceAssetUrls({
+        assetBaseUrl: "https://cdn.example/assets/",
+        voiceId: "es_ES-sharvard-medium-f"
+      })
+    ).toEqual({
+      manifestUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_ES-sharvard-medium/manifest.json",
+      modelUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_ES-sharvard-medium/es_ES-sharvard-medium.onnx",
+      configUrl:
+        "https://cdn.example/assets/tts/en-es/piper/es_ES-sharvard-medium/es_ES-sharvard-medium.onnx.json"
+    });
+
+    vi.stubEnv("VITE_IMMERSIONKIT_ASSET_BASE_URL", "https://env.example/assets/");
+    const requestedUrls: string[] = [];
+    const client = new PiperVoiceAssetClient({
+      repository: new InMemoryTtsVoiceAssetRepository(),
+      fetchJson: async (url) => {
+        requestedUrls.push(url);
+        throw new Error("stop-after-url-resolution");
+      }
+    });
+
+    await expect(client.ensureVoice()).rejects.toThrow(
+      "stop-after-url-resolution"
+    );
+    expect(requestedUrls).toEqual([
+      "https://env.example/assets/tts/en-es/piper/es_ES-sharvard-medium/manifest.json"
+    ]);
+
+    requestedUrls.length = 0;
+    await expect(client.ensureVoice("es_ES-carlfm-x_low")).rejects.toThrow(
+      "stop-after-url-resolution"
+    );
+    expect(requestedUrls).toEqual([
+      "https://env.example/assets/tts/en-es/piper/es_ES-carlfm-x_low/manifest.json"
+    ]);
+
+    requestedUrls.length = 0;
+    await expect(client.ensureVoice("es_ES-sharvard-medium-m")).rejects.toThrow(
+      "stop-after-url-resolution"
+    );
+    expect(requestedUrls).toEqual([
+      "https://env.example/assets/tts/en-es/piper/es_ES-sharvard-medium/manifest.json"
+    ]);
+  });
+
+  it("serves first-party Piper TTS assets with content types and checksum metadata", async () => {
+    const assetServer = await startAssetPackServer({ port: 0 });
+    try {
+      const manifestResponse = await fetch(
+        assetServer.ttsManifestUrls["es_ES-davefx-medium"]
+      );
+      expect(manifestResponse.status).toBe(200);
+      expect(manifestResponse.headers.get("content-type")).toContain(
+        "application/json"
+      );
+      const manifest = validatePiperTtsManifest(await manifestResponse.json());
+      expect(manifest).toMatchObject({
+        voiceId: "es_ES-davefx-medium",
+        language: "es-ES",
+        engine: "piper",
+        modelBytes: 63201294,
+        configBytes: 4817,
+        modelSha256:
+          "6658b03b1a6c316ee4c265a9896abc1393353c2d9e1bca7d66c2c442e222a917"
+      });
+
+      const modelResponse = await fetch(
+        `${assetServer.baseUrl}/tts/en-es/piper/es_ES-davefx-medium/es_ES-davefx-medium.onnx`
+      );
+      expect(modelResponse.status).toBe(200);
+      expect(modelResponse.headers.get("content-type")).toContain(
+        "application/octet-stream"
+      );
+      expect((await modelResponse.arrayBuffer()).byteLength).toBe(63201294);
+
+      const configResponse = await fetch(
+        `${assetServer.baseUrl}/tts/en-es/piper/es_ES-davefx-medium/es_ES-davefx-medium.onnx.json`
+      );
+      expect(configResponse.status).toBe(200);
+      expect(configResponse.headers.get("content-type")).toContain(
+        "application/json"
+      );
+      expect(await configResponse.json()).toHaveProperty("phoneme_id_map");
+
+      const carlfmManifestResponse = await fetch(
+        assetServer.ttsManifestUrls["es_ES-carlfm-x_low"]
+      );
+      expect(carlfmManifestResponse.status).toBe(200);
+      expect(
+        validatePiperTtsManifest(await carlfmManifestResponse.json())
+      ).toMatchObject({
+        voiceId: "es_ES-carlfm-x_low",
+        language: "es-ES",
+        modelBytes: 28130791
+      });
+
+      const danielaManifestResponse = await fetch(
+        assetServer.ttsManifestUrls["es_AR-daniela-high"]
+      );
+      expect(danielaManifestResponse.status).toBe(200);
+      expect(
+        validatePiperTtsManifest(await danielaManifestResponse.json())
+      ).toMatchObject({
+        voiceId: "es_AR-daniela-high",
+        language: "es-AR",
+        modelBytes: 114199011,
+        modelSha256:
+          "7ceb1fc0dab349418c5b54a639ae9ee595212d7c9ea422220d8419163d5cc985"
+      });
+
+      const claudeManifestResponse = await fetch(
+        assetServer.ttsManifestUrls["es_MX-claude-high"]
+      );
+      expect(claudeManifestResponse.status).toBe(200);
+      expect(
+        validatePiperTtsManifest(await claudeManifestResponse.json())
+      ).toMatchObject({
+        voiceId: "es_MX-claude-high",
+        language: "es-MX",
+        modelBytes: 63122309,
+        modelSha256:
+          "3ef40a71ea63852cd8ab7e6fa7d2ecdcfa67a0b47c9c48e3f10e02ee02083ea0"
+      });
+
+      const sharvardManifestResponse = await fetch(
+        assetServer.ttsManifestUrls["es_ES-sharvard-medium"]
+      );
+      expect(sharvardManifestResponse.status).toBe(200);
+      expect(
+        validatePiperTtsManifest(
+          await sharvardManifestResponse.json(),
+          "es_ES-sharvard-medium-f"
+        )
+      ).toMatchObject({
+        voiceId: "es_ES-sharvard-medium",
+        language: "es-ES",
+        modelBytes: 76733615,
+        speakerCount: 2,
+        speakerIdMap: {
+          M: 0,
+          F: 1
+        }
+      });
+
+      const missingResponse = await fetch(
+        `${assetServer.baseUrl}/tts/en-es/piper/missing/manifest.json`
+      );
+      expect(missingResponse.status).toBe(404);
+    } finally {
+      await closeServer(assetServer.server);
+    }
   });
 
   it("loads and filters remote packs by the active non-en-es language pair", async () => {
@@ -427,6 +624,16 @@ class InMemoryAssetPackRepository implements AssetPackRepository {
   }
 }
 
+class InMemoryTtsVoiceAssetRepository implements TtsVoiceAssetRepository {
+  async get() {
+    return null;
+  }
+
+  async put() {
+    return true;
+  }
+}
+
 function createRuntimeConfig(
   config: CurriculumConfig = DEFAULT_CURRICULUM_CONFIG,
   settings: Parameters<typeof resolveExtensionSettings>[0] = null
@@ -536,4 +743,12 @@ async function waitFor(
   }
 
   throw new Error("Timed out waiting for condition.");
+}
+
+function closeServer(server: Server): Promise<void> {
+  return new Promise((resolve) => {
+    server.close(() => {
+      resolve();
+    });
+  });
 }

@@ -8,6 +8,7 @@ import type {
 import {
   closePopover,
   mountPopover,
+  POPOVER_SPEAK_ACTION_ATTRIBUTE,
   renderPhrasePopover,
   renderSentencePopover,
   renderWordPopover,
@@ -96,6 +97,68 @@ describe("content popover placement", () => {
   );
 });
 
+describe("content popover speaker controls", () => {
+  it("speaks word target text without closing the popover", async () => {
+    const onSpeak = vi.fn();
+    await withFixtureDom("article-basic.html", async ({ wait }) => {
+      const popover = renderWordPopover(createWordDetail(), {
+        onClose: vi.fn(),
+        onStatusAction: vi.fn(),
+        onSpeak
+      });
+
+      querySpeakButton(popover).click();
+      await wait(0);
+      await waitForReactScheduler();
+
+      expect(isLeadingSpeakButton(popover)).toBe(true);
+      expect(onSpeak).toHaveBeenCalledWith("ciudad");
+      unmountReactPopover(popover);
+      await waitForReactScheduler();
+    });
+  });
+
+  it("speaks phrase target text", async () => {
+    const onSpeak = vi.fn();
+    await withFixtureDom("article-basic.html", async ({ wait }) => {
+      const popover = renderPhrasePopover(createPhraseDetail(), {
+        onClose: vi.fn(),
+        onSpeak
+      });
+
+      querySpeakButton(popover).click();
+      await wait(0);
+      await waitForReactScheduler();
+
+      expect(isLeadingSpeakButton(popover)).toBe(true);
+      expect(onSpeak).toHaveBeenCalledWith("ahora mismo");
+      unmountReactPopover(popover);
+      await waitForReactScheduler();
+    });
+  });
+
+  it("speaks sentence translated text", async () => {
+    const onSpeak = vi.fn();
+    await withFixtureDom("article-basic.html", async ({ document, wait }) => {
+      const note = document.createElement("span");
+      const popover = renderSentencePopover(note, createSentenceDetail(note), {
+        onClose: vi.fn(),
+        onAction: vi.fn(),
+        onSpeak
+      });
+
+      querySpeakButton(popover).click();
+      await wait(0);
+      await waitForReactScheduler();
+
+      expect(isLeadingSpeakButton(popover)).toBe(true);
+      expect(onSpeak).toHaveBeenCalledWith("La ciudad abre temprano.");
+      unmountReactPopover(popover);
+      await waitForReactScheduler();
+    });
+  });
+});
+
 function setViewport(window: Window, width: number, height: number) {
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -156,6 +219,34 @@ function readStyledBounds(
     right: left + size.width,
     bottom: top + size.height
   };
+}
+
+function querySpeakButton(popover: HTMLElement): HTMLButtonElement {
+  const button = popover.querySelector<HTMLButtonElement>(
+    `[${POPOVER_SPEAK_ACTION_ATTRIBUTE}="true"]`
+  );
+  if (!button) {
+    throw new Error("Expected popover speaker button.");
+  }
+
+  return button;
+}
+
+function isLeadingSpeakButton(popover: HTMLElement): boolean {
+  const leadingElement = popover.shadowRoot
+    ?.querySelector('[data-slot="card-header"]')
+    ?.firstElementChild;
+  return leadingElement?.getAttribute(POPOVER_SPEAK_ACTION_ATTRIBUTE) === "true";
+}
+
+function unmountReactPopover(popover: HTMLElement): void {
+  (popover as HTMLElement & { __ikUnmountReact?: () => void }).__ikUnmountReact?.();
+}
+
+function waitForReactScheduler(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
 }
 
 function createWordDetail(): TokenActivatedDetail {

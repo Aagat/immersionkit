@@ -7,6 +7,7 @@ import manifest from "./manifest.config";
 export default defineConfig({
   plugins: [react(), tailwindcss(), crx({ manifest })],
   resolve: {
+    conditions: ["onnxruntime-web-use-extern-wasm"],
     alias: {
       "@": new URL("../../packages/ui/src", import.meta.url).pathname,
       "@immersionkit/ui/styles.css": new URL(
@@ -23,7 +24,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         options: new URL("./options.html", import.meta.url).pathname,
-        popup: new URL("./popup.html", import.meta.url).pathname
+        popup: new URL("./popup.html", import.meta.url).pathname,
+        ttsOffscreen: new URL("./tts-offscreen.html", import.meta.url).pathname
       }
     }
   },
