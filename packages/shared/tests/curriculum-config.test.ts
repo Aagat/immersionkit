@@ -102,7 +102,7 @@ describe("curriculum configuration", () => {
       expect(bandIds.has(entry.minBand)).toBe(true);
     }
 
-    expect(FIXED_PHRASE_LEXICON.length).toBeGreaterThanOrEqual(250);
+    expect(FIXED_PHRASE_LEXICON.length).toBeGreaterThanOrEqual(700);
     for (const entry of FIXED_PHRASE_LEXICON) {
       expect(bandIds.has(entry.minBand)).toBe(true);
     }
@@ -115,7 +115,7 @@ describe("curriculum configuration", () => {
       );
     }
     for (const band of DEFAULT_CURRICULUM_CONFIG.bands) {
-      expect(fixedCountsByBand.get(band.bandId) ?? 0).toBeGreaterThan(0);
+      expect(fixedCountsByBand.get(band.bandId) ?? 0).toBeGreaterThanOrEqual(15);
     }
   });
 

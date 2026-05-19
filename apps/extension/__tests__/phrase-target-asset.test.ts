@@ -1,18 +1,21 @@
 import {
   DEFAULT_CURRICULUM_CONFIG,
+  FIXED_PHRASE_LEXICON,
   evaluatePhraseCurriculumContentInventory,
   getActiveCurriculumContent,
+  normalizePhraseText,
   normalizeToken
 } from "@immersionkit/shared";
 import { describe, expect, it } from "vitest";
 
 import phraseTargetAsset from "../src/assets/en-es.phrase-targets.v1.json";
+import renderUnitAsset from "../src/assets/en-es.render-units.v1.json";
 
 describe("phrase target asset", () => {
   it("contains only supported exact-match phrase target entries", () => {
     expect(phraseTargetAsset.schemaVersion).toBe("1.0.0");
     expect(phraseTargetAsset.languagePair).toBe("en-es");
-    expect(phraseTargetAsset.entries.length).toBeGreaterThanOrEqual(109);
+    expect(phraseTargetAsset.entries.length).toBeGreaterThanOrEqual(1100);
 
     const keys = new Set<string>();
     const bandIds = new Set(DEFAULT_CURRICULUM_CONFIG.bands.map((band) => band.bandId));
@@ -145,25 +148,6 @@ describe("phrase target asset", () => {
           category: "noun-chunk"
         }),
         expect.objectContaining({
-          sourceText: "going to",
-          targetText: "ir a + infinitivo",
-          sourceKind: "pattern-match",
-          category: "grammar-carrier"
-        }),
-        expect.objectContaining({
-          sourceText: "used to",
-          targetText: "soler + infinitivo",
-          sourceKind: "pattern-match",
-          category: "grammar-carrier"
-        }),
-        expect.objectContaining({
-          sourceText: "have to",
-          targetText: "tener que + infinitivo",
-          sourceKind: "pattern-match",
-          category: "grammar-carrier",
-          minBand: "level-2b"
-        }),
-        expect.objectContaining({
           sourceText: "public library card",
           targetText: "tarjeta de la biblioteca pública",
           sourceKind: "chunk",
@@ -176,8 +160,51 @@ describe("phrase target asset", () => {
           sourceKind: "chunk",
           category: "noun-chunk",
           minBand: "level-5a"
+        }),
+        expect.objectContaining({
+          sourceText: "birth certificate",
+          targetText: "certificado de nacimiento",
+          sourceKind: "chunk",
+          category: "noun-chunk",
+          minBand: "level-2c"
+        }),
+        expect.objectContaining({
+          sourceText: "password reset link",
+          targetText: "enlace de restablecimiento de contraseña",
+          sourceKind: "chunk",
+          category: "noun-chunk",
+          minBand: "level-3a"
+        }),
+        expect.objectContaining({
+          sourceText: "research paper abstract",
+          targetText: "resumen de artículo de investigación",
+          sourceKind: "chunk",
+          category: "noun-chunk",
+          minBand: "level-5a"
         })
       ])
     );
+  });
+
+  it("ships at least two thousand reviewed production phrase triggers", () => {
+    const reviewedSourceTexts = new Set<string>();
+    for (const entry of FIXED_PHRASE_LEXICON) {
+      reviewedSourceTexts.add(normalizePhraseText(entry.sourceText));
+    }
+    for (const entry of phraseTargetAsset.entries) {
+      reviewedSourceTexts.add(normalizePhraseText(entry.sourceText));
+    }
+    for (const entry of renderUnitAsset.entries) {
+      if (
+        entry.kind.includes("phrase") ||
+        entry.kind === "sentence-help-only" ||
+        entry.sourcePattern.tokens.length > 1 ||
+        entry.sourceText.includes(" ")
+      ) {
+        reviewedSourceTexts.add(normalizePhraseText(entry.sourceText));
+      }
+    }
+
+    expect(reviewedSourceTexts.size).toBeGreaterThanOrEqual(2000);
   });
 });

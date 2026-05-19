@@ -28,11 +28,11 @@ describe("phrase detection validation", () => {
     const evaluation = evaluatePhraseDetectorAgainstCorpus(corpus);
 
     expect(evaluation.overall).toEqual({
-      truePositives: 18,
+      truePositives: 19,
       falsePositives: 1,
       falseNegatives: 1,
-      precision: 0.9474,
-      recall: 0.9474
+      precision: 0.95,
+      recall: 0.95
     });
   });
 

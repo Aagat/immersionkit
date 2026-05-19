@@ -23,6 +23,14 @@
           "startToken": 0,
           "endToken": 3,
           "normalizedSourceText": "by the way"
+        },
+        {
+          "id": "fixed-at-noon-main",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 6,
+          "endToken": 8,
+          "normalizedSourceText": "at noon"
         }
       ]
     },

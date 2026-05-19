@@ -935,15 +935,15 @@ describe("background sentence analysis service", () => {
     expect(chunkPhrase).toMatchObject({
       sourceKind: "chunk",
       category: "noun-chunk",
-      targetText: "sistema público de salud",
-      normalizedTargetText: "sistema publico de salud",
+      targetText: "sistema público de atención médica",
+      normalizedTargetText: "sistema publico de atencion medica",
       phraseMinBand: "level-4a",
       phraseId:
-        "phrase:chunk:public-health-care-system:sistema-publico-de-salud"
+        "phrase:chunk:public-health-care-system:sistema-publico-de-atencion-medica"
     });
     await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
-      canonicalTargetText: "sistema público de salud",
-      normalizedTargetText: "sistema publico de salud"
+      canonicalTargetText: "sistema público de atención médica",
+      normalizedTargetText: "sistema publico de atencion medica"
     });
   });
 
