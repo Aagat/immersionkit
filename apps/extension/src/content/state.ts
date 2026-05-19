@@ -24,7 +24,10 @@ import type {
   RuntimeAnalysisContext
 } from "./storage";
 import type { ContentWrapperRegistryState } from "./wrapper-registry";
-import type { WordRenderIndex } from "./word-render-index";
+import type {
+  AnalyzerPatternWordRenderIndex,
+  WordRenderIndex
+} from "./word-render-index";
 
 export type ProcessingAnalysisCacheState = {
   analysisContext: RuntimeAnalysisContext;
@@ -57,6 +60,7 @@ export type ProcessingState = {
   targetLanguage: SupportedTargetLanguage;
   samplingSeed: string;
   wordRenderIndex: WordRenderIndex;
+  analyzerPatternWordRenderIndex: AnalyzerPatternWordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
   sentenceHintPhrases: string[];
@@ -90,6 +94,7 @@ export function createRuntimeState(): RuntimeState {
 export function createProcessingState(input: {
   processingContext: ProcessingContext;
   wordRenderIndex: WordRenderIndex;
+  analyzerPatternWordRenderIndex: AnalyzerPatternWordRenderIndex;
   sentenceTranslationEnabled: boolean;
 }): ProcessingState {
   const { processingContext } = input;
@@ -103,6 +108,7 @@ export function createProcessingState(input: {
     targetLanguage: processingContext.settings.targetLanguage,
     samplingSeed: `${window.location.hostname}${window.location.pathname}`,
     wordRenderIndex: input.wordRenderIndex,
+    analyzerPatternWordRenderIndex: input.analyzerPatternWordRenderIndex,
     vocabByLexemeId: processingContext.vocabByLexemeId,
     learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
     sentenceHintPhrases: processingContext.sentenceHintPhrases,

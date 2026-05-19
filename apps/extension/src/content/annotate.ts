@@ -13,6 +13,7 @@ import type {
   VocabStatus
 } from "@immersionkit/shared";
 import type { WordRenderEntry } from "../render-units/render-units";
+import type { AnalyzerPatternWordRenderIndex } from "./word-render-index";
 import { DIAGNOSTICS_ENABLED } from "../build-profile";
 
 import {
@@ -52,6 +53,7 @@ export type ProcessTextNodeContext = {
   sourceLanguage?: SupportedSourceLanguage;
   targetLanguage?: SupportedTargetLanguage;
   wordRenderIndex: Map<string, WordRenderEntry>;
+  analyzerPatternWordRenderIndex?: AnalyzerPatternWordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
   isDueForReview?: (lexemeId: string) => boolean;

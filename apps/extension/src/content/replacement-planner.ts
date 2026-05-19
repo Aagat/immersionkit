@@ -1,6 +1,4 @@
 import {
-  DEFAULT_SOURCE_LANGUAGE,
-  DEFAULT_TARGET_LANGUAGE,
   evaluateLearningItemDueStatus,
   hashString,
   normalizeToken
@@ -31,6 +29,10 @@ import {
   type RuntimeAnalysisContext
 } from "./storage";
 import { preserveWordCasing, segmentText } from "./tokenize";
+import {
+  createAnalyzerPatternWordRenderKey,
+  type AnalyzerPatternWordRenderIndex
+} from "./word-render-index";
 
 export type ReplacementPlannerContext = {
   discoveryRate: number;
@@ -39,6 +41,7 @@ export type ReplacementPlannerContext = {
   sourceLanguage: SupportedSourceLanguage;
   targetLanguage: SupportedTargetLanguage;
   wordRenderIndex: Map<string, WordRenderEntry>;
+  analyzerPatternWordRenderIndex?: AnalyzerPatternWordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
   isDueForReview?: (lexemeId: string) => boolean;
@@ -248,7 +251,10 @@ export function planTextReplacements(input: {
       : null;
     const wordEntry =
       context.wordRenderIndex.get(segment.normalized) ??
-      createWordEntryFromCachedDecision(cachedInjectDecision);
+      findCurrentAnalyzerPatternWordEntry(
+        cachedInjectDecision,
+        context.analyzerPatternWordRenderIndex
+      );
     if (!wordEntry) {
       continue;
     }
@@ -708,43 +714,28 @@ function effectiveDiscoveryRate(
   return Math.min(1, Math.max(baseRate, floor));
 }
 
-function createWordEntryFromCachedDecision(
-  decision: CachedWordRenderDecision | null
+function findCurrentAnalyzerPatternWordEntry(
+  decision: CachedWordRenderDecision | null,
+  analyzerPatternWordRenderIndex?: AnalyzerPatternWordRenderIndex
 ): WordRenderEntry | null {
   if (
     !decision ||
     decision.decision !== "inject" ||
     !decision.renderUnitId ||
-    !decision.targetText ||
-    !decision.candidatePos
+    !decision.lexemeId ||
+    !analyzerPatternWordRenderIndex
   ) {
     return null;
   }
 
-  return {
-    lexemeId: decision.lexemeId,
-    renderUnitId: decision.renderUnitId,
-    renderUnitMinBand: decision.renderUnitMinBand ?? "",
-    renderUnitMatchMode: "analyzer-pattern",
-    normalizedSourceText:
-      decision.normalizedSourceText ?? decision.normalizedText,
-    targetText: decision.targetText,
-    sourceLemma:
-      decision.candidateLemma ??
-      decision.normalizedSourceText ??
-      decision.normalizedText,
-    targetLemma: decision.targetText,
-    pos: decision.candidatePos,
-    frequencyRank:
-      typeof decision.frequencyRank === "number" &&
-      Number.isFinite(decision.frequencyRank)
-        ? decision.frequencyRank
-        : null,
-    confidence: decision.confidence ?? 0.9,
-    sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
-    targetLanguage: DEFAULT_TARGET_LANGUAGE,
-    sourceDataset: "render-units"
-  };
+  const entry = analyzerPatternWordRenderIndex.get(
+    createAnalyzerPatternWordRenderKey(decision.renderUnitId, decision.lexemeId)
+  );
+  if (!entry || entry.renderUnitMatchMode !== "analyzer-pattern") {
+    return null;
+  }
+
+  return entry;
 }
 
 function findCachedWordRenderDecision(input: {

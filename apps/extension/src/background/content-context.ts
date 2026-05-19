@@ -1,5 +1,8 @@
 import {
   DEFAULT_EXTENSION_SETTINGS,
+  createFallbackLanguagePairDefinition,
+  getLanguagePairDefinition,
+  type ActiveAssetContext,
   type ContentAnalysisContextSnapshot,
   type ContentContextSnapshot,
   type RenderUnitEntry,
@@ -15,6 +18,11 @@ import { loadUserDataValues } from "../storage/user-data-repository";
 import { isRecord, pickFirstDefinedValue, readString } from "../storage/serialization";
 import { USER_DATA_KEYS } from "../shared/user-data-keys";
 import { IndexedDbUserVocabRepository } from "../storage/user-data-repository";
+import { WINK_NLP_ANALYZER_VERSION } from "./sentence-analyzers";
+import {
+  buildSentenceAnalysisVersion,
+  getRuntimePhraseTargetsForLanguagePair
+} from "./sentence-analysis-version";
 
 const SITE_SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.siteSettings] as const;
 const MAX_CONTENT_CONTEXT_LEARNING_UNIT_REF_IDS = 500;
@@ -29,13 +37,16 @@ export class ContentContextService {
     hostname: string;
     sentenceHashes?: readonly string[];
   }): Promise<ContentContextSnapshot> {
-    const [runtimeConfig, siteSettingsStorage, assetContext, sentenceAnalysisEntries] =
+    const [runtimeConfig, siteSettingsStorage, assetContext] =
       await Promise.all([
         loadBackgroundRuntimeConfig(),
         loadUserDataValues([...SITE_SETTINGS_STORAGE_KEYS]),
-        this.assetPacks.loadActiveContext(),
-        this.loadAnalysisEntries(input.sentenceHashes)
+        this.assetPacks.loadActiveContext()
       ]);
+    const sentenceAnalysisEntries = await this.loadAnalysisEntries(
+      input.sentenceHashes,
+      assetContext
+    );
     const siteSetting = parseSiteSetting(
       pickFirstDefinedValue(siteSettingsStorage, SITE_SETTINGS_STORAGE_KEYS),
       input.hostname
@@ -74,7 +85,8 @@ export class ContentContextService {
   async loadAnalysisContext(
     sentenceHashes: readonly string[]
   ): Promise<ContentAnalysisContextSnapshot> {
-    const entries = await this.loadAnalysisEntries(sentenceHashes);
+    const assetContext = await this.assetPacks.loadActiveContext();
+    const entries = await this.loadAnalysisEntries(sentenceHashes, assetContext);
     return {
       entryCount: entries.length,
       entries
@@ -82,7 +94,8 @@ export class ContentContextService {
   }
 
   private async loadAnalysisEntries(
-    sentenceHashes: readonly string[] | undefined
+    sentenceHashes: readonly string[] | undefined,
+    assetContext: Pick<ActiveAssetContext, "languagePair" | "renderUnits">
   ): Promise<SentenceAnalysisEntry[]> {
     const requestedHashes = Array.isArray(sentenceHashes)
       ? [...new Set(sentenceHashes.map((hash) => hash.trim()).filter(Boolean))]
@@ -92,7 +105,21 @@ export class ContentContextService {
       return [];
     }
 
-    return this.sentenceAnalysisCache.listBySentenceHashes(requestedHashes);
+    const pairDefinition =
+      getLanguagePairDefinition(assetContext.languagePair) ??
+      createFallbackLanguagePairDefinition(assetContext.languagePair);
+    const analysisVersion = buildSentenceAnalysisVersion(
+      WINK_NLP_ANALYZER_VERSION,
+      assetContext.renderUnits,
+      getRuntimePhraseTargetsForLanguagePair(assetContext.languagePair),
+      pairDefinition.fixedPhraseLexicon,
+      assetContext.languagePair
+    );
+
+    return this.sentenceAnalysisCache.listBySentenceHashes(
+      requestedHashes,
+      analysisVersion
+    );
   }
 
   private async loadVocabEntries(

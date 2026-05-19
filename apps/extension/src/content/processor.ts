@@ -55,6 +55,7 @@ export function processRoots(state: ProcessingState, roots: ParentNode[]) {
         samplingSeed: state.samplingSeed,
         createNodeId: () => createNodeId(state),
         wordRenderIndex: state.wordRenderIndex,
+        analyzerPatternWordRenderIndex: state.analyzerPatternWordRenderIndex,
         vocabByLexemeId: state.vocabByLexemeId,
         analysisContext: state.analysisCache.analysisContext,
         cachedWordRenderDecisions: state.analysisCache.cachedWordRenderDecisions,
@@ -161,11 +162,13 @@ async function refreshFreshPhraseMatches(
   const sentenceHashesWithWordDecisions = new Set<string>();
   const freshContext = buildCachedSentenceAnalysisContext(entries);
   for (const [sentenceHash, analysis] of freshContext.analysisContext.bySentenceHash) {
-    if (analysis.wordDecisions.length > 0) {
-      state.analysisCache.cachedWordRenderDecisions.set(
-        sentenceHash,
-        analysis.wordDecisions
-      );
+    const previousWordDecisions =
+      state.analysisCache.cachedWordRenderDecisions.get(sentenceHash) ?? [];
+    state.analysisCache.cachedWordRenderDecisions.set(
+      sentenceHash,
+      analysis.wordDecisions
+    );
+    if (analysis.wordDecisions.length > 0 || previousWordDecisions.length > 0) {
       sentenceHashesWithWordDecisions.add(sentenceHash);
     }
 

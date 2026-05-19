@@ -453,6 +453,31 @@
       "expectedPhrases": []
     },
     {
+      "id": "fixed-a-few-weeks-ago",
+      "sourceText": "So a few weeks ago, I started asking myself.",
+      "tokens": [
+        { "surface": "So", "pos": "ADV" },
+        { "surface": "a", "pos": "DET" },
+        { "surface": "few", "pos": "ADJ" },
+        { "surface": "weeks", "pos": "NOUN" },
+        { "surface": "ago", "pos": "ADV" },
+        { "surface": "I", "pos": "PRON" },
+        { "surface": "started", "pos": "VERB" },
+        { "surface": "asking", "pos": "VERB" },
+        { "surface": "myself", "pos": "PRON" }
+      ],
+      "expectedPhrases": [
+        {
+          "id": "fixed-a-few-weeks-ago-main",
+          "category": "function-phrase",
+          "sourceKind": "fixed-phrase",
+          "startToken": 1,
+          "endToken": 5,
+          "normalizedSourceText": "a few weeks ago"
+        }
+      ]
+    },
+    {
       "id": "multi-fixed-phrases",
       "sourceText": "At least, by the way, we tried.",
       "tokens": [

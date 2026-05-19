@@ -66,11 +66,16 @@ export class IndexedDbSentenceAnalysisCacheRepository
   }
 
   async listBySentenceHashes(
-    sentenceHashes: readonly string[]
+    sentenceHashes: readonly string[],
+    analyzerVersion?: string
   ): Promise<SentenceAnalysisEntry[]> {
     const uniqueHashes = [...new Set(sentenceHashes.filter(Boolean))];
     if (uniqueHashes.length === 0) {
       return [];
+    }
+
+    if (analyzerVersion) {
+      return this.getMany(uniqueHashes, analyzerVersion);
     }
 
     if (!isIndexedDbAvailable()) {

@@ -31,7 +31,7 @@ export type SentenceAnalyzer = {
   analyze(sentence: string, sentenceHash?: string): AnalyzerOutput | Promise<AnalyzerOutput>;
 };
 
-const WINK_NLP_ANALYZER_VERSION =
+export const WINK_NLP_ANALYZER_VERSION =
   "wink-nlp@2.4.0+immersionkit-background-v6-source-grammar";
 
 let winkAnalyzerPromise: Promise<SentenceAnalyzer> | null = null;

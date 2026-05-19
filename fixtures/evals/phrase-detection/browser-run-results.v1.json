@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-19T20:26:57.375Z",
+  "generatedAt": "2026-05-19T23:37:55.212Z",
   "browserContext": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
@@ -10,7 +10,7 @@
     {
       "name": "All configured implementations completed",
       "passed": true,
-      "details": "3 implementation runs captured for 22 cases."
+      "details": "3 implementation runs captured for 23 cases."
     },
     {
       "name": "Shared annotated baseline is present",
@@ -29,17 +29,17 @@
       "label": "Shared annotated heuristics",
       "inputMode": "fixture-annotated",
       "runtime": {
-        "totalMs": 22,
-        "averageCaseMs": 0.04,
-        "casesPerSecond": 25000,
+        "totalMs": 19,
+        "averageCaseMs": 0.03304347826086956,
+        "casesPerSecond": 30263.157894736843,
         "repeatCount": 25
       },
       "overall": {
-        "truePositives": 19,
+        "truePositives": 20,
         "falsePositives": 1,
         "falseNegatives": 1,
-        "precision": 0.95,
-        "recall": 0.95
+        "precision": 0.9524,
+        "recall": 0.9524
       },
       "categoryMetrics": [
         {
@@ -52,7 +52,7 @@
         },
         {
           "category": "function-phrase",
-          "truePositives": 7,
+          "truePositives": 8,
           "falsePositives": 0,
           "falseNegatives": 0,
           "precision": 1,
@@ -153,16 +153,16 @@
       "label": "compromise/three + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 123,
-        "averageCaseMs": 0.22363636363636363,
-        "casesPerSecond": 4471.544715447155,
+        "totalMs": 125,
+        "averageCaseMs": 0.21739130434782608,
+        "casesPerSecond": 4600,
         "repeatCount": 25
       },
       "overall": {
-        "truePositives": 20,
+        "truePositives": 21,
         "falsePositives": 1,
         "falseNegatives": 0,
-        "precision": 0.9524,
+        "precision": 0.9545,
         "recall": 1
       },
       "categoryMetrics": [
@@ -176,7 +176,7 @@
         },
         {
           "category": "function-phrase",
-          "truePositives": 7,
+          "truePositives": 8,
           "falsePositives": 0,
           "falseNegatives": 0,
           "precision": 1,
@@ -262,16 +262,16 @@
       "label": "wink-nlp + shared phrase heuristics",
       "inputMode": "library-pos-from-raw",
       "runtime": {
-        "totalMs": 23,
-        "averageCaseMs": 0.04181818181818182,
-        "casesPerSecond": 23913.04347826087,
+        "totalMs": 25,
+        "averageCaseMs": 0.043478260869565216,
+        "casesPerSecond": 23000,
         "repeatCount": 25
       },
       "overall": {
-        "truePositives": 20,
+        "truePositives": 21,
         "falsePositives": 1,
         "falseNegatives": 0,
-        "precision": 0.9524,
+        "precision": 0.9545,
         "recall": 1
       },
       "categoryMetrics": [
@@ -285,7 +285,7 @@
         },
         {
           "category": "function-phrase",
-          "truePositives": 7,
+          "truePositives": 8,
           "falsePositives": 0,
           "falseNegatives": 0,
           "precision": 1,
@@ -373,7 +373,7 @@
       {
         "id": "phrase-detection-browser-assertion-all-configured-implementations-completed",
         "passed": true,
-        "message": "3 implementation runs captured for 22 cases."
+        "message": "3 implementation runs captured for 23 cases."
       },
       {
         "id": "phrase-detection-browser-assertion-shared-annotated-baseline-is-present",
@@ -393,16 +393,16 @@
       {
         "id": "phrase-detection-shared-annotated-precision",
         "passed": true,
-        "actual": 0.95,
+        "actual": 0.9524,
         "minimum": 0.95,
-        "message": "Phrase detection shared-annotated precision must not regress below the current target. Actual 0.950000, minimum 0.950000."
+        "message": "Phrase detection shared-annotated precision must not regress below the current target. Actual 0.952400, minimum 0.950000."
       },
       {
         "id": "phrase-detection-shared-annotated-recall",
         "passed": true,
-        "actual": 0.95,
+        "actual": 0.9524,
         "minimum": 0.95,
-        "message": "Phrase detection shared-annotated recall must not regress below the current target. Actual 0.950000, minimum 0.950000."
+        "message": "Phrase detection shared-annotated recall must not regress below the current target. Actual 0.952400, minimum 0.950000."
       },
       {
         "id": "phrase-detection-compromise-three-present",
@@ -412,9 +412,9 @@
       {
         "id": "phrase-detection-compromise-three-precision",
         "passed": true,
-        "actual": 0.9524,
+        "actual": 0.9545,
         "minimum": 0.95,
-        "message": "Phrase detection compromise-three precision must not regress below the current target. Actual 0.952400, minimum 0.950000."
+        "message": "Phrase detection compromise-three precision must not regress below the current target. Actual 0.954500, minimum 0.950000."
       },
       {
         "id": "phrase-detection-compromise-three-recall",
@@ -431,9 +431,9 @@
       {
         "id": "phrase-detection-wink-nlp-precision",
         "passed": true,
-        "actual": 0.9524,
+        "actual": 0.9545,
         "minimum": 0.95,
-        "message": "Phrase detection wink-nlp precision must not regress below the current target. Actual 0.952400, minimum 0.950000."
+        "message": "Phrase detection wink-nlp precision must not regress below the current target. Actual 0.954500, minimum 0.950000."
       },
       {
         "id": "phrase-detection-wink-nlp-recall",
