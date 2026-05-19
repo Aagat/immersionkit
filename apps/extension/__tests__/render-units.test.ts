@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRenderUnitRuntimeIndex,
+  normalizeToken,
   resolveRenderUnitPhraseTarget
 } from "@immersionkit/shared";
 
@@ -157,6 +158,22 @@ describe("render unit assets", () => {
     ).toContain("lx:no:adverb");
   });
 
+  it("keeps bundled target normalization accent-folded and unsplit", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const mismatches = renderUnits
+      .filter((entry) => entry.targetText && entry.normalizedTargetText)
+      .flatMap((entry) => {
+        const normalizedTargetText = normalizeToken(entry.targetText ?? "");
+        return normalizedTargetText === entry.normalizedTargetText
+          ? []
+          : [
+              `${entry.renderUnitId}: ${entry.targetText} -> ${entry.normalizedTargetText}, expected ${normalizedTargetText}`
+            ];
+      });
+
+    expect(mismatches).toEqual([]);
+  });
+
   it("models time as duration by default with occurrence-specific vez phrases", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
     const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
@@ -171,8 +188,16 @@ describe("render unit assets", () => {
       targetText: "primera vez",
       normalizedTargetText: "primera vez"
     });
+    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "last time")).toMatchObject({
+      targetText: "última vez",
+      normalizedTargetText: "ultima vez"
+    });
+    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "next time")).toMatchObject({
+      targetText: "próxima vez",
+      normalizedTargetText: "proxima vez"
+    });
     expect(resolveRenderUnitPhraseTarget(runtimeIndex, "one more time")).toMatchObject({
-      targetText: "una vez mas",
+      targetText: "una vez más",
       normalizedTargetText: "una vez mas"
     });
     expect(getRenderUnitSentenceHints(renderUnits)).toEqual(
@@ -195,5 +220,13 @@ describe("render unit assets", () => {
       .map((entry) => entry.renderUnitId);
 
     expect(unsafeRenderableFrames).toEqual([]);
+  });
+
+  it("does not keep context-sensitive discourse words as exact inline units", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+
+    expect(runtimeIndex.preferredWordByNormalizedForm.get("as")).toBeUndefined();
+    expect(runtimeIndex.preferredWordByNormalizedForm.get("so")).toBeUndefined();
   });
 });

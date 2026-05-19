@@ -87,7 +87,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-in-the-morning",
     "in the morning",
-    "por la manana",
+    "por la mañana",
     "function-phrase",
     0.94
   ),
@@ -157,14 +157,14 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-more-or-less",
     "more or less",
-    "mas o menos",
+    "más o menos",
     "fixed-idiom",
     0.93
   ),
   createFixedPhraseEntry(
     "fixed-every-day",
     "every day",
-    "todos los dias",
+    "todos los días",
     "function-phrase",
     0.94
   ),
@@ -178,7 +178,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-next-week",
     "next week",
-    "la proxima semana",
+    "la próxima semana",
     "function-phrase",
     0.94
   ),
@@ -234,7 +234,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-more-than",
     "more than",
-    "mas que",
+    "más que",
     "function-phrase",
     0.94
   ),
@@ -255,7 +255,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-the-most",
     "the most",
-    "el mas",
+    "el más",
     "function-phrase",
     0.91
   ),
@@ -332,7 +332,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-according-to",
     "according to",
-    "segun",
+    "según",
     "function-phrase",
     0.92
   ),
@@ -346,7 +346,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-after-that",
     "after that",
-    "despues de eso",
+    "después de eso",
     "function-phrase",
     0.93
   ),
@@ -409,14 +409,14 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-for-this-reason",
     "for this reason",
-    "por esta razon",
+    "por esta razón",
     "function-phrase",
     0.92
   ),
   createFixedPhraseEntry(
     "fixed-as-well-as",
     "as well as",
-    "asi como",
+    "así como",
     "function-phrase",
     0.94
   ),
@@ -444,7 +444,7 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-in-terms-of",
     "in terms of",
-    "en terminos de",
+    "en términos de",
     "function-phrase",
     0.93
   ),
@@ -479,14 +479,14 @@ export const FIXED_PHRASE_LEXICON: readonly FixedPhraseLexiconEntry[] = [
   createFixedPhraseEntry(
     "fixed-in-practice",
     "in practice",
-    "en la practica",
+    "en la práctica",
     "function-phrase",
     0.91
   ),
   createFixedPhraseEntry(
     "fixed-as-opposed-to",
     "as opposed to",
-    "en oposicion a",
+    "en oposición a",
     "function-phrase",
     0.92
   ),
@@ -562,28 +562,28 @@ function createCuratedPhraseTargetEntry(
 export const CURATED_PHRASE_TARGET_LEXICON: readonly CuratedPhraseTargetEntry[] = [
   createCuratedPhraseTargetEntry(
     "public health care system",
-    "sistema de salud publica",
+    "sistema de salud pública",
     "chunk",
     "noun-chunk",
     0.93
   ),
   createCuratedPhraseTargetEntry(
     "climate change action plan",
-    "plan de accion climatica",
+    "plan de acción climática",
     "chunk",
     "noun-chunk",
     0.92
   ),
   createCuratedPhraseTargetEntry(
     "customer service team",
-    "equipo de atencion al cliente",
+    "equipo de atención al cliente",
     "chunk",
     "noun-chunk",
     0.91
   ),
   createCuratedPhraseTargetEntry(
     "used to",
-    "solia",
+    "solía",
     "pattern-match",
     "grammar-carrier",
     0.9

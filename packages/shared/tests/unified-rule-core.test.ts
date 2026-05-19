@@ -53,6 +53,21 @@ describe("unified shared contracts", () => {
     expect(first.phraseId).toBe("phrase:fixed-phrase:at-least:por-lo-menos");
     expect(first.phraseId).not.toBe(alternateTargetId);
   });
+
+  it("normalizes accented Spanish phrase targets without splitting letters", () => {
+    const entry = createRuntimePhraseRegistryEntry({
+      sourceText: "used to",
+      targetText: "solía",
+      sourceKind: "pattern-match",
+      category: "grammar-carrier",
+      confidence: 0.9,
+      firstSeenAt: "2026-04-23T12:00:00.000Z"
+    });
+
+    expect(normalizePhraseText("móvil rápido")).toBe("movil rapido");
+    expect(entry.normalizedTargetText).toBe("solia");
+    expect(entry.phraseId).toBe("phrase:pattern-match:used-to:solia");
+  });
 });
 
 describe("unified ambiguity rules", () => {

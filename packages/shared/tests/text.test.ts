@@ -29,6 +29,7 @@ describe("text normalization", () => {
 
   it("normalizes tokens for render lookup", () => {
     expect(normalizeToken(" \u201cRunner\u2019s,\u201d ")).toBe("runner's");
+    expect(normalizeToken("¡Móvil!")).toBe("movil");
     expect(normalizeToken("...")).toBe("");
   });
 });
@@ -51,9 +52,10 @@ describe("tokenization helpers", () => {
   });
 
   it("returns normalized token stream for lookup hashing and matching", () => {
-    expect(normalizeAndTokenize("Don\u2019t stop-believing")).toEqual([
+    expect(normalizeAndTokenize("Don\u2019t stop-believing rápido")).toEqual([
       "don't",
-      "stop-believing"
+      "stop-believing",
+      "rapido"
     ]);
   });
 });

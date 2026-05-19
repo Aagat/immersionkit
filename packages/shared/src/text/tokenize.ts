@@ -1,6 +1,6 @@
 import { normalizeToken } from "./normalize";
 
-const TOKEN_PATTERN = /[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*/g;
+const TOKEN_PATTERN = /[\p{L}0-9]+(?:[’'-][\p{L}0-9]+)*/gu;
 
 export type TokenizedWord = {
   raw: string;

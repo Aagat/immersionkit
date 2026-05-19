@@ -153,6 +153,31 @@ describe("eligible text-node collection", () => {
     });
   });
 
+  it("excludes navigation and ARIA-only interactive controls", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      document.body.innerHTML = `
+        <main>
+          <p>Article copy remains available for inline learning.</p>
+          <nav>
+            <span>Navigation label should stay untouched</span>
+          </nav>
+          <div role="button">Expandable information control</div>
+          <div role="menuitem">Menu item label</div>
+          <summary>Disclosure summary text</summary>
+        </main>
+      `;
+
+      const combinedText = joinText(collectEligibleTextNodes(document.body));
+      expect(combinedText).toContain(
+        "Article copy remains available for inline learning."
+      );
+      expect(combinedText).not.toContain("Navigation label should stay untouched");
+      expect(combinedText).not.toContain("Expandable information control");
+      expect(combinedText).not.toContain("Menu item label");
+      expect(combinedText).not.toContain("Disclosure summary text");
+    });
+  });
+
   it("keeps oversized public text nodes eligible for downstream windowing", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const longLead = Array.from({ length: 18 }, () =>

@@ -35,19 +35,19 @@ describe("phrase target asset", () => {
       expect.arrayContaining([
         expect.objectContaining({
           sourceText: "renewable energy project plan",
-          targetText: "plan de proyectos de energia renovable",
+          targetText: "plan de proyectos de energía renovable",
           sourceKind: "chunk",
           category: "noun-chunk"
         }),
         expect.objectContaining({
           sourceText: "local government officials meeting",
-          targetText: "reunion de funcionarios del gobierno local",
+          targetText: "reunión de funcionarios del gobierno local",
           sourceKind: "chunk",
           category: "noun-chunk"
         }),
         expect.objectContaining({
           sourceText: "emergency response plan update",
-          targetText: "actualizacion del plan de respuesta de emergencia",
+          targetText: "actualización del plan de respuesta de emergencia",
           sourceKind: "chunk",
           category: "noun-chunk"
         }),
@@ -65,13 +65,13 @@ describe("phrase target asset", () => {
         }),
         expect.objectContaining({
           sourceText: "neighborhood safety meeting",
-          targetText: "reunion de seguridad del vecindario",
+          targetText: "reunión de seguridad del vecindario",
           sourceKind: "chunk",
           category: "noun-chunk"
         }),
         expect.objectContaining({
           sourceText: "public health guidance",
-          targetText: "orientacion de salud publica",
+          targetText: "orientación de salud pública",
           sourceKind: "chunk",
           category: "noun-chunk"
         })
