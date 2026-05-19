@@ -22,7 +22,7 @@
     "pageSentenceCount": 35,
     "cacheReplaySentenceCount": 60,
     "cacheReplayExpectedUniqueSentenceCount": 12,
-    "qualityCaseCount": 22,
+    "qualityCaseCount": 23,
     "qualityCorpusVersion": "2026-04-21"
   },
   "analyzerResults": [
@@ -69,16 +69,16 @@
       },
       "quality": {
         "corpusVersion": "2026-04-21",
-        "caseCount": 22,
+        "caseCount": 23,
         "averageTokenCoverage": 1,
-        "phraseTruePositiveCount": 12,
-        "phraseFalsePositiveCount": 85,
+        "phraseTruePositiveCount": 13,
+        "phraseFalsePositiveCount": 87,
         "phraseFalseNegativeCount": 8,
-        "phrasePrecision": 0.12371134020618557,
-        "averagePhraseRecall": 0.6666666666666666,
-        "phraseF1": 0.20512820512820512,
-        "evaluatedPhraseCaseCount": 18,
-        "matchedPhraseCaseCount": 12,
+        "phrasePrecision": 0.13,
+        "averagePhraseRecall": 0.6842105263157895,
+        "phraseF1": 0.21487603305785125,
+        "evaluatedPhraseCaseCount": 19,
+        "matchedPhraseCaseCount": 13,
         "sampledCaseMetrics": [
           {
             "caseId": "fixed-by-the-way",
@@ -345,6 +345,20 @@
             "phrasePrecision": 0,
             "phraseRecall": 1,
             "phraseF1": 0
+          },
+          {
+            "caseId": "fixed-a-few-weeks-ago",
+            "expectedTokenCount": 9,
+            "matchedTokenCount": 9,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "predictedPhraseCount": 3,
+            "truePositivePhraseCount": 1,
+            "falsePositivePhraseCount": 2,
+            "falseNegativePhraseCount": 0,
+            "phrasePrecision": 0.3333333333333333,
+            "phraseRecall": 1,
+            "phraseF1": 0.5
           },
           {
             "caseId": "multi-fixed-phrases",
@@ -1132,15 +1146,15 @@
       },
       "quality": {
         "corpusVersion": "2026-04-21",
-        "caseCount": 22,
+        "caseCount": 23,
         "averageTokenCoverage": 1,
         "phraseTruePositiveCount": 0,
-        "phraseFalsePositiveCount": 4,
-        "phraseFalseNegativeCount": 20,
+        "phraseFalsePositiveCount": 5,
+        "phraseFalseNegativeCount": 21,
         "phrasePrecision": 0,
         "averagePhraseRecall": 0,
         "phraseF1": 0,
-        "evaluatedPhraseCaseCount": 18,
+        "evaluatedPhraseCaseCount": 19,
         "matchedPhraseCaseCount": 0,
         "sampledCaseMetrics": [
           {
@@ -1408,6 +1422,20 @@
             "phrasePrecision": 1,
             "phraseRecall": 1,
             "phraseF1": 1
+          },
+          {
+            "caseId": "fixed-a-few-weeks-ago",
+            "expectedTokenCount": 9,
+            "matchedTokenCount": 9,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "predictedPhraseCount": 1,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 1,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "multi-fixed-phrases",
