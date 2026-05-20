@@ -178,6 +178,10 @@ export function evaluatePhraseRuntimeActivation(
     return { eligible: true };
   }
 
+  if (isRetainedPhraseLearningItemInActiveWindow(input.learningItem, activeContent)) {
+    return { eligible: true };
+  }
+
   const decision = evaluateCurriculumEligibility(input.config, {
     unitType: "phrase",
     itemId: input.phraseId,
@@ -214,4 +218,25 @@ function scoreWordRenderDifficulty(entry: WordRenderEntry): number | null {
   }
 
   return Math.max(0, Math.min(1, entry.frequencyRank / 5000));
+}
+
+function isRetainedPhraseLearningItemInActiveWindow(
+  item: LearningItem,
+  activeContent: ActiveCurriculumContent
+): boolean {
+  if (item.status === "new" || item.status === "suspended" || !item.bandId) {
+    return false;
+  }
+
+  const activeOrder = activeContent.band?.order;
+  const itemOrder = activeContent.config.bands.find(
+    (band) => band.bandId === item.bandId
+  )?.order;
+
+  return (
+    typeof activeOrder === "number" &&
+    typeof itemOrder === "number" &&
+    itemOrder <= activeOrder &&
+    activeOrder - itemOrder <= 1
+  );
 }

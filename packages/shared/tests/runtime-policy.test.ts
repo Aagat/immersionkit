@@ -162,6 +162,89 @@ describe("runtime curriculum activation", () => {
       skipReason: "phrase-target-band-locked"
     });
   });
+
+  it("keeps retained previous-band words eligible outside the due window", () => {
+    const decision = evaluateWordRuntimeActivation({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {
+        activeVocabularyBandId: "level-1b",
+        unlockedBandIds: ["level-1a", "level-1b"]
+      },
+      wordEntry: createWordEntry({ renderUnitMinBand: "level-1a" }),
+      learningItem: createLearningItem({
+        itemId: "word:en:telescope:noun",
+        unitRefId: "en:telescope:noun",
+        unitType: "word",
+        bandId: "level-1a",
+        status: "learning",
+        nextReviewAt: "2099-04-18T09:00:00.000Z"
+      }),
+      status: "learning",
+      isDueForReview: false
+    });
+
+    expect(decision).toMatchObject({
+      eligible: true
+    });
+  });
+
+  it("keeps retained previous-band phrases eligible outside the due window", () => {
+    const decision = evaluatePhraseRuntimeActivation({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {
+        activePhraseBandId: "level-1b",
+        unlockedBandIds: ["level-1a", "level-1b"]
+      },
+      phraseId: "fixed-for-now",
+      sourceText: "for now",
+      learningItem: createLearningItem({
+        itemId: "phrase:fixed-for-now",
+        unitRefId: "fixed-for-now",
+        unitType: "phrase",
+        bandId: "level-1a",
+        status: "learning",
+        nextReviewAt: "2099-04-18T09:00:00.000Z"
+      }),
+      sourceKind: "fixed-phrase",
+      category: "function-phrase",
+      phraseMinBand: "level-1a",
+      isDueForReview: false
+    });
+
+    expect(decision).toMatchObject({
+      eligible: true
+    });
+  });
+
+  it("keeps new previous-band phrases on the active-band gate when not due", () => {
+    const decision = evaluatePhraseRuntimeActivation({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {
+        activePhraseBandId: "level-1b",
+        unlockedBandIds: ["level-1a", "level-1b"]
+      },
+      phraseId: "fixed-for-now",
+      sourceText: "for now",
+      learningItem: createLearningItem({
+        itemId: "phrase:fixed-for-now",
+        unitRefId: "fixed-for-now",
+        unitType: "phrase",
+        bandId: "level-1a",
+        status: "new",
+        nextReviewAt: "2099-04-18T09:00:00.000Z"
+      }),
+      sourceKind: "fixed-phrase",
+      category: "function-phrase",
+      phraseMinBand: "level-1a",
+      isDueForReview: false
+    });
+
+    expect(decision).toMatchObject({
+      eligible: false,
+      activeBandId: "level-1b",
+      skipReason: "outside-active-band-items"
+    });
+  });
 });
 
 describe("checkpoint summaries", () => {
