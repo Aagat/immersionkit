@@ -375,6 +375,30 @@ body {
   padding: 8px 0;
 }
 
+button.ik-debug-table-row {
+  width: 100%;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+button.ik-debug-table-row:hover:not(:disabled),
+button.ik-debug-table-row:focus-visible {
+  background: rgba(80, 145, 113, 0.12);
+  outline: 1px solid rgba(158, 216, 187, 0.28);
+  outline-offset: -1px;
+}
+
+button.ik-debug-table-row:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
 .ik-debug-table-row span {
   min-width: 0;
   overflow: hidden;

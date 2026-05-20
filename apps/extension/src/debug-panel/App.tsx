@@ -200,6 +200,17 @@ export function DebugPanelApp() {
             filter={filter}
             decisions={decisions}
             onFilterChange={setFilter}
+            onSelectDecision={(row) => {
+              if (!row.selectCommand) {
+                setStatusMessage(`no selectable target for ${row.ref}`);
+                return;
+              }
+              if (!inspectMode) {
+                postCommand({ type: "set-inspect-mode", enabled: true });
+              }
+              setStatusMessage(`selecting ${row.ref}`);
+              postCommand(row.selectCommand);
+            }}
           />
         ) : null}
         {activeTab === "data" ? (
@@ -461,11 +472,13 @@ function StackItem({
 function DecisionsTab({
   filter,
   decisions,
-  onFilterChange
+  onFilterChange,
+  onSelectDecision
 }: {
   filter: DecisionFilter;
   decisions: DecisionRow[];
   onFilterChange: (filter: DecisionFilter) => void;
+  onSelectDecision: (row: DecisionRow) => void;
 }) {
   return (
     <section className="ik-debug-panel ik-debug-decisions">
@@ -494,14 +507,28 @@ function DecisionsTab({
           <span>ref</span>
         </div>
         {decisions.map((row) => (
-          <div className="ik-debug-table-row" role="row" key={row.id}>
+          <button
+            className="ik-debug-table-row"
+            disabled={!row.selectCommand}
+            type="button"
+            role="row"
+            key={row.id}
+            title={
+              row.selectCommand
+                ? `Select ${row.ref}`
+                : `No rendered selection target for ${row.ref}`
+            }
+            onClick={() => {
+              onSelectDecision(row);
+            }}
+          >
             <span>{row.type}</span>
             <span>{row.source}</span>
             <span>{row.target}</span>
             <span>{row.action}</span>
             <span>{row.reason}</span>
             <span>{row.ref}</span>
-          </div>
+          </button>
         ))}
       </div>
     </section>
@@ -682,6 +709,7 @@ type DecisionRow = {
   action: string;
   reason: string;
   ref: string;
+  selectCommand?: DebugInspectorCommand;
 };
 
 type ComparableDecision = {
@@ -734,7 +762,13 @@ function collectDecisionRows(
       target: trace.targetToken ?? "",
       action: trace.finalAction,
       reason: trace.explanation,
-      ref: trace.tokenId ?? trace.renderUnit.renderUnitId ?? trace.nodeId
+      ref: trace.tokenId ?? trace.renderUnit.renderUnitId ?? trace.nodeId,
+      selectCommand: trace.tokenId
+        ? ({
+            type: "select-token",
+            tokenId: trace.tokenId
+          } satisfies DebugInspectorCommand)
+        : undefined
     })),
     ...Object.entries(snapshot.phrasesByTokenId).map(([id, trace]) => ({
       id,
@@ -743,7 +777,13 @@ function collectDecisionRows(
       target: trace.targetText ?? "",
       action: trace.finalAction,
       reason: trace.rejectedReason ?? trace.explanation,
-      ref: trace.tokenId ?? trace.phraseId
+      ref: trace.tokenId ?? trace.phraseId,
+      selectCommand: trace.tokenId
+        ? ({
+            type: "select-token",
+            tokenId: trace.tokenId
+          } satisfies DebugInspectorCommand)
+        : undefined
     })),
     ...Object.entries(snapshot.sentencesByHash).map(([id, trace]) => ({
       id,
@@ -752,7 +792,11 @@ function collectDecisionRows(
       target: trace.translation?.rendered ? "rendered" : "",
       action: trace.queued ? "queued" : "candidate",
       reason: trace.ranking?.primaryReason ?? trace.reason,
-      ref: trace.sentenceHash
+      ref: trace.sentenceHash,
+      selectCommand: {
+        type: "select-sentence",
+        sentenceHash: trace.sentenceHash
+      } satisfies DebugInspectorCommand
     }))
   ];
 

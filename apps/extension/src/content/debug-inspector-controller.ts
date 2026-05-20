@@ -162,7 +162,55 @@ export function createDebugInspectorController(
     },
     selectTokenId(tokenId) {
       const element = findTokenElement(tokenId);
-      return element ? selectElement(element) : false;
+      if (element) {
+        return selectElement(element);
+      }
+
+      const tokenTrace = runtimeState.debugTrace?.readTokenTrace(tokenId) ?? null;
+      if (tokenTrace) {
+        const selection: DebugSelectionSnapshot = {
+          type: "word",
+          tokenId,
+          trace: tokenTrace,
+          dom: createTraceOnlyDomSnapshot({
+            "data-ik-token-id": tokenId,
+            "data-ik-node-id": tokenTrace.nodeId
+          }, `${tokenTrace.sourceToken} -> ${tokenTrace.targetToken ?? "no target"}`),
+          sentence: tokenTrace.sentenceHash
+            ? runtimeState.debugTrace?.readSentenceTrace(tokenTrace.sentenceHash) ??
+              null
+            : null
+        };
+        setSelectedElement(null);
+        runtimeState.debugTrace?.setSelection(selection);
+        emit({ type: "selection", selection });
+        emitSnapshot();
+        return true;
+      }
+
+      const phraseTrace = runtimeState.debugTrace?.readPhraseTrace(tokenId) ?? null;
+      if (phraseTrace) {
+        const selection: DebugSelectionSnapshot = {
+          type: "phrase",
+          tokenId,
+          trace: phraseTrace,
+          dom: createTraceOnlyDomSnapshot({
+            "data-ik-token-id": tokenId,
+            "data-ik-phrase-id": phraseTrace.phraseId
+          }, `${phraseTrace.sourceText ?? phraseTrace.phraseId} -> ${phraseTrace.targetText ?? "no target"}`),
+          sentence: phraseTrace.sentenceHash
+            ? runtimeState.debugTrace?.readSentenceTrace(phraseTrace.sentenceHash) ??
+              null
+            : null
+        };
+        setSelectedElement(null);
+        runtimeState.debugTrace?.setSelection(selection);
+        emit({ type: "selection", selection });
+        emitSnapshot();
+        return true;
+      }
+
+      return false;
     },
     selectSentenceHash(sentenceHash) {
       const element = document.querySelector<HTMLElement>(
@@ -345,6 +393,23 @@ function createEmptySnapshot(): DebugTraceSnapshot {
       sentences: 0,
       events: 0
     }
+  };
+}
+
+function createTraceOnlyDomSnapshot(
+  attributes: Record<string, string>,
+  textContentPreview: string
+) {
+  return {
+    tagName: "trace",
+    textContentPreview,
+    boundingClientRect: {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0
+    },
+    attributes
   };
 }
 
