@@ -50,6 +50,7 @@ export type MetricIconName =
   | "power"
   | "shield"
   | "spark"
+  | "terminal"
   | "translate"
   | "volume";
 

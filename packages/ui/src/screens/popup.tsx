@@ -597,7 +597,7 @@ function PopupHeader({
             title="Open debug inspector"
             onClick={onOpenDebug}
           >
-            <IkIcon name="spark" />
+            <IkIcon name="terminal" />
           </Button>
         ) : null}
         <Button

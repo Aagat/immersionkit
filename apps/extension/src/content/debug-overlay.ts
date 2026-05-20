@@ -16,6 +16,11 @@ import type { RuntimeState } from "./state";
 
 const DEBUG_OVERLAY_HOST_ID = "immersionkit-debug-overlay";
 const DEBUG_OVERLAY_IGNORE_ATTRIBUTE = "data-immersionkit-ignore";
+const DEBUG_OVERLAY_PANEL_MIN_WIDTH = 420;
+const DEBUG_OVERLAY_PANEL_MIN_HEIGHT = 420;
+const DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN = 48;
+const DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN = 32;
+const DEBUG_OVERLAY_COLLAPSED_SIZE = 56;
 
 let messageHookInstalled = false;
 let removeOverlayListeners: (() => void) | null = null;
@@ -99,14 +104,14 @@ function createDebugOverlayHost(
       top: 16px;
       right: 16px;
       z-index: 1;
-      width: min(980px, calc(100vw - 48px));
-      height: min(860px, calc(100vh - 32px));
-      min-width: 420px;
-      max-width: calc(100vw - 48px);
-      min-height: 420px;
-      max-height: calc(100vh - 32px);
+      width: min(980px, calc(100vw - ${DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN}px));
+      height: min(860px, calc(100vh - ${DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN}px));
+      min-width: ${DEBUG_OVERLAY_PANEL_MIN_WIDTH}px;
+      max-width: calc(100vw - ${DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN}px);
+      min-height: ${DEBUG_OVERLAY_PANEL_MIN_HEIGHT}px;
+      max-height: calc(100vh - ${DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN}px);
       overflow: hidden;
-      resize: horizontal;
+      resize: none;
       border: 1px solid rgba(215, 226, 220, 0.22);
       border-radius: 18px;
       background: #101816;
@@ -122,10 +127,10 @@ function createDebugOverlayHost(
       top: auto;
       right: 16px;
       bottom: 16px;
-      width: 56px;
-      min-width: 56px;
-      height: 56px;
-      min-height: 56px;
+      width: ${DEBUG_OVERLAY_COLLAPSED_SIZE}px !important;
+      min-width: ${DEBUG_OVERLAY_COLLAPSED_SIZE}px;
+      height: ${DEBUG_OVERLAY_COLLAPSED_SIZE}px !important;
+      min-height: ${DEBUG_OVERLAY_COLLAPSED_SIZE}px;
       border-radius: 16px;
       resize: none;
     }
@@ -136,6 +141,42 @@ function createDebugOverlayHost(
       height: 100%;
       border: 0;
       background: #101816;
+    }
+
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      z-index: 2;
+      width: 24px;
+      height: 24px;
+      cursor: nesw-resize;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .resize-handle::before {
+      content: "";
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      width: 12px;
+      height: 12px;
+      border-left: 1px solid rgba(215, 226, 220, 0.58);
+      border-bottom: 1px solid rgba(215, 226, 220, 0.58);
+      border-bottom-left-radius: 4px;
+      background: repeating-linear-gradient(
+        135deg,
+        transparent 0,
+        transparent 3px,
+        rgba(215, 226, 220, 0.48) 3px,
+        rgba(215, 226, 220, 0.48) 4px
+      );
+      opacity: 0.82;
+    }
+
+    .panel[data-collapsed='true'] .resize-handle {
+      display: none;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -168,9 +209,15 @@ function createDebugOverlayHost(
   iframe.src = chrome.runtime.getURL("debug.html?surface=overlay");
   iframe.allow = "";
 
-  panel.append(iframe);
+  const resizeHandle = document.createElement("div");
+  resizeHandle.className = "resize-handle";
+  resizeHandle.setAttribute("role", "separator");
+  resizeHandle.setAttribute("aria-label", "Resize debug inspector");
+  resizeHandle.title = "Resize debug inspector";
+
+  panel.append(iframe, resizeHandle);
   shadowRoot.append(style, panel);
-  installOverlayListeners(runtimeState, host, panel, iframe, controller);
+  installOverlayListeners(runtimeState, host, panel, iframe, resizeHandle, controller);
   return host;
 }
 
@@ -179,6 +226,7 @@ function installOverlayListeners(
   host: HTMLElement,
   panel: HTMLElement,
   iframe: HTMLIFrameElement,
+  resizeHandle: HTMLElement,
   controller: DebugInspectorController
 ): void {
   removeOverlayListeners?.();
@@ -279,6 +327,68 @@ function installOverlayListeners(
     controller.setInspectMode(false);
   };
 
+  let removeResizeListeners: (() => void) | null = null;
+  const stopResizeTracking = () => {
+    removeResizeListeners?.();
+    removeResizeListeners = null;
+  };
+  const handleResizePointerDown = (event: PointerEvent) => {
+    if (panel.getAttribute("data-collapsed") === "true") {
+      return;
+    }
+
+    event.preventDefault();
+    stopResizeTracking();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startRect = panel.getBoundingClientRect();
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault();
+      const maxWidth = Math.max(
+        DEBUG_OVERLAY_PANEL_MIN_WIDTH,
+        window.innerWidth - DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN
+      );
+      const maxHeight = Math.max(
+        DEBUG_OVERLAY_PANEL_MIN_HEIGHT,
+        window.innerHeight - DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN
+      );
+      const nextWidth = Math.min(
+        maxWidth,
+        Math.max(
+          DEBUG_OVERLAY_PANEL_MIN_WIDTH,
+          startRect.width + startX - moveEvent.clientX
+        )
+      );
+      const nextHeight = Math.min(
+        maxHeight,
+        Math.max(
+          DEBUG_OVERLAY_PANEL_MIN_HEIGHT,
+          startRect.height + moveEvent.clientY - startY
+        )
+      );
+
+      panel.style.width = `${Math.ceil(nextWidth)}px`;
+      panel.style.height = `${Math.ceil(nextHeight)}px`;
+    };
+
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      upEvent.preventDefault();
+      if (resizeHandle.hasPointerCapture?.(upEvent.pointerId)) {
+        resizeHandle.releasePointerCapture(upEvent.pointerId);
+      }
+      stopResizeTracking();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
+    removeResizeListeners = () => {
+      window.removeEventListener("pointermove", handlePointerMove, true);
+      window.removeEventListener("pointerup", handlePointerUp, true);
+    };
+    resizeHandle.setPointerCapture?.(event.pointerId);
+  };
+
   iframe.addEventListener("load", () => {
     sendEvent({ type: "snapshot", snapshot: controller.readSnapshot() });
     sendEvent({
@@ -288,11 +398,14 @@ function installOverlayListeners(
   });
   window.addEventListener("message", handleMessage);
   document.addEventListener("keydown", handleKeyDown, true);
+  resizeHandle.addEventListener("pointerdown", handleResizePointerDown);
 
   removeOverlayListeners = () => {
     unsubscribe();
+    stopResizeTracking();
     window.removeEventListener("message", handleMessage);
     document.removeEventListener("keydown", handleKeyDown, true);
+    resizeHandle.removeEventListener("pointerdown", handleResizePointerDown);
     removeOverlayListeners = null;
   };
 }

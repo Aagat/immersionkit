@@ -14,6 +14,7 @@ import {
   ShieldCheckIcon,
   SparkleIcon,
   SpeakerHighIcon,
+  TerminalWindowIcon,
   TranslateIcon,
   XIcon
 } from "@phosphor-icons/react";
@@ -45,6 +46,7 @@ const iconMap = {
   power: PowerIcon,
   shield: ShieldCheckIcon,
   spark: SparkleIcon,
+  terminal: TerminalWindowIcon,
   translate: TranslateIcon,
   volume: SpeakerHighIcon
 } satisfies Record<MetricIconName, PhosphorIcon>;
