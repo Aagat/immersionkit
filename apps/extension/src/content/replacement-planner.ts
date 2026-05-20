@@ -1,6 +1,4 @@
 import {
-  DEFAULT_SOURCE_LANGUAGE,
-  DEFAULT_TARGET_LANGUAGE,
   evaluateLearningItemDueStatus,
   hashString,
   normalizeToken
@@ -18,7 +16,12 @@ import type {
   InjectedWordKind,
   SentenceCandidateMetadata
 } from "./contracts";
-import { findSentenceForOffset, scoreSentenceCandidates, segmentSentences } from "./sentences";
+import {
+  findSentenceForOffset,
+  scoreSentenceCandidates,
+  segmentSentences,
+  type SentenceSegment
+} from "./sentences";
 import {
   findRuntimeWordDecision,
   type CachedPhraseMatch,
@@ -26,6 +29,10 @@ import {
   type RuntimeAnalysisContext
 } from "./storage";
 import { preserveWordCasing, segmentText } from "./tokenize";
+import {
+  createAnalyzerPatternWordRenderKey,
+  type AnalyzerPatternWordRenderIndex
+} from "./word-render-index";
 
 export type ReplacementPlannerContext = {
   discoveryRate: number;
@@ -34,6 +41,7 @@ export type ReplacementPlannerContext = {
   sourceLanguage: SupportedSourceLanguage;
   targetLanguage: SupportedTargetLanguage;
   wordRenderIndex: Map<string, WordRenderEntry>;
+  analyzerPatternWordRenderIndex?: AnalyzerPatternWordRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
   isDueForReview?: (lexemeId: string) => boolean;
@@ -137,6 +145,7 @@ export type PhraseActivationInput = {
   sourceKind: CachedPhraseMatch["sourceKind"];
   category: CachedPhraseMatch["category"];
   renderUnitMinBand?: string;
+  phraseMinBand?: string;
   isDueForReview: boolean;
 };
 
@@ -204,7 +213,7 @@ export function planTextReplacements(input: {
         nodeId: context.nodeId,
         start: phraseCandidate.start,
         end: phraseCandidate.end,
-        sourceText: sourceText.slice(phraseCandidate.start, phraseCandidate.end),
+        sourceText: phraseCandidate.sourceText,
         targetText: phraseCandidate.targetText,
         sourceLanguage: context.sourceLanguage,
         targetLanguage: context.targetLanguage,
@@ -242,7 +251,10 @@ export function planTextReplacements(input: {
       : null;
     const wordEntry =
       context.wordRenderIndex.get(segment.normalized) ??
-      createWordEntryFromCachedDecision(cachedInjectDecision);
+      findCurrentAnalyzerPatternWordEntry(
+        cachedInjectDecision,
+        context.analyzerPatternWordRenderIndex
+      );
     if (!wordEntry) {
       continue;
     }
@@ -411,14 +423,12 @@ function selectPhraseRenderCandidates(input: {
         continue;
       }
 
-      const start = sentence.start + match.span.startChar;
-      const end = sentence.start + match.span.endChar;
-      const sourceSlice = input.sourceText.slice(start, end);
-      if (
-        start < sentence.start ||
-        end > sentence.end ||
-        normalizePhraseText(sourceSlice) !== normalizePhraseText(match.sourceText)
-      ) {
+      const resolvedSpan = resolvePhraseSpanInSourceText({
+        sourceText: input.sourceText,
+        sentence,
+        match
+      });
+      if (!resolvedSpan) {
         rejected.push(
           createPhraseRenderRejection(match, sentence.hash, "span-mismatch", {
             targetText: learningItem.targetText
@@ -426,6 +436,7 @@ function selectPhraseRenderCandidates(input: {
         );
         continue;
       }
+      const { start, end } = resolvedSpan;
 
       const isDueForReview = evaluateLearningItemDueStatus(
         learningItem,
@@ -440,6 +451,7 @@ function selectPhraseRenderCandidates(input: {
           sourceKind: match.sourceKind,
           category: match.category,
           renderUnitMinBand: match.renderUnitMinBand,
+          phraseMinBand: match.phraseMinBand,
           isDueForReview
         });
         if (!curriculumDecision.eligible) {
@@ -495,6 +507,179 @@ function selectPhraseRenderCandidates(input: {
   };
 }
 
+function resolvePhraseSpanInSourceText(input: {
+  sourceText: string;
+  sentence: SentenceSegment;
+  match: CachedPhraseMatch;
+}): { start: number; end: number; sourceText: string } | null {
+  const directStart = input.sentence.start + input.match.span.startChar;
+  const directEnd = input.sentence.start + input.match.span.endChar;
+  const directMatch = toResolvedPhraseSpan(input, directStart, directEnd);
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const normalizedMap = buildNormalizedSentenceOffsetMap(
+    input.sourceText.slice(input.sentence.start, input.sentence.end)
+  );
+  const mappedMatch = mapNormalizedPhraseSpan(input, normalizedMap, {
+    startChar: input.match.span.startChar,
+    endChar: input.match.span.endChar
+  });
+  if (mappedMatch) {
+    return mappedMatch;
+  }
+
+  const normalizedNeedle = normalizePhraseText(
+    input.match.sourceText || input.match.normalizedSourceText
+  );
+  if (!normalizedNeedle) {
+    return null;
+  }
+
+  const normalizedHaystack = normalizePhraseText(normalizedMap.normalizedText);
+  const candidateStarts = findAllPhraseStartOffsets(
+    normalizedHaystack,
+    normalizedNeedle
+  );
+  const closestStart = candidateStarts.sort(
+    (left, right) =>
+      Math.abs(left - input.match.span.startChar) -
+      Math.abs(right - input.match.span.startChar)
+  )[0];
+  if (closestStart === undefined) {
+    return null;
+  }
+
+  return mapNormalizedPhraseSpan(input, normalizedMap, {
+    startChar: closestStart,
+    endChar: closestStart + normalizedNeedle.length
+  });
+}
+
+function toResolvedPhraseSpan(
+  input: {
+    sourceText: string;
+    sentence: SentenceSegment;
+    match: CachedPhraseMatch;
+  },
+  start: number,
+  end: number
+): { start: number; end: number; sourceText: string } | null {
+  if (start < input.sentence.start || end > input.sentence.end || end <= start) {
+    return null;
+  }
+
+  const sourceText = input.sourceText.slice(start, end);
+  if (normalizePhraseText(sourceText) !== normalizePhraseText(input.match.sourceText)) {
+    return null;
+  }
+
+  return { start, end, sourceText };
+}
+
+function buildNormalizedSentenceOffsetMap(rawSentence: string): {
+  normalizedText: string;
+  charStarts: number[];
+  charEnds: number[];
+} {
+  const chars: string[] = [];
+  const charStarts: number[] = [];
+  const charEnds: number[] = [];
+  let index = 0;
+
+  while (index < rawSentence.length && /\s/.test(rawSentence[index] ?? "")) {
+    index += 1;
+  }
+
+  while (index < rawSentence.length) {
+    const current = rawSentence[index] ?? "";
+    if (/\s/.test(current)) {
+      const runStart = index;
+      while (index < rawSentence.length && /\s/.test(rawSentence[index] ?? "")) {
+        index += 1;
+      }
+      if (!hasNonWhitespaceFrom(rawSentence, index)) {
+        break;
+      }
+      chars.push(" ");
+      charStarts.push(runStart);
+      charEnds.push(index);
+      continue;
+    }
+
+    chars.push(current);
+    charStarts.push(index);
+    index += 1;
+    charEnds.push(index);
+  }
+
+  return {
+    normalizedText: chars.join(""),
+    charStarts,
+    charEnds
+  };
+}
+
+function hasNonWhitespaceFrom(value: string, start: number): boolean {
+  for (let index = start; index < value.length; index += 1) {
+    if (!/\s/.test(value[index] ?? "")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function mapNormalizedPhraseSpan(
+  input: {
+    sourceText: string;
+    sentence: SentenceSegment;
+    match: CachedPhraseMatch;
+  },
+  normalizedMap: {
+    normalizedText: string;
+    charStarts: number[];
+    charEnds: number[];
+  },
+  span: { startChar: number; endChar: number }
+): { start: number; end: number; sourceText: string } | null {
+  if (
+    span.startChar < 0 ||
+    span.endChar <= span.startChar ||
+    span.endChar > normalizedMap.normalizedText.length
+  ) {
+    return null;
+  }
+
+  const relativeStart = normalizedMap.charStarts[span.startChar];
+  const relativeEnd = normalizedMap.charEnds[span.endChar - 1];
+  if (relativeStart === undefined || relativeEnd === undefined) {
+    return null;
+  }
+
+  return toResolvedPhraseSpan(
+    input,
+    input.sentence.start + relativeStart,
+    input.sentence.start + relativeEnd
+  );
+}
+
+function findAllPhraseStartOffsets(haystack: string, needle: string): number[] {
+  const starts: number[] = [];
+  let cursor = 0;
+  while (cursor <= haystack.length - needle.length) {
+    const index = haystack.indexOf(needle, cursor);
+    if (index === -1) {
+      break;
+    }
+    starts.push(index);
+    cursor = index + Math.max(needle.length, 1);
+  }
+
+  return starts;
+}
+
 function getVocabStatus(
   lexemeId: string,
   vocabByLexemeId: Map<string, UserVocabEntry>
@@ -529,43 +714,28 @@ function effectiveDiscoveryRate(
   return Math.min(1, Math.max(baseRate, floor));
 }
 
-function createWordEntryFromCachedDecision(
-  decision: CachedWordRenderDecision | null
+function findCurrentAnalyzerPatternWordEntry(
+  decision: CachedWordRenderDecision | null,
+  analyzerPatternWordRenderIndex?: AnalyzerPatternWordRenderIndex
 ): WordRenderEntry | null {
   if (
     !decision ||
     decision.decision !== "inject" ||
     !decision.renderUnitId ||
-    !decision.targetText ||
-    !decision.candidatePos
+    !decision.lexemeId ||
+    !analyzerPatternWordRenderIndex
   ) {
     return null;
   }
 
-  return {
-    lexemeId: decision.lexemeId,
-    renderUnitId: decision.renderUnitId,
-    renderUnitMinBand: decision.renderUnitMinBand ?? "",
-    renderUnitMatchMode: "analyzer-pattern",
-    normalizedSourceText:
-      decision.normalizedSourceText ?? decision.normalizedText,
-    targetText: decision.targetText,
-    sourceLemma:
-      decision.candidateLemma ??
-      decision.normalizedSourceText ??
-      decision.normalizedText,
-    targetLemma: decision.targetText,
-    pos: decision.candidatePos,
-    frequencyRank:
-      typeof decision.frequencyRank === "number" &&
-      Number.isFinite(decision.frequencyRank)
-        ? decision.frequencyRank
-        : null,
-    confidence: decision.confidence ?? 0.9,
-    sourceLanguage: DEFAULT_SOURCE_LANGUAGE,
-    targetLanguage: DEFAULT_TARGET_LANGUAGE,
-    sourceDataset: "render-units"
-  };
+  const entry = analyzerPatternWordRenderIndex.get(
+    createAnalyzerPatternWordRenderKey(decision.renderUnitId, decision.lexemeId)
+  );
+  if (!entry || entry.renderUnitMatchMode !== "analyzer-pattern") {
+    return null;
+  }
+
+  return entry;
 }
 
 function findCachedWordRenderDecision(input: {

@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureLinuxHeadedBrowserDisplay } from "../headed-browser-display.mjs";
 import { startAssetPackServer } from "../assets/asset-pack-server.mjs";
+import { getExtensionLaunchOptions } from "../browser-launch-mode.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
@@ -172,15 +172,10 @@ if (!address || typeof address === "string") {
   throw new Error("Failed to start local smoke server.");
 }
 
-ensureLinuxHeadedBrowserDisplay();
-
-const context = await chromium.launchPersistentContext(userDataDir, {
-  headless: false,
-  args: [
-    `--disable-extensions-except=${extensionPath}`,
-    `--load-extension=${extensionPath}`
-  ]
-});
+const context = await chromium.launchPersistentContext(
+  userDataDir,
+  getExtensionLaunchOptions(extensionPath)
+);
 
 try {
   let serviceWorker = context.serviceWorkers()[0];
@@ -215,7 +210,7 @@ try {
 
     async function openImmersionKitDatabaseForUserData() {
       return new Promise((resolveOpen, rejectOpen) => {
-        const request = indexedDB.open("immersionkit-extension", 7);
+        const request = indexedDB.open("immersionkit-extension", 8);
         request.onupgradeneeded = () => {
           ensureExtensionStores(request.result, request.transaction);
         };
@@ -271,6 +266,11 @@ try {
       ensureIndex(lexemes, "languagePairBandId", ["languagePair", "bandId"]);
       ensureIndex(lexemes, "assetVersion", "assetVersion");
       ensureIndex(lexemes, "lexemeId", "lexemeId");
+      const ttsVoices = ensureStore(database, transaction, "tts-voices", {
+        keyPath: "voiceId"
+      });
+      ensureIndex(ttsVoices, "languagePair", "languagePair");
+      ensureIndex(ttsVoices, "assetVersion", "assetVersion");
     }
 
     function ensureStore(database, transaction, storeName, options) {
@@ -296,6 +296,7 @@ try {
   for (const fixture of smokeFixtures) {
     contentSnapshots.push(await runSmokeFixture(page, baseUrl, fixture));
   }
+  const ttsSmoke = await runTtsSmoke(page, serviceWorker);
 
   const storageSnapshot = await serviceWorker.evaluate(async () => {
     const indexedDbSnapshot = await new Promise((resolve) => {
@@ -402,6 +403,7 @@ try {
       rootBooted: snapshot.rootBooted,
       codeBlockPresent: snapshot.codeBlockPresent
     })),
+    ttsSmoke,
     storageSnapshot: {
       analysisCacheEntries: storageSnapshot.analysisCacheEntries,
       translationCacheEntries: storageSnapshot.translationCacheEntries,
@@ -418,6 +420,9 @@ try {
   if (!analysisShape || analysisShape.analyzerId !== "wink-nlp") {
     throw new Error("Background analysis did not use wink-nlp.");
   }
+  if (!ttsSmoke.requestIssued || ttsSmoke.engine !== "chrome-tts") {
+    throw new Error("Speaker button smoke did not complete through TTS fallback.");
+  }
 } finally {
   await context.close();
   await new Promise((resolveServer) => server.close(resolveServer));
@@ -428,6 +433,92 @@ try {
     maxRetries: 3,
     retryDelay: 100
   });
+}
+
+async function runTtsSmoke(page, serviceWorker) {
+  await serviceWorker.evaluate(() => {
+    globalThis.__ikTtsSmokeRequests = [];
+    const originalFetch = globalThis.fetch.bind(globalThis);
+    globalThis.fetch = (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/assets/tts/")) {
+        globalThis.__ikTtsSmokeRequests.push({
+          kind: "asset-fetch",
+          url
+        });
+        return Promise.reject(new Error("tts-smoke-forced-fallback"));
+      }
+
+      return originalFetch(input, init);
+    };
+
+    chrome.tts ??= {};
+    chrome.tts.speak = (text, options, callback) => {
+      globalThis.__ikTtsSmokeRequests.push({
+        kind: "chrome-tts",
+        text,
+        lang: options?.lang ?? null
+      });
+      callback?.();
+    };
+  });
+
+  await page.evaluate(() => {
+    document.querySelector("[data-ik-token-id]")?.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
+    );
+  });
+  await page.waitForFunction(
+    () => {
+      const popover = document.querySelector("[data-ik-popover]");
+      return Boolean(
+        popover?.shadowRoot?.querySelector('[data-ik-speak-action="true"]')
+      );
+    },
+    undefined,
+    { timeout: 10_000 }
+  );
+  await page.evaluate(() => {
+    const popover = document.querySelector("[data-ik-popover]");
+    const speaker = popover?.shadowRoot?.querySelector(
+      '[data-ik-speak-action="true"]'
+    );
+    if (!(speaker instanceof HTMLButtonElement)) {
+      throw new Error("Speaker button was not available.");
+    }
+
+    speaker.click();
+  });
+
+  const requests = await waitForTtsSmokeRequests(serviceWorker);
+  const chromeTtsRequest = requests.find(
+    (request) => request && request.kind === "chrome-tts"
+  );
+  return {
+    requestIssued: Boolean(chromeTtsRequest),
+    engine: chromeTtsRequest ? "chrome-tts" : null,
+    text: chromeTtsRequest?.text ?? null,
+    lang: chromeTtsRequest?.lang ?? null
+  };
+}
+
+async function waitForTtsSmokeRequests(serviceWorker) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 10_000) {
+    const requests = await serviceWorker.evaluate(
+      () => globalThis.__ikTtsSmokeRequests ?? []
+    );
+    if (requests.some((request) => request?.kind === "chrome-tts")) {
+      return requests;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  return serviceWorker.evaluate(() => globalThis.__ikTtsSmokeRequests ?? []);
 }
 
 async function runSmokeFixture(page, baseUrl, fixture) {

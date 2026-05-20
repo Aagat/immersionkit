@@ -9,6 +9,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { getBrowserLaunchOptions } from "../browser-launch-mode.mjs";
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "../..");
 const require = createRequire(import.meta.url);
@@ -170,7 +172,7 @@ async function waitForServer(child, url, timeoutMs) {
 
 async function runBrowserValidation(playwrightModule) {
   const { chromium } = playwrightModule;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch(getBrowserLaunchOptions());
 
   try {
     const page = await browser.newPage();

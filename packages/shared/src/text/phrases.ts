@@ -30,6 +30,7 @@ export function createRuntimePhraseRegistryEntry(input: {
   lastSeenAt?: string;
   exposureCount?: number;
   sourceEntryId?: string;
+  minBand?: string;
 }): PhraseRegistryEntry {
   const normalizedSourceText = normalizePhraseText(input.sourceText);
   const normalizedTargetText = normalizePhraseText(input.targetText);
@@ -43,6 +44,7 @@ export function createRuntimePhraseRegistryEntry(input: {
     normalizedSourceText,
     canonicalTargetText: normalizeSentenceText(input.targetText),
     normalizedTargetText,
+    minBand: input.minBand,
     sourceKind: input.sourceKind,
     category: input.category,
     provenance: input.provenance ?? "runtime",

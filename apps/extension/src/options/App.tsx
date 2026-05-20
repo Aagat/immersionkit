@@ -4,7 +4,13 @@ import {
   type OptionsAdvancedDiagnostics,
   type OptionsSection
 } from "@immersionkit/ui";
-import type { ProviderName } from "@immersionkit/shared";
+import {
+  clampTtsPlaybackRate,
+  type ProviderName,
+  type TtsFallbackBehavior,
+  type TtsPlaybackRateSettings,
+  type TtsVoiceId
+} from "@immersionkit/shared";
 import {
   loadActivePageDiagnostics,
   isProviderKeyValid,
@@ -46,7 +52,8 @@ const EMPTY_STATS: VocabStats = {
   newCount: 0,
   learning: 0,
   known: 0,
-  ignored: 0
+  ignored: 0,
+  daily: []
 };
 
 const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
@@ -61,7 +68,13 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   unmetRequirements: []
 };
 
-type OptionsTab = "general" | "translation" | "advanced";
+type OptionsTab =
+  | "overview"
+  | "reading"
+  | "curriculum"
+  | "sites"
+  | "translation"
+  | "advanced";
 
 export function OptionsApp() {
   const [settingsState, setSettingsState] = useState<SettingsState | null>(null);
@@ -75,7 +88,7 @@ export function OptionsApp() {
   const [activePageDiagnostics, setActivePageDiagnostics] =
     useState<ActivePageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>(
-    showAdvancedTab ? "advanced" : "general"
+    showAdvancedTab ? "advanced" : "overview"
   );
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -248,6 +261,69 @@ export function OptionsApp() {
     });
   }, []);
 
+  const handleTtsVoiceChange = useCallback((ttsVoiceId: TtsVoiceId) => {
+    setSettingsState((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        settings: {
+          ...current.settings,
+          ttsVoiceId
+        }
+      };
+    });
+    setStatusMessage(null);
+    setErrorMessage(null);
+  }, []);
+
+  const handleTtsFallbackBehaviorChange = useCallback(
+    (ttsFallbackBehavior: TtsFallbackBehavior) => {
+      setSettingsState((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          settings: {
+            ...current.settings,
+            ttsFallbackBehavior
+          }
+        };
+      });
+      setStatusMessage(null);
+      setErrorMessage(null);
+    },
+    []
+  );
+
+  const handleTtsPlaybackRateChange = useCallback(
+    (surface: keyof TtsPlaybackRateSettings, rate: number) => {
+      setSettingsState((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          settings: {
+            ...current.settings,
+            ttsPlaybackRates: {
+              ...current.settings.ttsPlaybackRates,
+              [surface]: clampTtsPlaybackRate(rate)
+            }
+          }
+        };
+      });
+      setStatusMessage(null);
+      setErrorMessage(null);
+    },
+    []
+  );
+
   const handleSave = useCallback(async () => {
     if (!settingsState) {
       return;
@@ -356,7 +432,7 @@ export function OptionsApp() {
 
   useEffect(() => {
     if (!showAdvancedTab && activeTab === "advanced") {
-      setActiveTab("general");
+      setActiveTab("overview");
     }
   }, [activeTab, showAdvancedTab]);
 
@@ -421,6 +497,14 @@ export function OptionsApp() {
       apiKeyValid={providerKeyValid}
       showApiKey={showApiKey}
       translationSummary={translationSummary.description}
+      ttsVoiceId={
+        settingsState?.settings.ttsVoiceId ?? "es_ES-sharvard-medium-m"
+      }
+      ttsFallbackBehavior={
+        settingsState?.settings.ttsFallbackBehavior ??
+        "piper-with-system-fallback"
+      }
+      ttsPlaybackRates={settingsState?.settings.ttsPlaybackRates}
       savedSiteCount={formatCount(siteEntries.length)}
       pausedSiteCount={formatCount(disabledSiteCount)}
       advancedDiagnostics={advancedDiagnostics}
@@ -455,6 +539,9 @@ export function OptionsApp() {
         setShowApiKey((current) => !current);
       }}
       onClearApiKey={handleClearApiKey}
+      onTtsVoiceChange={handleTtsVoiceChange}
+      onTtsFallbackBehaviorChange={handleTtsFallbackBehaviorChange}
+      onTtsPlaybackRateChange={handleTtsPlaybackRateChange}
     />
   );
 }
@@ -464,6 +551,18 @@ function formatCount(value: number): string {
 }
 
 function toUiOptionsSection(tab: OptionsTab): OptionsSection {
+  if (tab === "reading") {
+    return "Reading";
+  }
+
+  if (tab === "curriculum") {
+    return "Curriculum";
+  }
+
+  if (tab === "sites") {
+    return "Sites";
+  }
+
   if (tab === "translation") {
     return "Translation";
   }
@@ -472,10 +571,22 @@ function toUiOptionsSection(tab: OptionsTab): OptionsSection {
     return "Advanced";
   }
 
-  return "General";
+  return "Overview";
 }
 
 function toLocalOptionsTab(section: OptionsSection): OptionsTab {
+  if (section === "Reading") {
+    return "reading";
+  }
+
+  if (section === "Curriculum") {
+    return "curriculum";
+  }
+
+  if (section === "Sites") {
+    return "sites";
+  }
+
   if (section === "Translation") {
     return "translation";
   }
@@ -484,7 +595,7 @@ function toLocalOptionsTab(section: OptionsSection): OptionsTab {
     return "advanced";
   }
 
-  return "general";
+  return "overview";
 }
 
 function toUiReadingLevel(seed: ProficiencySeed | undefined) {

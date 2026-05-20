@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ImmersionKit Public Preview Fixture - Sensitive Account Page</title>
+    <style>
+      body {
+        margin: 0;
+        color: #1f262b;
+        background: #f6f8fb;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 36px 20px;
+      }
+
+      form {
+        display: grid;
+        gap: 14px;
+        padding: 20px;
+        background: #ffffff;
+        border: 1px solid #d8dee7;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+      }
+
+      input,
+      textarea {
+        min-height: 36px;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Account and billing review</h1>
+      <p>
+        This page intentionally uses a sensitive path. ImmersionKit should skip
+        the document before it adds page markers or inline learning UI.
+      </p>
+      <form>
+        <label>
+          Account name
+          <input value="River Garden Cooperative" />
+        </label>
+        <label>
+          Payment note
+          <textarea>Card right after renewal can stay on file until June.</textarea>
+        </label>
+        <label>
+          Password
+          <input type="password" value="not-a-real-password" />
+        </label>
+      </form>
+    </main>
+  </body>
+</html>

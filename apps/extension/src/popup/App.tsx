@@ -18,13 +18,15 @@ import {
   type SiteSettingsMap,
   type VocabStats
 } from "../app-state/settings-state";
+import { POPUP_OVERLAY_RESIZE_MESSAGE_TYPE } from "../shared/popup-overlay";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
   newCount: 0,
   learning: 0,
   known: 0,
-  ignored: 0
+  ignored: 0,
+  daily: []
 };
 
 const DEFAULT_TAB_CONTEXT: ActiveTabContext = {
@@ -59,6 +61,7 @@ export function PopupApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  usePopupOverlayResizeBridge();
 
   const loadSnapshot = useCallback(async () => {
     const tabContext = await loadActiveTabContext();
@@ -151,7 +154,6 @@ export function PopupApp() {
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
       ?.label ?? "False beginner";
-  const translationEnabled = Boolean(settingsState?.settings.sentenceTranslationEnabled);
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
   const progressCopy = formatPopupProgressCopy({
     checkpointPreview,
@@ -169,32 +171,88 @@ export function PopupApp() {
         progressValue={estimateProgressValue(checkpointPreview)}
         progressLabel={progressCopy.progressLabel}
         progressDetail={progressCopy.progressDetail}
-        localFooterText={progressCopy.localFooterText}
         unsupportedMessage={activeTab.supportMessage}
         firstRunIntro={showFirstRunIntro}
         errorMessage={errorMessage}
         isSavingSite={isSavingSite}
-        metrics={[
-          { label: "Comfortable", value: formatCount(vocabStats.known), icon: "check" },
-          { label: "In practice", value: formatCount(vocabStats.learning), icon: "pause" },
-          { label: "Tracked words", value: formatCount(vocabStats.total), icon: "spark" }
-        ]}
-        sentenceHelpSummary={
-          translationEnabled
-            ? "Stored on this device. Sentence help is enabled."
-            : "Stored on this device. Sentence help is off."
-        }
+        learningStats={{
+          comfortable: vocabStats.known,
+          practice: vocabStats.learning,
+          newCount: vocabStats.newCount,
+          ignored: vocabStats.ignored,
+          total: vocabStats.total
+        }}
+        learningDays={vocabStats.daily}
         onSiteToggle={() => {
           void handleSiteToggle();
         }}
         onOpenSettings={handleOpenOptions}
-        onAdjustPace={handleOpenOptions}
         onDismissIntro={() => {
           void handleDismissFirstRunIntro();
         }}
       />
     </>
   );
+}
+
+function usePopupOverlayResizeBridge(): void {
+  useEffect(() => {
+    if (window.parent === window || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    let animationFrameId: number | null = null;
+    const root = document.getElementById("root");
+
+    const postHeight = () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        const rootHeight = root
+          ? Math.max(root.scrollHeight, root.getBoundingClientRect().height)
+          : 0;
+        const height = Math.ceil(
+          Math.max(
+            rootHeight,
+            document.body.scrollHeight
+          )
+        );
+
+        window.parent.postMessage(
+          {
+            type: POPUP_OVERLAY_RESIZE_MESSAGE_TYPE,
+            height
+          },
+          "*"
+        );
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(postHeight);
+    if (root) {
+      resizeObserver.observe(root);
+    }
+    resizeObserver.observe(document.body);
+
+    postHeight();
+    const timeoutIds = [
+      window.setTimeout(postHeight, 50),
+      window.setTimeout(postHeight, 250)
+    ];
+
+    return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      for (const timeoutId of timeoutIds) {
+        window.clearTimeout(timeoutId);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
 }
 
 function describeDiscoveryRate(rate: number): string {
@@ -221,24 +279,19 @@ export function formatPopupProgressCopy(input: {
 }): {
   progressLabel: string;
   progressDetail: string;
-  localFooterText: string;
 } {
   if (input.vocabStats.total === 0 || !input.checkpointPreview.activeBandId) {
     return {
       progressLabel: "Progress starts as you read",
       progressDetail:
-        "Reading history and local evidence build on this device while you browse supported pages.",
-      localFooterText:
-        "Stored on this device. Sentence help is off unless you turn it on."
+        "Reading history and local evidence build while you browse supported pages."
     };
   }
 
   const progressDetail = formatPopupCheckpointHint(input.checkpointPreview);
   return {
     progressLabel: progressDetail,
-    progressDetail,
-    localFooterText:
-      "Stored on this device. Sentence help is off unless you turn it on."
+    progressDetail
   };
 }
 
@@ -247,25 +300,22 @@ function formatPopupCheckpointHint(preview: CheckpointEligibilityPreview): strin
     return "Next step: build reading history on supported pages.";
   }
 
-  const activeBand = preview.activeBandLabel ?? preview.activeBandId;
-  const nextBand = preview.nextBandLabel ?? preview.nextBandId;
-
   if (preview.checkpointIsOnlyBlocker) {
-    return `Next step: ${activeBand} is ready to widen the reading band in settings.`;
+    return "Ready to widen your reading range in settings.";
   }
 
   if (preview.unmetRequirements.length > 0) {
     const missingCount = preview.unmetRequirements.filter(
       (requirement) => requirement !== "checkpoint"
     ).length;
-    return `Next step: ${activeBand}${nextBand ? ` toward ${nextBand}` : ""}, ${formatCount(missingCount)} reading evidence item${missingCount === 1 ? "" : "s"} left.`;
+    return `${formatCount(missingCount)} reading evidence item${missingCount === 1 ? "" : "s"} left before the next range.`;
   }
 
-  if (nextBand) {
-    return `Next step: keep building ${activeBand} toward ${nextBand}.`;
+  if (preview.nextBandId) {
+    return "Keep reading to widen your range.";
   }
 
-  return `Next step: ${activeBand} is the latest available level.`;
+  return "You are at the latest available range.";
 }
 
 function estimateProgressValue(preview: CheckpointEligibilityPreview): number {

@@ -17,7 +17,8 @@ import {
   type LearningItem,
   type ProviderName,
   type ResolvedExtensionSettings,
-  type SiteSetting
+  type SiteSetting,
+  type UserVocabEntry
 } from "@immersionkit/shared";
 import {
   parseProficiencySeed,
@@ -99,6 +100,17 @@ export type VocabStats = {
   learning: number;
   known: number;
   ignored: number;
+  daily: VocabDailyStats[];
+};
+
+export type VocabDailyStats = {
+  date: string;
+  label: string;
+  comfortable: number;
+  practice: number;
+  newCount: number;
+  ignored: number;
+  total: number;
 };
 
 export type CurriculumProgressionDiagnostics = {
@@ -259,29 +271,29 @@ export function getSiteEnabledForHost(
 }
 
 export async function loadVocabStats(): Promise<VocabStats> {
-  const statuses = [...(await new IndexedDbUserVocabRepository().loadAll()).values()]
-    .map((entry) => entry.status);
+  const entries = [...(await new IndexedDbUserVocabRepository().loadAll()).values()];
 
   const stats: VocabStats = {
-    total: statuses.length,
+    total: entries.length,
     newCount: 0,
     learning: 0,
     known: 0,
-    ignored: 0
+    ignored: 0,
+    daily: createVocabDailyStats(entries)
   };
 
-  for (const status of statuses) {
-    if (status === "known") {
+  for (const entry of entries) {
+    if (entry.status === "known") {
       stats.known += 1;
       continue;
     }
 
-    if (status === "learning") {
+    if (entry.status === "learning") {
       stats.learning += 1;
       continue;
     }
 
-    if (status === "ignored") {
+    if (entry.status === "ignored") {
       stats.ignored += 1;
       continue;
     }
@@ -290,6 +302,80 @@ export async function loadVocabStats(): Promise<VocabStats> {
   }
 
   return stats;
+}
+
+function createVocabDailyStats(
+  entries: readonly UserVocabEntry[],
+  now: Date = new Date()
+): VocabDailyStats[] {
+  const days = createRecentDayBuckets(now);
+  const byDate = new Map(days.map((day) => [day.date, day] as const));
+
+  for (const entry of entries) {
+    const timestamp = entry.lastSeenAt ?? entry.updatedAt ?? entry.createdAt;
+    const date = readLocalDateKey(timestamp);
+    if (!date) {
+      continue;
+    }
+
+    const day = byDate.get(date);
+    if (!day) {
+      continue;
+    }
+
+    day.total += 1;
+    if (entry.status === "known") {
+      day.comfortable += 1;
+    } else if (entry.status === "learning") {
+      day.practice += 1;
+    } else if (entry.status === "ignored") {
+      day.ignored += 1;
+    } else {
+      day.newCount += 1;
+    }
+  }
+
+  return days;
+}
+
+function createRecentDayBuckets(now: Date): VocabDailyStats[] {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(today);
+    day.setDate(today.getDate() - (6 - index));
+
+    return {
+      date: formatLocalDateKey(day),
+      label: day.toLocaleDateString(undefined, { weekday: "short" }),
+      comfortable: 0,
+      practice: 0,
+      newCount: 0,
+      ignored: 0,
+      total: 0
+    };
+  });
+}
+
+function readLocalDateKey(timestamp: string | null | undefined): string | null {
+  if (!timestamp) {
+    return null;
+  }
+
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+
+  return formatLocalDateKey(date);
+}
+
+function formatLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export async function loadCurriculumDiagnostics(): Promise<CurriculumDiagnostics> {

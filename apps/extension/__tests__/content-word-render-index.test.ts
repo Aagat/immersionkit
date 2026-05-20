@@ -6,7 +6,10 @@ import {
 } from "@immersionkit/shared";
 
 import { processTextNode } from "../src/content/annotate";
-import { buildWordRenderIndex } from "../src/content/word-render-index";
+import {
+  buildWordRenderIndex,
+  buildWordRenderIndexes
+} from "../src/content/word-render-index";
 import type { CachedWordRenderDecision } from "../src/content/storage";
 import type { WordRenderEntry } from "../src/render-units/render-units";
 import { withFixtureDom } from "./helpers/fixture-dom";
@@ -135,12 +138,24 @@ describe("content word render index", () => {
       const textNode = document.createTextNode(sourceSentence);
       document.body.append(textNode);
       const sentenceHash = hashSentence(sourceSentence);
+      const renderIndexes = buildWordRenderIndexes([
+        wordUnit({
+          lexemeId: "en:need:noun",
+          sourceLemma: "need",
+          targetLemma: "necesidad",
+          pos: "noun",
+          matchMode: "analyzer-pattern",
+          frequencyRank: 100
+        })
+      ]);
 
       const result = processTextNode(textNode, {
         discoveryRate: 1,
         samplingSeed: "noun-need-word-test",
         createNodeId: () => "ikn-noun-need-word-test",
-        wordRenderIndex: new Map(),
+        wordRenderIndex: renderIndexes.wordRenderIndex,
+        analyzerPatternWordRenderIndex:
+          renderIndexes.analyzerPatternWordRenderIndex,
         cachedWordRenderDecisions: new Map([
           [
             sentenceHash,
@@ -149,7 +164,7 @@ describe("content word render index", () => {
                 sentenceHash,
                 lexemeId: "en:need:noun",
                 sourceLemma: "need",
-                targetLemma: "necesidad",
+                targetLemma: "cached-necesidad",
                 pos: "noun",
                 frequencyRank: 100
               })
@@ -176,6 +191,45 @@ describe("content word render index", () => {
 
       expect(result.replaced).toBe(true);
       expect(document.body.textContent).toContain("great necesidad for");
+      expect(document.body.textContent).not.toContain("cached-necesidad");
+    });
+  });
+
+  it("does not render stale cached analyzer-pattern inject decisions missing from current render units", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sourceSentence = "So a few weeks ago, I started asking myself.";
+      const textNode = document.createTextNode(sourceSentence);
+      document.body.append(textNode);
+      const sentenceHash = hashSentence(sourceSentence);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "stale-so-word-test",
+        createNodeId: () => "ikn-stale-so-word-test",
+        wordRenderIndex: new Map(),
+        analyzerPatternWordRenderIndex: new Map(),
+        cachedWordRenderDecisions: new Map([
+          [
+            sentenceHash,
+            [
+              cachedInjectDecision({
+                sentenceHash,
+                lexemeId: "en:so:adverb",
+                sourceLemma: "so",
+                targetLemma: "tan",
+                pos: "adverb",
+                frequencyRank: 50
+              })
+            ]
+          ]
+        ]),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(false);
+      expect(document.body.textContent).toContain(sourceSentence);
+      expect(document.body.textContent).not.toContain("tan");
     });
   });
 

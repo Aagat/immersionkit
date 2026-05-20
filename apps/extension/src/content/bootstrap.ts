@@ -16,9 +16,12 @@ import {
   parseSentenceTranslationResults,
   renderSentenceTranslations
 } from "./sentence-renderer";
+import { setupPopupOverlayMessageHook } from "./popup-overlay";
 import { createRuntimeState, type RuntimeState } from "./state";
 
 export async function bootContentRuntime() {
+  setupPopupOverlayMessageHook();
+
   if (document.documentElement.hasAttribute(IMMERSIONKIT_ROOT_ATTRIBUTE)) {
     return;
   }

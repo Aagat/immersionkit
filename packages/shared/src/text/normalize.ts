@@ -1,6 +1,7 @@
 const SMART_APOSTROPHE_PATTERN = /[\u2018\u2019]/g;
 const DASH_VARIANT_PATTERN = /[\u2010-\u2015]/g;
-const EDGE_PUNCTUATION_PATTERN = /^[^a-z0-9]+|[^a-z0-9]+$/gi;
+const COMBINING_MARK_PATTERN = /[\u0300-\u036f]/g;
+const EDGE_PUNCTUATION_PATTERN = /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu;
 
 export function normalizeWhitespace(input: string): string {
   return input.replace(/\s+/g, " ").trim();
@@ -13,7 +14,10 @@ export function normalizeSentenceText(input: string): string {
 }
 
 export function normalizeToken(input: string): string {
-  const normalized = normalizeSentenceText(input).toLowerCase();
+  const normalized = normalizeSentenceText(input)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(COMBINING_MARK_PATTERN, "");
 
   if (!normalized) {
     return "";

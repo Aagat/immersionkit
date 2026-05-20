@@ -8,8 +8,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chromium, type BrowserContext, type Page, type Worker } from "playwright";
-import { ensureLinuxHeadedBrowserDisplay } from "../../../tools/headed-browser-display.mjs";
 import { startAssetPackServer } from "../../../tools/assets/asset-pack-server.mjs";
+import { getExtensionLaunchOptions } from "../../../tools/browser-launch-mode.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -93,7 +93,9 @@ describe("extension E2E harness", () => {
       .toBe(false);
 
     await options.reload({ waitUntil: "domcontentloaded" });
-    await options.waitForSelector("text=New word pace", { timeout: 10_000 });
+    await options.waitForSelector("text=Quick status across reading", {
+      timeout: 10_000
+    });
     expect(await options.locator("text=Start with normal reading").count()).toBe(0);
 
     const popup = await context.newPage();
@@ -160,8 +162,11 @@ describe("extension E2E harness", () => {
 
     await page.keyboard.press("Escape").catch(() => undefined);
     await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
-    const phrasePopoverText = await page.locator("[data-ik-popover='true']").innerText();
-    expect(phrasePopoverText).toContain("A reusable phrase you may see again");
+    const phrasePopoverText = await readPopoverText(page);
+    expect(phrasePopoverText).toContain("Translation not available");
+    expect(phrasePopoverText).toContain("Close help");
+    expect(phrasePopoverText).not.toContain("Hide phrase");
+    expect(phrasePopoverText).not.toContain("A reusable phrase you may see again");
     expect(phrasePopoverText).not.toMatch(/learning queue|review due|confidence/);
 
     const diagnostics = await readPageDiagnostics(serviceWorker, fixtureUrl);
@@ -193,10 +198,14 @@ describe("extension E2E harness", () => {
     await options.goto(`chrome-extension://${extensionId}/options.html`, {
       waitUntil: "domcontentloaded"
     });
-    await options.waitForSelector("text=New word pace", { timeout: 10_000 });
+    await options.waitForSelector("text=Quick status across reading", {
+      timeout: 10_000
+    });
     await expect
       .poll(() => options.getByRole("button", { name: "Save changes" }).isEnabled())
       .toBe(true);
+    await options.getByRole("tab", { name: "Reading" }).click();
+    await options.waitForSelector("text=Density preview", { timeout: 5_000 });
     const discoveryRateInput = options.locator("#settings-discovery-rate");
     await discoveryRateInput.focus();
     await options.keyboard.press("Home");
@@ -211,11 +220,9 @@ describe("extension E2E harness", () => {
     expect(savedSettings.discoveryRate).toBe(0.07);
     expect(savedSettings.proficiencySeed).toBe("intermediate");
 
-    await options
-      .getByLabel("Options sections")
-      .getByRole("button", { name: "Translation" })
-      .click();
-    await options.locator(".ik-ui-field select").selectOption("openai");
+    await options.getByRole("tab", { name: "Translation" }).click();
+    await options.getByRole("combobox", { name: "Provider" }).click();
+    await options.getByRole("option", { name: "OpenAI" }).click();
     await options
       .getByRole("switch", { name: "Enable sentence help" })
       .click();
@@ -297,18 +304,13 @@ async function launchBuiltExtension(): Promise<{
   extensionId: string;
   serviceWorker: Worker;
 }> {
-  ensureLinuxHeadedBrowserDisplay();
-
   const userDataDir = await mkdtemp(join(tmpdir(), "ik-extension-e2e-"));
   userDataDirs.push(userDataDir);
 
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
-    args: [
-      `--disable-extensions-except=${extensionPath}`,
-      `--load-extension=${extensionPath}`
-    ]
-  });
+  const context = await chromium.launchPersistentContext(
+    userDataDir,
+    getExtensionLaunchOptions(extensionPath)
+  );
   contexts.push(context);
 
   let serviceWorker = context.serviceWorkers()[0];
@@ -343,6 +345,12 @@ async function openFirstPopover(page: Page, selector: string): Promise<void> {
 async function expectPopover(page: Page): Promise<void> {
   await page.waitForSelector("[data-ik-popover='true']", { timeout: 5_000 });
   await expect.poll(() => page.locator("[data-ik-popover='true']").isVisible()).toBe(true);
+}
+
+async function readPopoverText(page: Page): Promise<string> {
+  return page.locator("[data-ik-popover='true']").evaluate((node) => {
+    return node.shadowRoot?.textContent ?? node.textContent ?? "";
+  });
 }
 
 async function readPageDiagnostics(
@@ -465,7 +473,7 @@ async function writeUserData(
 
       async function openImmersionKitDatabaseForUserData(): Promise<IDBDatabase> {
         return new Promise((resolveOpen, rejectOpen) => {
-          const request = indexedDB.open("immersionkit-extension", 7);
+          const request = indexedDB.open("immersionkit-extension", 8);
           request.onupgradeneeded = () => {
             ensureExtensionStores(request.result, request.transaction!);
           };
@@ -526,6 +534,11 @@ async function writeUserData(
         ensureIndex(lexemes, "languagePairBandId", ["languagePair", "bandId"]);
         ensureIndex(lexemes, "assetVersion", "assetVersion");
         ensureIndex(lexemes, "lexemeId", "lexemeId");
+        const ttsVoices = ensureStore(database, transaction, "tts-voices", {
+          keyPath: "voiceId"
+        });
+        ensureIndex(ttsVoices, "languagePair", "languagePair");
+        ensureIndex(ttsVoices, "assetVersion", "assetVersion");
       }
 
       function ensureStore(

@@ -49,6 +49,7 @@ export type PhraseRuntimeActivationInput = {
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
   renderUnitMinBand?: string;
+  phraseMinBand?: string;
   isDueForReview: boolean;
 };
 
@@ -156,7 +157,28 @@ export function evaluatePhraseRuntimeActivation(
     }
   }
 
+  if (input.phraseMinBand) {
+    const phraseTargetBandDecision = evaluatePhraseCurriculumContentInventory({
+      sourceText: input.sourceText,
+      sourceKind: input.sourceKind,
+      category: input.category,
+      phraseMinBand: input.phraseMinBand,
+      activeContent
+    });
+    if (!phraseTargetBandDecision.eligible) {
+      return {
+        eligible: false,
+        activeBandId: phraseTargetBandDecision.activeBandId,
+        skipReason: phraseTargetBandDecision.skipReason
+      };
+    }
+  }
+
   if (input.isDueForReview) {
+    return { eligible: true };
+  }
+
+  if (isRetainedPhraseLearningItemInActiveWindow(input.learningItem, activeContent)) {
     return { eligible: true };
   }
 
@@ -175,6 +197,7 @@ export function evaluatePhraseRuntimeActivation(
     sourceKind: input.sourceKind,
     category: input.category,
     renderUnitMinBand: input.renderUnitMinBand,
+    phraseMinBand: input.phraseMinBand,
     activeContent
   });
   if (!inventoryDecision.eligible) {
@@ -195,4 +218,25 @@ function scoreWordRenderDifficulty(entry: WordRenderEntry): number | null {
   }
 
   return Math.max(0, Math.min(1, entry.frequencyRank / 5000));
+}
+
+function isRetainedPhraseLearningItemInActiveWindow(
+  item: LearningItem,
+  activeContent: ActiveCurriculumContent
+): boolean {
+  if (item.status === "new" || item.status === "suspended" || !item.bandId) {
+    return false;
+  }
+
+  const activeOrder = activeContent.band?.order;
+  const itemOrder = activeContent.config.bands.find(
+    (band) => band.bandId === item.bandId
+  )?.order;
+
+  return (
+    typeof activeOrder === "number" &&
+    typeof itemOrder === "number" &&
+    itemOrder <= activeOrder &&
+    activeOrder - itemOrder <= 1
+  );
 }

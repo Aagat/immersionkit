@@ -28,11 +28,11 @@ describe("phrase detection validation", () => {
     const evaluation = evaluatePhraseDetectorAgainstCorpus(corpus);
 
     expect(evaluation.overall).toEqual({
-      truePositives: 18,
+      truePositives: 20,
       falsePositives: 1,
       falseNegatives: 1,
-      precision: 0.9474,
-      recall: 0.9474
+      precision: 0.9524,
+      recall: 0.9524
     });
   });
 
@@ -44,6 +44,17 @@ describe("phrase detection validation", () => {
     expect(overlapCase).toBeTruthy();
     expect(overlapCase?.detected.map((candidate) => candidate.normalizedSourceText)).toEqual([
       "on the other hand"
+    ]);
+  });
+
+  it("prefers temporal a few ago phrases over the generic a few fallback", () => {
+    const corpus = readCorpus();
+    const evaluation = evaluatePhraseDetectorAgainstCorpus(corpus);
+    const temporalCase = findCaseResult(evaluation, "fixed-a-few-weeks-ago");
+
+    expect(temporalCase).toBeTruthy();
+    expect(temporalCase?.detected.map((candidate) => candidate.normalizedSourceText)).toEqual([
+      "a few weeks ago"
     ]);
   });
 

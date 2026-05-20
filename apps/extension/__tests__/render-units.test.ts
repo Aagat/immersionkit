@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_CURRICULUM_CONFIG,
   buildRenderUnitRuntimeIndex,
+  normalizeToken,
   resolveRenderUnitPhraseTarget
 } from "@immersionkit/shared";
 
@@ -157,6 +159,50 @@ describe("render unit assets", () => {
     ).toContain("lx:no:adverb");
   });
 
+  it("keeps bundled target normalization accent-folded and unsplit", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const mismatches = renderUnits
+      .filter((entry) => entry.targetText && entry.normalizedTargetText)
+      .flatMap((entry) => {
+        const normalizedTargetText = normalizeToken(entry.targetText ?? "");
+        return normalizedTargetText === entry.normalizedTargetText
+          ? []
+          : [
+              `${entry.renderUnitId}: ${entry.targetText} -> ${entry.normalizedTargetText}, expected ${normalizedTargetText}`
+            ];
+      });
+
+    expect(mismatches).toEqual([]);
+  });
+
+  it("keeps every bundled phrase render unit banded and target-resolvable when renderable", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const bandIds = new Set(DEFAULT_CURRICULUM_CONFIG.bands.map((band) => band.bandId));
+    const failures = renderUnits
+      .filter((entry) => entry.kind !== "single-token")
+      .flatMap((entry) => {
+        const messages: string[] = [];
+        if (!bandIds.has(entry.minBand)) {
+          messages.push(`${entry.renderUnitId}: unknown minBand ${entry.minBand}`);
+        }
+        if (entry.renderPolicy === "inline" || entry.renderPolicy === "phrase-only") {
+          if (!entry.targetText?.trim() || !entry.normalizedTargetText?.trim()) {
+            messages.push(`${entry.renderUnitId}: missing renderable phrase target`);
+          }
+          if (entry.sourcePattern.matchMode === "exact") {
+            const resolved = resolveRenderUnitPhraseTarget(runtimeIndex, entry.sourceText);
+            if (resolved?.targetText !== entry.targetText) {
+              messages.push(`${entry.renderUnitId}: unresolved phrase target`);
+            }
+          }
+        }
+        return messages;
+      });
+
+    expect(failures).toEqual([]);
+  });
+
   it("models time as duration by default with occurrence-specific vez phrases", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
     const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
@@ -171,8 +217,16 @@ describe("render unit assets", () => {
       targetText: "primera vez",
       normalizedTargetText: "primera vez"
     });
+    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "last time")).toMatchObject({
+      targetText: "última vez",
+      normalizedTargetText: "ultima vez"
+    });
+    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "next time")).toMatchObject({
+      targetText: "próxima vez",
+      normalizedTargetText: "proxima vez"
+    });
     expect(resolveRenderUnitPhraseTarget(runtimeIndex, "one more time")).toMatchObject({
-      targetText: "una vez mas",
+      targetText: "una vez más",
       normalizedTargetText: "una vez mas"
     });
     expect(getRenderUnitSentenceHints(renderUnits)).toEqual(
@@ -195,5 +249,36 @@ describe("render unit assets", () => {
       .map((entry) => entry.renderUnitId);
 
     expect(unsafeRenderableFrames).toEqual([]);
+  });
+
+  it("does not keep context-sensitive discourse words as exact inline units", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const demotedIds = renderUnits
+      .filter((entry) => entry.renderPolicy === "sentence-help-only")
+      .map((entry) => entry.renderUnitId);
+
+    for (const unsafeSource of [
+      "a",
+      "as",
+      "so",
+      "that",
+      "there",
+      "like",
+      "over",
+      "party",
+      "paper",
+      "script"
+    ]) {
+      expect(runtimeIndex.preferredWordByNormalizedForm.get(unsafeSource)).toBeUndefined();
+    }
+    expect(demotedIds).toEqual(
+      expect.arrayContaining([
+        "ru:a:adjective:exact",
+        "ru:that:adjective:analyzer-pattern",
+        "ru:paper:noun:exact",
+        "ru:script:single-token"
+      ])
+    );
   });
 });

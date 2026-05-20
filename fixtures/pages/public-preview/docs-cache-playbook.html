@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ImmersionKit Public Preview Fixture - Cache Playbook Docs</title>
+    <style>
+      body {
+        margin: 0;
+        color: #1d2733;
+        background: #f5f7fa;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        max-width: 940px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+
+      article {
+        max-width: 740px;
+      }
+
+      pre,
+      code {
+        background: #101820;
+        color: #edf4f8;
+        border-radius: 6px;
+      }
+
+      pre {
+        overflow-x: auto;
+        padding: 16px;
+      }
+
+      code {
+        padding: 2px 5px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+      }
+
+      th,
+      td {
+        border: 1px solid #d5dbe3;
+        padding: 8px 10px;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>Cache warmup playbook</h1>
+        <p>
+          This guide explains how the support team can watch a cache warmup
+          without turning a normal deploy into an incident. Use it when a public
+          page has a new layout, a small data migration, or a slow first request.
+        </p>
+        <h2>Before the deploy</h2>
+        <p>
+          At least one engineer should read the release note and confirm that
+          the rollback path is still simple. The right place for the note is the
+          deploy ticket, not the customer-facing page.
+        </p>
+        <pre><code>cache_warmup:
+  owner: web-platform
+  route: /docs/cache
+  max_wait_seconds: 45
+  manual_check: true</code></pre>
+        <h2>During the deploy</h2>
+        <p>
+          As soon as the first request finishes, compare the response time with
+          the morning baseline. If the light chart looks stable, move up to the
+          next route and keep the old route open in a separate tab.
+        </p>
+        <p>
+          The team does not need to plant a manual check inside every section.
+          A short table is easier to scan than a long checklist when the page is
+          already busy.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Expected state</th>
+              <th>Owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>/docs/cache</td>
+              <td>Warm after the first request</td>
+              <td>Web platform</td>
+            </tr>
+            <tr>
+              <td>/docs/search</td>
+              <td>Ready before the public note</td>
+              <td>Search team</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2>After the deploy</h2>
+        <p>
+          For now, leave the dashboard open only while the release captain is in
+          the room. The follow-up issue can include logs, but it should not
+          include private tokens or customer text.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

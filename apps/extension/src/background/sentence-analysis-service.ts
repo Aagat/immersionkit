@@ -1,4 +1,3 @@
-import phraseTargetAsset from "../assets/en-es.phrase-targets.v1.json";
 import {
   BEGINNER_DIFFICULTY_PRESET,
   DEFAULT_LANGUAGE_PAIR_ID,
@@ -37,6 +36,10 @@ import {
   getV1AmbiguityGroupForWord
 } from "@immersionkit/shared/runtime";
 import { detectPhraseCandidatesFromAnalyzerOutput } from "@immersionkit/shared/phrases/detection";
+import {
+  RUNTIME_PHRASE_TARGET_LEXICON_BY_PAIR,
+  buildSentenceAnalysisVersion
+} from "./sentence-analysis-version";
 
 import {
   getBackgroundAssetPackService,
@@ -56,16 +59,6 @@ import {
   type SentenceAnalyzer
 } from "./sentence-analyzers";
 import { IndexedDbUserVocabRepository } from "../storage/user-data-repository";
-
-const RUNTIME_PHRASE_TARGET_LEXICON_BY_PAIR = new Map<
-  LanguagePairId,
-  readonly CuratedPhraseTargetEntry[]
->([
-  [
-    DEFAULT_LANGUAGE_PAIR_ID,
-    parsePhraseTargetAsset(phraseTargetAsset, DEFAULT_LANGUAGE_PAIR_ID)
-  ]
-]);
 
 export type SentenceAnalysisCandidate = {
   sentenceHash?: string;
@@ -116,6 +109,7 @@ type WordRenderLookup = RenderUnitRuntimeIndex;
 type ResolvedPhraseTarget = {
   targetText: string;
   normalizedTargetText: string;
+  minBand?: string;
 };
 
 type PhraseTargetResolver = (input: {
@@ -195,9 +189,13 @@ export class SentenceAnalysisService {
       getLanguagePairDefinition(languagePair) ??
       createFallbackLanguagePairDefinition(languagePair);
     const renderUnits = assetContext.renderUnits;
-    const analysisVersion = buildRenderUnitAnalysisVersion(
+    const curatedPhraseTargets =
+      this.phraseTargetsByLanguagePair.get(languagePair) ?? [];
+    const analysisVersion = buildSentenceAnalysisVersion(
       analyzer.analyzerVersion,
       renderUnits,
+      curatedPhraseTargets,
+      pairDefinition.fixedPhraseLexicon,
       languagePair
     );
     const normalizedCandidates = normalizeAnalysisCandidates(candidates);
@@ -245,7 +243,7 @@ export class SentenceAnalysisService {
         now,
         renderUnits,
         pairDefinition,
-        this.phraseTargetsByLanguagePair.get(languagePair) ?? []
+        curatedPhraseTargets
       );
       entriesToPersist.push(entry);
       results.push({
@@ -498,6 +496,7 @@ function buildPhraseOccurrences(
       normalizedSourceText: candidate.normalizedSourceText,
       targetText: resolvedTarget?.targetText,
       normalizedTargetText: resolvedTarget?.normalizedTargetText,
+      phraseMinBand: resolvedTarget?.minBand,
       sourceKind: candidate.sourceKind,
       category: candidate.category,
       ruleId: candidate.ruleId,
@@ -526,7 +525,8 @@ function resolveDetectedPhraseTarget(
   if (candidateTargetText && candidateNormalizedTargetText) {
     return {
       targetText: candidateTargetText,
-      normalizedTargetText: candidateNormalizedTargetText
+      normalizedTargetText: candidateNormalizedTargetText,
+      minBand: candidate.minBand
     };
   }
 
@@ -536,60 +536,6 @@ function resolveDetectedPhraseTarget(
     sourceKind: candidate.sourceKind,
     category: candidate.category
   });
-}
-
-function buildRenderUnitAnalysisVersion(
-  analyzerVersion: string,
-  renderUnits: readonly RenderUnitEntry[],
-  languagePair: LanguagePairId = DEFAULT_LANGUAGE_PAIR_ID
-): string {
-  if (renderUnits.length === 0) {
-    return `${analyzerVersion}+pair:${languagePair}`;
-  }
-
-  const signature = renderUnits
-    .map((unit) =>
-      stableSerializeRenderUnitSignature({
-        renderUnitId: unit.renderUnitId,
-        kind: unit.kind,
-        renderPolicy: unit.renderPolicy,
-        minBand: unit.minBand,
-        sourceText: unit.sourceText,
-        normalizedSourceText: unit.normalizedSourceText,
-        targetText: unit.targetText ?? null,
-        normalizedTargetText: unit.normalizedTargetText ?? null,
-        sourcePattern: unit.sourcePattern,
-        replacement: unit.replacement ?? null,
-        lexemeIds: unit.lexemeIds,
-        pos: unit.pos ?? null,
-        frequencyRank: unit.frequencyRank ?? null,
-        confidence: unit.confidence
-      })
-    )
-    .sort()
-    .join("|");
-
-  return `${analyzerVersion}+pair:${languagePair}+render-units:${hashSentence(signature).slice(0, 12)}`;
-}
-
-function stableSerializeRenderUnitSignature(input: unknown): string {
-  if (input === null || typeof input !== "object") {
-    return JSON.stringify(input);
-  }
-
-  if (Array.isArray(input)) {
-    return `[${input.map((item) => stableSerializeRenderUnitSignature(item)).join(",")}]`;
-  }
-
-  const entries = Object.entries(input)
-    .filter(([, value]) => value !== undefined)
-    .sort(([left], [right]) => left.localeCompare(right));
-  return `{${entries
-    .map(
-      ([key, value]) =>
-        `${JSON.stringify(key)}:${stableSerializeRenderUnitSignature(value)}`
-    )
-    .join(",")}}`;
 }
 
 function overlapsRenderUnitOccurrence(
@@ -721,70 +667,13 @@ function buildRenderUnitPhraseTargetResolver(
     if (curatedTarget) {
       return {
         targetText: curatedTarget.targetText,
-        normalizedTargetText: curatedTarget.normalizedTargetText
+        normalizedTargetText: curatedTarget.normalizedTargetText,
+        minBand: curatedTarget.minBand
       };
     }
 
     return null;
   };
-}
-
-function parsePhraseTargetAsset(
-  value: unknown,
-  expectedLanguagePair: LanguagePairId
-): readonly CuratedPhraseTargetEntry[] {
-  if (
-    !isRecord(value) ||
-    value.languagePair !== expectedLanguagePair ||
-    !Array.isArray(value.entries)
-  ) {
-    return [];
-  }
-
-  return value.entries.flatMap((entry): CuratedPhraseTargetEntry[] => {
-    if (!isRecord(entry)) {
-      return [];
-    }
-
-    const sourceText = readString(entry.sourceText);
-    const targetText = readString(entry.targetText);
-    const sourceKind = readPhraseTargetSourceKind(entry.sourceKind);
-    const category = readPhraseCategory(entry.category);
-    const confidence =
-      typeof entry.confidence === "number" && Number.isFinite(entry.confidence)
-        ? Math.max(0, Math.min(1, entry.confidence))
-        : null;
-
-    if (!sourceText || !targetText || !sourceKind || !category || confidence === null) {
-      return [];
-    }
-
-    return [
-      {
-        sourceText,
-        targetText,
-        sourceKind,
-        category,
-        confidence,
-        normalizedSourceText: normalizeToken(sourceText),
-        normalizedTargetText: normalizeToken(targetText)
-      }
-    ];
-  });
-}
-
-function readPhraseTargetSourceKind(
-  value: unknown
-): CuratedPhraseTargetEntry["sourceKind"] | null {
-  return value === "chunk" || value === "pattern-match" ? value : null;
-}
-
-function readPhraseCategory(value: unknown): CuratedPhraseTargetEntry["category"] | null {
-  return value === "noun-chunk" ||
-    value === "adjective-noun" ||
-    value === "grammar-carrier"
-    ? value
-    : null;
 }
 
 function computeSuitabilitySignals(

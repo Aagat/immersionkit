@@ -2,7 +2,7 @@ import { createDiagnosticsSnapshot, readPageDiagnostics, updateDiagnostics } fro
 import { closePopover } from "./popover";
 import { clearSentenceTranslations } from "./sentence-renderer";
 import { loadProcessingContext } from "./storage";
-import { buildWordRenderIndex } from "./word-render-index";
+import { buildWordRenderIndexes } from "./word-render-index";
 import { restoreAnnotatedNodes } from "./annotate";
 import { diagnosticInfo } from "../shared/logger";
 import {
@@ -75,10 +75,13 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       return;
     }
 
-    const wordRenderIndex = buildWordRenderIndex(processingContext.renderUnits, {
+    const wordRenderIndexes = buildWordRenderIndexes(processingContext.renderUnits, {
       bandPreference: getCurriculumBandPreference(processingContext.curriculumConfig)
     });
-    if (wordRenderIndex.size === 0 && processingContext.sentenceHintPhrases.length === 0) {
+    if (
+      wordRenderIndexes.wordRenderIndex.size === 0 &&
+      processingContext.sentenceHintPhrases.length === 0
+    ) {
       stopProcessing(runtimeState);
       diagnosticInfo("ImmersionKit has no approved render units to process.");
       return;
@@ -87,7 +90,9 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     stopProcessing(runtimeState);
     const state = createProcessingState({
       processingContext,
-      wordRenderIndex,
+      wordRenderIndex: wordRenderIndexes.wordRenderIndex,
+      analyzerPatternWordRenderIndex:
+        wordRenderIndexes.analyzerPatternWordRenderIndex,
       sentenceTranslationEnabled
     });
 

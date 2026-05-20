@@ -59,6 +59,53 @@ describe("content phrase-unit rendering", () => {
     });
   });
 
+  it("maps normalized phrase spans back onto wrapped page text", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const rawText =
+        "As soon as we arrive at the old city, we read the important book\n          right now.";
+      const normalizedSentence =
+        "As soon as we arrive at the old city, we read the important book right now.";
+      const textNode = document.createTextNode(rawText);
+      document.body.append(textNode);
+
+      const phraseStart = normalizedSentence.indexOf("right now");
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "phrase-normalized-span-test",
+        createNodeId: () => "ikn-phrase-normalized-span-test",
+        wordRenderIndex: new Map(),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false,
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(normalizedSentence, [
+          createPhraseMatch(normalizedSentence, {
+            phraseId: "ru:right-now:fixed-phrase",
+            sourceText: "right now",
+            startChar: phraseStart,
+            endChar: phraseStart + "right now".length,
+            sourceKind: "fixed-phrase",
+            category: "fixed-idiom"
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "ru:right-now:fixed-phrase",
+            createPhraseLearningItem({
+              phraseId: "ru:right-now:fixed-phrase",
+              sourceText: "right now",
+              targetText: "ahora mismo"
+            })
+          ]
+        ])
+      });
+
+      expect(result.phraseInjectedCount).toBe(1);
+      const phrase = document.querySelector<HTMLElement>("[data-ik-unit-kind='phrase']");
+      expect(phrase?.textContent).toBe("ahora mismo");
+      expect(phrase?.getAttribute("data-ik-source-token")).toBe("right now");
+      expect(document.body.textContent).toContain("important book\n          ahora mismo.");
+    });
+  });
+
   it("rejects overlapping phrase spans deterministically", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const sentence = "I used to visit the old city often.";

@@ -77,6 +77,7 @@ export type CurriculumContentInventoryDecision = {
     | "beginner-cognate"
     | "phrase-inventory"
     | "render-unit-band"
+    | "phrase-target-band"
     | null;
   skipReason:
     | "unknown-active-content"
@@ -84,6 +85,7 @@ export type CurriculumContentInventoryDecision = {
     | "word-rank-outside-content"
     | "phrase-outside-content"
     | "render-unit-band-locked"
+    | "phrase-target-band-locked"
     | null;
 };
 
@@ -728,6 +730,7 @@ export function evaluatePhraseCurriculumContentInventory(input: {
   sourceKind: PhraseSourceKind;
   category: PhraseCategory;
   renderUnitMinBand?: string;
+  phraseMinBand?: string;
   activeContent: ActiveCurriculumContent;
 }): CurriculumContentInventoryDecision {
   const activeBandId = input.activeContent.band?.bandId ?? null;
@@ -756,6 +759,24 @@ export function evaluatePhraseCurriculumContentInventory(input: {
       activeBandId,
       matchReason: null,
       skipReason: "render-unit-band-locked"
+    };
+  }
+
+  if (input.phraseMinBand) {
+    if (isRenderUnitBandEligible(input.phraseMinBand, input.activeContent)) {
+      return {
+        eligible: true,
+        activeBandId,
+        matchReason: "phrase-target-band",
+        skipReason: null
+      };
+    }
+
+    return {
+      eligible: false,
+      activeBandId,
+      matchReason: null,
+      skipReason: "phrase-target-band-locked"
     };
   }
 

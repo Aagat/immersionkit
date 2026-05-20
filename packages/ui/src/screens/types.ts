@@ -1,17 +1,77 @@
-import type { IconName } from "../components/primitives";
-
 export type PopupState = "supported" | "unsupported";
 export type SiteControlState = "on" | "paused";
 export type ArticleState = "supported" | "word" | "phrase" | "sentence";
-export type OptionsSection = "General" | "Translation" | "Advanced";
+export type OptionsSection =
+  | "Overview"
+  | "Reading"
+  | "Curriculum"
+  | "Sites"
+  | "Translation"
+  | "Advanced";
 export type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
+export type TtsVoiceId =
+  | "es_ES-davefx-medium"
+  | "es_ES-carlfm-x_low"
+  | "es_AR-daniela-high"
+  | "es_MX-claude-high"
+  | "es_ES-sharvard-medium-m"
+  | "es_ES-sharvard-medium-f";
+export type TtsFallbackBehavior =
+  | "piper-with-system-fallback"
+  | "piper-only"
+  | "system-only";
+export type TtsPlaybackRateSettings = {
+  word: number;
+  phrase: number;
+  sentence: number;
+};
 
-export const settingsTabs: OptionsSection[] = ["General", "Translation", "Advanced"];
+export type MetricIconName =
+  | "band"
+  | "book"
+  | "check"
+  | "chevron"
+  | "close"
+  | "document"
+  | "eyeOff"
+  | "gear"
+  | "info"
+  | "link"
+  | "lock"
+  | "message"
+  | "pause"
+  | "power"
+  | "shield"
+  | "spark"
+  | "translate"
+  | "volume";
+
+export const settingsTabs: OptionsSection[] = [
+  "Overview",
+  "Reading",
+  "Curriculum",
+  "Sites",
+  "Translation",
+  "Advanced"
+];
 
 export type PopupMetric = {
   label: string;
   value: string | number;
-  icon?: IconName;
+  icon?: MetricIconName;
+};
+
+export type PopupLearningStats = {
+  comfortable: number;
+  practice: number;
+  newCount: number;
+  ignored?: number;
+  total: number;
+};
+
+export type PopupLearningDayStats = PopupLearningStats & {
+  date?: string;
+  label: string;
 };
 
 export type OptionsStats = {
@@ -114,6 +174,9 @@ export type ExtensionOptionsProps = {
   apiKeyValid?: boolean;
   showApiKey?: boolean;
   translationSummary?: string;
+  ttsVoiceId?: TtsVoiceId;
+  ttsFallbackBehavior?: TtsFallbackBehavior;
+  ttsPlaybackRates?: TtsPlaybackRateSettings;
   siteSummary?: string;
   pausedSiteCount?: string | number;
   savedSiteCount?: string | number;
@@ -132,6 +195,12 @@ export type ExtensionOptionsProps = {
   onApiKeyChange?: (apiKey: string) => void;
   onToggleApiKeyVisibility?: () => void;
   onClearApiKey?: () => void;
+  onTtsVoiceChange?: (voiceId: TtsVoiceId) => void;
+  onTtsFallbackBehaviorChange?: (behavior: TtsFallbackBehavior) => void;
+  onTtsPlaybackRateChange?: (
+    surface: keyof TtsPlaybackRateSettings,
+    rate: number
+  ) => void;
 };
 
 export type ExtensionPopupProps = {
@@ -147,14 +216,13 @@ export type ExtensionPopupProps = {
   progressLabel?: string;
   progressDetail?: string;
   metrics?: PopupMetric[];
-  localFooterText?: string;
+  learningStats?: PopupLearningStats;
+  learningDays?: readonly PopupLearningDayStats[];
   unsupportedMessage?: string;
   firstRunIntro?: boolean;
   errorMessage?: string | null;
-  sentenceHelpSummary?: string;
   isSavingSite?: boolean;
   onSiteToggle?: () => void;
   onOpenSettings?: () => void;
-  onAdjustPace?: () => void;
   onDismissIntro?: () => void;
 };

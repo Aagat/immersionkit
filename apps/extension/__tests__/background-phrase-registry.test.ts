@@ -40,6 +40,7 @@ describe("background phrase registry", () => {
         itemId: `phrase:${entry.phraseId}`,
         unitRefId: entry.phraseId,
         unitType: "phrase",
+        bandId: "level-2b",
         targetText: "cuidar de",
         status: "new"
       }
@@ -80,7 +81,8 @@ describe("background phrase registry", () => {
 
     expect(learningItems.items[`phrase:${occurrence.phraseId}`]).toMatchObject({
       sourceText: "take care of",
-      targetText: "cuidar de"
+      targetText: "cuidar de",
+      bandId: "level-2b"
     });
   });
 
@@ -120,6 +122,7 @@ function createPhraseOccurrence(phraseId: string): PhraseOccurrence {
     normalizedSourceText: "take care of",
     targetText: "cuidar de",
     normalizedTargetText: "cuidar de",
+    phraseMinBand: "level-2b",
     sourceKind: "fixed-phrase",
     category: "fixed-idiom",
     ruleId: "fixed:take-care-of",

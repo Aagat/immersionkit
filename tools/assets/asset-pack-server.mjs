@@ -1,41 +1,27 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = resolve(scriptDir, "../..");
 const languagePair = "en-es";
+const defaultTtsVoiceId = "es_ES-sharvard-medium";
+const ttsAssetPathPrefix = `/assets/tts/${languagePair}/piper`;
 
 export async function startAssetPackServer(options = {}) {
   const host = options.host ?? process.env.IK_ASSET_PACK_HOST ?? "127.0.0.1";
   const port = Number(options.port ?? process.env.IK_ASSET_PACK_PORT ?? 8787);
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const assetPacks = await buildAssetPacks(repoRoot);
+  const ttsAssets = await buildTtsAssets(repoRoot);
 
   const server = createServer((request, response) => {
-    const url = new URL(request.url ?? "/", `http://${host}`);
-    const payload = routeAssetRequest(url.pathname, assetPacks);
-
-    response.setHeader("access-control-allow-origin", "*");
-    response.setHeader("access-control-allow-methods", "GET, OPTIONS");
-    response.setHeader("access-control-allow-headers", "content-type");
-    response.setHeader("cache-control", "no-store");
-
-    if (request.method === "OPTIONS") {
-      response.writeHead(204);
-      response.end();
-      return;
-    }
-
-    if (!payload) {
-      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      response.end("Not found");
-      return;
-    }
-
-    response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-    response.end(`${JSON.stringify(payload)}\n`);
+    void handleAssetRequest(request, response, {
+      assetPacks,
+      ttsAssets,
+      host
+    });
   });
 
   await new Promise((resolveListen, rejectListen) => {
@@ -51,12 +37,63 @@ export async function startAssetPackServer(options = {}) {
     throw new Error("Failed to start ImmersionKit asset pack server.");
   }
 
+  const baseUrl = `http://${host}:${address.port}/assets`;
+  const ttsManifestUrls = Object.fromEntries(
+    [...ttsAssets.voicesById.keys()].map((voiceId) => [
+      voiceId,
+      `${baseUrl}/tts/${languagePair}/piper/${encodeURIComponent(voiceId)}/manifest.json`
+    ])
+  );
+
   return {
     server,
-    baseUrl: `http://${host}:${address.port}/assets`,
-    manifestUrl: `http://${host}:${address.port}/assets/${languagePair}/manifest.json`,
-    packCount: assetPacks.packsByBandId.size
+    baseUrl,
+    manifestUrl: `${baseUrl}/${languagePair}/manifest.json`,
+    packCount: assetPacks.packsByBandId.size,
+    ttsManifestUrl:
+      ttsManifestUrls[defaultTtsVoiceId] ??
+      ttsManifestUrls[[...ttsAssets.voicesById.keys()][0]],
+    ttsManifestUrls
   };
+}
+
+async function handleAssetRequest(
+  request,
+  response,
+  { assetPacks, ttsAssets, host }
+) {
+  try {
+    const url = new URL(request.url ?? "/", `http://${host}`);
+
+    response.setHeader("access-control-allow-origin", "*");
+    response.setHeader("access-control-allow-methods", "GET, OPTIONS");
+    response.setHeader("access-control-allow-headers", "content-type");
+    response.setHeader("cache-control", "no-store");
+
+    if (request.method === "OPTIONS") {
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    const payload = await routeAssetRequest(url.pathname, {
+      assetPacks,
+      ttsAssets
+    });
+
+    if (!payload) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+
+    response.writeHead(200, { "content-type": payload.contentType });
+    response.end(payload.body);
+  } catch (error) {
+    console.error("ImmersionKit asset request failed.", error);
+    response.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
+    response.end("Internal server error");
+  }
 }
 
 async function buildAssetPacks(repoRoot) {
@@ -134,9 +171,68 @@ async function buildAssetPacks(repoRoot) {
   };
 }
 
-function routeAssetRequest(pathname, assetPacks) {
+async function buildTtsAssets(repoRoot) {
+  const voicesRoot = join(repoRoot, "apps/extension/src/assets/tts/en-es/piper");
+  const entries = await readdir(voicesRoot, { withFileTypes: true });
+  const voicesById = new Map();
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const voiceDir = join(voicesRoot, entry.name);
+    const manifest = await readJson(join(voiceDir, "manifest.json"));
+    if (!manifest || manifest.engine !== "piper" || manifest.voiceId !== entry.name) {
+      continue;
+    }
+
+    voicesById.set(entry.name, {
+      manifest,
+      voiceDir,
+      modelFileName: basename(manifest.modelUrl),
+      configFileName: basename(manifest.configUrl)
+    });
+  }
+
+  return { voicesById };
+}
+
+async function routeAssetRequest(pathname, { assetPacks, ttsAssets }) {
   if (pathname === `/assets/${languagePair}/manifest.json`) {
-    return assetPacks.manifest;
+    return jsonPayload(assetPacks.manifest);
+  }
+
+  const ttsMatch = pathname.match(
+    new RegExp(`^${ttsAssetPathPrefix}/([^/]+)/([^/]+)$`)
+  );
+  if (ttsMatch) {
+    const voiceId = decodeURIComponent(ttsMatch[1] ?? "");
+    const fileName = decodeURIComponent(ttsMatch[2] ?? "");
+    const voice = ttsAssets.voicesById.get(voiceId);
+    if (!voice) {
+      return null;
+    }
+
+    if (fileName === "manifest.json") {
+      return jsonPayload(voice.manifest);
+    }
+
+    if (fileName === voice.configFileName) {
+      return {
+        body: await readFile(join(voice.voiceDir, voice.configFileName)),
+        contentType: "application/json; charset=utf-8"
+      };
+    }
+
+    if (fileName === voice.modelFileName) {
+      return {
+        body: await readFile(join(voice.voiceDir, voice.modelFileName)),
+        contentType: "application/octet-stream"
+      };
+    }
+
+    return null;
   }
 
   const match = pathname.match(
@@ -152,7 +248,15 @@ function routeAssetRequest(pathname, assetPacks) {
     return null;
   }
 
-  return assetPacks.packsByBandId.get(bandId) ?? null;
+  const pack = assetPacks.packsByBandId.get(bandId);
+  return pack ? jsonPayload(pack) : null;
+}
+
+function jsonPayload(payload) {
+  return {
+    body: `${JSON.stringify(payload)}\n`,
+    contentType: "application/json; charset=utf-8"
+  };
 }
 
 async function readJson(path) {

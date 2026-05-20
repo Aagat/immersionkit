@@ -1,6 +1,8 @@
 import {
+  RuntimeMessageType,
   resolveSentenceGrammarCards,
   type SentenceGrammarCard,
+  type SpeakTextSurface,
   type UserVocabEntry
 } from "@immersionkit/shared";
 import { applyTokenStatusUpdate } from "./annotate";
@@ -12,13 +14,8 @@ import type {
 import { IMMERSIONKIT_TOKEN_STATUS_EVENT } from "./contracts";
 import { IMMERSIONKIT_TOKEN_ATTRIBUTE, IMMERSIONKIT_WORD_SELECTOR } from "./constants";
 import {
-  POPOVER_ACTION_ATTRIBUTE,
-  POPOVER_SENTENCE_ACTION_ATTRIBUTE,
   closePopover,
-  handlePopoverCloseClick,
   mountPopover,
-  readInteractiveStatus,
-  readSentencePopoverAction,
   renderPhrasePopover,
   renderSentencePopover,
   renderWordPopover,
@@ -30,6 +27,7 @@ import type { SentenceNoteMetadata } from "./sentence-renderer";
 import { persistVocabStatus } from "./storage";
 import type { CachedGrammarFeature } from "./runtime-analysis";
 import type { RuntimeState } from "./state";
+import { sendRuntimeMessage } from "../runtime-client";
 
 export function openWordPopover(
   runtimeState: RuntimeState,
@@ -44,32 +42,14 @@ export function openWordPopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, tokenElement);
 
-  const popover = renderWordPopover(detail);
-  popover.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
+  const popover = renderWordPopover(detail, {
+    onClose: () => closePopover(runtimeState),
+    onStatusAction: (status) => {
+      void handlePopoverStatusAction(runtimeState, detail, status);
+    },
+    onSpeak: (text) => {
+      return speakPopoverText("word", text);
     }
-
-    if (handlePopoverCloseClick(runtimeState, event)) {
-      return;
-    }
-
-    const actionButton = event.target.closest<HTMLButtonElement>(
-      `[${POPOVER_ACTION_ATTRIBUTE}]`
-    );
-    if (!actionButton) {
-      return;
-    }
-
-    const status = readInteractiveStatus(
-      actionButton.getAttribute(POPOVER_ACTION_ATTRIBUTE)
-    );
-    if (!status) {
-      return;
-    }
-
-    event.preventDefault();
-    void handlePopoverStatusAction(runtimeState, detail, status);
   });
 
   mountPopover(runtimeState, popover, tokenElement);
@@ -111,54 +91,36 @@ export function openSentenceNotePopover(
       features: deliveredGrammarFeatures
     }) ?? (() => undefined);
 
-  const popover = renderSentencePopover(noteElement, {
+  let popover: HTMLDivElement;
+  popover = renderSentencePopover(noteElement, {
     ...detail,
     grammarCards
-  });
-  popover.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
+  }, {
+    onClose: () => closePopover(runtimeState),
+    onAction: (action) => {
+      if (action === "show-translation") {
+        noteElement.setAttribute("data-ik-source-visible", "false");
+        syncSentencePopoverActions(popover, noteElement);
+        return;
+      }
+
+      if (action === "toggle-source") {
+        noteElement.setAttribute("data-ik-source-visible", "true");
+        syncSentencePopoverActions(popover, noteElement);
+        return;
+      }
+
+      if (action === "details") {
+        popover.setAttribute("data-ik-details-active", "true");
+        syncSentencePopoverActions(popover, noteElement);
+        return;
+      }
+
+      closePopover(runtimeState);
+    },
+    onSpeak: (text) => {
+      return speakPopoverText("sentence", text);
     }
-
-    if (handlePopoverCloseClick(runtimeState, event)) {
-      return;
-    }
-
-    const actionButton = event.target.closest<HTMLButtonElement>(
-      `[${POPOVER_SENTENCE_ACTION_ATTRIBUTE}]`
-    );
-    if (!actionButton) {
-      return;
-    }
-
-    const action = readSentencePopoverAction(
-      actionButton.getAttribute(POPOVER_SENTENCE_ACTION_ATTRIBUTE)
-    );
-    if (!action) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (action === "show-translation") {
-      noteElement.setAttribute("data-ik-source-visible", "false");
-      syncSentencePopoverActions(popover, noteElement);
-      return;
-    }
-
-    if (action === "toggle-source") {
-      noteElement.setAttribute("data-ik-source-visible", "true");
-      syncSentencePopoverActions(popover, noteElement);
-      return;
-    }
-
-    if (action === "details") {
-      popover.setAttribute("data-ik-details-active", "true");
-      syncSentencePopoverActions(popover, noteElement);
-      return;
-    }
-
-    closePopover(runtimeState);
   });
 
   mountPopover(runtimeState, popover, noteElement, stopGrammarDetailDwell);
@@ -231,15 +193,33 @@ export function openPhraseTokenPopover(
   closePopover(runtimeState);
   setActiveToken(runtimeState, phraseElement);
 
-  const popover = renderPhrasePopover(detail);
-  popover.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
+  const popover = renderPhrasePopover(detail, {
+    onClose: () => closePopover(runtimeState),
+    onSpeak: (text) => {
+      return speakPopoverText("phrase", text);
     }
-
-    handlePopoverCloseClick(runtimeState, event);
   });
   mountPopover(runtimeState, popover, phraseElement);
+}
+
+async function speakPopoverText(
+  surface: SpeakTextSurface,
+  text: string
+): Promise<void> {
+  const trimmedText = text.trim();
+  if (!trimmedText) {
+    return;
+  }
+
+  const response = await sendRuntimeMessage({
+    type: RuntimeMessageType.SpeakText,
+    text: trimmedText,
+    language: "es-ES",
+    surface
+  });
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "tts-unavailable");
+  }
 }
 
 export function applyStatusToLexemeTokens(update: TokenStatusUpdatedDetail) {

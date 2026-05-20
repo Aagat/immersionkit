@@ -17,6 +17,22 @@ import type {
 const BE_FORMS = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
 const HAVE_FORMS = new Set(["have", "has", "had"]);
 const PREPOSITIONS = new Set(["of", "for", "in", "on", "to", "with", "from", "at"]);
+const TEMPORAL_AGO_UNITS = new Set([
+  "second",
+  "seconds",
+  "minute",
+  "minutes",
+  "hour",
+  "hours",
+  "day",
+  "days",
+  "week",
+  "weeks",
+  "month",
+  "months",
+  "year",
+  "years"
+]);
 const GENERIC_CHUNK_HEADS = new Set([
   "thing",
   "things",
@@ -39,6 +55,7 @@ type BuildCandidateInput = {
   ruleId: string;
   targetText?: string;
   normalizedTargetText?: string;
+  minBand?: string;
   confidence: number;
   startToken: number;
   endToken: number;
@@ -219,6 +236,10 @@ export function detectFixedPhraseLane(
         continue;
       }
 
+      if (isSuppressedGenericFixedPhrase(phrase, tokens, startToken)) {
+        continue;
+      }
+
       candidates.push(
         buildPhraseCandidate({
           sourceKind: "fixed-phrase",
@@ -227,6 +248,7 @@ export function detectFixedPhraseLane(
           ruleId: phrase.phraseId,
           targetText: phrase.targetText,
           normalizedTargetText: phrase.normalizedTargetText,
+          minBand: phrase.minBand,
           confidence: phrase.confidence,
           startToken,
           endToken: startToken + phraseLength,
@@ -238,6 +260,22 @@ export function detectFixedPhraseLane(
   }
 
   return candidates;
+}
+
+function isSuppressedGenericFixedPhrase(
+  phrase: FixedPhraseLexiconEntry,
+  tokens: readonly PhraseToken[],
+  startToken: number
+): boolean {
+  if (phrase.normalizedTokens.join(" ") !== "a few") {
+    return false;
+  }
+
+  const timeUnit = tokens[startToken + 2]?.normalized;
+  const trailingAgo = tokens[startToken + 3]?.normalized;
+  return Boolean(
+    timeUnit && TEMPORAL_AGO_UNITS.has(timeUnit) && trailingAgo === "ago"
+  );
 }
 
 export function detectGrammarCarrierPatterns(
@@ -555,6 +593,7 @@ function buildPhraseCandidate(input: BuildCandidateInput): PhraseCandidate {
     normalizedSourceText,
     targetText: input.targetText,
     normalizedTargetText: input.normalizedTargetText,
+    minBand: input.minBand,
     canonicalPhraseKey,
     confidence: input.confidence,
     ruleStrength: input.confidence,

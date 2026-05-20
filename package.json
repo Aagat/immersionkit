@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter @immersionkit/extension dev",
     "asset-packs:serve": "node tools/assets/asset-pack-server.mjs",
+    "assets:pull-tts-models": "node tools/assets/pull-tts-models.mjs",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "build:local-assets": "VITE_IMMERSIONKIT_ASSET_BASE_URL=http://127.0.0.1:8787/assets pnpm build",
     "build:production": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build:production",
@@ -19,6 +20,10 @@
     "smoke:extension": "node tools/smoke/extension-runtime-smoke.mjs",
     "smoke:extension:build": "pnpm build:local-assets && pnpm smoke:extension",
     "smoke:extension:production": "pnpm build:production:local-assets && IMMERSIONKIT_EXPECT_PRODUCTION_BUILD=1 pnpm smoke:extension",
+    "smoke:preview": "node tools/smoke/public-preview-acceptance.mjs",
+    "smoke:preview:build": "pnpm build:local-assets && pnpm smoke:preview",
+    "smoke:public-web": "node tools/smoke/public-web-preview-audit.mjs",
+    "smoke:public-web:build": "pnpm build:local-assets && pnpm smoke:public-web",
     "benchmark": "node tools/benchmarks/run-browser-validation-suite.mjs",
     "benchmark:validation": "pnpm benchmark",
     "benchmark:nlp-performance": "pnpm --filter @immersionkit/extension benchmark:nlp:browser",

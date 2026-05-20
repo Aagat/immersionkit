@@ -1,8 +1,8 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-05-11T16:13:12.809Z",
+  "generatedAt": "2026-05-19T20:28:59.068Z",
   "runtime": {
-    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
     "language": "en-US",
     "locationHref": "http://127.0.0.1:4173/validation.html?lane=nlp-performance&autorun=1&inputProfile=baseline",
     "timezone": "Europe/Madrid"
@@ -22,7 +22,7 @@
     "pageSentenceCount": 35,
     "cacheReplaySentenceCount": 60,
     "cacheReplayExpectedUniqueSentenceCount": 12,
-    "qualityCaseCount": 22,
+    "qualityCaseCount": 23,
     "qualityCorpusVersion": "2026-04-21"
   },
   "analyzerResults": [
@@ -33,17 +33,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 19.199999999254942,
-      "hotPerSentenceLatencyMs": 0.9014285714365542,
+      "coldStartLatencyMs": 14.5,
+      "hotPerSentenceLatencyMs": 0.5899999959128244,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 9.599999999627471,
-        "perSentenceLatencyMs": 0.9599999999627471
+        "totalLatencyMs": 4.300000190734863,
+        "perSentenceLatencyMs": 0.43000001907348634
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 46.40000000037253,
-        "perSentenceLatencyMs": 0.9666666666744277
+        "totalLatencyMs": 22.5,
+        "perSentenceLatencyMs": 0.46875
       },
       "payload": {
         "averageBytesPerSentence": 1075.4583333333333,
@@ -51,8 +51,8 @@
         "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 37300000,
-        "afterUsedHeapBytes": 37300000,
+        "beforeUsedHeapBytes": 42100000,
+        "afterUsedHeapBytes": 42100000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -63,33 +63,33 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 53.899999998509884,
-        "withCacheLatencyMs": 10.800000000745058,
-        "savedLatencyMs": 43.099999997764826
+        "noCacheLatencyMs": 35.89999961853027,
+        "withCacheLatencyMs": 7.90000057220459,
+        "savedLatencyMs": 27.999999046325684
       },
       "quality": {
         "corpusVersion": "2026-04-21",
-        "caseCount": 22,
+        "caseCount": 23,
         "averageTokenCoverage": 1,
-        "phraseTruePositiveCount": 12,
-        "phraseFalsePositiveCount": 85,
-        "phraseFalseNegativeCount": 7,
-        "phrasePrecision": 0.12371134020618557,
-        "averagePhraseRecall": 0.6666666666666666,
-        "phraseF1": 0.20689655172413793,
-        "evaluatedPhraseCaseCount": 18,
-        "matchedPhraseCaseCount": 12,
+        "phraseTruePositiveCount": 13,
+        "phraseFalsePositiveCount": 87,
+        "phraseFalseNegativeCount": 8,
+        "phrasePrecision": 0.13,
+        "averagePhraseRecall": 0.6842105263157895,
+        "phraseF1": 0.21487603305785125,
+        "evaluatedPhraseCaseCount": 19,
+        "matchedPhraseCaseCount": 13,
         "sampledCaseMetrics": [
           {
             "caseId": "fixed-by-the-way",
             "expectedTokenCount": 7,
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
-            "expectedPhraseCount": 1,
+            "expectedPhraseCount": 2,
             "predictedPhraseCount": 6,
             "truePositivePhraseCount": 0,
             "falsePositivePhraseCount": 6,
-            "falseNegativePhraseCount": 1,
+            "falseNegativePhraseCount": 2,
             "phrasePrecision": 0,
             "phraseRecall": 0,
             "phraseF1": 0
@@ -345,6 +345,20 @@
             "phrasePrecision": 0,
             "phraseRecall": 1,
             "phraseF1": 0
+          },
+          {
+            "caseId": "fixed-a-few-weeks-ago",
+            "expectedTokenCount": 9,
+            "matchedTokenCount": 9,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "predictedPhraseCount": 3,
+            "truePositivePhraseCount": 1,
+            "falsePositivePhraseCount": 2,
+            "falseNegativePhraseCount": 0,
+            "phrasePrecision": 0.3333333333333333,
+            "phraseRecall": 1,
+            "phraseF1": 0.5
           },
           {
             "caseId": "multi-fixed-phrases",
@@ -1096,17 +1110,17 @@
         "fixture-pages": 35,
         "cache-replay": 60
       },
-      "coldStartLatencyMs": 1.099999999627471,
-      "hotPerSentenceLatencyMs": 0.07857142857142857,
+      "coldStartLatencyMs": 0.9000005722045898,
+      "hotPerSentenceLatencyMs": 0.07000000136239189,
       "smallBatch": {
         "sentenceCount": 10,
-        "totalLatencyMs": 0.40000000037252903,
-        "perSentenceLatencyMs": 0.0400000000372529
+        "totalLatencyMs": 0.2999992370605469,
+        "perSentenceLatencyMs": 0.029999923706054688
       },
       "mediumBatch": {
         "sentenceCount": 48,
-        "totalLatencyMs": 2,
-        "perSentenceLatencyMs": 0.041666666666666664
+        "totalLatencyMs": 1.2000007629394531,
+        "perSentenceLatencyMs": 0.02500001589457194
       },
       "payload": {
         "averageBytesPerSentence": 918.2708333333334,
@@ -1114,8 +1128,8 @@
         "sampleSentenceCount": 48
       },
       "memoryProxy": {
-        "beforeUsedHeapBytes": 37300000,
-        "afterUsedHeapBytes": 37300000,
+        "beforeUsedHeapBytes": 42100000,
+        "afterUsedHeapBytes": 42100000,
         "deltaUsedHeapBytes": 0
       },
       "determinism": {
@@ -1126,21 +1140,21 @@
         "replaySentenceCount": 60,
         "uniqueSentenceCount": 12,
         "simulatedHitRate": 0.8,
-        "noCacheLatencyMs": 2.300000000745058,
-        "withCacheLatencyMs": 1,
-        "savedLatencyMs": 1.300000000745058
+        "noCacheLatencyMs": 1.6000003814697266,
+        "withCacheLatencyMs": 0.6000003814697266,
+        "savedLatencyMs": 1
       },
       "quality": {
         "corpusVersion": "2026-04-21",
-        "caseCount": 22,
+        "caseCount": 23,
         "averageTokenCoverage": 1,
         "phraseTruePositiveCount": 0,
-        "phraseFalsePositiveCount": 4,
-        "phraseFalseNegativeCount": 19,
+        "phraseFalsePositiveCount": 5,
+        "phraseFalseNegativeCount": 21,
         "phrasePrecision": 0,
         "averagePhraseRecall": 0,
         "phraseF1": 0,
-        "evaluatedPhraseCaseCount": 18,
+        "evaluatedPhraseCaseCount": 19,
         "matchedPhraseCaseCount": 0,
         "sampledCaseMetrics": [
           {
@@ -1148,11 +1162,11 @@
             "expectedTokenCount": 7,
             "matchedTokenCount": 7,
             "tokenCoverage": 1,
-            "expectedPhraseCount": 1,
+            "expectedPhraseCount": 2,
             "predictedPhraseCount": 1,
             "truePositivePhraseCount": 0,
             "falsePositivePhraseCount": 1,
-            "falseNegativePhraseCount": 1,
+            "falseNegativePhraseCount": 2,
             "phrasePrecision": 0,
             "phraseRecall": 0,
             "phraseF1": 0
@@ -1408,6 +1422,20 @@
             "phrasePrecision": 1,
             "phraseRecall": 1,
             "phraseF1": 1
+          },
+          {
+            "caseId": "fixed-a-few-weeks-ago",
+            "expectedTokenCount": 9,
+            "matchedTokenCount": 9,
+            "tokenCoverage": 1,
+            "expectedPhraseCount": 1,
+            "predictedPhraseCount": 1,
+            "truePositivePhraseCount": 0,
+            "falsePositivePhraseCount": 1,
+            "falseNegativePhraseCount": 1,
+            "phrasePrecision": 0,
+            "phraseRecall": 0,
+            "phraseF1": 0
           },
           {
             "caseId": "multi-fixed-phrases",

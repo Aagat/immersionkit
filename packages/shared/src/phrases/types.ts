@@ -71,6 +71,7 @@ export type PhraseCandidate = {
   normalizedSourceText: string;
   targetText?: string;
   normalizedTargetText?: string;
+  minBand?: string;
   canonicalPhraseKey: string;
   confidence: number;
   ruleStrength: number;

@@ -11,8 +11,8 @@ const WORD_INJECTION_THRESHOLDS = {
 
 const PHRASE_DETECTION_THRESHOLDS = {
   "shared-annotated": {
-    precision: 18 / 19,
-    recall: 18 / 19
+    precision: 0.95,
+    recall: 0.95
   },
   "compromise-three": {
     precision: 0.95,

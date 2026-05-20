@@ -1,0 +1,4 @@
+interface:
+  display_name: "Extension Visual Validation"
+  short_description: "Launch, inspect, and screenshot the installed extension."
+  default_prompt: "Use $extension-visual-validation to validate the installed extension UI with browser screenshots."
