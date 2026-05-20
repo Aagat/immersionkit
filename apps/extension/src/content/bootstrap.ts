@@ -3,9 +3,11 @@ import { sendRuntimeMessage } from "../runtime-client";
 import { isPageDiagnosticsMessage } from "../diagnostics/page-diagnostics";
 import { DIAGNOSTICS_ENABLED } from "../build-profile";
 import { diagnosticInfo } from "../shared/logger";
+import { isSupportContextMessage } from "../support/report";
 import { IMMERSIONKIT_ROOT_ATTRIBUTE } from "./constants";
 import {
   readRuntimePageDiagnostics,
+  readRuntimeSupportContext,
   refreshProcessing,
   updateRuntimeDiagnostics
 } from "./controller";
@@ -51,6 +53,13 @@ function setupRuntimeMessageHook(runtimeState: RuntimeState) {
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (isSupportContextMessage(message)) {
+      sendResponse(
+        readRuntimeSupportContext(runtimeState, Boolean(message.includeExcerpts))
+      );
+      return false;
+    }
+
     if (DIAGNOSTICS_ENABLED && isPageDiagnosticsMessage(message)) {
       sendResponse(readRuntimePageDiagnostics(runtimeState));
       return false;

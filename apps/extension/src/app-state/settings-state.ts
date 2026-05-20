@@ -43,6 +43,10 @@ import {
   PAGE_DIAGNOSTICS_MESSAGE_TYPE,
   type PageDiagnosticsSnapshot
 } from "../diagnostics/page-diagnostics";
+import {
+  SUPPORT_CONTEXT_MESSAGE_TYPE,
+  type ContentSupportContextSnapshot
+} from "../support/report";
 import { DIAGNOSTICS_ENABLED } from "../build-profile";
 
 type StorageRecord = Record<string, unknown>;
@@ -171,6 +175,13 @@ export type ActivePageDiagnostics = {
   tabId: number;
   url: string;
   diagnostics: PageDiagnosticsSnapshot | null;
+  message: string;
+};
+
+export type ActivePageSupportContext = {
+  tabId: number;
+  url: string;
+  context: ContentSupportContextSnapshot | null;
   message: string;
 };
 
@@ -575,6 +586,45 @@ export async function loadActivePageDiagnostics(): Promise<ActivePageDiagnostics
   };
 }
 
+export async function loadActivePageSupportContext(
+  includeExcerpts = false
+): Promise<ActivePageSupportContext | null> {
+  if (typeof chrome === "undefined" || !chrome.tabs?.query) {
+    return null;
+  }
+
+  const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+    chrome.tabs.query({ currentWindow: true }, (result) => {
+      if (chrome.runtime.lastError) {
+        resolve([]);
+        return;
+      }
+
+      resolve(result ?? []);
+    });
+  });
+
+  const tab = selectDiagnosticsTab(tabs);
+  if (!tab?.id || !tab.url) {
+    return {
+      tabId: 0,
+      url: "",
+      context: null,
+      message: "Open a supported HTTP(S) page before creating a page-specific report."
+    };
+  }
+
+  const context = await sendPageSupportContextMessage(tab.id, includeExcerpts);
+  return {
+    tabId: tab.id,
+    url: tab.url,
+    context,
+    message: context
+      ? "Active-page support context loaded."
+      : "No support context response from the selected page."
+  };
+}
+
 export async function loadActiveTabContext(): Promise<ActiveTabContext> {
   if (typeof chrome === "undefined" || !chrome.tabs?.query) {
     return {
@@ -696,6 +746,33 @@ async function sendPageDiagnosticsMessage(
   });
 }
 
+async function sendPageSupportContextMessage(
+  tabId: number,
+  includeExcerpts: boolean
+): Promise<ContentSupportContextSnapshot | null> {
+  if (!chrome.tabs?.sendMessage) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      {
+        type: SUPPORT_CONTEXT_MESSAGE_TYPE,
+        includeExcerpts
+      },
+      (response?: unknown) => {
+        if (chrome.runtime.lastError || !isContentSupportContextSnapshot(response)) {
+          resolve(null);
+          return;
+        }
+
+        resolve(response);
+      }
+    );
+  });
+}
+
 function isPageDiagnosticsSnapshot(
   value: unknown
 ): value is PageDiagnosticsSnapshot {
@@ -704,6 +781,18 @@ function isPageDiagnosticsSnapshot(
     typeof value.pageUrl === "string" &&
     typeof value.pageHostname === "string" &&
     typeof value.updatedAt === "string"
+  );
+}
+
+function isContentSupportContextSnapshot(
+  value: unknown
+): value is ContentSupportContextSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value.pageUrl === "string" &&
+    typeof value.pageHostname === "string" &&
+    typeof value.updatedAt === "string" &&
+    isRecord(value.renderCounts)
   );
 }
 

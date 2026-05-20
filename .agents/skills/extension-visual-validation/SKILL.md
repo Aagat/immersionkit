@@ -20,7 +20,11 @@ node .agents/skills/extension-visual-validation/scripts/installed-extension-visu
   --out-dir /tmp/immersionkit-visual-pass/extension
 ```
 
-On Linux, the script uses the repo helper that selects the user-owned headed display. In the current local setup that means `DISPLAY=:1` when `DISPLAY` is missing or points at the root-owned display.
+The script runs Chromium headless by default and still captures screenshots.
+Pass `--headed` only when actively inspecting the browser. On Linux headed runs
+use the repo helper that selects the user-owned headed display. In the current
+local setup that means `DISPLAY=:1` when `DISPLAY` is missing or points at the
+root-owned display.
 
 ## Outputs
 

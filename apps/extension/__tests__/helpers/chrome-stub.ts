@@ -18,6 +18,8 @@ const USER_VOCAB_STORE_KEY = "user-vocab";
 export type ChromeTestStub = {
   sentMessages: unknown[];
   sentTabMessages: { tabId: number; message: unknown }[];
+  createdTabs: chrome.tabs.CreateProperties[];
+  openedOptionsPageCount: () => number;
   setStorageValues: (values: StorageValues) => void;
   setTabs: (tabs: chrome.tabs.Tab[]) => void;
   setSendMessageHandler: (
@@ -36,8 +38,10 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
   const listeners = new Set<RuntimeListener>();
   const sentMessages: unknown[] = [];
   const sentTabMessages: { tabId: number; message: unknown }[] = [];
+  const createdTabs: chrome.tabs.CreateProperties[] = [];
   const storageValues: StorageValues = { ...initialStorage };
   let tabs: chrome.tabs.Tab[] = [];
+  let openedOptionsPageCount = 0;
   let sendMessageHandler:
     | ((message: unknown) => unknown | Promise<unknown>)
     | null = null;
@@ -67,9 +71,21 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
           callback?.(
             response === undefined
               ? createDefaultRuntimeResponse(message, storageValues)
-              : response
+            : response
           );
         });
+      },
+      getManifest() {
+        return {
+          version: "0.1.0"
+        } as chrome.runtime.Manifest;
+      },
+      getURL(path: string) {
+        return `chrome-extension://test-extension/${path}`;
+      },
+      openOptionsPage(callback?: () => void) {
+        openedOptionsPageCount += 1;
+        callback?.();
       }
     },
     tabs: {
@@ -79,6 +95,16 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
       sendMessage(tabId: number, message: unknown, callback?: () => void) {
         sentTabMessages.push({ tabId, message });
         callback?.();
+      },
+      create(
+        createProperties: chrome.tabs.CreateProperties,
+        callback?: (tab: chrome.tabs.Tab) => void
+      ) {
+        createdTabs.push(createProperties);
+        callback?.({
+          id: createdTabs.length,
+          url: createProperties.url
+        } as chrome.tabs.Tab);
       }
     }
   } as unknown as typeof chrome;
@@ -88,6 +114,10 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
   return {
     sentMessages,
     sentTabMessages,
+    createdTabs,
+    openedOptionsPageCount() {
+      return openedOptionsPageCount;
+    },
     setStorageValues(values: StorageValues) {
       Object.assign(storageValues, values);
     },

@@ -7,8 +7,15 @@ export type OptionsSection =
   | "Curriculum"
   | "Sites"
   | "Translation"
+  | "Support"
   | "Advanced";
 export type ReadingLevel = "Beginner" | "False beginner" | "Intermediate";
+export type SupportIssueCategory =
+  | "bug"
+  | "quality"
+  | "translation"
+  | "page-compatibility"
+  | "other";
 export type TtsVoiceId =
   | "es_ES-davefx-medium"
   | "es_ES-carlfm-x_low"
@@ -52,6 +59,7 @@ export const settingsTabs: OptionsSection[] = [
   "Curriculum",
   "Sites",
   "Translation",
+  "Support",
   "Advanced"
 ];
 
@@ -183,6 +191,12 @@ export type ExtensionOptionsProps = {
   advancedDiagnostics?: OptionsAdvancedDiagnostics | null;
   exactActiveBandId?: string | null;
   bandOptions?: readonly OptionsBandOption[];
+  supportCategory?: SupportIssueCategory;
+  supportDescription?: string;
+  supportIncludeExcerpts?: boolean;
+  supportStatusMessage?: string | null;
+  supportErrorMessage?: string | null;
+  isGeneratingSupportReport?: boolean;
   onSectionChange?: (section: OptionsSection) => void;
   onSave?: () => void;
   onReload?: () => void;
@@ -201,6 +215,11 @@ export type ExtensionOptionsProps = {
     surface: keyof TtsPlaybackRateSettings,
     rate: number
   ) => void;
+  onSupportCategoryChange?: (category: SupportIssueCategory) => void;
+  onSupportDescriptionChange?: (description: string) => void;
+  onSupportIncludeExcerptsChange?: (include: boolean) => void;
+  onDownloadSupportReport?: () => void;
+  onCopySupportSummary?: () => void;
 };
 
 export type ExtensionPopupProps = {
@@ -224,5 +243,6 @@ export type ExtensionPopupProps = {
   isSavingSite?: boolean;
   onSiteToggle?: () => void;
   onOpenSettings?: () => void;
+  onReportIssue?: () => void;
   onDismissIntro?: () => void;
 };

@@ -17,7 +17,6 @@ import {
   TranslateIcon,
   XIcon
 } from "@phosphor-icons/react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { MetricIconName } from "./types";
@@ -212,42 +211,6 @@ function BlurredPage({ supported }: { supported: boolean }) {
   );
 }
 
-export function MetricStat({
-  label,
-  value,
-  icon,
-  compact = false
-}: {
-  label: string;
-  value: string | number;
-  icon: MetricIconName;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 items-center gap-3 rounded-3xl bg-card p-3 shadow-sm ring-1 ring-foreground/5",
-        compact && "flex-col items-start gap-2 p-2.5"
-      )}
-    >
-      <IkIcon name={icon} className="text-muted-foreground" />
-      <div className="min-w-0">
-        <p className={cn("truncate text-base font-medium", compact && "text-sm")}>
-          {value}
-        </p>
-        <span
-          className={cn(
-            "block text-xs text-muted-foreground",
-            compact ? "leading-tight" : "truncate"
-          )}
-        >
-          {label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export function SentenceBlock({ label, text }: { label: string; text: string }) {
   return (
     <div className="flex flex-col gap-2 rounded-3xl bg-muted/50 p-4">
@@ -312,19 +275,5 @@ export function InlineMark({
     >
       {children}
     </span>
-  );
-}
-
-export function StatusBadge({
-  children,
-  tone = "secondary"
-}: {
-  children: ReactNode;
-  tone?: "default" | "secondary" | "outline" | "destructive";
-}) {
-  return (
-    <Badge variant={tone} className="w-fit">
-      {children}
-    </Badge>
   );
 }

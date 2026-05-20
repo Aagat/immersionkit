@@ -145,6 +145,10 @@ export function PopupApp() {
     chrome.runtime.openOptionsPage();
   }, []);
 
+  const handleReportIssue = useCallback(() => {
+    openSupportOptionsPage();
+  }, []);
+
   const handleDismissFirstRunIntro = useCallback(async () => {
     setShowFirstRunIntro(false);
     await markFirstRunIntroSeen();
@@ -187,12 +191,27 @@ export function PopupApp() {
           void handleSiteToggle();
         }}
         onOpenSettings={handleOpenOptions}
+        onReportIssue={handleReportIssue}
         onDismissIntro={() => {
           void handleDismissFirstRunIntro();
         }}
       />
     </>
   );
+}
+
+export function openSupportOptionsPage(): void {
+  if (typeof chrome === "undefined" || !chrome.runtime) {
+    return;
+  }
+
+  const supportUrl = chrome.runtime.getURL?.("options.html#support");
+  if (supportUrl && chrome.tabs?.create) {
+    chrome.tabs.create({ url: supportUrl });
+    return;
+  }
+
+  chrome.runtime.openOptionsPage?.();
 }
 
 function usePopupOverlayResizeBridge(): void {

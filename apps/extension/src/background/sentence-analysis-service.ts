@@ -1043,10 +1043,6 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 const BE_FORMS = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
 const DETERMINERS = new Set(["a", "an", "the"]);
 const DEMONSTRATIVES = new Set(["this", "that", "these", "those"]);

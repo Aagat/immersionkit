@@ -22,8 +22,8 @@ const assetPort = Number(args.assetPort ?? 8787);
 const firstSentence =
   "The important new city has at least one small family house near the water.";
 
-const { ensureLinuxHeadedBrowserDisplay } = await import(
-  pathToFileURL(join(repoRoot, "tools/headed-browser-display.mjs")).href
+const { getExtensionLaunchOptions } = await import(
+  pathToFileURL(join(repoRoot, "tools/browser-launch-mode.mjs")).href
 );
 const { startAssetPackServer } = await import(
   pathToFileURL(join(repoRoot, "tools/assets/asset-pack-server.mjs")).href
@@ -42,15 +42,10 @@ const assetServer = await maybeStartAssetServer(assetPort);
 const fixtureServer = await startFixtureServer(createFixtureHtml(firstSentence));
 const fixtureUrl = readServerUrl(fixtureServer);
 
-ensureLinuxHeadedBrowserDisplay();
 const userDataDir = await mkdtemp(join(tmpdir(), "ik-visual-extension-"));
 const context = await chromium.launchPersistentContext(userDataDir, {
-  headless: false,
+  ...getExtensionLaunchOptions(extensionPath),
   viewport: { width: 1280, height: 900 },
-  args: [
-    `--disable-extensions-except=${extensionPath}`,
-    `--load-extension=${extensionPath}`
-  ]
 });
 
 try {
@@ -174,6 +169,9 @@ function parseArgs(values) {
       parsed.assetPort = values[++index];
       continue;
     }
+    if (value === "--headed" || value === "--headless") {
+      continue;
+    }
     throw new Error(`Unknown argument: ${value}`);
   }
   return parsed;
@@ -187,6 +185,8 @@ Options:
   --repo-root <path>    Repository root. Defaults to current working directory.
   --out-dir <path>      Screenshot output directory. Defaults to /tmp/immersionkit-visual-pass/extension.
   --asset-port <port>   Local asset-pack server port. Defaults to 8787.
+  --headed              Open Chromium visibly for visual debugging.
+  --headless            Force headless Chromium. This is the default.
   --help, -h            Show this help.
 `);
 }
@@ -538,7 +538,7 @@ async function writeUserData(serviceWorker, key, value) {
 
       function openDatabase() {
         return new Promise((resolveOpen, rejectOpen) => {
-          const request = indexedDB.open("immersionkit-extension", 7);
+          const request = indexedDB.open("immersionkit-extension", 8);
           request.onupgradeneeded = () => ensureStores(request.result, request.transaction);
           request.onsuccess = () => resolveOpen(request.result);
           request.onerror = () =>

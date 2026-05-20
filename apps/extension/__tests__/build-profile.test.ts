@@ -5,6 +5,7 @@ import {
   normalizeBuildProfile
 } from "../src/build-profile";
 import { shouldShowAdvancedTabForLocation } from "../src/options/App";
+import { settingsTabs } from "@immersionkit/ui";
 
 describe("extension build profile", () => {
   it("defaults to diagnostic profile unless production is explicit", () => {
@@ -45,5 +46,12 @@ describe("extension build profile", () => {
         search: "?debug=1"
       })
     ).toBe(false);
+  });
+
+  it("keeps Support visible separately from gated Advanced diagnostics", () => {
+    const productionTabs = settingsTabs.filter((tab) => tab !== "Advanced");
+
+    expect(productionTabs).toContain("Support");
+    expect(productionTabs).not.toContain("Advanced");
   });
 });

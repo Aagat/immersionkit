@@ -7,7 +7,7 @@ import {
 export type ProficiencySeed = "beginner" | "false-beginner" | "intermediate";
 export type LegacyProficiencySeed = ProficiencySeed | "advanced";
 
-export const DEFAULT_PROFICIENCY_SEED: ProficiencySeed = "false-beginner";
+const DEFAULT_PROFICIENCY_SEED: ProficiencySeed = "false-beginner";
 
 export const PROFICIENCY_SEED_OPTIONS: readonly {
   id: ProficiencySeed;
@@ -107,7 +107,7 @@ export function resolveLearningProfileFromStorage(
   return createLearningProfileForProficiencySeed(parseProficiencySeed(rawSeed));
 }
 
-export function hasActiveLearningProfile(
+function hasActiveLearningProfile(
   profile: CurriculumRuntimeProfileInput | null | undefined
 ): boolean {
   return Boolean(

@@ -14,6 +14,9 @@ export function shouldRunBrowserHeaded({
     return true;
   }
 
+  if (isTrue(env.IK_BROWSER_HEADLESS)) {
+    return false;
+  }
   if (isTrue(env.IK_BROWSER_HEADED) || isTrue(env.IK_HEADED) || isTrue(env.PWDEBUG)) {
     return true;
   }

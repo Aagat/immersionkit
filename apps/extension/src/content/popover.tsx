@@ -52,10 +52,9 @@ type ReactPopoverHost = HTMLDivElement & {
 };
 
 const POPOVER_ATTRIBUTE = "data-ik-popover";
-export const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
-export const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
+const POPOVER_ACTION_ATTRIBUTE = "data-ik-status-action";
+const POPOVER_SENTENCE_ACTION_ATTRIBUTE = "data-ik-sentence-action";
 export const POPOVER_SPEAK_ACTION_ATTRIBUTE = "data-ik-speak-action";
-const POPOVER_CLOSE_ATTRIBUTE = "data-ik-popover-close";
 const POPOVER_VIEWPORT_MARGIN = 10;
 const POPOVER_ANCHOR_OFFSET = 12;
 const STATUS_BUTTONS: readonly {
@@ -117,23 +116,6 @@ const CONTENT_POPOVER_STYLES = `
     white-space: nowrap;
   }
 `;
-
-export function handlePopoverCloseClick(
-  runtimeState: ContentPopoverRuntimeState,
-  event: MouseEvent
-): boolean {
-  if (!(event.target instanceof Element)) {
-    return false;
-  }
-
-  if (!event.target.closest(`[${POPOVER_CLOSE_ATTRIBUTE}]`)) {
-    return false;
-  }
-
-  event.preventDefault();
-  closePopover(runtimeState);
-  return true;
-}
 
 export function renderWordPopover(
   detail: TokenActivatedDetail,
@@ -374,16 +356,6 @@ export function setActiveToken(
   token.setAttribute("data-ik-active", "true");
 }
 
-export function readInteractiveStatus(
-  value: string | null
-): InteractiveVocabStatus | null {
-  if (value === "known" || value === "learning" || value === "ignored") {
-    return value;
-  }
-
-  return null;
-}
-
 export function syncSentencePopoverActions(
   popover: HTMLElement,
   noteElement: HTMLElement
@@ -410,21 +382,6 @@ export function syncSentencePopoverActions(
     const detailsActive = popover.getAttribute("data-ik-details-active") === "true";
     detailsButton.setAttribute("aria-pressed", detailsActive ? "true" : "false");
   }
-}
-
-export function readSentencePopoverAction(
-  value: string | null
-): SentencePopoverAction | null {
-  if (
-    value === "show-translation" ||
-    value === "toggle-source" ||
-    value === "details" ||
-    value === "close"
-  ) {
-    return value;
-  }
-
-  return null;
 }
 
 export function isWithinPopover(target: EventTarget | null): boolean {

@@ -39,6 +39,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +56,7 @@ import {
   type ExtensionOptionsProps,
   type OptionsSection,
   type ReadingLevel,
+  type SupportIssueCategory,
   type TtsPlaybackRateSettings
 } from "./types";
 
@@ -95,6 +97,12 @@ export function ExtensionOptions({
   advancedDiagnostics,
   exactActiveBandId,
   bandOptions = [],
+  supportCategory = "bug",
+  supportDescription = "",
+  supportIncludeExcerpts = false,
+  supportStatusMessage,
+  supportErrorMessage,
+  isGeneratingSupportReport = false,
   onSectionChange,
   onSave,
   onReload,
@@ -109,7 +117,12 @@ export function ExtensionOptions({
   onClearApiKey,
   onTtsVoiceChange,
   onTtsFallbackBehaviorChange,
-  onTtsPlaybackRateChange
+  onTtsPlaybackRateChange,
+  onSupportCategoryChange,
+  onSupportDescriptionChange,
+  onSupportIncludeExcerptsChange,
+  onDownloadSupportReport,
+  onCopySupportSummary
 }: ExtensionOptionsProps) {
   const [localActive, setLocalActive] = useState<OptionsSection>(initialSection);
   const active = activeSection ?? localActive;
@@ -238,6 +251,21 @@ export function ExtensionOptions({
                 onTtsPlaybackRateChange={onTtsPlaybackRateChange}
               />
             </TabsContent>
+            <TabsContent value="Support" className="m-0">
+              <OptionsSupportPanel
+                category={supportCategory}
+                description={supportDescription}
+                includeExcerpts={supportIncludeExcerpts}
+                statusMessage={supportStatusMessage}
+                errorMessage={supportErrorMessage}
+                isGenerating={isGeneratingSupportReport}
+                onCategoryChange={onSupportCategoryChange}
+                onDescriptionChange={onSupportDescriptionChange}
+                onIncludeExcerptsChange={onSupportIncludeExcerptsChange}
+                onDownloadReport={onDownloadSupportReport}
+                onCopySummary={onCopySupportSummary}
+              />
+            </TabsContent>
             {showAdvanced ? (
               <TabsContent value="Advanced" className="m-0">
                 <OptionsAdvancedPanel
@@ -262,7 +290,7 @@ export function ExtensionOptions({
     <ImmersionFrame variant="settings">
       <BrowserChrome
         title="ImmersionKit Options"
-        url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : ""}`}
+        url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : active === "Support" ? "#support" : ""}`}
         appFrame
       >
         {optionsContent}
@@ -304,6 +332,10 @@ function OptionsHeader({
     Translation: [
       "Sentence help",
       "Optional provider setup for selected sentence notes."
+    ],
+    Support: [
+      "Support",
+      "Export a local issue report for the support channel."
     ],
     Advanced: [
       "Advanced diagnostics",
@@ -1613,6 +1645,164 @@ function SpeechRateControl({
         <span>Faster</span>
       </div>
     </Field>
+  );
+}
+
+const supportIssueOptions: readonly {
+  value: SupportIssueCategory;
+  label: string;
+}[] = [
+  { value: "bug", label: "Bug" },
+  { value: "quality", label: "Quality issue" },
+  { value: "translation", label: "Incorrect translation" },
+  { value: "page-compatibility", label: "Page compatibility" },
+  { value: "other", label: "Other" }
+];
+
+function OptionsSupportPanel({
+  category = "bug",
+  description = "",
+  includeExcerpts = false,
+  statusMessage,
+  errorMessage,
+  isGenerating = false,
+  onCategoryChange,
+  onDescriptionChange,
+  onIncludeExcerptsChange,
+  onDownloadReport,
+  onCopySummary
+}: {
+  category?: SupportIssueCategory;
+  description?: string;
+  includeExcerpts?: boolean;
+  statusMessage?: string | null;
+  errorMessage?: string | null;
+  isGenerating?: boolean;
+  onCategoryChange?: (category: SupportIssueCategory) => void;
+  onDescriptionChange?: (description: string) => void;
+  onIncludeExcerptsChange?: (include: boolean) => void;
+  onDownloadReport?: () => void;
+  onCopySummary?: () => void;
+}) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Report an issue</CardTitle>
+          <CardDescription>
+            Create a local report file and send it through the support channel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="support-issue-category">Issue type</FieldLabel>
+              <Select
+                value={category}
+                onValueChange={(value) =>
+                  onCategoryChange?.(value as SupportIssueCategory)
+                }
+              >
+                <SelectTrigger id="support-issue-category" className="w-full">
+                  <SelectValue placeholder="Issue type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {supportIssueOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="support-description">What happened?</FieldLabel>
+              <Textarea
+                id="support-description"
+                value={description}
+                maxLength={2000}
+                placeholder="Briefly describe the bug, bad translation, or page behavior."
+                onChange={(event) => onDescriptionChange?.(event.target.value)}
+              />
+              <FieldDescription>
+                Avoid pasting passwords, account data, or private page text.
+              </FieldDescription>
+            </Field>
+            <Field orientation="horizontal" className="rounded-lg border p-3">
+              <Switch
+                id="support-include-excerpts"
+                checked={includeExcerpts}
+                onCheckedChange={onIncludeExcerptsChange}
+              />
+              <FieldContent>
+                <FieldLabel htmlFor="support-include-excerpts">
+                  Include replacement excerpts
+                </FieldLabel>
+                <FieldDescription>
+                  Adds a few short snippets around rendered ImmersionKit words or phrases.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+      <div className="flex flex-col gap-4">
+        {statusMessage ? (
+          <Alert>
+            <IkIcon name="check" />
+            <AlertDescription>{statusMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        {errorMessage ? (
+          <Alert variant="destructive">
+            <WarningCircleIcon aria-hidden="true" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle>Support bundle</CardTitle>
+            <CardDescription>
+              The report includes extension state and redacted page context.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <CompactMetric label="Page URL" value="Redacted" icon="shield" />
+            <CompactMetric label="API keys" value="Excluded" icon="lock" />
+            <CompactMetric
+              label="Page excerpts"
+              value={includeExcerpts ? "Opted in" : "Off"}
+              icon="document"
+            />
+          </CardContent>
+          <CardFooter className="flex-wrap gap-2 border-t pt-3">
+            <Button
+              disabled={isGenerating}
+              onClick={onDownloadReport}
+            >
+              <IkIcon name="document" dataIcon="inline-start" />
+              {isGenerating ? "Preparing..." : "Download report"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isGenerating}
+              onClick={onCopySummary}
+            >
+              <IkIcon name="message" dataIcon="inline-start" />
+              Copy summary
+            </Button>
+          </CardFooter>
+        </Card>
+        <Alert>
+          <IkIcon name="shield" />
+          <AlertDescription>
+            Reports are created on this device. They do not upload automatically.
+          </AlertDescription>
+        </Alert>
+      </div>
+    </div>
   );
 }
 

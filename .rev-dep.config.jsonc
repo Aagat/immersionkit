@@ -2,6 +2,8 @@
   "configVersion": "1.7",
   "$schema": "https://github.com/jayu/rev-dep/blob/master/config-schema/1.7.schema.json?raw=true",
   "ignoreFiles": [
+    "apps/extension/public/ort/**",
+    "apps/extension/public/tts/**",
     "apps/extension/src/assets/**",
     "fixtures/**",
     "tools/importers/inputs/**",
@@ -15,7 +17,8 @@
         "src/background/index.ts",
         "src/content/index.ts",
         "src/options/main.tsx",
-        "src/popup/main.tsx"
+        "src/popup/main.tsx",
+        "src/tts/offscreen.ts"
       ],
       "devEntryPoints": [
         "manifest.config.ts",
@@ -39,6 +42,7 @@
           "src/content/index.ts",
           "src/options/main.tsx",
           "src/popup/main.tsx",
+          "src/tts/offscreen.ts",
           "manifest.config.ts",
           "vite.config.ts",
           "__tests__/*.ts",
@@ -62,6 +66,7 @@
           "src/content/index.ts",
           "src/options/main.tsx",
           "src/popup/main.tsx",
+          "src/tts/offscreen.ts",
           "manifest.config.ts",
           "vite.config.ts",
           "__tests__/*.ts",
@@ -79,13 +84,17 @@
         "ignoreFiles": [
           "packages/shared/**",
           "../packages/shared/**",
-          "../../packages/shared/**"
+          "../../packages/shared/**",
+          "packages/ui/**",
+          "../packages/ui/**",
+          "../../packages/ui/**"
         ]
       },
       "unusedNodeModulesDetection": {
         "enabled": true,
         "excludeModules": [
-          "@types/**"
+          "@types/**",
+          "tailwindcss"
         ],
         "pkgJsonFieldsWithBinaries": [
           "scripts"
@@ -94,7 +103,13 @@
       "missingNodeModulesDetection": {
         "enabled": true,
         "excludeModules": [
-          "node:*"
+          "node:*",
+          "@phosphor-icons/react",
+          "class-variance-authority",
+          "clsx",
+          "radix-ui",
+          "recharts",
+          "tailwind-merge"
         ]
       },
       "unresolvedImportsDetection": {
@@ -111,7 +126,8 @@
           "src/background/index.ts",
           "src/content/index.ts",
           "src/options/main.tsx",
-          "src/popup/main.tsx"
+          "src/popup/main.tsx",
+          "src/tts/offscreen.ts"
         ],
         "ignoreTypeImports": true
       }
@@ -156,7 +172,13 @@
         "graphExclude": [
           "tests/**",
           "src/**/*.d.ts"
-        ]
+        ],
+        "ignore": {
+          "src/phrases/fixed-phrases.generated.ts": [
+            "FIXED_PHRASE_SOURCE_SCHEMA_VERSION",
+            "FIXED_PHRASE_SOURCE_ASSET_VERSION"
+          ]
+        }
       },
       "unusedNodeModulesDetection": {
         "enabled": true
@@ -193,15 +215,10 @@
         "ignoreTypeImports": true
       },
       "orphanFilesDetection": {
-        "enabled": true,
-        "ignoreTypeImports": true,
-        "graphExclude": [
-          "**/*.css"
-        ]
+        "enabled": false
       },
       "unusedExportsDetection": {
-        "enabled": true,
-        "ignoreTypeExports": true
+        "enabled": false
       },
       "unusedNodeModulesDetection": {
         "enabled": true,
@@ -210,6 +227,9 @@
         ],
         "pkgJsonFieldsWithBinaries": [
           "scripts"
+        ],
+        "filesWithModules": [
+          "src/styles.css"
         ]
       },
       "missingNodeModulesDetection": {

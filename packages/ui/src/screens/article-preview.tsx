@@ -234,13 +234,3 @@ function PopoverFrame({
     </Card>
   );
 }
-
-function TokenPair({ source, target }: { source: string; target: string }) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{source}</span>
-      <IkIcon name="chevron" className="text-muted-foreground" />
-      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{target}</span>
-    </div>
-  );
-}

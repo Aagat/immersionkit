@@ -6,15 +6,15 @@ import type {
   WordHelpPopoverProps
 } from "../index";
 
-export const noop = () => undefined;
+const noop = () => undefined;
 
-export const popupMetrics: NonNullable<ExtensionPopupProps["metrics"]> = [
+const popupMetrics: NonNullable<ExtensionPopupProps["metrics"]> = [
   { label: "reading band", value: "1B", icon: "band" },
   { label: "comfortable", value: 18, icon: "check" },
   { label: "practice", value: 9, icon: "spark" }
 ];
 
-export const popupLearningStats: NonNullable<ExtensionPopupProps["learningStats"]> = {
+const popupLearningStats: NonNullable<ExtensionPopupProps["learningStats"]> = {
   comfortable: 18,
   practice: 9,
   newCount: 12,
@@ -22,7 +22,7 @@ export const popupLearningStats: NonNullable<ExtensionPopupProps["learningStats"
   total: 41
 };
 
-export const popupLearningDays: NonNullable<ExtensionPopupProps["learningDays"]> = [
+const popupLearningDays: NonNullable<ExtensionPopupProps["learningDays"]> = [
   { label: "Mon", comfortable: 3, practice: 2, newCount: 1, total: 6 },
   { label: "Tue", comfortable: 4, practice: 1, newCount: 3, total: 8 },
   { label: "Wed", comfortable: 2, practice: 4, newCount: 2, total: 8 },
@@ -47,14 +47,14 @@ export const supportedPopupProps: ExtensionPopupProps = {
   onDismissIntro: noop
 };
 
-export const optionsStats: NonNullable<ExtensionOptionsProps["stats"]> = {
+const optionsStats: NonNullable<ExtensionOptionsProps["stats"]> = {
   comfortable: 18,
   practice: 9,
   newCount: 12,
   total: 41
 };
 
-export const checkpoint: NonNullable<ExtensionOptionsProps["checkpoint"]> = {
+const checkpoint: NonNullable<ExtensionOptionsProps["checkpoint"]> = {
   currentBand: "Level 1B",
   nextBand: "Level 1C",
   progressValue: 68,
@@ -65,7 +65,7 @@ export const checkpoint: NonNullable<ExtensionOptionsProps["checkpoint"]> = {
   onWiden: noop
 };
 
-export const currentFocus: NonNullable<ExtensionOptionsProps["currentFocus"]> = {
+const currentFocus: NonNullable<ExtensionOptionsProps["currentFocus"]> = {
   levelLabel: "False beginner",
   bandLabel: "Level 1B",
   learnerTitle: "Everyday reading support",
@@ -80,7 +80,7 @@ export const currentFocus: NonNullable<ExtensionOptionsProps["currentFocus"]> = 
   nextFocusPreview: "More phrase chunks and broader reading contexts."
 };
 
-export const learningPath: NonNullable<ExtensionOptionsProps["learningPath"]> = [
+const learningPath: NonNullable<ExtensionOptionsProps["learningPath"]> = [
   {
     levelId: "level-1",
     levelLabel: "Foundations",
@@ -270,7 +270,7 @@ export const learningPath: NonNullable<ExtensionOptionsProps["learningPath"]> = 
   }
 ];
 
-export const diagnostics: NonNullable<ExtensionOptionsProps["advancedDiagnostics"]> = {
+const diagnostics: NonNullable<ExtensionOptionsProps["advancedDiagnostics"]> = {
   buildProfile: "diagnostic",
   diagnosticsEnabled: true,
   activePageMessage: "Supported page with current sentence cache.",

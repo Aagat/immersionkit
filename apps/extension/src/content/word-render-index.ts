@@ -38,24 +38,6 @@ export function buildWordRenderIndexes(
   };
 }
 
-export function buildAnalyzerPatternWordRenderIndex(
-  renderUnits: readonly RenderUnitEntry[],
-  options: { bandPreference?: readonly string[] } = {}
-): AnalyzerPatternWordRenderIndex {
-  return buildRenderUnitRuntimeIndex(renderUnits, {
-    bandPreference: options.bandPreference
-  }).analyzerPatternWordEntries.reduce<AnalyzerPatternWordRenderIndex>(
-    (index, entry) => {
-      index.set(
-        createAnalyzerPatternWordRenderKey(entry.renderUnitId, entry.lexemeId),
-        entry
-      );
-      return index;
-    },
-    new Map()
-  );
-}
-
 export function createAnalyzerPatternWordRenderKey(
   renderUnitId: string,
   lexemeId: string

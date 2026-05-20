@@ -41,7 +41,6 @@ import {
 } from "../screens/screen-primitives";
 import {
   baseOptionsProps,
-  noop,
   phrasePopoverProps,
   sentencePopoverProps,
   supportedPopupProps,

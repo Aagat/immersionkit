@@ -2,7 +2,6 @@ import {
   DEFAULT_LANGUAGE_PAIR_ID,
   DEFAULT_EXTENSION_SETTINGS,
   isLanguagePairId,
-  isTtsVoiceId,
   type LanguagePairId,
   type TtsVoiceId
 } from "@immersionkit/shared";
@@ -33,10 +32,9 @@ export type PiperTtsVoiceInfo = {
   speakerId?: number;
 };
 
-export const PIPER_TTS_DEFAULT_VOICE_ID = DEFAULT_EXTENSION_SETTINGS.ttsVoiceId;
-export const PIPER_TTS_VOICE_ID = PIPER_TTS_DEFAULT_VOICE_ID;
+const PIPER_TTS_DEFAULT_VOICE_ID = DEFAULT_EXTENSION_SETTINGS.ttsVoiceId;
 export const PIPER_TTS_LANGUAGE = "es-ES";
-export const PIPER_TTS_VOICES: readonly PiperTtsVoiceInfo[] = [
+const PIPER_TTS_VOICES: readonly PiperTtsVoiceInfo[] = [
   {
     voiceId: "es_ES-davefx-medium",
     assetId: "es_ES-davefx-medium",
@@ -88,7 +86,7 @@ export const PIPER_TTS_VOICES: readonly PiperTtsVoiceInfo[] = [
     speakerId: 1
   }
 ];
-export const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
+const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
 
 export type PiperTtsVoiceManifest = {
   schemaVersion: string;
@@ -181,12 +179,6 @@ let singletonClient: PiperVoiceAssetClient | null = null;
 export function getPiperVoiceAssetClient(): PiperVoiceAssetClient {
   singletonClient ??= new PiperVoiceAssetClient();
   return singletonClient;
-}
-
-export async function ensurePiperVoiceAsset(
-  options: PiperVoiceAssetClientOptions & { voiceId?: TtsVoiceId } = {}
-): Promise<PiperVoiceAsset> {
-  return new PiperVoiceAssetClient(options).ensureVoice(options.voiceId);
 }
 
 export class PiperVoiceAssetClient {
@@ -295,9 +287,7 @@ export class PiperVoiceAssetClient {
   }
 }
 
-export class IndexedDbTtsVoiceAssetRepository
-  implements TtsVoiceAssetRepository
-{
+class IndexedDbTtsVoiceAssetRepository implements TtsVoiceAssetRepository {
   async get(voiceId: string): Promise<StoredTtsVoiceAsset | null> {
     if (!isIndexedDbAvailable()) {
       return null;
@@ -376,7 +366,7 @@ export function getPiperTtsVoiceInfo(
   );
 }
 
-export function getPiperTtsVoiceInfoForAsset(
+function getPiperTtsVoiceInfoForAsset(
   assetId: PiperTtsAssetId
 ): PiperTtsVoiceInfo {
   return (
@@ -385,7 +375,7 @@ export function getPiperTtsVoiceInfoForAsset(
   );
 }
 
-export function normalizeAssetBaseUrl(value: string | null | undefined): string | null {
+function normalizeAssetBaseUrl(value: string | null | undefined): string | null {
   if (!value) {
     return null;
   }

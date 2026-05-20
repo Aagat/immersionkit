@@ -88,6 +88,7 @@ export function ExtensionPopup({
   isSavingSite = false,
   onSiteToggle,
   onOpenSettings,
+  onReportIssue,
   onDismissIntro
 }: ExtensionPopupProps) {
   const [localSiteState, setLocalSiteState] =
@@ -105,7 +106,10 @@ export function ExtensionPopup({
       }
     >
       <PopupPanel>
-        <PopupHeader onOpenSettings={onOpenSettings} />
+        <PopupHeader
+          onOpenSettings={onOpenSettings}
+          onReportIssue={onReportIssue}
+        />
         {errorMessage ? (
           <Alert>
             <WarningCircleIcon aria-hidden="true" />
@@ -556,7 +560,13 @@ function PopupPanel({ children }: { children: ReactNode }) {
   );
 }
 
-function PopupHeader({ onOpenSettings }: { onOpenSettings?: () => void }) {
+function PopupHeader({
+  onOpenSettings,
+  onReportIssue
+}: {
+  onOpenSettings?: () => void;
+  onReportIssue?: () => void;
+}) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -568,16 +578,28 @@ function PopupHeader({ onOpenSettings }: { onOpenSettings?: () => void }) {
         </span>
         <span className="truncate text-lg font-medium">ImmersionKit</span>
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-lg"
-        className="size-12 shrink-0 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
-        aria-label="Open settings"
-        onClick={onOpenSettings}
-      >
-        <IkIcon name="gear" />
-      </Button>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-lg"
+          className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+          aria-label="Report issue"
+          onClick={onReportIssue}
+        >
+          <IkIcon name="message" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-lg"
+          className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+          aria-label="Open settings"
+          onClick={onOpenSettings}
+        >
+          <IkIcon name="gear" />
+        </Button>
+      </div>
     </div>
   );
 }

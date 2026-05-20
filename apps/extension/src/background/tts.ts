@@ -1,6 +1,5 @@
 import {
   DEFAULT_EXTENSION_SETTINGS,
-  RuntimeMessageType,
   type TtsFallbackBehavior,
   type TtsPlaybackRateSettings,
   type TtsVoiceId,
@@ -148,14 +147,6 @@ export class BackgroundTextToSpeechService {
       return getDefaultTtsPlaybackSettings();
     }
   }
-}
-
-export function isSpeakTextMessage(input: unknown): input is SpeakTextMessage {
-  return (
-    typeof input === "object" &&
-    input !== null &&
-    (input as { type?: unknown }).type === RuntimeMessageType.SpeakText
-  );
 }
 
 function validateSpeakTextMessage(

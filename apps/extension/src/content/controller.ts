@@ -15,6 +15,8 @@ import { collectRootsSentenceHashes, setupMutationObserver } from "./mutations";
 import { processRoots } from "./processor";
 import { applyUiTheme } from "./theme";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
+import type { ContentSupportContextSnapshot } from "../support/report";
+import { readContentSupportContext } from "./support-context";
 
 export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   if (runtimeState.refreshPromise) {
@@ -150,6 +152,19 @@ export function readRuntimePageDiagnostics(
     diagnostics: runtimeState.diagnostics,
     processing: runtimeState.processing?.diagnostics ?? null
   });
+}
+
+export function readRuntimeSupportContext(
+  runtimeState: RuntimeState,
+  includeExcerpts: boolean
+): ContentSupportContextSnapshot {
+  return readContentSupportContext(
+    {
+      diagnostics: runtimeState.diagnostics,
+      processing: runtimeState.processing?.diagnostics ?? null
+    },
+    includeExcerpts
+  );
 }
 
 export function updateRuntimeDiagnostics(runtimeState: RuntimeState): void {

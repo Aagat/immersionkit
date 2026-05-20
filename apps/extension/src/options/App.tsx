@@ -13,6 +13,7 @@ import {
 } from "@immersionkit/shared";
 import {
   loadActivePageDiagnostics,
+  loadActivePageSupportContext,
   isProviderKeyValid,
   loadCheckpointEligibilityPreview,
   loadCurriculumDiagnostics,
@@ -46,6 +47,14 @@ import {
   DIAGNOSTICS_ENABLED,
   EXTENSION_BUILD_PROFILE
 } from "../build-profile";
+import {
+  createSupportReportBundle,
+  createSupportReportFileName,
+  createSupportSettingsSnapshot,
+  createSupportSummary,
+  type SupportIssueCategory,
+  type SupportReportBundleV1
+} from "../support/report";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -74,6 +83,7 @@ type OptionsTab =
   | "curriculum"
   | "sites"
   | "translation"
+  | "support"
   | "advanced";
 
 export function OptionsApp() {
@@ -88,13 +98,25 @@ export function OptionsApp() {
   const [activePageDiagnostics, setActivePageDiagnostics] =
     useState<ActivePageDiagnostics | null>(null);
   const [activeTab, setActiveTab] = useState<OptionsTab>(
-    showAdvancedTab ? "advanced" : "overview"
+    getInitialOptionsTab(showAdvancedTab)
   );
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
+  const [isGeneratingSupportReport, setIsGeneratingSupportReport] =
+    useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [supportCategory, setSupportCategory] =
+    useState<SupportIssueCategory>("bug");
+  const [supportDescription, setSupportDescription] = useState("");
+  const [supportIncludeExcerpts, setSupportIncludeExcerpts] = useState(false);
+  const [supportStatusMessage, setSupportStatusMessage] = useState<string | null>(
+    null
+  );
+  const [supportErrorMessage, setSupportErrorMessage] = useState<string | null>(
+    null
+  );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -430,6 +452,115 @@ export function OptionsApp() {
     await markFirstRunIntroSeen();
   }, []);
 
+  const siteEntries = Object.values(siteSettings).sort(
+    (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
+  );
+  const disabledSiteCount = siteEntries.filter((entry) => !entry.enabled).length;
+
+  const createSupportBundle = useCallback(async (): Promise<SupportReportBundleV1> => {
+    if (!settingsState) {
+      throw new Error("settings-unavailable");
+    }
+
+    const activePage = await loadActivePageSupportContext(supportIncludeExcerpts);
+    const contentContext = activePage?.context ?? null;
+    const activePageUrl = contentContext?.pageUrl ?? activePage?.url ?? null;
+    const activePageHostname =
+      contentContext?.pageHostname ?? readHostname(activePageUrl);
+    const currentSiteSetting = activePageHostname
+      ? siteEntries.find((entry) => entry.hostname === activePageHostname) ?? null
+      : null;
+
+    return createSupportReportBundle({
+      issueCategory: supportCategory,
+      issueDescription: supportDescription,
+      extension: {
+        version: getExtensionVersion(),
+        buildProfile: EXTENSION_BUILD_PROFILE
+      },
+      browser: getBrowserSupportSnapshot(),
+      activePageUrl,
+      activePageHostname,
+      activePageSupported: Boolean(contentContext),
+      activePageSupportMessage:
+        activePage?.message ??
+        "No active supported page was available for this report.",
+      contentContext,
+      settings: createSupportSettingsSnapshot({
+        settings: settingsState.settings,
+        proficiencySeed: settingsState.proficiencySeed,
+        providerApiKey: settingsState.providerApiKey
+      }),
+      progress: {
+        vocabTotal: vocabStats.total,
+        newCount: vocabStats.newCount,
+        learning: vocabStats.learning,
+        known: vocabStats.known,
+        ignored: vocabStats.ignored,
+        activeBandId: checkpointPreview.activeBandId,
+        activeBandLabel: checkpointPreview.activeBandLabel,
+        nextBandId: checkpointPreview.nextBandId,
+        nextBandLabel: checkpointPreview.nextBandLabel,
+        unmetRequirementCount: checkpointPreview.unmetRequirements.length
+      },
+      sites: {
+        savedSiteCount: siteEntries.length,
+        pausedSiteCount: disabledSiteCount,
+        currentHostname: activePageHostname,
+        currentSiteEnabled: currentSiteSetting?.enabled ?? null
+      }
+    });
+  }, [
+    checkpointPreview.activeBandId,
+    checkpointPreview.activeBandLabel,
+    checkpointPreview.nextBandId,
+    checkpointPreview.nextBandLabel,
+    checkpointPreview.unmetRequirements.length,
+    disabledSiteCount,
+    settingsState,
+    siteEntries,
+    supportCategory,
+    supportDescription,
+    supportIncludeExcerpts,
+    vocabStats.ignored,
+    vocabStats.known,
+    vocabStats.learning,
+    vocabStats.newCount,
+    vocabStats.total
+  ]);
+
+  const handleDownloadSupportReport = useCallback(async () => {
+    setSupportStatusMessage(null);
+    setSupportErrorMessage(null);
+    setIsGeneratingSupportReport(true);
+
+    try {
+      const bundle = await createSupportBundle();
+      downloadSupportReportBundle(bundle);
+      setSupportStatusMessage("Support report downloaded.");
+    } catch {
+      setSupportErrorMessage("Unable to create a support report right now.");
+    } finally {
+      setIsGeneratingSupportReport(false);
+    }
+  }, [createSupportBundle]);
+
+  const handleCopySupportSummary = useCallback(async () => {
+    setSupportStatusMessage(null);
+    setSupportErrorMessage(null);
+    setIsGeneratingSupportReport(true);
+
+    try {
+      const bundle = await createSupportBundle();
+      await copyTextToClipboard(createSupportSummary(bundle));
+      setSupportStatusMessage("Support summary copied.");
+    } catch {
+      setSupportErrorMessage("Unable to copy a support summary right now.");
+    } finally {
+      setIsGeneratingSupportReport(false);
+    }
+  }, [createSupportBundle]);
+
   useEffect(() => {
     if (!showAdvancedTab && activeTab === "advanced") {
       setActiveTab("overview");
@@ -442,10 +573,6 @@ export function OptionsApp() {
   const providerKeyValid = settingsState
     ? isProviderKeyValid(settingsState.settings.provider, settingsState.providerApiKey)
     : false;
-  const siteEntries = Object.values(siteSettings).sort(
-    (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
-  );
-  const disabledSiteCount = siteEntries.filter((entry) => !entry.enabled).length;
   const translationSummary = getTranslationSummary({
     provider: settingsState?.settings.provider ?? "none",
     sentenceTranslationEnabled: Boolean(settingsState?.settings.sentenceTranslationEnabled),
@@ -510,6 +637,12 @@ export function OptionsApp() {
       advancedDiagnostics={advancedDiagnostics}
       exactActiveBandId={getExactActiveBandId(curriculumDiagnostics?.profile)}
       bandOptions={CURRICULUM_BAND_OPTIONS}
+      supportCategory={supportCategory}
+      supportDescription={supportDescription}
+      supportIncludeExcerpts={supportIncludeExcerpts}
+      supportStatusMessage={supportStatusMessage}
+      supportErrorMessage={supportErrorMessage}
+      isGeneratingSupportReport={isGeneratingSupportReport}
       siteSummary={
         siteEntries.length > 0
           ? `Recent site choices: ${siteEntries.slice(0, 3).map((entry) => entry.hostname).join(", ")}.`
@@ -542,6 +675,27 @@ export function OptionsApp() {
       onTtsVoiceChange={handleTtsVoiceChange}
       onTtsFallbackBehaviorChange={handleTtsFallbackBehaviorChange}
       onTtsPlaybackRateChange={handleTtsPlaybackRateChange}
+      onSupportCategoryChange={(category) => {
+        setSupportCategory(category);
+        setSupportStatusMessage(null);
+        setSupportErrorMessage(null);
+      }}
+      onSupportDescriptionChange={(description) => {
+        setSupportDescription(description);
+        setSupportStatusMessage(null);
+        setSupportErrorMessage(null);
+      }}
+      onSupportIncludeExcerptsChange={(include) => {
+        setSupportIncludeExcerpts(include);
+        setSupportStatusMessage(null);
+        setSupportErrorMessage(null);
+      }}
+      onDownloadSupportReport={() => {
+        void handleDownloadSupportReport();
+      }}
+      onCopySupportSummary={() => {
+        void handleCopySupportSummary();
+      }}
     />
   );
 }
@@ -567,6 +721,10 @@ function toUiOptionsSection(tab: OptionsTab): OptionsSection {
     return "Translation";
   }
 
+  if (tab === "support") {
+    return "Support";
+  }
+
   if (tab === "advanced") {
     return "Advanced";
   }
@@ -589,6 +747,10 @@ function toLocalOptionsTab(section: OptionsSection): OptionsTab {
 
   if (section === "Translation") {
     return "translation";
+  }
+
+  if (section === "Support") {
+    return "support";
   }
 
   if (section === "Advanced") {
@@ -719,6 +881,14 @@ function shouldShowAdvancedTab(): boolean {
   });
 }
 
+function getInitialOptionsTab(showAdvancedTab: boolean): OptionsTab {
+  if (typeof window !== "undefined" && window.location.hash === "#support") {
+    return "support";
+  }
+
+  return showAdvancedTab ? "advanced" : "overview";
+}
+
 export function shouldShowAdvancedTabForLocation(input: {
   diagnosticsEnabled: boolean;
   hash: string;
@@ -734,6 +904,86 @@ export function shouldShowAdvancedTabForLocation(input: {
     params.get("debug") === "1" ||
     params.get("advanced") === "1"
   );
+}
+
+function getExtensionVersion(): string {
+  if (typeof chrome === "undefined" || !chrome.runtime?.getManifest) {
+    return "unknown";
+  }
+
+  return chrome.runtime.getManifest().version ?? "unknown";
+}
+
+function getBrowserSupportSnapshot() {
+  if (typeof navigator === "undefined") {
+    return {
+      userAgent: "unknown",
+      language: "unknown",
+      platform: "unknown"
+    };
+  }
+
+  return {
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    platform: navigator.platform
+  };
+}
+
+function readHostname(url: string | null): string | null {
+  if (!url) {
+    return null;
+  }
+
+  try {
+    return new URL(url).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+function downloadSupportReportBundle(bundle: SupportReportBundleV1): void {
+  if (typeof document === "undefined" || typeof URL === "undefined") {
+    throw new Error("download-unavailable");
+  }
+
+  const blob = new Blob([`${JSON.stringify(bundle, null, 2)}\n`], {
+    type: "application/json"
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = createSupportReportFileName(bundle);
+  link.rel = "noopener";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  if (typeof document === "undefined") {
+    throw new Error("clipboard-unavailable");
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "true");
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  document.body.append(textArea);
+  textArea.select();
+  const copied = document.execCommand("copy");
+  textArea.remove();
+
+  if (!copied) {
+    throw new Error("clipboard-unavailable");
+  }
 }
 
 function createAdvancedDiagnostics(input: {
