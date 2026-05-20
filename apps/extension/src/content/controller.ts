@@ -17,6 +17,7 @@ import { applyUiTheme } from "./theme";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
 import type { ContentSupportContextSnapshot } from "../support/report";
 import { readContentSupportContext } from "./support-context";
+import { summarizeProcessingContext } from "./debug-trace-store";
 
 export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   if (runtimeState.refreshPromise) {
@@ -25,6 +26,12 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
 
   runtimeState.refreshPromise = (async () => {
     applyUiTheme();
+    const debugRunId = runtimeState.debugTrace?.beginRun({
+      url: window.location.href,
+      hostname: window.location.hostname,
+      pathname: window.location.pathname,
+      reason: "refresh-processing"
+    });
 
     const initialSentenceHashes = document.body
       ? collectPageSentenceHashes(document.body)
@@ -36,6 +43,13 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
         initialSentenceHashes
       );
     } catch (error) {
+      if (debugRunId) {
+        runtimeState.debugTrace?.recordRunError(
+          debugRunId,
+          "content-context-load-failed",
+          error
+        );
+      }
       stopProcessing(runtimeState);
       console.warn("ImmersionKit content context load failed; page processing is off.", {
         error,
@@ -47,6 +61,12 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       processingContext.settings.sentenceTranslationEnabled,
       processingContext.settings.provider
     );
+    if (debugRunId) {
+      runtimeState.debugTrace?.recordContext(
+        debugRunId,
+        summarizeProcessingContext(processingContext, sentenceTranslationEnabled)
+      );
+    }
 
     runtimeState.diagnostics = createDiagnosticsSnapshot({
       siteEnabled: processingContext.siteEnabled,
@@ -64,12 +84,21 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       fallback: processingContext.renderAssetInfo.isFallback
     });
     if (processingContext.renderAssetInfo.isFallback) {
+      runtimeState.debugTrace?.recordEvent({
+        phase: "assets",
+        level: "warn",
+        title: "render asset fallback active",
+        detail: "No cached asset packs are available for this page."
+      });
       console.warn(
         "ImmersionKit has no cached asset packs available; inline pack-backed learning will stay off for this page."
       );
     }
 
     if (!processingContext.siteEnabled) {
+      if (debugRunId) {
+        runtimeState.debugTrace?.recordStopReason(debugRunId, "site-disabled");
+      }
       stopProcessing(runtimeState);
       diagnosticInfo("ImmersionKit disabled for site.", {
         hostname: window.location.hostname
@@ -84,6 +113,9 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       wordRenderIndexes.wordRenderIndex.size === 0 &&
       processingContext.sentenceHintPhrases.length === 0
     ) {
+      if (debugRunId) {
+        runtimeState.debugTrace?.recordStopReason(debugRunId, "no-approved-render-units");
+      }
       stopProcessing(runtimeState);
       diagnosticInfo("ImmersionKit has no approved render units to process.");
       return;
@@ -95,17 +127,27 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       wordRenderIndex: wordRenderIndexes.wordRenderIndex,
       analyzerPatternWordRenderIndex:
         wordRenderIndexes.analyzerPatternWordRenderIndex,
-      sentenceTranslationEnabled
+      sentenceTranslationEnabled,
+      debugTrace: runtimeState.debugTrace
     });
 
     runtimeState.processing = state;
 
     if (!document.body) {
+      if (debugRunId) {
+        runtimeState.debugTrace?.recordStopReason(debugRunId, "missing-document-body");
+      }
       return;
     }
 
+    if (debugRunId) {
+      runtimeState.debugTrace?.markProcessing(debugRunId);
+    }
     processRoots(state, [document.body]);
     setupMutationObserver(state, processRoots);
+    if (debugRunId) {
+      runtimeState.debugTrace?.markActive(debugRunId);
+    }
     updateRuntimeDiagnostics(runtimeState);
   })().finally(() => {
     runtimeState.refreshPromise = null;

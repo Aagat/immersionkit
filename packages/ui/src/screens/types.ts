@@ -241,8 +241,10 @@ export type ExtensionPopupProps = {
   firstRunIntro?: boolean;
   errorMessage?: string | null;
   isSavingSite?: boolean;
+  debugAvailable?: boolean;
   onSiteToggle?: () => void;
   onOpenSettings?: () => void;
+  onOpenDebug?: () => void;
   onReportIssue?: () => void;
   onDismissIntro?: () => void;
 };

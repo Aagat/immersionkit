@@ -33,6 +33,12 @@ import {
   createAnalyzerPatternWordRenderKey,
   type AnalyzerPatternWordRenderIndex
 } from "./word-render-index";
+import {
+  createWordDecisionTrace,
+  type DebugDecisionSink,
+  type DebugPhraseDecisionTrace,
+  type DebugTokenDecisionTrace
+} from "./debug-trace-store";
 
 export type ReplacementPlannerContext = {
   discoveryRate: number;
@@ -52,6 +58,7 @@ export type ReplacementPlannerContext = {
   learningItemsByUnitRefId?: Map<string, LearningItem>;
   shouldActivateWord?: (input: WordActivationInput) => ActivationDecision;
   shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
+  debugSink?: DebugDecisionSink;
   allowPhraseOnlyCandidates?: boolean;
 };
 
@@ -156,6 +163,9 @@ type PhraseRenderCandidate = {
   category: string;
   ruleId: string;
   confidence: number;
+  renderPolicy?: string | null;
+  renderUnitMinBand?: string | null;
+  phraseMinBand?: string | null;
   start: number;
   end: number;
   sourceText: string;
@@ -193,6 +203,11 @@ export function planTextReplacements(input: {
     learningItemsByUnitRefId: context.learningItemsByUnitRefId,
     shouldActivatePhrase: context.shouldActivatePhrase
   });
+  for (const rejection of phraseCandidates.rejected) {
+    context.debugSink?.recordPhraseDecision(
+      createRejectedPhraseTrace(context.nodeId, rejection)
+    );
+  }
   const injectedSentenceHashes = new Set<string>();
   const spans: ReplacementSpan[] = [];
   let injectedCount = 0;
@@ -207,9 +222,10 @@ export function planTextReplacements(input: {
   for (const segment of segments) {
     const phraseCandidate = phraseCandidates.acceptedByStart.get(segment.start);
     if (phraseCandidate) {
+      const tokenId = `${context.nodeId}-t${tokenIndex}`;
       spans.push({
         kind: "phrase",
-        tokenId: `${context.nodeId}-t${tokenIndex}`,
+        tokenId,
         nodeId: context.nodeId,
         start: phraseCandidate.start,
         end: phraseCandidate.end,
@@ -226,6 +242,9 @@ export function planTextReplacements(input: {
         confidence: phraseCandidate.confidence,
         isDueForReview: phraseCandidate.isDueForReview
       });
+      context.debugSink?.recordPhraseDecision(
+        createInjectedPhraseTrace(context.nodeId, tokenId, phraseCandidate)
+      );
       tokenIndex += 1;
       injectedSentenceHashes.add(phraseCandidate.sentence.hash);
       injectedCount += 1;
@@ -235,11 +254,27 @@ export function planTextReplacements(input: {
       continue;
     }
 
-    if (segment.start < coveredUntil || segment.kind === "text") {
+    if (segment.kind === "text") {
       continue;
     }
 
     const sentence = findSentenceForOffset(sentences, segment.start);
+    if (segment.start < coveredUntil) {
+      context.debugSink?.recordTokenDecision(
+        createWordDecisionTrace({
+          nodeId: context.nodeId,
+          sourceToken: segment.value,
+          normalizedSourceToken: segment.normalized,
+          sentenceHash: sentence?.hash ?? null,
+          start: segment.start,
+          end: segment.end,
+          finalAction: "skipped-overlapped-by-phrase",
+          explanation: "Token was covered by a selected phrase span."
+        })
+      );
+      continue;
+    }
+
     const cachedInjectDecision = sentence
       ? findCachedWordRenderDecision({
           decisionsBySentenceHash: context.cachedWordRenderDecisions,
@@ -256,11 +291,38 @@ export function planTextReplacements(input: {
         context.analyzerPatternWordRenderIndex
       );
     if (!wordEntry) {
+      context.debugSink?.recordTokenDecision(
+        createWordDecisionTrace({
+          nodeId: context.nodeId,
+          sourceToken: segment.value,
+          normalizedSourceToken: segment.normalized,
+          sentenceHash: sentence?.hash ?? null,
+          start: segment.start,
+          end: segment.end,
+          finalAction: "skipped-no-render-unit",
+          explanation: "No approved render unit matched this token."
+        })
+      );
       continue;
     }
 
     const status = getVocabStatus(wordEntry.lexemeId, context.vocabByLexemeId);
     if (status === "ignored") {
+      context.debugSink?.recordTokenDecision(
+        createWordDecisionTrace({
+          nodeId: context.nodeId,
+          sourceToken: segment.value,
+          normalizedSourceToken: segment.normalized,
+          targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+          sentenceHash: sentence?.hash ?? null,
+          start: segment.start,
+          end: segment.end,
+          wordEntry,
+          status,
+          finalAction: "skipped-ignored",
+          explanation: "The learner marked this lexeme as ignored."
+        })
+      );
       continue;
     }
 
@@ -278,18 +340,61 @@ export function planTextReplacements(input: {
       });
       if (!activationDecision.eligible) {
         curriculumSkippedWordCount += 1;
+        context.debugSink?.recordTokenDecision(
+          createWordDecisionTrace({
+            nodeId: context.nodeId,
+            sourceToken: segment.value,
+            normalizedSourceToken: segment.normalized,
+            targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+            sentenceHash: sentence?.hash ?? null,
+            start: segment.start,
+            end: segment.end,
+            wordEntry,
+            status,
+            learningItem,
+            due: isDueForReview,
+            activationDecision,
+            finalAction: "skipped-curriculum",
+            explanation:
+              activationDecision.skipReason ??
+              "The current curriculum band did not admit this token."
+          })
+        );
         continue;
       }
     }
 
+    const samplingSeed =
+      `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`;
+    const sampling = evaluateDiscoverySampling(
+      samplingSeed,
+      context.discoveryRate,
+      effectiveDiscoveryRate(context.discoveryRate, activationDecision)
+    );
     if (
       wordKind === "discovery" &&
       !isDueForReview &&
-      !shouldInjectDiscoveryToken(
-        `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`,
-        effectiveDiscoveryRate(context.discoveryRate, activationDecision)
-      )
+      !sampling.passed
     ) {
+      context.debugSink?.recordTokenDecision(
+        createWordDecisionTrace({
+          nodeId: context.nodeId,
+          sourceToken: segment.value,
+          normalizedSourceToken: segment.normalized,
+          targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+          sentenceHash: sentence?.hash ?? null,
+          start: segment.start,
+          end: segment.end,
+          wordEntry,
+          status,
+          learningItem,
+          due: isDueForReview,
+          activationDecision,
+          sampling,
+          finalAction: "skipped-sampling",
+          explanation: explainSamplingSkip(sampling)
+        })
+      );
       continue;
     }
 
@@ -305,6 +410,32 @@ export function planTextReplacements(input: {
       : null;
     if (cachedSkipDecision) {
       contextSkippedCount += 1;
+      context.debugSink?.recordTokenDecision(
+        createWordDecisionTrace({
+          nodeId: context.nodeId,
+          sourceToken: segment.value,
+          normalizedSourceToken: segment.normalized,
+          targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+          sentenceHash: sentence?.hash ?? null,
+          start: segment.start,
+          end: segment.end,
+          wordEntry,
+          status,
+          learningItem,
+          due: isDueForReview,
+          activationDecision,
+          sampling,
+          contextDecision: {
+            evaluated: true,
+            decision: "skip",
+            rationale: cachedSkipDecision.rationale ?? null
+          },
+          finalAction: "skipped-context",
+          explanation:
+            cachedSkipDecision.rationale ??
+            "Cached contextual analysis suppressed this token."
+        })
+      );
       continue;
     }
 
@@ -312,14 +443,16 @@ export function planTextReplacements(input: {
       injectedSentenceHashes.add(sentence.hash);
     }
 
+    const tokenId = `${context.nodeId}-t${tokenIndex}`;
+    const targetToken = preserveWordCasing(segment.value, wordEntry.targetLemma);
     spans.push({
       kind: "word",
-      tokenId: `${context.nodeId}-t${tokenIndex}`,
+      tokenId,
       nodeId: context.nodeId,
       start: segment.start,
       end: segment.end,
       sourceToken: segment.value,
-      targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+      targetToken,
       sentence,
       wordEntry,
       status,
@@ -328,6 +461,44 @@ export function planTextReplacements(input: {
       activeBandId: activationDecision?.activeBandId ?? null,
       activationReason: activationDecision?.activationReason ?? null
     });
+    context.debugSink?.recordTokenDecision(
+      createWordDecisionTrace({
+        tokenId,
+        nodeId: context.nodeId,
+        sourceToken: segment.value,
+        normalizedSourceToken: segment.normalized,
+        targetToken,
+        sentenceHash: sentence?.hash ?? null,
+        start: segment.start,
+        end: segment.end,
+        wordEntry,
+        status,
+        learningItem,
+        due: isDueForReview,
+        activationDecision,
+        sampling:
+          wordKind === "discovery" && !isDueForReview
+            ? sampling
+            : {
+                evaluated: false,
+                baseRate: context.discoveryRate,
+                effectiveRate: effectiveDiscoveryRate(
+                  context.discoveryRate,
+                  activationDecision
+                ),
+                seed: samplingSeed
+              },
+        contextDecision: {
+          evaluated: Boolean(cachedInjectDecision),
+          decision: "inject",
+          rationale: cachedInjectDecision?.rationale ?? null
+        },
+        finalAction: "injected",
+        explanation:
+          cachedInjectDecision?.rationale ??
+          "Token passed render-unit, vocab, curriculum, sampling, and context gates."
+      })
+    );
     tokenIndex += 1;
     injectedCount += 1;
 
@@ -475,6 +646,9 @@ function selectPhraseRenderCandidates(input: {
         category: match.category,
         ruleId: match.ruleId,
         confidence: match.confidence,
+        renderPolicy: match.renderPolicy,
+        renderUnitMinBand: match.renderUnitMinBand,
+        phraseMinBand: match.phraseMinBand,
         start,
         end,
         sourceText: match.sourceText,
@@ -504,6 +678,95 @@ function selectPhraseRenderCandidates(input: {
     acceptedByStart,
     rejected,
     curriculumSkippedCount
+  };
+}
+
+function createInjectedPhraseTrace(
+  nodeId: string,
+  tokenId: string,
+  candidate: PhraseRenderCandidate
+): DebugPhraseDecisionTrace {
+  return {
+    kind: "phrase",
+    tokenId,
+    nodeId,
+    phraseId: candidate.phraseId,
+    sourceText: candidate.sourceText,
+    normalizedSourceText: normalizePhraseText(candidate.sourceText),
+    targetText: candidate.targetText,
+    sentenceHash: candidate.sentence.hash,
+    offset: {
+      start: candidate.start,
+      end: candidate.end
+    },
+    match: {
+      sourceKind: candidate.sourceKind,
+      category: candidate.category,
+      ruleId: candidate.ruleId,
+      confidence: candidate.confidence,
+      renderPolicy: candidate.renderPolicy ?? "inline",
+      renderUnitMinBand: candidate.renderUnitMinBand ?? null,
+      phraseMinBand: candidate.phraseMinBand ?? null
+    },
+    learningItem: {
+      exists: true,
+      itemId: candidate.itemId,
+      due: candidate.isDueForReview
+    },
+    gates: {
+      renderPolicyOk: true,
+      activeLearningItem: true,
+      usableTarget: true,
+      spanResolved: true,
+      curriculumEligible: true,
+      overlapSelected: true
+    },
+    rejectedReason: null,
+    finalAction: "injected",
+    explanation: "Phrase passed render policy, learning item, target, span, curriculum, and overlap gates."
+  };
+}
+
+function createRejectedPhraseTrace(
+  nodeId: string,
+  rejection: PhraseRenderRejection
+): DebugPhraseDecisionTrace {
+  const reason = rejection.reason;
+  return {
+    kind: "phrase",
+    nodeId,
+    phraseId: rejection.phraseId,
+    sourceText: rejection.sourceText,
+    normalizedSourceText: rejection.sourceText
+      ? normalizePhraseText(rejection.sourceText)
+      : undefined,
+    targetText: rejection.targetText,
+    sentenceHash: rejection.sentenceHash,
+    offset: null,
+    match: {
+      sourceKind: rejection.sourceKind,
+      category: rejection.category,
+      ruleId: null,
+      confidence: null,
+      renderPolicy: reason.startsWith("render-policy-")
+        ? reason.replace("render-policy-", "")
+        : null
+    },
+    learningItem: {
+      exists: reason !== "missing-active-learning-item",
+      suspended: reason === "missing-active-learning-item" ? undefined : false
+    },
+    gates: {
+      renderPolicyOk: !reason.startsWith("render-policy-"),
+      activeLearningItem: reason !== "missing-active-learning-item",
+      usableTarget: reason !== "blank-target",
+      spanResolved: reason !== "span-mismatch",
+      curriculumEligible: !reason.startsWith("curriculum-"),
+      overlapSelected: reason !== "overlap"
+    },
+    rejectedReason: reason,
+    finalAction: "rejected",
+    explanation: `Phrase rejected: ${reason}.`
   };
 }
 
@@ -688,18 +951,43 @@ function getVocabStatus(
   return entry?.status ?? "new";
 }
 
-function shouldInjectDiscoveryToken(seed: string, discoveryRate: number): boolean {
-  if (discoveryRate <= 0) {
-    return false;
+function evaluateDiscoverySampling(
+  seed: string,
+  baseRate: number,
+  effectiveRate: number
+): DebugTokenDecisionTrace["sampling"] {
+  if (effectiveRate <= 0) {
+    return {
+      evaluated: true,
+      baseRate,
+      effectiveRate,
+      seed,
+      passed: false
+    };
   }
 
-  if (discoveryRate >= 1) {
-    return true;
+  if (effectiveRate >= 1) {
+    return {
+      evaluated: true,
+      baseRate,
+      effectiveRate,
+      seed,
+      passed: true
+    };
   }
 
   const hashPrefix = hashString(seed).slice(0, 8);
   const hashValue = Number.parseInt(hashPrefix, 16);
-  return hashValue / 0xffffffff <= discoveryRate;
+  const value = hashValue / 0xffffffff;
+  return {
+    evaluated: true,
+    baseRate,
+    effectiveRate,
+    seed,
+    hashPrefix,
+    value,
+    passed: value <= effectiveRate
+  };
 }
 
 function effectiveDiscoveryRate(
@@ -712,6 +1000,16 @@ function effectiveDiscoveryRate(
   }
 
   return Math.min(1, Math.max(baseRate, floor));
+}
+
+function explainSamplingSkip(
+  sampling: DebugTokenDecisionTrace["sampling"]
+): string {
+  if (typeof sampling.value !== "number") {
+    return `Discovery sampling skipped this token at effective rate ${sampling.effectiveRate.toFixed(3)}.`;
+  }
+
+  return `Discovery sampling skipped this token (${sampling.value.toFixed(3)} > ${sampling.effectiveRate.toFixed(3)}).`;
 }
 
 function findCurrentAnalyzerPatternWordEntry(

@@ -42,9 +42,11 @@ import {
   type PhraseActivationInput,
   type PhraseRenderRejection,
   type PhraseReplacementSpan,
+  type ReplacementPlan,
   type WordActivationInput,
   type WordReplacementSpan
 } from "./replacement-planner";
+import type { DebugDecisionSink } from "./debug-trace-store";
 
 export type ProcessTextNodeContext = {
   discoveryRate: number;
@@ -64,6 +66,7 @@ export type ProcessTextNodeContext = {
   learningItemsByUnitRefId?: Map<string, LearningItem>;
   shouldActivateWord?: (input: WordActivationInput) => ActivationDecision;
   shouldActivatePhrase?: (input: PhraseActivationInput) => ActivationDecision;
+  debugSink?: DebugDecisionSink;
   allowPhraseOnlyCandidates?: boolean;
 };
 
@@ -113,7 +116,8 @@ export function processTextNode(
   const rendered = renderTextWindow({
     sourceText,
     context,
-    offsetBase: 0
+    offsetBase: 0,
+    windowIndex: 0
   });
   if (!rendered.replaced) {
     return rendered.result;
@@ -132,11 +136,12 @@ function processWindowedTextNode(
   const fragment = document.createDocumentFragment();
   const mergedResult = emptyResult();
 
-  for (const window of windows) {
+  for (const [windowIndex, window] of windows.entries()) {
     const rendered = renderTextWindow({
       sourceText: window.text,
       context,
-      offsetBase: window.start
+      offsetBase: window.start,
+      windowIndex
     });
 
     mergedResult.injectedCount += rendered.result.injectedCount;
@@ -174,12 +179,13 @@ function renderTextWindow(input: {
   sourceText: string;
   context: ProcessTextNodeContext;
   offsetBase: number;
+  windowIndex: number;
 }): {
   replaced: boolean;
   node: Node;
   result: ProcessTextNodeResult;
 } {
-  const { sourceText, context, offsetBase } = input;
+  const { sourceText, context, offsetBase, windowIndex } = input;
   if (segmentText(sourceText).length === 0) {
     return {
       replaced: false,
@@ -198,6 +204,12 @@ function renderTextWindow(input: {
       targetLanguage: context.targetLanguage ?? DEFAULT_TARGET_LANGUAGE
     },
     offsetBase
+  });
+  recordDebugNodeTrace(context.debugSink, plan, {
+    sourceText,
+    offsetBase,
+    windowIndex,
+    replaced: plan.spans.length > 0
   });
 
   if (plan.spans.length === 0) {
@@ -271,6 +283,37 @@ function renderTextWindow(input: {
       unrenderedPhraseRejections: []
     }
   };
+}
+
+function recordDebugNodeTrace(
+  debugSink: DebugDecisionSink | undefined,
+  plan: ReplacementPlan,
+  input: {
+    sourceText: string;
+    offsetBase: number;
+    windowIndex: number;
+    replaced: boolean;
+  }
+): void {
+  debugSink?.recordTextNodeTrace({
+    nodeId: plan.nodeId,
+    sourcePreview: input.sourceText,
+    sourceLength: input.sourceText.length,
+    offsetBase: input.offsetBase,
+    windowIndex: input.windowIndex,
+    replaced: input.replaced,
+    injectedCount: plan.diagnostics.injectedCount,
+    phraseInjectedCount: plan.diagnostics.phraseInjectedCount,
+    phraseRejectedCount: plan.diagnostics.phraseRejectedCount,
+    contextSkippedCount: plan.diagnostics.contextSkippedCount,
+    curriculumSkippedWordCount: plan.diagnostics.curriculumSkippedWordCount,
+    curriculumSkippedPhraseCount: plan.diagnostics.curriculumSkippedPhraseCount,
+    sentenceHashes: plan.sentenceHashes,
+    tokenIds: plan.spans.map((span) => span.tokenId),
+    phraseTokenIds: plan.spans.flatMap((span) =>
+      span.kind === "phrase" ? [span.tokenId] : []
+    )
+  });
 }
 
 function renderReplacementPlan(plan: {

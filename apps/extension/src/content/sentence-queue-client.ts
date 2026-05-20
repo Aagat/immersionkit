@@ -2,9 +2,11 @@ import {
   RuntimeMessageType,
   type QueuedSentenceCandidate,
   type QueueSentenceCandidatesMessage,
+  type SentenceAnalysisResult,
   type SentenceAnalysisEntry,
   type SentenceRankingReason,
-  type SentenceTranslationResult
+  type SentenceTranslationResult,
+  type TranslationAvailability
 } from "@immersionkit/shared";
 import { sendRuntimeMessage } from "../runtime-client";
 import type { SentenceCandidateMetadata } from "./contracts";
@@ -12,8 +14,16 @@ import type { SentenceCandidateMetadata } from "./contracts";
 const MAX_QUEUED_SENTENCE_CANDIDATES = 12;
 
 export type SentenceQueueOutcome = {
+  accepted: number;
+  analyzed: number;
+  analysisCacheHits: number;
+  queued: number;
+  skipped: number;
+  cacheHits: number;
+  translationAvailability: TranslationAvailability;
   queuedCandidateCount: number;
   cachedResults: SentenceTranslationResult[];
+  analysisResults: SentenceAnalysisResult[];
   analysisEntries: SentenceAnalysisEntry[];
   rankingReasons: SentenceRankingReason[];
 };
@@ -39,8 +49,18 @@ export async function sendSentenceCandidatesToQueue(
   }
 
   return {
+    accepted: response.accepted,
+    analyzed: response.analyzed,
+    analysisCacheHits: response.analysisCacheHits,
+    queued: response.queued,
+    skipped: response.skipped,
+    cacheHits: response.cacheHits,
+    translationAvailability: response.translationAvailability,
     queuedCandidateCount: compactCandidates.length,
     cachedResults: Array.isArray(response.cachedResults) ? response.cachedResults : [],
+    analysisResults: Array.isArray(response.analysisResults)
+      ? response.analysisResults
+      : [],
     analysisEntries: Array.isArray(response.analysisResults)
       ? response.analysisResults.map((result) => result.entry)
       : [],

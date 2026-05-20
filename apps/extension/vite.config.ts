@@ -23,6 +23,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        debug: new URL("./debug.html", import.meta.url).pathname,
         options: new URL("./options.html", import.meta.url).pathname,
         popup: new URL("./popup.html", import.meta.url).pathname,
         ttsOffscreen: new URL("./tts-offscreen.html", import.meta.url).pathname

@@ -19,6 +19,11 @@ import {
   type VocabStats
 } from "../app-state/settings-state";
 import { POPUP_OVERLAY_RESIZE_MESSAGE_TYPE } from "../shared/popup-overlay";
+import { DIAGNOSTICS_ENABLED } from "../build-profile";
+import {
+  DEBUG_OVERLAY_TOGGLE_MESSAGE_TYPE,
+  type DebugOverlayToggleResponse
+} from "../shared/debug-overlay";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -145,6 +150,31 @@ export function PopupApp() {
     chrome.runtime.openOptionsPage();
   }, []);
 
+  const handleOpenDebug = useCallback(async () => {
+    if (
+      !DIAGNOSTICS_ENABLED ||
+      typeof activeTab.tabId !== "number" ||
+      typeof chrome === "undefined" ||
+      !chrome.tabs?.sendMessage
+    ) {
+      return;
+    }
+
+    await new Promise<DebugOverlayToggleResponse | null>((resolve) => {
+      chrome.tabs.sendMessage(
+        activeTab.tabId as number,
+        { type: DEBUG_OVERLAY_TOGGLE_MESSAGE_TYPE },
+        (response?: DebugOverlayToggleResponse) => {
+          if (chrome.runtime.lastError || !response?.ok) {
+            resolve(null);
+            return;
+          }
+          resolve(response);
+        }
+      );
+    });
+  }, [activeTab.tabId]);
+
   const handleReportIssue = useCallback(() => {
     openSupportOptionsPage();
   }, []);
@@ -191,6 +221,10 @@ export function PopupApp() {
           void handleSiteToggle();
         }}
         onOpenSettings={handleOpenOptions}
+        debugAvailable={DIAGNOSTICS_ENABLED && activeTab.isSupportedPage}
+        onOpenDebug={() => {
+          void handleOpenDebug();
+        }}
         onReportIssue={handleReportIssue}
         onDismissIntro={() => {
           void handleDismissFirstRunIntro();

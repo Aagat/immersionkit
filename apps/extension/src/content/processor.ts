@@ -46,6 +46,12 @@ export function processRoots(state: ProcessingState, roots: ParentNode[]) {
 
   for (const root of roots) {
     const nodes = collectEligibleTextNodes(root);
+    state.debugTrace?.recordEvent({
+      phase: "dom",
+      level: nodes.length > 0 ? "info" : "skip",
+      title: "eligible text nodes collected",
+      detail: `count=${nodes.length}`
+    });
 
     for (const node of nodes) {
       const result = processTextNode(node, {
@@ -65,6 +71,7 @@ export function processRoots(state: ProcessingState, roots: ParentNode[]) {
         learningItemsByUnitRefId: state.learningItemsByUnitRefId,
         shouldActivateWord: (input) => shouldActivateWordByCurriculum(state, input),
         shouldActivatePhrase: (input) => shouldActivatePhraseByCurriculum(state, input),
+        debugSink: state.debugTrace ?? undefined,
         isKnownWordForScoring: (word) => isKnownWord(state, word),
         isDueForReview: (lexemeId) => isDueLearningItem(state, lexemeId),
         allowPhraseOnlyCandidates: true
@@ -97,6 +104,7 @@ export function processRoots(state: ProcessingState, roots: ParentNode[]) {
       }
 
       for (const candidate of result.sentenceCandidates) {
+        state.debugTrace?.recordSentenceCandidate(candidate);
         if (state.diagnostics.seenSentenceHashes.has(candidate.sentenceHash)) {
           continue;
         }
@@ -135,6 +143,10 @@ async function handleQueuedSentenceCandidates(
     return;
   }
 
+  state.debugTrace?.recordSentenceQueueOutcome({
+    candidates,
+    outcome
+  });
   state.diagnostics.sentenceCandidatesQueued += outcome.queuedCandidateCount;
   state.diagnostics.sentenceRankingReasons = outcome.rankingReasons.slice(0, 8);
   updateCurriculumDiagnosticsFromRanking(state.diagnostics);
@@ -143,10 +155,16 @@ async function handleQueuedSentenceCandidates(
   }
 
   if (state.sentenceTranslationEnabled && outcome.cachedResults.length > 0) {
-    state.diagnostics.sentenceNotesRendered += renderSentenceTranslations(
+    const renderedCount = renderSentenceTranslations(
       outcome.cachedResults,
       state.renderRegistry.sentenceAnchorRegistry
     );
+    state.diagnostics.sentenceNotesRendered += renderedCount;
+    state.debugTrace?.recordSentenceTranslationsRendered({
+      results: outcome.cachedResults,
+      renderedCount,
+      availability: outcome.translationAvailability
+    });
   }
 }
 

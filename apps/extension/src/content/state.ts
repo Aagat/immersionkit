@@ -12,6 +12,8 @@ import {
   type UserVocabEntry
 } from "@immersionkit/shared";
 import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
+import type { DebugInspectorController } from "./debug-inspector-controller";
+import type { DebugTraceStore } from "./debug-trace-store";
 import { createDefaultDiagnostics, type ContentDiagnosticsProcessingState } from "./diagnostics";
 import { ContentEvidenceTracker } from "./evidence";
 import type { ContentPopoverRuntimeState } from "./popover";
@@ -71,6 +73,7 @@ export type ProcessingState = {
   renderRegistry: ProcessingRenderRegistryState;
   sentenceTranslationEnabled: boolean;
   evidenceTracker: ContentEvidenceTracker;
+  debugTrace: DebugTraceStore | null;
   isActive: boolean;
 };
 
@@ -78,6 +81,8 @@ export type RuntimeState = ContentPopoverRuntimeState & {
   processing: ProcessingState | null;
   refreshPromise: Promise<void> | null;
   diagnostics: PageDiagnosticsSnapshot;
+  debugTrace: DebugTraceStore | null;
+  debugInspector: DebugInspectorController | null;
 };
 
 export function createRuntimeState(): RuntimeState {
@@ -87,7 +92,9 @@ export function createRuntimeState(): RuntimeState {
     activeToken: null,
     popover: null,
     popoverCleanup: null,
-    diagnostics: createDefaultDiagnostics()
+    diagnostics: createDefaultDiagnostics(),
+    debugTrace: null,
+    debugInspector: null
   };
 }
 
@@ -96,6 +103,7 @@ export function createProcessingState(input: {
   wordRenderIndex: WordRenderIndex;
   analyzerPatternWordRenderIndex: AnalyzerPatternWordRenderIndex;
   sentenceTranslationEnabled: boolean;
+  debugTrace?: DebugTraceStore | null;
 }): ProcessingState {
   const { processingContext } = input;
   const languagePair = getLanguagePairDefinition(
@@ -176,6 +184,7 @@ export function createProcessingState(input: {
     },
     sentenceTranslationEnabled: input.sentenceTranslationEnabled,
     evidenceTracker: new ContentEvidenceTracker(),
+    debugTrace: input.debugTrace ?? null,
     isActive: true
   };
 }

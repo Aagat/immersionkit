@@ -86,8 +86,10 @@ export function ExtensionPopup({
   firstRunIntro = false,
   errorMessage = null,
   isSavingSite = false,
+  debugAvailable = false,
   onSiteToggle,
   onOpenSettings,
+  onOpenDebug,
   onReportIssue,
   onDismissIntro
 }: ExtensionPopupProps) {
@@ -108,6 +110,8 @@ export function ExtensionPopup({
       <PopupPanel>
         <PopupHeader
           onOpenSettings={onOpenSettings}
+          debugAvailable={debugAvailable}
+          onOpenDebug={onOpenDebug}
           onReportIssue={onReportIssue}
         />
         {errorMessage ? (
@@ -562,9 +566,13 @@ function PopupPanel({ children }: { children: ReactNode }) {
 
 function PopupHeader({
   onOpenSettings,
+  debugAvailable,
+  onOpenDebug,
   onReportIssue
 }: {
   onOpenSettings?: () => void;
+  debugAvailable?: boolean;
+  onOpenDebug?: () => void;
   onReportIssue?: () => void;
 }) {
   return (
@@ -579,6 +587,19 @@ function PopupHeader({
         <span className="truncate text-lg font-medium">ImmersionKit</span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {debugAvailable ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+            aria-label="Open debug inspector"
+            title="Open debug inspector"
+            onClick={onOpenDebug}
+          >
+            <IkIcon name="spark" />
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"

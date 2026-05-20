@@ -11,3 +11,15 @@
   margin: 0;
   padding: 0;
 }
+
+[data-ik-debug-inspect-mode="true"] [data-ik-token-id],
+[data-ik-debug-inspect-mode="true"] [data-ik-sentence-note="true"] {
+  outline: 1px dashed rgba(23, 63, 54, 0.65);
+  outline-offset: 2px;
+}
+
+[data-ik-debug-selected="true"] {
+  outline: 3px solid #c08a00 !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(243, 211, 106, 0.25);
+}

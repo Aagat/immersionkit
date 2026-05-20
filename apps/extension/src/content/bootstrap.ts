@@ -11,6 +11,8 @@ import {
   refreshProcessing,
   updateRuntimeDiagnostics
 } from "./controller";
+import { setupDebugOverlayMessageHook } from "./debug-overlay";
+import { createDebugTraceStore } from "./debug-trace-store";
 import { shouldSkipDocument } from "./dom";
 import { setupInteractionHooks } from "./interactions";
 import { applyUiTheme } from "./theme";
@@ -42,6 +44,10 @@ export async function bootContentRuntime() {
   pingBackground();
 
   const runtimeState = createRuntimeState();
+  if (DIAGNOSTICS_ENABLED) {
+    runtimeState.debugTrace = createDebugTraceStore();
+    setupDebugOverlayMessageHook(runtimeState);
+  }
   setupInteractionHooks(runtimeState);
   setupRuntimeMessageHook(runtimeState);
   await refreshProcessing(runtimeState);
@@ -75,6 +81,13 @@ function setupRuntimeMessageHook(runtimeState: RuntimeState) {
         if (runtimeState.processing) {
           runtimeState.processing.diagnostics.sentenceNotesRendered += renderedCount;
         }
+        runtimeState.debugTrace?.recordSentenceTranslationsRendered({
+          results,
+          renderedCount,
+          availability: runtimeState.processing?.sentenceTranslationEnabled
+            ? "ready"
+            : undefined
+        });
         updateRuntimeDiagnostics(runtimeState);
       }
 

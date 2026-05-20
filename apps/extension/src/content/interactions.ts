@@ -36,6 +36,18 @@ export function setupInteractionHooks(runtimeState: RuntimeState) {
         return;
       }
 
+      if (runtimeState.debugInspector?.isInspectModeEnabled()) {
+        const selected = runtimeState.debugInspector.trySelectTarget(
+          event.target,
+          "click"
+        );
+        if (selected) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+      }
+
       if (emitSentenceNoteActivated(runtimeState, event.target)) {
         event.preventDefault();
         return;
@@ -61,6 +73,18 @@ export function setupInteractionHooks(runtimeState: RuntimeState) {
 
       if (event.key !== "Enter" && event.key !== " ") {
         return;
+      }
+
+      if (runtimeState.debugInspector?.isInspectModeEnabled()) {
+        const selected = runtimeState.debugInspector.trySelectTarget(
+          event.target,
+          "keyboard"
+        );
+        if (selected) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
       }
 
       if (emitSentenceNoteActivated(runtimeState, event.target)) {
