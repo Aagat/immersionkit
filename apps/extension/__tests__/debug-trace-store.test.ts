@@ -48,4 +48,48 @@ describe("debug trace store", () => {
       }
     );
   });
+
+  it("keeps the immediately previous run for compare output", async () => {
+    await withFixtureDom("article-basic.html", () => {
+      const store = createDebugTraceStore();
+      store.beginRun({ reason: "first-run" });
+      store.recordTokenDecision(
+        createWordDecisionTrace({
+          tokenId: "ikn-test-t0",
+          nodeId: "ikn-test",
+          sourceToken: "city",
+          normalizedSourceToken: "city",
+          sentenceHash: null,
+          start: 0,
+          end: 4,
+          finalAction: "skipped-no-render-unit",
+          explanation: "No render unit."
+        })
+      );
+
+      const firstRunId = store.readSnapshot().runId;
+      store.beginRun({ reason: "second-run" });
+      store.recordTokenDecision(
+        createWordDecisionTrace({
+          tokenId: "ikn-test-t0",
+          nodeId: "ikn-test",
+          sourceToken: "city",
+          normalizedSourceToken: "city",
+          targetToken: "ciudad",
+          sentenceHash: null,
+          start: 0,
+          end: 4,
+          finalAction: "injected",
+          explanation: "Rendered."
+        })
+      );
+
+      const snapshot = store.readSnapshot();
+      expect(snapshot.previousRun?.runId).toBe(firstRunId);
+      expect(snapshot.previousRun?.tokensByTokenId["ikn-test-t0"]?.finalAction)
+        .toBe("skipped-no-render-unit");
+      expect(snapshot.tokensByTokenId["ikn-test-t0"]?.finalAction).toBe("injected");
+      expect(snapshot.previousRun && "previousRun" in snapshot.previousRun).toBe(false);
+    });
+  });
 });

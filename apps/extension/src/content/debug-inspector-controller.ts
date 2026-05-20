@@ -337,6 +337,7 @@ function createEmptySnapshot(): DebugTraceSnapshot {
     sentencesByHash: {},
     events: [],
     selected: null,
+    previousRun: null,
     dropped: {
       nodes: 0,
       tokens: 0,

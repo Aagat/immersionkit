@@ -186,6 +186,19 @@ body {
   margin: 0 0 12px;
 }
 
+.ik-debug-panel details + details {
+  margin-top: 12px;
+}
+
+.ik-debug-panel summary.ik-debug-panel-title {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.ik-debug-panel summary.ik-debug-panel-title::marker {
+  color: #7f9990;
+}
+
 .ik-debug-log-panel {
   display: flex;
   flex-direction: column;

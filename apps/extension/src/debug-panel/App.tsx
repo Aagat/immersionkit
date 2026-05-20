@@ -42,6 +42,8 @@ const FILTERS: { id: DecisionFilter; label: string }[] = [
   { id: "sentence-candidates", label: "sentences" }
 ];
 
+const PARENT_TARGET_ORIGIN = readParentTargetOrigin();
+
 export function DebugPanelApp() {
   const [snapshot, setSnapshot] = useState<DebugTraceSnapshot | null>(null);
   const [selection, setSelection] = useState<DebugSelectionSnapshot | null>(null);
@@ -54,7 +56,11 @@ export function DebugPanelApp() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.source !== window.parent || !isDebugInspectorEventMessage(event.data)) {
+      if (
+        event.source !== window.parent ||
+        (PARENT_TARGET_ORIGIN && event.origin !== PARENT_TARGET_ORIGIN) ||
+        !isDebugInspectorEventMessage(event.data)
+      ) {
         return;
       }
 
@@ -509,19 +515,38 @@ function DataTab({
   snapshot: DebugTraceSnapshot | null;
   selection: DebugSelectionSnapshot | null;
 }) {
+  const pageDiagnostics = snapshot
+    ? createPageDiagnosticsSummary(snapshot)
+    : { diagnostics: "pending" };
+  const selectedTrace =
+    selection && "trace" in selection ? selection.trace : selection ?? { selection: "none" };
+  const relevantVocab =
+    selection?.type === "word" ? selection.trace.vocab : { vocab: "not-applicable" };
+  const relevantLearningItem =
+    selection?.type === "word" || selection?.type === "phrase"
+      ? selection.trace.learningItem
+      : { learningItem: "not-applicable" };
+  const relevantSentenceAnalysis =
+    selection?.sentence?.analysis ?? { sentenceAnalysis: "none" };
+
   return (
     <section className="ik-debug-grid">
       <div className="ik-debug-panel">
         <PanelTitle prompt="$ ik.data --context" />
-        <pre className="ik-debug-json">
-          {JSON.stringify(snapshot?.context ?? { context: "pending" }, null, 2)}
-        </pre>
+        <DebugJsonBlock title="page_context" value={snapshot?.context ?? { context: "pending" }} />
+        <DebugJsonBlock title="page_diagnostics" value={pageDiagnostics} />
+        <DebugJsonBlock title="full_snapshot_summary" value={createSnapshotSummary(snapshot)} />
       </div>
       <aside className="ik-debug-panel">
         <PanelTitle prompt="$ ik.data --selected" />
-        <pre className="ik-debug-json">
-          {JSON.stringify(selection ?? { selection: "none" }, null, 2)}
-        </pre>
+        <DebugJsonBlock title="selected_trace" value={selectedTrace} />
+        <DebugJsonBlock title="selected_dom" value={selection?.dom ?? { dom: "none" }} />
+        <DebugJsonBlock title="relevant_vocab_entry" value={relevantVocab} />
+        <DebugJsonBlock title="relevant_learning_item" value={relevantLearningItem} />
+        <DebugJsonBlock
+          title="relevant_sentence_analysis"
+          value={relevantSentenceAnalysis}
+        />
       </aside>
     </section>
   );
@@ -539,6 +564,11 @@ function ExportTab({
   onRequestExport: () => void;
 }) {
   const fullPayload = exportPayload ?? (snapshot ? createLocalExport(snapshot) : null);
+  const comparison = snapshot ? compareWithPreviousRun(snapshot) : null;
+  const bugReportBundle =
+    fullPayload && snapshot
+      ? createBugReportBundle(fullPayload, selection, comparison)
+      : null;
   return (
     <section className="ik-debug-panel ik-debug-export">
       <PanelTitle prompt="$ ik.export" />
@@ -566,6 +596,15 @@ function ExportTab({
         </button>
         <button
           type="button"
+          disabled={!comparison}
+          onClick={() => {
+            void copyJson(comparison);
+          }}
+        >
+          Copy compare JSON
+        </button>
+        <button
+          type="button"
           disabled={!fullPayload}
           onClick={() => {
             if (fullPayload) {
@@ -575,7 +614,25 @@ function ExportTab({
         >
           Download trace JSON
         </button>
+        <button
+          type="button"
+          disabled={!bugReportBundle}
+          onClick={() => {
+            if (bugReportBundle) {
+              downloadJson(
+                `immersionkit-debug-bug-${bugReportBundle.runId}.json`,
+                bugReportBundle
+              );
+            }
+          }}
+        >
+          Download bug bundle
+        </button>
       </div>
+      <PanelTitle prompt="$ ik.compare --previous" />
+      <pre className="ik-debug-json">
+        {JSON.stringify(comparison ?? { compare: "no previous run" }, null, 2)}
+      </pre>
       <pre className="ik-debug-json">
         {JSON.stringify(fullPayload ?? { export: "pending" }, null, 2)}
       </pre>
@@ -594,6 +651,15 @@ function EmptyState({ prompt, text }: { prompt: string; text: string }) {
 
 function PanelTitle({ prompt }: { prompt: string }) {
   return <h2 className="ik-debug-panel-title">{prompt}</h2>;
+}
+
+function DebugJsonBlock({ title, value }: { title: string; value: unknown }) {
+  return (
+    <details open>
+      <summary className="ik-debug-panel-title">{title}</summary>
+      <pre className="ik-debug-json">{JSON.stringify(value, null, 2)}</pre>
+    </details>
+  );
 }
 
 function LogRow({ event }: { event: DebugTimelineEvent }) {
@@ -616,6 +682,40 @@ type DecisionRow = {
   action: string;
   reason: string;
   ref: string;
+};
+
+type ComparableDecision = {
+  id: string;
+  type: string;
+  source: string;
+  target: string;
+  action: string;
+  reason: string;
+};
+
+type TraceComparison = {
+  currentRunId: string;
+  previousRunId: string;
+  currentStartedAt: string;
+  previousStartedAt: string;
+  summary: {
+    added: number;
+    removed: number;
+    actionChanged: number;
+    reasonChanged: number;
+    unchanged: number;
+  };
+  changes: Array<{
+    id: string;
+    type: string;
+    source: string;
+    target: string;
+    change: "added" | "removed" | "action-changed" | "reason-changed";
+    previousAction?: string;
+    currentAction?: string;
+    previousReason?: string;
+    currentReason?: string;
+  }>;
 };
 
 function collectDecisionRows(
@@ -679,14 +779,237 @@ function collectDecisionRows(
   });
 }
 
+function compareWithPreviousRun(snapshot: DebugTraceSnapshot): TraceComparison | null {
+  if (!snapshot.previousRun) {
+    return null;
+  }
+
+  const previous = collectComparableDecisions(snapshot.previousRun);
+  const current = collectComparableDecisions(snapshot);
+  const keys = new Set([...previous.keys(), ...current.keys()]);
+  const comparison: TraceComparison = {
+    currentRunId: snapshot.runId,
+    previousRunId: snapshot.previousRun.runId,
+    currentStartedAt: snapshot.startedAt,
+    previousStartedAt: snapshot.previousRun.startedAt,
+    summary: {
+      added: 0,
+      removed: 0,
+      actionChanged: 0,
+      reasonChanged: 0,
+      unchanged: 0
+    },
+    changes: []
+  };
+
+  for (const key of [...keys].sort()) {
+    const before = previous.get(key);
+    const after = current.get(key);
+    if (!before && after) {
+      comparison.summary.added += 1;
+      comparison.changes.push({
+        id: key,
+        type: after.type,
+        source: after.source,
+        target: after.target,
+        change: "added",
+        currentAction: after.action,
+        currentReason: after.reason
+      });
+      continue;
+    }
+
+    if (before && !after) {
+      comparison.summary.removed += 1;
+      comparison.changes.push({
+        id: key,
+        type: before.type,
+        source: before.source,
+        target: before.target,
+        change: "removed",
+        previousAction: before.action,
+        previousReason: before.reason
+      });
+      continue;
+    }
+
+    if (!before || !after) {
+      continue;
+    }
+
+    if (before.action !== after.action) {
+      comparison.summary.actionChanged += 1;
+      comparison.changes.push({
+        id: key,
+        type: after.type,
+        source: after.source,
+        target: after.target,
+        change: "action-changed",
+        previousAction: before.action,
+        currentAction: after.action,
+        previousReason: before.reason,
+        currentReason: after.reason
+      });
+      continue;
+    }
+
+    if (before.reason !== after.reason) {
+      comparison.summary.reasonChanged += 1;
+      comparison.changes.push({
+        id: key,
+        type: after.type,
+        source: after.source,
+        target: after.target,
+        change: "reason-changed",
+        previousAction: before.action,
+        currentAction: after.action,
+        previousReason: before.reason,
+        currentReason: after.reason
+      });
+      continue;
+    }
+
+    comparison.summary.unchanged += 1;
+  }
+
+  return comparison;
+}
+
+function collectComparableDecisions(
+  snapshot: DebugTraceSnapshot | DebugTraceSnapshot["previousRun"]
+): Map<string, ComparableDecision> {
+  const rows = new Map<string, ComparableDecision>();
+  if (!snapshot) {
+    return rows;
+  }
+
+  for (const [fallbackId, trace] of Object.entries(snapshot.tokensByTokenId)) {
+    const id = `word:${trace.tokenId ?? fallbackId}`;
+    rows.set(id, {
+      id,
+      type: "word",
+      source: trace.sourceToken,
+      target: trace.targetToken ?? "",
+      action: trace.finalAction,
+      reason: trace.explanation
+    });
+  }
+
+  for (const [fallbackId, trace] of Object.entries(snapshot.phrasesByTokenId)) {
+    const id = `phrase:${trace.tokenId ?? fallbackId}`;
+    rows.set(id, {
+      id,
+      type: "phrase",
+      source: trace.sourceText ?? trace.phraseId,
+      target: trace.targetText ?? "",
+      action: trace.finalAction,
+      reason: trace.rejectedReason ?? trace.explanation
+    });
+  }
+
+  for (const [sentenceHash, trace] of Object.entries(snapshot.sentencesByHash)) {
+    const action = trace.translation?.rendered
+      ? "rendered"
+      : trace.queued
+        ? "queued"
+        : "candidate";
+    rows.set(`sentence:${sentenceHash}`, {
+      id: `sentence:${sentenceHash}`,
+      type: "sentence",
+      source: trace.sourcePreview,
+      target: trace.translation?.availability ?? "",
+      action,
+      reason: trace.ranking?.primaryReason ?? trace.reason
+    });
+  }
+
+  return rows;
+}
+
+function createPageDiagnosticsSummary(snapshot: DebugTraceSnapshot) {
+  return {
+    status: snapshot.status,
+    stopReason: snapshot.stopReason ?? null,
+    counts: {
+      nodes: snapshot.nodes.length,
+      tokens: Object.keys(snapshot.tokensByTokenId).length,
+      phrases: Object.keys(snapshot.phrasesByTokenId).length,
+      sentences: Object.keys(snapshot.sentencesByHash).length,
+      events: snapshot.events.length
+    },
+    dropped: snapshot.dropped,
+    latestEvent: snapshot.events.at(-1) ?? null
+  };
+}
+
+function createSnapshotSummary(snapshot: DebugTraceSnapshot | null) {
+  if (!snapshot) {
+    return { snapshot: "pending" };
+  }
+
+  return {
+    runId: snapshot.runId,
+    previousRunId: snapshot.previousRun?.runId ?? null,
+    startedAt: snapshot.startedAt,
+    updatedAt: snapshot.updatedAt,
+    page: snapshot.page,
+    selected:
+      snapshot.selected?.type === "word" || snapshot.selected?.type === "phrase"
+        ? {
+            type: snapshot.selected.type,
+            tokenId: snapshot.selected.tokenId
+          }
+        : snapshot.selected
+          ? {
+              type: snapshot.selected.type,
+              sentenceHash: snapshot.selected.sentenceHash
+            }
+          : null
+  };
+}
+
+function createBugReportBundle(
+  payload: DebugTraceExport,
+  selection: DebugSelectionSnapshot | null,
+  comparison: TraceComparison | null
+) {
+  const trace = payload.trace;
+  return {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    runId: trace.runId,
+    page: trace.page,
+    status: trace.status,
+    stopReason: trace.stopReason ?? null,
+    selected: selection,
+    comparison,
+    diagnostics: createPageDiagnosticsSummary(trace),
+    recentEvents: trace.events.slice(-80),
+    redactions: payload.redactions
+  };
+}
+
 function postCommand(command: DebugInspectorCommand): void {
   window.parent.postMessage(
     {
       type: DEBUG_INSPECTOR_COMMAND_MESSAGE_TYPE,
       command
     },
-    "*"
+    PARENT_TARGET_ORIGIN ?? "*"
   );
+}
+
+function readParentTargetOrigin(): string | null {
+  if (!document.referrer) {
+    return null;
+  }
+
+  try {
+    const origin = new URL(document.referrer).origin;
+    return origin === "null" ? null : origin;
+  } catch {
+    return null;
+  }
 }
 
 function formatOffsetMs(value: number): string {

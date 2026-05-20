@@ -18,7 +18,7 @@ const DEBUG_OVERLAY_HOST_ID = "immersionkit-debug-overlay";
 const DEBUG_OVERLAY_IGNORE_ATTRIBUTE = "data-immersionkit-ignore";
 const DEBUG_OVERLAY_PANEL_MIN_WIDTH = 420;
 const DEBUG_OVERLAY_PANEL_MIN_HEIGHT = 420;
-const DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN = 48;
+const DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN = 32;
 const DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN = 32;
 const DEBUG_OVERLAY_COLLAPSED_SIZE = 56;
 
@@ -104,8 +104,8 @@ function createDebugOverlayHost(
       top: 16px;
       right: 16px;
       z-index: 1;
-      width: min(980px, calc(100vw - ${DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN}px));
-      height: min(860px, calc(100vh - ${DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN}px));
+      width: calc(100vw - ${DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN}px);
+      height: calc(100vh - ${DEBUG_OVERLAY_VIEWPORT_VERTICAL_MARGIN}px);
       min-width: ${DEBUG_OVERLAY_PANEL_MIN_WIDTH}px;
       max-width: calc(100vw - ${DEBUG_OVERLAY_VIEWPORT_HORIZONTAL_MARGIN}px);
       min-height: ${DEBUG_OVERLAY_PANEL_MIN_HEIGHT}px;
@@ -244,7 +244,7 @@ function installOverlayListeners(
   const unsubscribe = controller.subscribe(sendEvent);
 
   const handleMessage = (event: MessageEvent) => {
-    if (event.source !== iframe.contentWindow) {
+    if (event.source !== iframe.contentWindow || event.origin !== targetOrigin) {
       return;
     }
 
@@ -342,6 +342,8 @@ function installOverlayListeners(
     const startX = event.clientX;
     const startY = event.clientY;
     const startRect = panel.getBoundingClientRect();
+    const previousIframePointerEvents = iframe.style.pointerEvents;
+    iframe.style.pointerEvents = "none";
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
       moveEvent.preventDefault();
@@ -385,6 +387,7 @@ function installOverlayListeners(
     removeResizeListeners = () => {
       window.removeEventListener("pointermove", handlePointerMove, true);
       window.removeEventListener("pointerup", handlePointerUp, true);
+      iframe.style.pointerEvents = previousIframePointerEvents;
     };
     resizeHandle.setPointerCapture?.(event.pointerId);
   };

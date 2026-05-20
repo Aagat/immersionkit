@@ -18,7 +18,7 @@ const MAX_SENTENCE_TRACES = 300;
 const MAX_TIMELINE_EVENTS = 1000;
 const MAX_PREVIEW_LENGTH = 240;
 
-export type DebugTraceSnapshot = {
+export type DebugTraceSnapshotBase = {
   schemaVersion: 1;
   runId: string;
   startedAt: string;
@@ -34,6 +34,12 @@ export type DebugTraceSnapshot = {
   events: DebugTimelineEvent[];
   selected?: DebugSelectionSnapshot | null;
   dropped: DebugTraceDroppedCounts;
+};
+
+export type DebugPreviousTraceSnapshot = DebugTraceSnapshotBase;
+
+export type DebugTraceSnapshot = DebugTraceSnapshotBase & {
+  previousRun: DebugPreviousTraceSnapshot | null;
 };
 
 export type DebugTraceDroppedCounts = {
@@ -356,7 +362,9 @@ export function createDebugTraceStore(): DebugTraceStore {
   const capWarnings = new Set<string>();
 
   function beginRun(input: Partial<DebugPageSummary> & { reason?: string } = {}): string {
-    state = createInitialState(input);
+    const previousRun =
+      state.runId === "ikr-pending" ? state.previousRun : snapshotWithoutPrevious(state);
+    state = createInitialState(input, previousRun);
     capWarnings.clear();
     addEvent({
       phase: "boot",
@@ -874,7 +882,8 @@ export function createWordDecisionTrace(input: {
 }
 
 function createInitialState(
-  input: Partial<DebugPageSummary> & { reason?: string } = {}
+  input: Partial<DebugPageSummary> & { reason?: string } = {},
+  previousRun: DebugPreviousTraceSnapshot | null = null
 ): MutableTraceState {
   const now = new Date();
   const page = readPageSummary(input);
@@ -895,6 +904,7 @@ function createInitialState(
     sentencesByHash: {},
     events: [],
     selected: null,
+    previousRun,
     dropped: {
       nodes: 0,
       tokens: 0,
@@ -939,6 +949,12 @@ function createRunId(): string {
 
 function cloneSnapshot(snapshot: DebugTraceSnapshot): DebugTraceSnapshot {
   return JSON.parse(JSON.stringify(snapshot)) as DebugTraceSnapshot;
+}
+
+function snapshotWithoutPrevious(snapshot: DebugTraceSnapshot): DebugPreviousTraceSnapshot {
+  const cloned = cloneSnapshot(snapshot);
+  const { previousRun: _previousRun, ...withoutPrevious } = cloned;
+  return withoutPrevious;
 }
 
 function createPreview(value: string, maxLength = MAX_PREVIEW_LENGTH): string {
