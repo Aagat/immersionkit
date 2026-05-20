@@ -226,6 +226,33 @@ describe("extension E2E harness", () => {
 
     expect((await readSettingsFromExtensionPage(options)).sentenceTranslationEnabled).toBe(false);
   }, 90_000);
+
+  it("keeps injected marks and popovers readable on light and dark pages", async () => {
+    const { context, serviceWorker } = await launchBuiltExtension();
+    await seedSettings(serviceWorker);
+
+    for (const theme of ["light", "dark"] as const) {
+      const fixtureUrl = await startFixtureServer(createThemedFixtureHtml(theme));
+      const page = await context.newPage();
+      await page.goto(fixtureUrl, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("[data-ik-token-id]", { timeout: 10_000 });
+      await page.waitForTimeout(8_000);
+
+      const pageTheme = await page.evaluate(() =>
+        document.documentElement.getAttribute("data-ik-ui-theme")
+      );
+      expect(pageTheme).toBe(theme);
+
+      await openFirstPopover(page, "[data-ik-unit-kind='word']");
+      await expectPopover(page);
+      assertReadableContentUi(await readContentUiStyles(page), theme);
+
+      await page.keyboard.press("Escape").catch(() => undefined);
+      await openFirstPopover(page, "[data-ik-unit-kind='phrase']");
+      await expectPopover(page);
+      assertReadableContentUi(await readContentUiStyles(page), theme);
+    }
+  }, 90_000);
 });
 
 async function buildExtension(assetBaseUrl: string): Promise<void> {
@@ -269,10 +296,46 @@ async function waitForExtensionOptionsPage(
   return page;
 }
 
-async function startFixtureServer(): Promise<string> {
+function createThemedFixtureHtml(theme: "light" | "dark"): string {
+  const dark = theme === "dark";
+  return `<!doctype html>
+<html>
+  <head>
+    <title>ImmersionKit ${theme} visual fixture</title>
+    <style>
+      html, body {
+        margin: 0;
+        background: ${dark ? "#1d2330" : "#f8f6ee"};
+        color: ${dark ? "#eef4ff" : "#111827"};
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 80px 32px;
+        font: 18px/1.7 Georgia, serif;
+      }
+      h1 {
+        font: 700 40px/1.15 system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>City services update</h1>
+        <p>The important new city has at least one small family house near the water.</p>
+        <p>As soon as we arrive at the old city, we read the important book right now.</p>
+        <p>The public safety update includes school board schedules and weather forecasts.</p>
+      </article>
+    </main>
+  </body>
+</html>`;
+}
+
+async function startFixtureServer(html = fixtureHtml): Promise<string> {
   const server = createServer((_, response) => {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    response.end(fixtureHtml);
+    response.end(html);
   });
   servers.push(server);
 
@@ -343,6 +406,116 @@ async function openFirstPopover(page: Page, selector: string): Promise<void> {
 async function expectPopover(page: Page): Promise<void> {
   await page.waitForSelector("[data-ik-popover='true']", { timeout: 5_000 });
   await expect.poll(() => page.locator("[data-ik-popover='true']").isVisible()).toBe(true);
+}
+
+async function readContentUiStyles(page: Page): Promise<ContentUiStyleSnapshot> {
+  return page.evaluate(() => {
+    const read = (selector: string) => {
+      const node = document.querySelector(selector);
+      if (!node) {
+        return null;
+      }
+
+      const styles = getComputedStyle(node);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+        borderColor: styles.borderColor,
+        textDecorationColor: styles.textDecorationColor
+      };
+    };
+
+    return {
+      body: read("body"),
+      activeToken: read("[data-ik-active='true']"),
+      popover: read("[data-ik-popover='true']"),
+      tokenBox: read(".ik-ui-token-pair span"),
+      exampleLine: read(".ik-ui-example-line"),
+      button: read(".ik-content-popover .ik-ui-button")
+    };
+  });
+}
+
+type ContentUiStyleSnapshot = {
+  body: CssStyleSnapshot | null;
+  activeToken: CssStyleSnapshot | null;
+  popover: CssStyleSnapshot | null;
+  tokenBox: CssStyleSnapshot | null;
+  exampleLine: CssStyleSnapshot | null;
+  button: CssStyleSnapshot | null;
+};
+
+type CssStyleSnapshot = {
+  backgroundColor: string;
+  color: string;
+  borderColor: string;
+  textDecorationColor: string;
+};
+
+function assertReadableContentUi(
+  styles: ContentUiStyleSnapshot,
+  theme: "light" | "dark"
+): void {
+  expect(styles.body).not.toBeNull();
+  expect(styles.activeToken).not.toBeNull();
+  expect(styles.popover).not.toBeNull();
+  expect(styles.tokenBox).not.toBeNull();
+  expect(styles.button).not.toBeNull();
+
+  const bodyBackground = parseRgb(styles.body!.backgroundColor);
+  const tokenColor = parseRgb(styles.activeToken!.color);
+  const popoverBackground = parseRgb(styles.popover!.backgroundColor);
+  const popoverText = parseRgb(styles.popover!.color);
+  const tokenBoxBackground = parseRgb(styles.tokenBox!.backgroundColor);
+  const tokenBoxText = parseRgb(styles.tokenBox!.color);
+  const buttonBackground = parseRgb(styles.button!.backgroundColor);
+  const buttonText = parseRgb(styles.button!.color);
+
+  expect(contrastRatio(tokenColor, bodyBackground)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(popoverText, popoverBackground)).toBeGreaterThanOrEqual(7);
+  expect(contrastRatio(tokenBoxText, tokenBoxBackground)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(buttonText, buttonBackground)).toBeGreaterThanOrEqual(4.5);
+
+  if (theme === "dark") {
+    expect(relativeLuminance(popoverBackground)).toBeLessThan(0.08);
+    expect(relativeLuminance(tokenBoxBackground)).toBeLessThan(0.1);
+    return;
+  }
+
+  expect(relativeLuminance(popoverBackground)).toBeGreaterThan(0.9);
+  expect(relativeLuminance(tokenBoxBackground)).toBeGreaterThan(0.85);
+}
+
+function parseRgb(value: string): [number, number, number] {
+  const match = value.match(
+    /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*[0-9.]+)?\s*\)$/i
+  );
+  if (!match) {
+    throw new Error(`Expected an rgb/rgba color, got ${value}`);
+  }
+
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function contrastRatio(
+  left: [number, number, number],
+  right: [number, number, number]
+): number {
+  const leftLuminance = relativeLuminance(left);
+  const rightLuminance = relativeLuminance(right);
+  const lighter = Math.max(leftLuminance, rightLuminance);
+  const darker = Math.min(leftLuminance, rightLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function relativeLuminance([red, green, blue]: [number, number, number]): number {
+  const [r, g, b] = [red, green, blue].map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 async function readPageDiagnostics(
