@@ -1,35 +1,4 @@
 import type { CSSProperties, ReactNode } from "react";
-import {
-  BookOpen,
-  Check,
-  ChevronRight,
-  EyeOff,
-  FileText,
-  Info,
-  Languages,
-  Layers3,
-  Link2,
-  Lock,
-  MessageCircle,
-  Pause,
-  Power,
-  Settings,
-  ShieldCheck,
-  Sparkles,
-  Volume2,
-  X
-} from "lucide-react";
-import { cn } from "../lib/utils";
-import { Badge as ShadcnBadge } from "./ui/badge";
-import { Button as ShadcnButton } from "./ui/button";
-import { Card as ShadcnCard } from "./ui/card";
-import { Progress } from "./ui/progress";
-import { Switch } from "./ui/switch";
-import {
-  Tabs as ShadcnTabs,
-  TabsList,
-  TabsTrigger
-} from "./ui/tabs";
 
 type Tone = "accent" | "muted" | "warning" | "danger" | "info";
 type Size = "sm" | "md" | "lg";
@@ -56,81 +25,185 @@ export type IconName =
   | "translate"
   | "volume";
 
-const iconMap = {
-  band: Layers3,
-  book: BookOpen,
-  check: Check,
-  chevron: ChevronRight,
-  close: X,
-  document: FileText,
-  eyeOff: EyeOff,
-  gear: Settings,
-  info: Info,
-  link: Link2,
-  lock: Lock,
-  message: MessageCircle,
-  pause: Pause,
-  power: Power,
-  shield: ShieldCheck,
-  spark: Sparkles,
-  translate: Languages,
-  volume: Volume2
-} satisfies Record<IconName, typeof BookOpen>;
-
 export function ImmersionLogo({ size = "md" }: { size?: Size }) {
   return (
-    <span
-      className={cn(
-        "relative inline-grid place-items-center rounded-md bg-primary text-primary-foreground shadow-sm",
-        size === "sm" && "size-5",
-        size === "md" && "size-7",
-        size === "lg" && "size-9"
-      )}
-      aria-hidden="true"
-    >
-      <span className="absolute left-1/2 top-1/2 h-3/5 w-0.5 -translate-x-1.5 -translate-y-1/2 rotate-12 rounded-full bg-primary-foreground/95" />
-      <span className="absolute left-1/2 top-1/2 h-3/5 w-0.5 -translate-x-0.5 -translate-y-1/2 rotate-12 rounded-full bg-primary-foreground/75" />
-      <span className="absolute left-1/2 top-1/2 h-3/5 w-0.5 translate-x-0.5 -translate-y-1/2 rotate-12 rounded-full bg-primary-foreground/55" />
+    <span className={`ik-ui-logo ik-ui-logo--${size}`} aria-hidden="true">
+      <span />
+      <span />
+      <span />
     </span>
   );
 }
 
-export function Icon({
-  name,
-  className
-}: {
-  name: IconName;
-  className?: string;
-}) {
-  const IconComponent = iconMap[name];
+export function Icon({ name }: { name: IconName }) {
+  return (
+    <svg
+      className={`ik-ui-icon ik-ui-icon--${name}`}
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {renderIcon(name)}
+    </svg>
+  );
+}
 
-  return <IconComponent className={cn("size-4", className)} aria-hidden="true" />;
+function renderIcon(name: IconName): ReactNode {
+  switch (name) {
+    case "band":
+      return (
+        <>
+          <path d="m12 3 8 4-8 4-8-4 8-4Z" />
+          <path d="m4 12 8 4 8-4" />
+          <path d="m4 17 8 4 8-4" />
+        </>
+      );
+    case "book":
+      return (
+        <>
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H7a3 3 0 0 0-3 3V5.5Z" />
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M9 7h6" />
+        </>
+      );
+    case "check":
+      return <path d="m5 12 4 4L19 6" />;
+    case "chevron":
+      return <path d="m9 18 6-6-6-6" />;
+    case "close":
+      return (
+        <>
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </>
+      );
+    case "document":
+      return (
+        <>
+          <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z" />
+          <path d="M14 2v5h5" />
+          <path d="M9 13h6" />
+          <path d="M9 17h4" />
+        </>
+      );
+    case "eyeOff":
+      return (
+        <>
+          <path d="m2 2 20 20" />
+          <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+          <path d="M9.88 5.09A10.8 10.8 0 0 1 12 5c5 0 8 4 9 7a11.5 11.5 0 0 1-2.12 3.19" />
+          <path d="M6.61 6.61C3.98 8.08 2.55 10.42 2 12c1 3 4 7 10 7a10.6 10.6 0 0 0 4.39-.91" />
+        </>
+      );
+    case "gear":
+      return (
+        <>
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 0 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.37a1.7 1.7 0 0 0-1 .57V20a2 2 0 0 1-4 0v-.07a1.7 1.7 0 0 0-1-.57 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-.57-1H4a2 2 0 0 1 0-4h.07a1.7 1.7 0 0 0 .57-1 1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1-.57V4a2 2 0 0 1 4 0v.07a1.7 1.7 0 0 0 1 .57 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.37 9c.12.36.32.7.57 1H20a2 2 0 0 1 0 4h-.07c-.25.3-.45.64-.57 1Z" />
+        </>
+      );
+    case "info":
+      return (
+        <>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4" />
+          <path d="M12 8h.01" />
+        </>
+      );
+    case "link":
+      return (
+        <>
+          <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 4.93" />
+          <path d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 0 0 7.07 7.07L13 19.07" />
+        </>
+      );
+    case "lock":
+      return (
+        <>
+          <rect x="4" y="10" width="16" height="10" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </>
+      );
+    case "message":
+      return (
+        <>
+          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
+        </>
+      );
+    case "pause":
+      return (
+        <>
+          <rect x="6" y="5" width="4" height="14" rx="1" />
+          <rect x="14" y="5" width="4" height="14" rx="1" />
+        </>
+      );
+    case "power":
+      return (
+        <>
+          <path d="M12 2v10" />
+          <path d="M18.36 6.64a9 9 0 1 1-12.72 0" />
+        </>
+      );
+    case "shield":
+      return (
+        <>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+          <path d="m9 12 2 2 4-5" />
+        </>
+      );
+    case "spark":
+      return (
+        <>
+          <path d="M12 2v5" />
+          <path d="M12 17v5" />
+          <path d="M4.93 4.93 8.46 8.46" />
+          <path d="m15.54 15.54 3.53 3.53" />
+          <path d="M2 12h5" />
+          <path d="M17 12h5" />
+          <path d="m4.93 19.07 3.53-3.53" />
+          <path d="m15.54 8.46 3.53-3.53" />
+        </>
+      );
+    case "translate":
+      return (
+        <>
+          <path d="m5 8 6 6" />
+          <path d="m4 14 6-6 2-3" />
+          <path d="M2 5h12" />
+          <path d="M7 2h1" />
+          <path d="m22 22-5-10-5 10" />
+          <path d="M14 18h6" />
+        </>
+      );
+    case "volume":
+      return (
+        <>
+          <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+          <path d="M16 9.5a4 4 0 0 1 0 5" />
+          <path d="M19 7a8 8 0 0 1 0 10" />
+        </>
+      );
+  }
 }
 
 export function Badge({
   children,
   tone = "muted",
-  icon,
-  className
+  icon
 }: {
   children: ReactNode;
   tone?: Tone;
   icon?: IconName;
-  className?: string;
 }) {
-  const variant = {
-    accent: "default",
-    muted: "secondary",
-    warning: "warning",
-    danger: "destructive",
-    info: "info"
-  }[tone] as "default" | "secondary" | "warning" | "destructive" | "info";
-
   return (
-    <ShadcnBadge variant={variant} className={className}>
+    <span className={`ik-ui-badge ik-ui-badge--${tone}`}>
       {icon ? <Icon name={icon} /> : null}
       {children}
-    </ShadcnBadge>
+    </span>
   );
 }
 
@@ -140,7 +213,6 @@ export function Button({
   size = "md",
   icon,
   disabled = false,
-  className,
   onClick
 }: {
   children: ReactNode;
@@ -148,56 +220,39 @@ export function Button({
   size?: "sm" | "md";
   icon?: IconName;
   disabled?: boolean;
-  className?: string;
   onClick?: () => void;
 }) {
-  const shadcnVariant = {
-    primary: "default",
-    secondary: "outline",
-    ghost: "ghost",
-    chip: "secondary"
-  }[variant] as "default" | "secondary" | "ghost" | "outline";
-
   return (
-    <ShadcnButton
+    <button
       type="button"
-      variant={shadcnVariant}
-      size={size === "sm" ? "sm" : "default"}
+      className={`ik-ui-button ik-ui-button--${variant} ik-ui-button--${size}`}
       disabled={disabled}
-      className={className}
       onClick={onClick}
     >
       {icon ? <Icon name={icon} /> : null}
       {children}
-    </ShadcnButton>
+    </button>
   );
 }
 
 export function IconButton({
   label,
   icon,
-  disabled = false,
-  onClick,
-  className
+  disabled = false
 }: {
   label: string;
   icon: IconName;
   disabled?: boolean;
-  onClick?: () => void;
-  className?: string;
 }) {
   return (
-    <ShadcnButton
+    <button
       type="button"
-      variant="ghost"
-      size="icon"
+      className="ik-ui-icon-button"
       aria-label={label}
       disabled={disabled}
-      className={className}
-      onClick={onClick}
     >
       <Icon name={icon} />
-    </ShadcnButton>
+    </button>
   );
 }
 
@@ -208,7 +263,7 @@ export function Card({
   children: ReactNode;
   className?: string;
 }) {
-  return <ShadcnCard className={cn("p-5", className)}>{children}</ShadcnCard>;
+  return <section className={`ik-ui-card ${className}`}>{children}</section>;
 }
 
 export function SectionHeader({
@@ -221,14 +276,12 @@ export function SectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="grid gap-1">
-        {eyebrow ? (
-          <p className="text-xs font-bold uppercase text-primary">{eyebrow}</p>
-        ) : null}
-        <h2 className="text-xl font-semibold tracking-normal">{title}</h2>
+    <div className="ik-ui-section-header">
+      <div>
+        {eyebrow ? <p className="ik-ui-eyebrow">{eyebrow}</p> : null}
+        <h2>{title}</h2>
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="ik-ui-section-action">{action}</div> : null}
     </div>
   );
 }
@@ -236,25 +289,31 @@ export function SectionHeader({
 export function ProgressBar({
   value,
   label,
-  detail,
-  className
+  detail
 }: {
   value: number;
   label?: string;
   detail?: string;
-  className?: string;
 }) {
   const clampedValue = Math.max(0, Math.min(100, value));
 
   return (
-    <div className={cn("grid gap-2", className)}>
+    <div className="ik-ui-progress">
       {label || detail ? (
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-          {label ? <span className="font-medium">{label}</span> : null}
-          {detail ? <span className="text-muted-foreground">{detail}</span> : null}
+        <div className="ik-ui-progress-copy">
+          {label ? <span>{label}</span> : null}
+          {detail ? <span>{detail}</span> : null}
         </div>
       ) : null}
-      <Progress value={clampedValue} />
+      <div
+        className="ik-ui-progress-track"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clampedValue}
+      >
+        <span style={{ width: `${clampedValue}%` }} />
+      </div>
     </div>
   );
 }
@@ -270,21 +329,19 @@ export function ProgressRing({
 
   return (
     <div
-      className="grid size-28 place-items-center rounded-full text-center shadow-sm"
+      className="ik-ui-progress-ring"
       style={
         {
-          background: `conic-gradient(hsl(var(--primary)) ${clampedValue}%, hsl(var(--secondary)) 0)`
-        } as CSSProperties
+          "--ik-ui-ring-value": `${clampedValue}%`
+        } as CSSProperties & Record<"--ik-ui-ring-value", string>
       }
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={clampedValue}
     >
-      <div className="grid size-20 place-items-center rounded-full bg-card">
-        <span className="text-lg font-bold">{clampedValue}%</span>
-        <small className="-mt-5 text-xs text-muted-foreground">{label}</small>
-      </div>
+      <span>{clampedValue}%</span>
+      <small>{label}</small>
     </div>
   );
 }
@@ -301,12 +358,19 @@ export function Toggle({
   onChange?: (checked: boolean) => void;
 }) {
   return (
-    <Switch
-      checked={checked}
+    <button
+      type="button"
+      className={`ik-ui-toggle${checked ? " is-on" : ""}`}
+      role="switch"
+      aria-checked={checked}
       aria-label={label}
       disabled={disabled}
-      onCheckedChange={onChange}
-    />
+      onClick={() => {
+        onChange?.(!checked);
+      }}
+    >
+      <span />
+    </button>
   );
 }
 
@@ -320,13 +384,11 @@ export function MetricCard({
   icon?: IconName;
 }) {
   return (
-    <div className="flex min-h-20 items-center gap-3 rounded-lg border bg-card p-4 shadow-sm">
-      {icon ? <Icon name={icon} className="size-5 text-primary" /> : null}
+    <div className="ik-ui-metric">
+      {icon ? <Icon name={icon} /> : null}
       <div>
-        <p className="text-xl font-semibold leading-none">{value}</p>
-        <span className="text-xs font-medium uppercase text-muted-foreground">
-          {label}
-        </span>
+        <p>{value}</p>
+        <span>{label}</span>
       </div>
     </div>
   );
@@ -340,15 +402,18 @@ export function Tabs({
   active: string;
 }) {
   return (
-    <ShadcnTabs value={active}>
-      <TabsList>
-        {tabs.map((tab) => (
-          <TabsTrigger key={tab} value={tab}>
-            {tab}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </ShadcnTabs>
+    <nav className="ik-ui-tabs" aria-label="Settings sections">
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          className={tab === active ? "is-active" : ""}
+          aria-pressed={tab === active}
+        >
+          {tab}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -362,36 +427,25 @@ export function BrowserShell({
   activeExtension?: boolean;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border bg-card shadow-panel">
-      <div className="flex items-center gap-3 border-b bg-muted/50 px-4 py-3">
-        <div className="flex gap-1.5" aria-hidden="true">
-          <span className="size-3 rounded-full bg-red-400" />
-          <span className="size-3 rounded-full bg-amber-400" />
-          <span className="size-3 rounded-full bg-emerald-400" />
+    <div className="ik-ui-browser">
+      <div className="ik-ui-browser-bar">
+        <div className="ik-ui-window-controls">
+          <span />
+          <span />
+          <span />
         </div>
-        <div className="min-w-0 flex-1 truncate rounded-md border bg-background px-3 py-1.5 text-sm text-muted-foreground">
-          {url}
-        </div>
-        <div
-          className={cn(
-            "grid size-8 place-items-center rounded-md border bg-background",
-            activeExtension && "border-primary text-primary"
-          )}
-        >
+        <div className="ik-ui-address">{url}</div>
+        <div className={`ik-ui-toolbar-logo${activeExtension ? " is-active" : ""}`}>
           <ImmersionLogo size="sm" />
         </div>
       </div>
-      <div className="relative min-h-[560px] bg-background">{children}</div>
+      <div className="ik-ui-browser-body">{children}</div>
     </div>
   );
 }
 
 export function PopupShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="grid w-[380px] max-w-full gap-4 rounded-xl border bg-card p-5 text-card-foreground shadow-panel">
-      {children}
-    </div>
-  );
+  return <div className="ik-ui-popup">{children}</div>;
 }
 
 export function Popover({
@@ -402,13 +456,8 @@ export function Popover({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "relative grid gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-panel",
-        className
-      )}
-    >
-      <span className="absolute -top-2 left-8 size-4 rotate-45 border-l border-t bg-popover" />
+    <div className={`ik-ui-popover ${className}`}>
+      <span className="ik-ui-popover-arrow" />
       {children}
     </div>
   );
@@ -427,16 +476,7 @@ export function WordMark({
   label?: string;
   onClick?: () => void;
 }) {
-  const className = cn(
-    "inline rounded px-1 py-0.5 font-semibold underline decoration-2 underline-offset-2 transition-colors",
-    kind === "word" && "bg-cyan-50 text-cyan-900 decoration-cyan-500",
-    kind === "phrase" && "bg-blue-50 text-blue-900 decoration-blue-500",
-    kind === "sentence" && "bg-violet-50 text-violet-900 decoration-violet-500",
-    status === "new" && "bg-amber-50 text-amber-900 decoration-amber-500",
-    status === "known" && "bg-emerald-50 text-emerald-900 decoration-emerald-500",
-    status === "muted" && "bg-muted text-muted-foreground decoration-muted-foreground",
-    onClick && "cursor-pointer"
-  );
+  const className = `ik-ui-mark ik-ui-mark--${kind} ik-ui-mark--${status}`;
 
   if (onClick) {
     return (

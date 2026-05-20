@@ -5,16 +5,14 @@ import {
   Button,
   Card,
   Icon,
-  IconButton,
   ImmersionLogo,
   ProgressBar
 } from "../components/primitives";
-import type { IconName } from "../components/primitives";
-import { cn } from "../lib/utils";
 import {
   BrowserChrome,
   ImmersionFrame,
-  LocalFooter
+  LocalFooter,
+  MetricStat
 } from "./screen-primitives";
 import type {
   ExtensionPopupProps,
@@ -36,44 +34,56 @@ export function ExtensionPopup({
   metrics,
   localFooterText,
   unsupportedMessage = "Open a normal HTTP(S) article, blog, or docs page to use reading mode.",
+  firstRunIntro = false,
   errorMessage = null,
   sentenceHelpSummary,
   isSavingSite = false,
   onSiteToggle,
   onOpenSettings,
-  onAdjustPace
+  onAdjustPace,
+  onDismissIntro
 }: ExtensionPopupProps) {
   const [localSiteState, setLocalSiteState] =
     useState<SiteControlState>(initialSiteState);
   const resolvedSiteState = siteState ?? localSiteState;
   const supported = state === "supported";
   const enabled = supported && resolvedSiteState === "on";
-  const toggleSite = () => {
-    if (onSiteToggle) {
-      onSiteToggle();
-      return;
-    }
-    setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
-  };
   const popupContent = (
-    <div className={cn(chromeFrame && "absolute right-16 top-20 z-10")}>
+    <div className={chromeFrame ? "ik-ui-popup-anchor" : undefined}>
       <PopupPanel>
         <PopupHeader onOpenSettings={onOpenSettings} />
         {errorMessage ? (
-          <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+          <div className="ik-ui-warning-banner" role="status">
             <Icon name="info" />
             {errorMessage}
           </div>
         ) : null}
+        {firstRunIntro ? (
+          <Card className="ik-ui-note-card ik-ui-note-card--blue">
+            <Icon name="shield" />
+            <div>
+              <h3>Read normally with small doses of Spanish.</h3>
+              <p>
+                Words and phrases appear gently on supported pages. Progress
+                and reading history stay on this device. Pause any site, adjust
+                your starting point or pace in settings, and turn sentence help
+                on only when you want it.
+              </p>
+              <button type="button" className="ik-ui-popover-link" onClick={onDismissIntro}>
+                Got it
+              </button>
+            </div>
+          </Card>
+        ) : null}
         {supported ? (
           <>
-            <div className="grid grid-cols-[88px_1fr] items-center gap-5 pt-1">
-              <div className="grid size-20 place-items-center rounded-[18px] border-2 border-primary bg-primary/10 text-primary shadow-sm">
-                <Icon name="book" className="size-9" />
+            <div className="ik-ui-band-hero">
+              <div className="ik-ui-band-icon">
+                <Icon name="book" />
               </div>
               <div>
-                <h2 className="text-3xl font-semibold leading-tight tracking-normal">{bandTitle}</h2>
-                <p className="mt-1 text-lg text-muted-foreground">{bandSubtitle}</p>
+                <h2>{bandTitle}</h2>
+                <p>{bandSubtitle}</p>
               </div>
             </div>
             <ProgressBar
@@ -81,13 +91,13 @@ export function ExtensionPopup({
               label={progressLabel}
               detail={progressDetail}
             />
-            <div className="h-px bg-border" />
-            <Card className={cn("flex items-center justify-between gap-6 p-5", !enabled && "bg-muted/40")}>
-              <div className="min-w-0">
-                <Badge tone={enabled ? "accent" : "muted"} className="text-base">
+            <div className="ik-ui-popup-rule" />
+            <Card className={`ik-ui-site-card${enabled ? "" : " is-paused"}`}>
+              <div>
+                <Badge tone={enabled ? "accent" : "muted"}>
                   {enabled ? "On for this site" : "Paused for this site"}
                 </Badge>
-                <h1 className="mt-4 max-w-sm text-2xl font-medium leading-9 tracking-normal">
+                <h1>
                   {enabled
                     ? "A few Spanish words will appear while you read."
                     : "Spanish words are paused on this site."}
@@ -95,26 +105,28 @@ export function ExtensionPopup({
               </div>
               <button
                 type="button"
-                className={cn(
-                  "grid size-28 shrink-0 place-items-center rounded-full border-[10px] bg-background text-muted-foreground shadow-sm transition-colors",
-                  enabled && "border-primary/25 bg-primary text-primary-foreground",
-                  isSavingSite && "cursor-default opacity-60"
-                )}
+                className={`ik-ui-power-button${enabled ? " is-on" : ""}`}
                 aria-label={enabled ? "Pause reading mode" : "Resume reading mode"}
                 aria-pressed={enabled}
                 disabled={isSavingSite}
-                onClick={toggleSite}
+                onClick={() => {
+                  if (onSiteToggle) {
+                    onSiteToggle();
+                    return;
+                  }
+                  setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
+                }}
               >
-                <Icon name="power" className="size-12" />
+                <Icon name="power" />
               </button>
             </Card>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="ik-ui-metric-grid ik-ui-metric-grid--three">
               {(metrics ?? [
                 { label: "Comfortable", value: 0, icon: "check" },
                 { label: "In practice", value: 0, icon: "pause" },
                 { label: "Tracked words", value: 0, icon: "spark" }
               ]).map((metric) => (
-                <PopupMetric
+                <MetricStat
                   key={metric.label}
                   label={metric.label}
                   value={metric.value}
@@ -136,52 +148,42 @@ export function ExtensionPopup({
             <Button
               variant="primary"
               icon={enabled ? undefined : "power"}
-              className="h-16 text-xl"
-              onClick={enabled ? undefined : toggleSite}
+              onClick={enabled ? undefined : onSiteToggle}
             >
               {enabled ? "Keep reading" : "Resume reading"}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="justify-self-center"
+            <button
+              type="button"
+              className="ik-ui-standalone-link"
               onClick={onAdjustPace ?? onOpenSettings}
             >
               Adjust pace
-            </Button>
+            </button>
           </>
         ) : (
           <>
-            <div className="grid justify-items-center gap-5 rounded-lg bg-transparent px-8 py-4 text-center">
-              <Badge tone="muted" icon="power" className="text-base">Unavailable here</Badge>
-              <h1 className="text-3xl font-semibold tracking-normal">
-                This page is not supported
-              </h1>
-              <p className="max-w-md text-2xl leading-9 text-muted-foreground">
-                {unsupportedMessage}
-              </p>
+            <div className="ik-ui-unsupported-block">
+              <Badge tone="muted">Unavailable here</Badge>
+              <h1>This page is not supported</h1>
+              <p>{unsupportedMessage}</p>
               <button
                 type="button"
-                className="grid size-36 place-items-center rounded-full border-[10px] border-muted bg-background text-muted-foreground shadow-sm"
+                className="ik-ui-power-button ik-ui-power-button--disabled"
                 aria-label="Controls unavailable"
                 disabled
               >
-                <Icon name="power" className="size-16" />
+                <Icon name="power" />
               </button>
-              <span className="text-lg font-medium text-muted-foreground">
-                Controls unavailable
-              </span>
+              <span>Controls unavailable</span>
             </div>
-            <Card className="flex items-center gap-5">
-              <Icon name="shield" className="size-9 shrink-0 text-foreground" />
-              <p className="text-xl leading-8 text-muted-foreground">
-                We skip private, browser, form-heavy, and sensitive pages.
-              </p>
+            <Card className="ik-ui-note-card">
+              <Icon name="shield" />
+              <p>We skip private, browser, form-heavy, and sensitive pages. Reading mode works on normal articles, blogs, and docs.</p>
             </Card>
-            <Card className="grid gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold">{bandTitle}</h3>
-                <span className="text-xs text-muted-foreground">{progressLabel}</span>
+            <Card className="ik-ui-progress-card">
+              <div className="ik-ui-card-row">
+                <h3>{bandTitle}</h3>
+                <span>{progressLabel}</span>
               </div>
               <ProgressBar
                 value={progressValue}
@@ -189,7 +191,7 @@ export function ExtensionPopup({
               />
             </Card>
             <LocalFooter text="Your reading data stays on this device." />
-            <Button variant="secondary" className="h-14 text-lg" onClick={onOpenSettings}>Open settings</Button>
+            <Button variant="secondary" onClick={onOpenSettings}>Open settings</Button>
           </>
         )}
       </PopupPanel>
@@ -214,41 +216,24 @@ export function ExtensionPopup({
 }
 
 function PopupPanel({ children }: { children: ReactNode }) {
-  return (
-    <section className="grid w-[640px] max-w-[calc(100vw-16px)] gap-6 rounded-lg border bg-card p-8 text-card-foreground shadow-panel">
-      {children}
-    </section>
-  );
+  return <section className="ik-ui-popup">{children}</section>;
 }
 
 function PopupHeader({ onOpenSettings }: { onOpenSettings?: () => void }) {
   return (
-    <header className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-4 text-3xl font-semibold">
-        <ImmersionLogo size="lg" />
+    <header className="ik-ui-popup-header">
+      <div className="ik-ui-brand">
+        <ImmersionLogo />
         <span>ImmersionKit</span>
       </div>
-      <IconButton label="Open settings" icon="gear" className="size-12 [&_svg]:size-8" onClick={onOpenSettings} />
+      <button
+        type="button"
+        className="ik-ui-icon-button"
+        aria-label="Open settings"
+        onClick={onOpenSettings}
+      >
+        <Icon name="gear" />
+      </button>
     </header>
-  );
-}
-
-function PopupMetric({
-  label,
-  value,
-  icon
-}: {
-  label: string;
-  value: string | number;
-  icon: IconName;
-}) {
-  return (
-    <div className="grid min-h-32 gap-3 rounded-lg border bg-card p-4 text-center shadow-sm">
-      <div className="flex min-w-0 items-center justify-center gap-2 text-lg text-muted-foreground">
-        <Icon name={icon} className="size-6 text-foreground" />
-        <span className="min-w-0 truncate">{label}</span>
-      </div>
-      <p className="text-4xl font-semibold leading-none">{value}</p>
-    </div>
   );
 }

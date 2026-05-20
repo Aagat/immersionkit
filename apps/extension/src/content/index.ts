@@ -1,3 +1,4 @@
+import "@immersionkit/ui/styles.css";
 import "./styles.css";
 import { bootContentRuntime } from "./bootstrap";
 

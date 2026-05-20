@@ -5,6 +5,7 @@ import {
   ReadingPage
 } from "../index";
 import "../styles.css";
+import "./preview.css";
 
 const referenceScreens = [
   ["popup-supported-site", "01-popup-supported-site.png"],
@@ -40,35 +41,34 @@ const liveScreens = [
 
 function PreviewApp() {
   return (
-    <main className="ik-preview-root grid gap-8 p-7">
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-5 rounded-lg border bg-card/90 p-5 shadow-soft backdrop-blur max-md:static max-md:flex-col max-md:items-start">
+    <main className="ik-preview-shell">
+      <header className="ik-preview-header">
         <div>
-          <p className="text-xs font-bold uppercase text-primary">ImmersionKit UI</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-normal">Preview Screens</h1>
+          <p>ImmersionKit UI</p>
+          <h1>Preview Screens</h1>
         </div>
-        <nav className="flex flex-wrap gap-2" aria-label="Preview sections">
-          <a className="rounded-md border bg-background px-3 py-2 text-sm font-semibold text-foreground no-underline" href="#generated">Generated references</a>
-          <a className="rounded-md border bg-background px-3 py-2 text-sm font-semibold text-foreground no-underline" href="#live">Live React screens</a>
+        <nav aria-label="Preview sections">
+          <a href="#generated">Generated references</a>
+          <a href="#live">Live React screens</a>
         </nav>
       </header>
 
-      <section id="design-system" className="grid gap-5">
-        <div className="grid gap-1">
-          <h2 className="text-2xl font-semibold tracking-normal">Design System</h2>
-          <p className="text-muted-foreground">
+      <section id="design-system" className="ik-preview-section">
+        <div className="ik-preview-section-heading">
+          <h2>Design System</h2>
+          <p>
             Generated visual reference for the color palette, spacing, shadows,
             and public-preview component language.
           </p>
         </div>
-        <div className="grid gap-5">
+        <div className="ik-preview-grid ik-preview-grid--wide">
           {designAssets.map(([id, title, filename]) => (
-            <article key={id} className="overflow-hidden rounded-lg border bg-card shadow-soft">
-              <header className="flex items-baseline justify-between gap-3 border-b p-4">
+            <article key={id} className="ik-preview-card ik-preview-card--wide">
+              <header>
                 <h3>{title}</h3>
-                <span className="text-sm text-muted-foreground">{filename}</span>
+                <span>{filename}</span>
               </header>
               <img
-                className="block max-h-[820px] w-full bg-muted/30 object-contain"
                 alt={`${title} generated asset`}
                 src={`/design-assets/${filename}`}
               />
@@ -77,20 +77,19 @@ function PreviewApp() {
         </div>
       </section>
 
-      <section id="generated" className="grid gap-5">
-        <div className="grid gap-1">
-          <h2 className="text-2xl font-semibold tracking-normal">Generated References</h2>
-          <p className="text-muted-foreground">These are the generated design references used to check the component states.</p>
+      <section id="generated" className="ik-preview-section">
+        <div className="ik-preview-section-heading">
+          <h2>Generated References</h2>
+          <p>These are the generated design references used to check the component states.</p>
         </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-5 max-sm:grid-cols-1">
+        <div className="ik-preview-grid">
           {referenceScreens.map(([id, filename]) => (
-            <article key={id} className="overflow-hidden rounded-lg border bg-card shadow-soft">
-              <header className="flex items-baseline justify-between gap-3 border-b p-4">
+            <article key={id} className="ik-preview-card">
+              <header>
                 <h3>{formatTitle(id)}</h3>
-                <span className="text-sm text-muted-foreground">{filename}</span>
+                <span>{filename}</span>
               </header>
               <img
-                className="block h-[420px] w-full bg-muted/30 object-contain"
                 alt={`${formatTitle(id)} generated design reference`}
                 src={`/design-screens/${filename}`}
               />
@@ -99,22 +98,22 @@ function PreviewApp() {
         </div>
       </section>
 
-      <section id="live" className="grid gap-5">
-        <div className="grid gap-1">
-          <h2 className="text-2xl font-semibold tracking-normal">Live React Screens</h2>
-          <p className="text-muted-foreground">
+      <section id="live" className="ik-preview-section">
+        <div className="ik-preview-section-heading">
+          <h2>Live React Screens</h2>
+          <p>
             These are exported from `@immersionkit/ui` and can be integrated into the
             extension later.
           </p>
-          <p className="text-muted-foreground">3 reusable components, 9 state examples.</p>
+          <p>3 reusable components, 9 state examples.</p>
         </div>
-        <div className="grid gap-6">
+        <div className="ik-preview-live-stack">
           {liveScreens.map(([id, Screen]) => (
-            <article key={id} className="overflow-hidden rounded-lg border bg-card shadow-soft">
-              <header className="border-b p-4">
+            <article key={id} className="ik-preview-live-card">
+              <header>
                 <h3>{formatTitle(id)}</h3>
               </header>
-              <div className="overflow-hidden bg-muted/30">
+              <div className="ik-preview-live-viewport">
                 <Screen />
               </div>
             </article>
