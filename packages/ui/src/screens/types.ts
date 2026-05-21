@@ -57,9 +57,7 @@ export type MetricIconName =
 
 export const settingsTabs: OptionsSection[] = [
   "Overview",
-  "Account",
   "Reading",
-  "Curriculum",
   "Sites",
   "Translation",
   "Support",

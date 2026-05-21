@@ -105,8 +105,8 @@ export function ExtensionPopup({
     <div
       className={
         chromeFrame
-          ? "absolute inset-x-4 top-4 sm:inset-x-auto sm:right-8 sm:top-8 sm:w-[392px]"
-          : "w-[392px]"
+          ? "absolute inset-x-3 top-3 sm:inset-x-auto sm:right-6 sm:top-6 sm:w-[360px]"
+          : "w-[360px] max-w-[100vw]"
       }
     >
       <PopupPanel>
@@ -220,7 +220,7 @@ function SignedOutPopup({
             Sign in for preview with Google
           </Button>
           <Button variant="outline" onClick={onOpenSettings}>
-            Open account settings
+            Open settings
           </Button>
         </CardContent>
       </Card>
@@ -306,10 +306,10 @@ function LearningReportCard({
   const total = Math.max(stats.total, 0);
 
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
         <div className="flex min-w-0 items-center gap-4">
-          <h2 className="shrink-0 text-2xl font-semibold">Reading report</h2>
+          <h2 className="shrink-0 text-xl font-semibold">Reading report</h2>
           <Badge
             variant="outline"
             className="shrink-0 rounded-xl px-3 py-1 text-sm font-normal"
@@ -317,7 +317,7 @@ function LearningReportCard({
             {formatStatCount(total)} tracked
           </Badge>
         </div>
-        <p className="truncate text-base text-muted-foreground">
+        <p className="truncate text-sm text-muted-foreground">
           {bandTitle} · {bandSubtitle}
         </p>
       </div>
@@ -335,14 +335,14 @@ function WeeklyWordBars({ days }: { days: readonly PopupLearningDayStats[] }) {
   return (
     <ChartContainer
       config={weeklyWordsChartConfig}
-      className="h-56 w-full"
-      initialDimension={{ width: 344, height: 224 }}
+      className="h-40 w-full"
+      initialDimension={{ width: 328, height: 160 }}
     >
       <BarChart
         accessibilityLayer
         data={chartData}
         margin={{ left: 0, right: 0, top: 6, bottom: 0 }}
-        barSize={22}
+        barSize={18}
       >
         <XAxis
           dataKey="label"
@@ -387,8 +387,8 @@ function WeeklyWordBars({ days }: { days: readonly PopupLearningDayStats[] }) {
 
 function TodayStats({ stats }: { stats: PopupLearningDayStats }) {
   return (
-    <div className="flex flex-col gap-4" aria-label="Today's words">
-      <span className="text-base text-muted-foreground">Today</span>
+    <div className="flex flex-col gap-3" aria-label="Today's words">
+      <span className="text-sm text-muted-foreground">Today</span>
       <div className="grid grid-cols-4 text-center">
         {[
           { label: "Comfort", value: stats.comfortable, className: "text-chart-1" },
@@ -400,10 +400,10 @@ function TodayStats({ stats }: { stats: PopupLearningDayStats }) {
             key={item.label}
             className="min-w-0 border-l border-border first:border-l-0"
           >
-            <div className={`truncate text-3xl font-medium leading-none ${item.className}`}>
+            <div className={`truncate text-2xl font-medium leading-none ${item.className}`}>
               {formatStatCount(item.value)}
             </div>
-            <div className="mt-2 truncate text-sm text-foreground">{item.label}</div>
+            <div className="mt-1.5 truncate text-xs text-foreground">{item.label}</div>
           </div>
         ))}
       </div>
@@ -415,14 +415,14 @@ function BandProgress({ value, detail }: { value: number; detail: string }) {
   const percent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3 text-base">
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-3 text-sm">
         <span className="font-medium">Band progress</span>
         <span>{Math.round(percent)}%</span>
       </div>
       <Progress
         value={percent}
-        className="h-2.5 bg-muted [&_[data-slot=progress-indicator]]:bg-chart-1"
+        className="h-2 bg-muted [&_[data-slot=progress-indicator]]:bg-chart-1"
       />
       <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </div>
@@ -600,7 +600,7 @@ function formatStatCount(value: number): string {
 
 function PopupPanel({ children }: { children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-xl ring-1 ring-foreground/10">
+    <section className="flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-xl ring-1 ring-foreground/10">
       {children}
     </section>
   );
@@ -621,12 +621,12 @@ function PopupHeader({
     <div className="flex items-center justify-between gap-4">
       <div className="flex min-w-0 items-center gap-3">
         <span
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-lg font-semibold text-primary-foreground shadow-sm"
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm"
           aria-hidden="true"
         >
           IK
         </span>
-        <span className="truncate text-lg font-medium">ImmersionKit</span>
+        <span className="truncate text-base font-medium">ImmersionKit</span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {debugAvailable ? (
@@ -634,7 +634,7 @@ function PopupHeader({
             type="button"
             variant="outline"
             size="icon-lg"
-            className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+            className="size-10 rounded-lg border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-5"
             aria-label="Open debug inspector"
             title="Open debug inspector"
             onClick={onOpenDebug}
@@ -646,7 +646,7 @@ function PopupHeader({
           type="button"
           variant="outline"
           size="icon-lg"
-          className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+          className="size-10 rounded-lg border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-5"
           aria-label="Report issue"
           onClick={onReportIssue}
         >
@@ -656,7 +656,7 @@ function PopupHeader({
           type="button"
           variant="outline"
           size="icon-lg"
-          className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+          className="size-10 rounded-lg border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-5"
           aria-label="Open settings"
           onClick={onOpenSettings}
         >

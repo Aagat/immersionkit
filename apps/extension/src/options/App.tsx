@@ -83,9 +83,7 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
 
 type OptionsTab =
   | "overview"
-  | "account"
   | "reading"
-  | "curriculum"
   | "sites"
   | "translation"
   | "support"
@@ -829,14 +827,6 @@ function toUiOptionsSection(tab: OptionsTab): OptionsSection {
     return "Reading";
   }
 
-  if (tab === "account") {
-    return "Account";
-  }
-
-  if (tab === "curriculum") {
-    return "Curriculum";
-  }
-
   if (tab === "sites") {
     return "Sites";
   }
@@ -862,11 +852,11 @@ function toLocalOptionsTab(section: OptionsSection): OptionsTab {
   }
 
   if (section === "Account") {
-    return "account";
+    return "overview";
   }
 
   if (section === "Curriculum") {
-    return "curriculum";
+    return "reading";
   }
 
   if (section === "Sites") {
@@ -1011,7 +1001,11 @@ function shouldShowAdvancedTab(): boolean {
 
 function getInitialOptionsTab(showAdvancedTab: boolean): OptionsTab {
   if (typeof window !== "undefined" && window.location.hash === "#account") {
-    return "account";
+    return "overview";
+  }
+
+  if (typeof window !== "undefined" && window.location.hash === "#curriculum") {
+    return "reading";
   }
 
   if (typeof window !== "undefined" && window.location.hash === "#support") {

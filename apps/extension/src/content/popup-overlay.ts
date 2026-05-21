@@ -89,13 +89,13 @@ function createPopupOverlayHost(): HTMLElement {
 
     .panel {
       position: fixed;
-      top: 16px;
-      right: 16px;
+      top: 12px;
+      right: 12px;
       z-index: 1;
-      width: min(392px, calc(100vw - 32px));
-      height: min(760px, calc(100vh - 32px));
+      width: min(360px, calc(100vw - 24px));
+      height: min(680px, calc(100vh - 24px));
       overflow: hidden;
-      border-radius: 30px;
+      border-radius: 18px;
       background: transparent;
       box-shadow:
         0 28px 70px rgba(15, 23, 42, 0.24),
@@ -116,6 +116,15 @@ function createPopupOverlayHost(): HTMLElement {
     @media (prefers-reduced-motion: reduce) {
       .panel {
         animation: none;
+      }
+    }
+
+    @media (max-height: 620px), (max-width: 760px) {
+      .panel {
+        top: 8px;
+        right: 8px;
+        width: min(340px, calc(100vw - 16px));
+        height: min(620px, calc(100vh - 16px));
       }
     }
 

@@ -212,11 +212,6 @@ export function ExtensionOptions({
                 provider={provider}
                 account={account}
                 onOpenSection={setActive}
-              />
-            </TabsContent>
-            <TabsContent value="Account" className="m-0">
-              <OptionsAccountPanel
-                account={account}
                 onPreviewSignIn={onPreviewSignIn}
                 onPreviewLogout={onPreviewLogout}
               />
@@ -225,15 +220,11 @@ export function ExtensionOptions({
               <OptionsReadingPanel
                 discoveryRatePercent={discoveryRatePercent}
                 readingLevel={readingLevel}
-                onDiscoveryRateChange={onDiscoveryRateChange}
-                onReadingLevelChange={onReadingLevelChange}
-              />
-            </TabsContent>
-            <TabsContent value="Curriculum" className="m-0">
-              <OptionsCurriculumPanel
                 checkpoint={checkpoint}
                 currentFocus={currentFocus}
                 learningPath={learningPath}
+                onDiscoveryRateChange={onDiscoveryRateChange}
+                onReadingLevelChange={onReadingLevelChange}
               />
             </TabsContent>
             <TabsContent value="Sites" className="m-0">
@@ -305,7 +296,7 @@ export function ExtensionOptions({
     <ImmersionFrame variant="settings">
       <BrowserChrome
         title="ImmersionKit Options"
-        url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : active === "Support" ? "#support" : active === "Account" ? "#account" : ""}`}
+        url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : active === "Support" ? "#support" : ""}`}
         appFrame
       >
         {optionsContent}
@@ -330,19 +321,19 @@ function OptionsHeader({
   const copy = {
     Overview: [
       "Options",
-      "Quick status across reading, curriculum, sites, and local progress."
+      "Quick status across account, reading, sites, and local progress."
     ],
     Account: [
-      "Account",
-      "Preview access, account status, and local learning data."
+      "Options",
+      "Account status now lives in Overview."
     ],
     Reading: [
       "Reading",
-      "Spanish density, starting point, and inline preview."
+      "Curriculum focus, Spanish density, starting point, and roadmap."
     ],
     Curriculum: [
-      "Curriculum",
-      "Roadmap through the current focus and next band."
+      "Reading",
+      "Curriculum focus now lives in Reading."
     ],
     Sites: [
       "Sites",
@@ -410,7 +401,9 @@ function OptionsOverviewPanel({
   sentenceHelpEnabled,
   provider,
   account,
-  onOpenSection
+  onOpenSection,
+  onPreviewSignIn,
+  onPreviewLogout
 }: Pick<
   ExtensionOptionsProps,
   | "discoveryRatePercent"
@@ -424,10 +417,12 @@ function OptionsOverviewPanel({
   | "sentenceHelpEnabled"
   | "provider"
   | "account"
+  | "onPreviewSignIn"
+  | "onPreviewLogout"
 > & {
   onOpenSection: (section: OptionsSection) => void;
 }) {
-  const readingLevelLabel = readingLevel ?? "False beginner";
+  const readingLevelLabel = readingLevel ?? "Beginner";
   const sentenceHelpLabel =
     provider === "openai"
       ? sentenceHelpEnabled
@@ -436,7 +431,12 @@ function OptionsOverviewPanel({
       : "Sentence help off";
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
+    <div className="flex flex-col gap-4">
+      <OptionsAccountPanel
+        account={account}
+        onPreviewSignIn={onPreviewSignIn}
+        onPreviewLogout={onPreviewLogout}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Overview</CardTitle>
@@ -445,19 +445,7 @@ function OptionsOverviewPanel({
             curriculum, local progress, and site behavior.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
-          <OverviewTile
-            title="Account"
-            value={account?.status === "signed-in" ? "Signed in" : "Sign in required"}
-            detail={
-              account?.status === "signed-in"
-                ? `${account.email}. Learning progress stays local.`
-                : "Preview sign-in unlocks reading mode; learning progress stays local."
-            }
-            icon="shield"
-            action="Open Account"
-            onAction={() => onOpenSection("Account")}
-          />
+        <CardContent className="flex flex-col gap-3">
           <OverviewTile
             title="Reading"
             value={`${discoveryRatePercent}% new word pace`}
@@ -475,8 +463,8 @@ function OptionsOverviewPanel({
                 : "Current focus appears after curriculum loads."
             }
             icon="band"
-            action="Open Curriculum"
-            onAction={() => onOpenSection("Curriculum")}
+            action="Open Reading"
+            onAction={() => onOpenSection("Reading")}
           />
           <OverviewTile
             title="Sites"
@@ -488,34 +476,32 @@ function OptionsOverviewPanel({
           />
         </CardContent>
       </Card>
-      <div className="flex flex-col gap-4">
-        <LearningSnapshotCard stats={stats} />
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview state</CardTitle>
-            <CardDescription>
-              Quick release-facing checks before final screenshots.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <CompactMetric
-              label="Reading band"
-              value={checkpoint?.nextBand ?? "Next band"}
-              icon="band"
-            />
-            <CompactMetric
-              label="Sentence help"
-              value={sentenceHelpLabel}
-              icon="translate"
-            />
-            <CompactMetric
-              label="Site choices"
-              value={savedSiteCount}
-              icon="link"
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <LearningSnapshotCard stats={stats} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Preview state</CardTitle>
+          <CardDescription>
+            Quick release-facing checks before final screenshots.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <CompactMetric
+            label="Reading band"
+            value={checkpoint?.nextBand ?? "Next band"}
+            icon="band"
+          />
+          <CompactMetric
+            label="Sentence help"
+            value={sentenceHelpLabel}
+            icon="translate"
+          />
+          <CompactMetric
+            label="Site choices"
+            value={savedSiteCount}
+            icon="link"
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -532,8 +518,8 @@ function OptionsAccountPanel({
   const notRequired = account.status === "not-required";
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
-      <Card>
+    <div className="flex flex-col gap-4">
+      <Card className={!signedIn && !notRequired ? "border-primary/60 shadow-sm" : undefined}>
         <CardHeader>
           <CardTitle>Preview account</CardTitle>
           <CardDescription>
@@ -544,8 +530,8 @@ function OptionsAccountPanel({
                 : "Preview sign-in is required before reading mode turns on."}
           </CardDescription>
           <CardAction>
-            <Badge variant={signedIn ? "default" : "secondary"}>
-              {notRequired ? "Local preview" : signedIn ? account.previewStatus : "Signed out"}
+            <Badge variant={signedIn || !notRequired ? "default" : "secondary"}>
+              {notRequired ? "Local preview" : signedIn ? account.previewStatus : "Sign in required"}
             </Badge>
           </CardAction>
         </CardHeader>
@@ -648,18 +634,25 @@ function OverviewTile({
 function OptionsReadingPanel({
   discoveryRatePercent = 8,
   readingLevel,
+  checkpoint,
+  currentFocus,
+  learningPath = [],
   onDiscoveryRateChange,
   onReadingLevelChange
 }: Pick<
   ExtensionOptionsProps,
   | "discoveryRatePercent"
   | "readingLevel"
+  | "checkpoint"
+  | "currentFocus"
+  | "learningPath"
   | "onDiscoveryRateChange"
   | "onReadingLevelChange"
 >) {
   const [localReadingLevel, setLocalReadingLevel] =
-    useState<ReadingLevel>("False beginner");
+    useState<ReadingLevel>("Beginner");
   const resolvedReadingLevel = readingLevel ?? localReadingLevel;
+  const activeLevel = learningPath.find((level) => level.active);
   const chooseReadingLevel = (level: ReadingLevel) => {
     setLocalReadingLevel(level);
     onReadingLevelChange?.(level);
@@ -667,6 +660,11 @@ function OptionsReadingPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      <CurrentFocusSummaryCard
+        checkpoint={checkpoint}
+        currentFocus={currentFocus}
+        activeLevel={activeLevel}
+      />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
         <Card>
           <CardHeader>
@@ -736,24 +734,6 @@ function OptionsReadingPanel({
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function OptionsCurriculumPanel({
-  checkpoint,
-  currentFocus,
-  learningPath = []
-}: Pick<ExtensionOptionsProps, "checkpoint" | "currentFocus" | "learningPath">) {
-  const activeLevel = learningPath.find((level) => level.active);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <CurrentFocusSummaryCard
-        checkpoint={checkpoint}
-        currentFocus={currentFocus}
-        activeLevel={activeLevel}
-      />
       <UnlockRoadmapCard
         checkpoint={checkpoint}
         currentFocus={currentFocus}

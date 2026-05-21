@@ -142,7 +142,7 @@ describe("options state", () => {
   });
 
   it("parses friendly proficiency seeds and migrates legacy advanced to intermediate", () => {
-    expect(parseProficiencySeed(undefined)).toBe("false-beginner");
+    expect(parseProficiencySeed(undefined)).toBe("beginner");
     expect(parseProficiencySeed("beginner")).toBe("beginner");
     expect(parseProficiencySeed("false-beginner")).toBe("false-beginner");
     expect(parseProficiencySeed("intermediate")).toBe("intermediate");
@@ -153,6 +153,13 @@ describe("options state", () => {
   });
 
   it("creates placement profiles from friendly seeds and exact diagnostic bands", () => {
+    expect(createLearningProfileForProficiencySeed("beginner")).toMatchObject({
+      activeVocabularyBandId: "level-1a",
+      activePhraseBandId: "level-1a",
+      activeGrammarBandId: "level-1a",
+      unlockedBandIds: ["level-1a"]
+    });
+
     expect(createLearningProfileForProficiencySeed("false-beginner")).toMatchObject({
       activeVocabularyBandId: "level-1b",
       activePhraseBandId: "level-1b",

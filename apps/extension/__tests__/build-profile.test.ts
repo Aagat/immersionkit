@@ -53,6 +53,8 @@ describe("extension build profile", () => {
     const productionTabs = settingsTabs.filter((tab) => tab !== "Advanced");
 
     expect(productionTabs).toContain("Support");
+    expect(productionTabs).not.toContain("Account");
+    expect(productionTabs).not.toContain("Curriculum");
     expect(productionTabs).not.toContain("Advanced");
   });
 

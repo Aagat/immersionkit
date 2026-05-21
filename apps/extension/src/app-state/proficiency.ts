@@ -7,7 +7,7 @@ import {
 export type ProficiencySeed = "beginner" | "false-beginner" | "intermediate";
 export type LegacyProficiencySeed = ProficiencySeed | "advanced";
 
-const DEFAULT_PROFICIENCY_SEED: ProficiencySeed = "false-beginner";
+const DEFAULT_PROFICIENCY_SEED: ProficiencySeed = "beginner";
 
 export const PROFICIENCY_SEED_OPTIONS: readonly {
   id: ProficiencySeed;

@@ -93,7 +93,7 @@ describe("extension E2E harness", () => {
       .toBe(false);
 
     await options.reload({ waitUntil: "domcontentloaded" });
-    await options.waitForSelector("text=Quick status across reading", {
+    await options.waitForSelector("text=Quick status across account", {
       timeout: 10_000
     });
     expect(await options.locator("text=Start with normal reading").count()).toBe(0);
@@ -198,7 +198,7 @@ describe("extension E2E harness", () => {
     await options.goto(`chrome-extension://${extensionId}/options.html`, {
       waitUntil: "domcontentloaded"
     });
-    await options.waitForSelector("text=Quick status across reading", {
+    await options.waitForSelector("text=Quick status across account", {
       timeout: 10_000
     });
     await expect

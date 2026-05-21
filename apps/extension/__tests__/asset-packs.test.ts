@@ -48,6 +48,12 @@ describe("background asset packs", () => {
     ).toEqual(["level-1c", "level-2a", "level-2b"]);
     expect(
       resolveActiveAssetBandWindow(DEFAULT_CURRICULUM_CONFIG, {
+        activeVocabularyBandId: "level-2a",
+        unlockedBandIds: ["level-1a", "level-1b", "level-1c", "level-2a"]
+      })
+    ).toEqual(["level-1a", "level-1b", "level-1c", "level-2a", "level-2b"]);
+    expect(
+      resolveActiveAssetBandWindow(DEFAULT_CURRICULUM_CONFIG, {
         activeVocabularyBandId: "level-5b"
       })
     ).toEqual(["level-5a", "level-5b"]);

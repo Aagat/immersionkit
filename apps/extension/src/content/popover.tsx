@@ -74,9 +74,9 @@ const CONTENT_POPOVER_STYLES = `
     --font-heading: var(--font-mono);
     box-sizing: border-box;
     display: block;
-    width: clamp(260px, 28vw, 340px);
+    width: clamp(232px, 24vw, 308px);
     max-width: calc(100vw - 20px);
-    max-height: min(62vh, calc(100vh - 20px), 560px);
+    max-height: min(78vh, calc(100vh - 20px), 500px);
     margin: 0;
     border: 0;
     padding: 0;
@@ -93,14 +93,34 @@ const CONTENT_POPOVER_STYLES = `
   }
 
   :host([data-ik-popover-kind="sentence"]) {
-    width: clamp(300px, 36vw, 480px);
-    max-height: min(68vh, calc(100vh - 20px), 620px);
+    width: clamp(280px, 34vw, 430px);
+    max-height: min(78vh, calc(100vh - 20px), 560px);
   }
 
   .ik-content-popover-card {
     max-height: inherit;
     overflow: auto;
     overscroll-behavior: contain;
+  }
+
+  :host(:not([data-ik-popover-kind="sentence"])) .ik-content-popover-card {
+    overflow: visible;
+  }
+
+  @media (max-height: 620px), (max-width: 760px) {
+    :host {
+      width: clamp(220px, 32vw, 292px);
+      max-height: calc(100vh - 20px);
+    }
+
+    :host([data-ik-popover-kind="sentence"]) {
+      width: clamp(260px, 42vw, 390px);
+    }
+
+    .ik-content-popover-card {
+      gap: 0.5rem;
+      padding: 0.625rem;
+    }
   }
 
   .ik-popover-light-dom-mirror-slot {

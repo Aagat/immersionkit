@@ -150,7 +150,7 @@ export function WordHelpPopoverContent({
       ) : null}
       {visibleExampleText ? (
         <div
-          className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm"
+          className="flex gap-2 rounded-lg bg-muted/50 p-3 text-xs leading-relaxed"
           data-ik-example-language={visibleExampleLanguage}
           data-ik-example-sentence="true"
         >
@@ -161,7 +161,7 @@ export function WordHelpPopoverContent({
           <span>{visibleExampleText}</span>
         </div>
       ) : null}
-      <div className="flex flex-nowrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5">
         <Button
           className={INACTIVE_STATUS_BUTTON_CLASS}
           variant="outline"
@@ -188,7 +188,7 @@ export function WordHelpPopoverContent({
           </Button>
         ))}
       </div>
-      <CardFooter className="justify-between gap-3 border-t pt-4">
+      <CardFooter className="justify-between gap-3 border-t pt-3">
         <Button
           type="button"
           variant="link"
@@ -248,7 +248,7 @@ export function PhraseHelpPopoverContent({
             optionAttribute="data-ik-example-language-option"
           />
           <div
-            className="flex gap-2 rounded-3xl bg-muted/50 p-4 text-sm"
+            className="flex gap-2 rounded-lg bg-muted/50 p-3 text-xs leading-relaxed"
             data-ik-example-language={exampleLanguage}
             data-ik-phrase-example-sentence="true"
             data-ik-translation-available={
@@ -263,7 +263,7 @@ export function PhraseHelpPopoverContent({
           </div>
         </>
       ) : null}
-      <CardFooter className="justify-between gap-3 border-t pt-4">
+      <CardFooter className="justify-between gap-3 border-t pt-3">
         <Button
           type="button"
           variant="link"
@@ -334,7 +334,7 @@ export function SentenceHelpPopoverContent({
         label="Why this helps"
         text={sentenceHelpDetail(learningNote)}
       />
-      <div className="flex flex-nowrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5">
         <Button
           variant={!sourceVisible ? "secondary" : "outline"}
           size="sm"
@@ -380,7 +380,7 @@ export function SentenceHelpPopoverContent({
           Details
         </Button>
       </div>
-      <CardFooter className="justify-between gap-3 border-t pt-4">
+      <CardFooter className="justify-between gap-3 border-t pt-3">
         <Button
           type="button"
           variant="link"
@@ -401,7 +401,7 @@ export function SentenceHelpPopoverContent({
 function GrammarCard({ card }: { card: SentenceHelpGrammarCard }) {
   return (
     <div
-      className="flex flex-col gap-3 rounded-3xl bg-muted/50 p-4"
+      className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3"
       data-ik-grammar-card="true"
       data-ik-grammar-feature-key={card.featureKey}
       data-ik-grammar-status={card.curriculumStatus}
@@ -410,7 +410,7 @@ function GrammarCard({ card }: { card: SentenceHelpGrammarCard }) {
         <IkIcon name="spark" />
         {card.title}
       </h4>
-      <p className="w-fit max-w-full rounded-2xl bg-background px-2.5 py-1 text-sm font-medium shadow-sm ring-1 ring-foreground/5">
+      <p className="w-fit max-w-full rounded-lg bg-background px-2.5 py-1 text-xs font-medium shadow-sm ring-1 ring-foreground/5">
         {card.sourceText}
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
@@ -428,7 +428,7 @@ function GrammarCard({ card }: { card: SentenceHelpGrammarCard }) {
 
 function GrammarPattern({ label, value }: { label: string; value: string }) {
   return (
-    <span className="min-w-0 rounded-3xl bg-background p-3 text-sm ring-1 ring-foreground/5">
+    <span className="min-w-0 rounded-lg bg-background p-2 text-xs ring-1 ring-foreground/5">
       <strong className="block text-xs uppercase text-muted-foreground">{label}</strong>
       {value}
     </span>
@@ -437,7 +437,7 @@ function GrammarPattern({ label, value }: { label: string; value: string }) {
 
 function PopoverCard({ children }: { children: ReactNode }) {
   return (
-    <Card className="ik-content-popover-card flex flex-col gap-3 p-4 text-sm shadow-xl">
+    <Card className="ik-content-popover-card flex flex-col gap-2.5 p-3 text-xs shadow-xl">
       {children}
     </Card>
   );
@@ -466,7 +466,7 @@ function PopoverHeading({
     <CardHeader className="flex flex-row items-start gap-2 p-0">
       {leadingIcon}
       <div className="min-w-0 flex flex-1 flex-wrap items-center gap-2">
-        <CardTitle className="min-w-0 break-words text-base leading-6">
+        <CardTitle className="min-w-0 break-words text-sm leading-5">
           {title}
         </CardTitle>
         <Badge className="shrink-0">{badge}</Badge>
@@ -551,10 +551,10 @@ function PopoverBrand() {
 
 function TokenPair({ source, target }: { source: string; target: string }) {
   return (
-    <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-0">
-      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{source}</span>
+    <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 p-0">
+      <span className="min-w-0 rounded-lg bg-muted/50 p-2.5 text-sm">{source}</span>
       <IkIcon name="chevron" className="text-muted-foreground" />
-      <span className="min-w-0 rounded-3xl bg-muted/50 p-3 text-sm">{target}</span>
+      <span className="min-w-0 rounded-lg bg-muted/50 p-2.5 text-sm">{target}</span>
     </CardContent>
   );
 }

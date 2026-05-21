@@ -206,7 +206,7 @@ export function PopupApp() {
         void refreshSnapshot();
       })
       .catch(() => {
-        setErrorMessage("Could not start preview sign-in. Open Account settings and try again.");
+        setErrorMessage("Could not start preview sign-in. Open settings and try again.");
       });
   }, [refreshSnapshot]);
 
@@ -218,7 +218,7 @@ export function PopupApp() {
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
-      ?.label ?? "False beginner";
+      ?.label ?? "Beginner";
   const discoverySummary = describeDiscoveryRate(settingsState?.settings.discoveryRate ?? 0);
   const progressCopy = formatPopupProgressCopy({
     checkpointPreview,
@@ -309,7 +309,7 @@ export function openAccountOptionsPage(): void {
     return;
   }
 
-  const accountUrl = chrome.runtime.getURL?.("options.html#account");
+  const accountUrl = chrome.runtime.getURL?.("options.html");
   if (accountUrl && chrome.tabs?.create) {
     chrome.tabs.create({ url: accountUrl });
     return;

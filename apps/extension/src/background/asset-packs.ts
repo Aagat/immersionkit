@@ -532,6 +532,20 @@ export function resolveActiveAssetBandWindow(
     activeBands.push(orderedBands[0]);
   }
   const windowIds = new Set<string>();
+  const activeBandOrders = activeBands.flatMap((band) =>
+    typeof band.order === "number" ? [band.order] : []
+  );
+  const maxActiveOrder =
+    activeBandOrders.length > 0 ? Math.max(...activeBandOrders) : null;
+
+  if (maxActiveOrder !== null) {
+    const unlockedBandIds = new Set(profile?.unlockedBandIds ?? []);
+    for (const band of orderedBands) {
+      if (band.order <= maxActiveOrder && unlockedBandIds.has(band.bandId)) {
+        windowIds.add(band.bandId);
+      }
+    }
+  }
 
   for (const activeBand of activeBands) {
     const activeIndex = Math.max(
