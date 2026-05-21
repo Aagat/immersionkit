@@ -58,7 +58,8 @@ export class ImmersionKitApiClient {
       options.baseUrl === undefined
         ? normalizeBaseUrl(import.meta.env.VITE_IMMERSIONKIT_API_BASE_URL)
         : normalizeBaseUrl(options.baseUrl);
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl =
+      options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
   }
 
   isConfigured(): boolean {

@@ -33,6 +33,10 @@ const useLocalD1 =
   options.local === "true" ||
   options.local === "1" ||
   process.env.IK_ASSET_RELEASE_D1_LOCAL === "1";
+const useLocalR2 =
+  options.local === "true" ||
+  options.local === "1" ||
+  process.env.IK_ASSET_RELEASE_R2_LOCAL === "1";
 const dryRun =
   options.dryRun === "true" ||
   options.dryRun === "1" ||
@@ -56,6 +60,7 @@ console.log(
     `Publishing ImmersionKit ${metadata.channel} asset release ${metadata.assetVersion}.`,
     `Release root: ${releaseRoot}`,
     `Bucket: ${bucket}`,
+    `R2: ${useLocalR2 ? "local" : "remote"}`,
     `D1: ${d1Database} (${useLocalD1 ? "local" : "remote"})`
   ].join("\n")
 );
@@ -89,6 +94,7 @@ async function putR2Object(bucketName, file) {
     "object",
     "put",
     `${bucketName}/${file.key}`,
+    useLocalR2 ? "--local" : "--remote",
     "--file",
     file.path,
     "--content-type",

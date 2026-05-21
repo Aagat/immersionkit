@@ -1,10 +1,10 @@
 name = "immersionkit-api"
 main = "src/index.ts"
-compatibility_date = "2026-05-20"
+compatibility_date = "2026-05-18"
 
 [vars]
-ASSET_PUBLIC_BASE_URL = "https://immersionkit-asset-releases.<account>.r2.dev/assets"
-GOOGLE_REDIRECT_URI = "https://<stable-extension-id>.chromiumapp.org/oauth/google"
+ASSET_PUBLIC_BASE_URL = "https://pub-e554fa2b8b81455caf0be40404e3959a.r2.dev/assets"
+GOOGLE_REDIRECT_URI = "https://lllcimijmblmggimefiojaahcccglcmf.chromiumapp.org/oauth/google"
 SESSION_TTL_DAYS = "30"
 OAUTH_STATE_TTL_MINUTES = "10"
 
@@ -13,7 +13,7 @@ binding = "DB"
 database_name = "immersionkit-preview"
 # Replace this with the id returned by:
 # pnpm --filter @immersionkit/api exec wrangler d1 create immersionkit-preview
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "976f799f-897e-44ae-be1c-040adf2d3627"
 migrations_dir = "migrations"
 
 [[r2_buckets]]

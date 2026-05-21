@@ -101,6 +101,41 @@ describe("commercial preview account and telemetry guards", () => {
     }
   });
 
+  it("keeps the default API fetch bound to the worker global", async () => {
+    const originalFetch = globalThis.fetch;
+    let observedThis: unknown = null;
+    globalThis.fetch = function fetchWithBindingCheck() {
+      observedThis = this;
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+            state: "ost_test",
+            expiresAt: "2099-05-21T10:00:00.000Z"
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" }
+          }
+        )
+      );
+    } as typeof fetch;
+
+    try {
+      const client = new ImmersionKitApiClient({
+        baseUrl: "https://api.example.test"
+      });
+      await client.startGoogleOAuth({
+        redirectUri: "https://abcdefghijklmnop.chromiumapp.org/oauth/google",
+        installId: "ins_test"
+      });
+
+      expect(observedThis).toBe(globalThis);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("accepts only fixed content-free activation telemetry properties", () => {
     expect(
       sanitizeActivationProperties({
