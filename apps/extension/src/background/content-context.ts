@@ -23,6 +23,7 @@ import {
   buildSentenceAnalysisVersion,
   getRuntimePhraseTargetsForLanguagePair
 } from "./sentence-analysis-version";
+import { BackgroundAccountService } from "./account-service";
 
 const SITE_SETTINGS_STORAGE_KEYS = [USER_DATA_KEYS.siteSettings] as const;
 const MAX_CONTENT_CONTEXT_LEARNING_UNIT_REF_IDS = 500;
@@ -32,27 +33,49 @@ export class ContentContextService {
   private readonly sentenceAnalysisCache = new IndexedDbSentenceAnalysisCacheRepository();
   private readonly learningItems = new BackgroundLearningItemService();
   private readonly userVocab = new IndexedDbUserVocabRepository();
+  private readonly accountService = new BackgroundAccountService();
 
   async loadContext(input: {
     hostname: string;
     sentenceHashes?: readonly string[];
   }): Promise<ContentContextSnapshot> {
-    const [runtimeConfig, siteSettingsStorage, assetContext] =
+    const [runtimeConfig, siteSettingsStorage, readingAllowed] =
       await Promise.all([
         loadBackgroundRuntimeConfig(),
         loadUserDataValues([...SITE_SETTINGS_STORAGE_KEYS]),
-        this.assetPacks.loadActiveContext()
+        this.accountService.isReadingAllowed()
       ]);
-    const sentenceAnalysisEntries = await this.loadAnalysisEntries(
-      input.sentenceHashes,
-      assetContext
-    );
     const siteSetting = parseSiteSetting(
       pickFirstDefinedValue(siteSettingsStorage, SITE_SETTINGS_STORAGE_KEYS),
       input.hostname
     );
     const discoveryRate = clampUnitInterval(
       siteSetting?.discoveryRate ?? runtimeConfig.settings.discoveryRate
+    );
+    const siteEnabled =
+      runtimeConfig.settings.enabled &&
+      readingAllowed &&
+      (siteSetting?.enabled ?? true);
+
+    if (!siteEnabled) {
+      return {
+        settings: runtimeConfig.settings,
+        discoveryRate,
+        siteSetting,
+        siteEnabled,
+        assetContext: createEmptyAssetContext(runtimeConfig.settings.languagePair),
+        vocabEntries: [],
+        learningItems: [],
+        sentenceAnalysisEntries: [],
+        curriculumConfig: runtimeConfig.curriculum.config,
+        learningProfile: runtimeConfig.curriculum.profile
+      };
+    }
+
+    const assetContext = await this.assetPacks.loadActiveContext();
+    const sentenceAnalysisEntries = await this.loadAnalysisEntries(
+      input.sentenceHashes,
+      assetContext
     );
     const relevantUnitRefIds = collectRelevantUnitRefIds(
       assetContext.renderUnits,
@@ -72,7 +95,7 @@ export class ContentContextService {
       settings: runtimeConfig.settings,
       discoveryRate,
       siteSetting,
-      siteEnabled: runtimeConfig.settings.enabled && (siteSetting?.enabled ?? true),
+      siteEnabled,
       assetContext,
       vocabEntries,
       learningItems,
@@ -133,6 +156,18 @@ export class ContentContextService {
       ? entries.filter((entry) => requestedLexemeIds.has(entry.lexemeId))
       : entries;
   }
+}
+
+function createEmptyAssetContext(languagePair: ActiveAssetContext["languagePair"]): ActiveAssetContext {
+  return {
+    languagePair,
+    renderUnits: [],
+    sentenceHintPhrases: [],
+    source: "empty",
+    assetVersion: null,
+    bandIds: [],
+    missingBandIds: []
+  };
 }
 
 export function collectRelevantUnitRefIds(

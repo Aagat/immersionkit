@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -147,11 +148,17 @@ async function buildAssetPacks(repoRoot) {
       renderUnits,
       lexemes
     };
-    packsByBandId.set(bandId, pack);
+    const packPayload = jsonPayload(pack);
+    packsByBandId.set(bandId, {
+      ...packPayload,
+      pack
+    });
     manifestEntries.push({
       bandId,
       assetVersion,
       languagePair,
+      sha256: sha256(packPayload.body),
+      byteLength: Buffer.byteLength(packPayload.body),
       renderUnitCount: renderUnits.length,
       lexemeCount: lexemes.length,
       url: `packs/${encodeURIComponent(assetVersion)}/${encodeURIComponent(bandId)}.json`
@@ -160,10 +167,11 @@ async function buildAssetPacks(repoRoot) {
 
   return {
     manifest: {
-      schemaVersion,
+      schemaVersion: "2.0.0",
       assetVersion,
       languagePair,
-      generatedAt: renderUnitAsset.generatedAt,
+      publishedAt: renderUnitAsset.generatedAt,
+      minimumExtensionVersion: "0.1.0",
       packs: manifestEntries
     },
     assetVersion,
@@ -249,7 +257,7 @@ async function routeAssetRequest(pathname, { assetPacks, ttsAssets }) {
   }
 
   const pack = assetPacks.packsByBandId.get(bandId);
-  return pack ? jsonPayload(pack) : null;
+  return pack ?? null;
 }
 
 function jsonPayload(payload) {
@@ -257,6 +265,10 @@ function jsonPayload(payload) {
     body: `${JSON.stringify(payload)}\n`,
     contentType: "application/json; charset=utf-8"
   };
+}
+
+function sha256(body) {
+  return createHash("sha256").update(body).digest("hex");
 }
 
 async function readJson(path) {

@@ -5,7 +5,9 @@ import {
   type OptionsSection
 } from "@immersionkit/ui";
 import {
+  RuntimeMessageType,
   clampTtsPlaybackRate,
+  type PreviewAccountState as RuntimePreviewAccountState,
   type ProviderName,
   type TtsFallbackBehavior,
   type TtsPlaybackRateSettings,
@@ -44,6 +46,7 @@ import {
   type StoredSiteSetting
 } from "../app-state/settings-state";
 import {
+  ACCOUNT_REQUIRED,
   DIAGNOSTICS_ENABLED,
   EXTENSION_BUILD_PROFILE
 } from "../build-profile";
@@ -55,6 +58,7 @@ import {
   type SupportIssueCategory,
   type SupportReportBundleV1
 } from "../support/report";
+import { sendRuntimeMessage } from "../runtime-client";
 
 const EMPTY_STATS: VocabStats = {
   total: 0,
@@ -79,6 +83,7 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
 
 type OptionsTab =
   | "overview"
+  | "account"
   | "reading"
   | "curriculum"
   | "sites"
@@ -106,6 +111,10 @@ export function OptionsApp() {
   const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
   const [isGeneratingSupportReport, setIsGeneratingSupportReport] =
     useState(false);
+  const [isSubmittingSupportFeedback, setIsSubmittingSupportFeedback] =
+    useState(false);
+  const [accountState, setAccountState] =
+    useState<RuntimePreviewAccountState | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [supportCategory, setSupportCategory] =
     useState<SupportIssueCategory>("bug");
@@ -133,7 +142,8 @@ export function OptionsApp() {
         loadedCheckpointPreview,
         loadedFirstRunIntroVisible,
         loadedCurriculumDiagnostics,
-        loadedActivePageDiagnostics
+        loadedActivePageDiagnostics,
+        loadedAccountState
       ] =
         await Promise.all([
           loadSettingsState(),
@@ -142,7 +152,8 @@ export function OptionsApp() {
           loadCheckpointEligibilityPreview(),
           loadFirstRunIntroVisible(),
           loadCurriculumDiagnostics(),
-          showAdvancedTab ? loadActivePageDiagnostics() : Promise.resolve(null)
+          showAdvancedTab ? loadActivePageDiagnostics() : Promise.resolve(null),
+          loadPreviewAccountState()
         ]);
 
       setSettingsState(loadedSettings);
@@ -152,6 +163,7 @@ export function OptionsApp() {
       setShowFirstRunIntro(loadedFirstRunIntroVisible);
       setCurriculumDiagnostics(loadedCurriculumDiagnostics);
       setActivePageDiagnostics(loadedActivePageDiagnostics);
+      setAccountState(loadedAccountState);
     } catch {
       setErrorMessage("Could not load extension settings.");
     } finally {
@@ -254,6 +266,16 @@ export function OptionsApp() {
   const handleSentenceTranslationChange = useCallback((enabled: boolean) => {
     setStatusMessage(null);
     setErrorMessage(null);
+    if (enabled) {
+      void sendRuntimeMessage({
+        type: RuntimeMessageType.QueueActivationEvent,
+        eventName: "sentence_help_interest",
+        properties: {
+          surface: "options",
+          action: "open"
+        }
+      });
+    }
 
     setSettingsState((current) => {
       if (!current) {
@@ -452,6 +474,43 @@ export function OptionsApp() {
     await markFirstRunIntroSeen();
   }, []);
 
+  const handlePreviewSignIn = useCallback(async () => {
+    setErrorMessage(null);
+    setStatusMessage(null);
+    try {
+      const response = await sendRuntimeMessage({
+        type: RuntimeMessageType.StartAccountLogin,
+        provider: "google"
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error ?? "preview-sign-in-failed");
+      }
+      setAccountState(response.state);
+      setStatusMessage("Signed in for preview.");
+      await loadState();
+    } catch {
+      setErrorMessage("Could not start Google preview sign-in. Try again.");
+    }
+  }, [loadState]);
+
+  const handlePreviewLogout = useCallback(async () => {
+    setErrorMessage(null);
+    setStatusMessage(null);
+    try {
+      const response = await sendRuntimeMessage({
+        type: RuntimeMessageType.LogoutAccount
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error ?? "preview-logout-failed");
+      }
+      setAccountState(response.state);
+      setStatusMessage("Signed out. Local learning data is still on this device.");
+      await loadState();
+    } catch {
+      setErrorMessage("Could not sign out right now.");
+    }
+  }, [loadState]);
+
   const siteEntries = Object.values(siteSettings).sort(
     (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
   );
@@ -561,6 +620,34 @@ export function OptionsApp() {
     }
   }, [createSupportBundle]);
 
+  const handleSubmitSupportFeedback = useCallback(async () => {
+    setSupportStatusMessage(null);
+    setSupportErrorMessage(null);
+    setIsSubmittingSupportFeedback(true);
+
+    try {
+      const bundle = await createSupportBundle();
+      const response = await sendRuntimeMessage({
+        type: RuntimeMessageType.SubmitFeedback,
+        category: supportCategory,
+        description: supportDescription,
+        diagnostics: bundle
+      });
+      if (!response?.ok) {
+        throw new Error(response?.error ?? "support-submit-failed");
+      }
+      setSupportStatusMessage(
+        response.submitted
+          ? "Feedback sent."
+          : "Feedback prepared. Add an API URL to send it from this build."
+      );
+    } catch {
+      setSupportErrorMessage("Unable to send feedback right now.");
+    } finally {
+      setIsSubmittingSupportFeedback(false);
+    }
+  }, [createSupportBundle, supportCategory, supportDescription]);
+
   useEffect(() => {
     if (!showAdvancedTab && activeTab === "advanced") {
       setActiveTab("overview");
@@ -637,12 +724,14 @@ export function OptionsApp() {
       advancedDiagnostics={advancedDiagnostics}
       exactActiveBandId={getExactActiveBandId(curriculumDiagnostics?.profile)}
       bandOptions={CURRICULUM_BAND_OPTIONS}
+      account={toUiAccountState(accountState)}
       supportCategory={supportCategory}
       supportDescription={supportDescription}
       supportIncludeExcerpts={supportIncludeExcerpts}
       supportStatusMessage={supportStatusMessage}
       supportErrorMessage={supportErrorMessage}
       isGeneratingSupportReport={isGeneratingSupportReport}
+      isSubmittingSupportFeedback={isSubmittingSupportFeedback}
       siteSummary={
         siteEntries.length > 0
           ? `Recent site choices: ${siteEntries.slice(0, 3).map((entry) => entry.hostname).join(", ")}.`
@@ -696,8 +785,39 @@ export function OptionsApp() {
       onCopySupportSummary={() => {
         void handleCopySupportSummary();
       }}
+      onSubmitSupportFeedback={() => {
+        void handleSubmitSupportFeedback();
+      }}
+      onPreviewSignIn={handlePreviewSignIn}
+      onPreviewLogout={handlePreviewLogout}
     />
   );
+}
+
+async function loadPreviewAccountState(): Promise<RuntimePreviewAccountState | null> {
+  const response = await sendRuntimeMessage({
+    type: RuntimeMessageType.GetAccountState
+  });
+  return response?.ok ? response.state : null;
+}
+
+function toUiAccountState(state: RuntimePreviewAccountState | null) {
+  if (!state) {
+    return ACCOUNT_REQUIRED
+      ? { status: "signed-out" as const }
+      : { status: "not-required" as const };
+  }
+  if (state && !state.accountRequired) {
+    return { status: "not-required" as const };
+  }
+  if (state.status !== "signed-in" || !state.profile) {
+    return { status: "signed-out" as const };
+  }
+  return {
+    status: "signed-in" as const,
+    email: state.profile.email,
+    previewStatus: state.profile.previewStatus
+  };
 }
 
 function formatCount(value: number): string {
@@ -707,6 +827,10 @@ function formatCount(value: number): string {
 function toUiOptionsSection(tab: OptionsTab): OptionsSection {
   if (tab === "reading") {
     return "Reading";
+  }
+
+  if (tab === "account") {
+    return "Account";
   }
 
   if (tab === "curriculum") {
@@ -735,6 +859,10 @@ function toUiOptionsSection(tab: OptionsTab): OptionsSection {
 function toLocalOptionsTab(section: OptionsSection): OptionsTab {
   if (section === "Reading") {
     return "reading";
+  }
+
+  if (section === "Account") {
+    return "account";
   }
 
   if (section === "Curriculum") {
@@ -882,6 +1010,10 @@ function shouldShowAdvancedTab(): boolean {
 }
 
 function getInitialOptionsTab(showAdvancedTab: boolean): OptionsTab {
+  if (typeof window !== "undefined" && window.location.hash === "#account") {
+    return "account";
+  }
+
   if (typeof window !== "undefined" && window.location.hash === "#support") {
     return "support";
   }

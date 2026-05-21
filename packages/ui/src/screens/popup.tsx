@@ -82,6 +82,7 @@ export function ExtensionPopup({
   metrics,
   learningStats,
   learningDays,
+  account = { status: "signed-in", email: "", previewStatus: "Active" },
   unsupportedMessage = "Open a normal HTTP(S) article, blog, or docs page to use reading mode.",
   firstRunIntro = false,
   errorMessage = null,
@@ -91,7 +92,8 @@ export function ExtensionPopup({
   onOpenSettings,
   onOpenDebug,
   onReportIssue,
-  onDismissIntro
+  onDismissIntro,
+  onPreviewSignIn
 }: ExtensionPopupProps) {
   const [localSiteState, setLocalSiteState] =
     useState<SiteControlState>(initialSiteState);
@@ -138,7 +140,12 @@ export function ExtensionPopup({
             </AlertDescription>
           </Alert>
         ) : null}
-        {supported ? (
+        {account.status === "signed-out" ? (
+          <SignedOutPopup
+            onPreviewSignIn={onPreviewSignIn}
+            onOpenSettings={onOpenSettings}
+          />
+        ) : supported ? (
           <SupportedPopup
             bandTitle={bandTitle}
             bandSubtitle={bandSubtitle}
@@ -184,6 +191,41 @@ export function ExtensionPopup({
         {popupContent}
       </BrowserChrome>
     </ImmersionFrame>
+  );
+}
+
+function SignedOutPopup({
+  onPreviewSignIn,
+  onOpenSettings
+}: {
+  onPreviewSignIn?: () => void;
+  onOpenSettings?: () => void;
+}) {
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <Badge variant="secondary" className="w-fit">
+            Preview account required
+          </Badge>
+          <CardTitle>Sign in for preview</CardTitle>
+          <CardDescription>
+            ImmersionKit requires preview sign-in before reading mode turns on.
+            Your learning progress and reading history stay local on this device.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <Button onClick={onPreviewSignIn}>
+            <IkIcon name="link" dataIcon="inline-start" />
+            Sign in for preview with Google
+          </Button>
+          <Button variant="outline" onClick={onOpenSettings}>
+            Open account settings
+          </Button>
+        </CardContent>
+      </Card>
+      <LocalFooter text="Preview sign-in is for access and support; it does not sync learning progress." />
+    </>
   );
 }
 

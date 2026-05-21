@@ -61,14 +61,33 @@ describe("background asset packs", () => {
 
   it("validates endpoint schemas and resolves pack URLs relative to the manifest", () => {
     const manifest = validateAssetPackManifest({
-      schemaVersion: "1.0.0",
+      schemaVersion: "2.0.0",
       assetVersion: "asset-v1",
       languagePair: "en-es",
-      packs: [{ bandId: "level-1a", url: "packs/asset-v1/level-1a.json" }]
+      publishedAt: "2026-05-01T00:00:00.000Z",
+      minimumExtensionVersion: "0.1.0",
+      packs: [
+        {
+          bandId: "level-1a",
+          url: "packs/asset-v1/level-1a.json",
+          sha256:
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          byteLength: 128
+        }
+      ]
     });
-    expect(manifest?.packs[0]).toMatchObject({
-      bandId: "level-1a",
-      url: "packs/asset-v1/level-1a.json"
+    expect(manifest).toMatchObject({
+      publishedAt: "2026-05-01T00:00:00.000Z",
+      minimumExtensionVersion: "0.1.0",
+      packs: [
+        {
+          bandId: "level-1a",
+          url: "packs/asset-v1/level-1a.json",
+          sha256:
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          byteLength: 128
+        }
+      ]
     });
     expect(
       resolvePackUrl(
@@ -288,6 +307,35 @@ describe("background asset packs", () => {
     }
   });
 
+  it("serves asset pack manifests with production-like checksum metadata", async () => {
+    const assetServer = await startAssetPackServer({ port: 0 });
+    try {
+      const manifestResponse = await fetch(assetServer.manifestUrl);
+      expect(manifestResponse.status).toBe(200);
+      const manifest = validateAssetPackManifest(await manifestResponse.json());
+      expect(manifest).toMatchObject({
+        schemaVersion: "2.0.0",
+        languagePair: "en-es",
+        minimumExtensionVersion: "0.1.0"
+      });
+      const entry = manifest?.packs[0];
+      expect(entry?.sha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(entry?.byteLength).toBeGreaterThan(0);
+
+      const packResponse = await fetch(
+        resolvePackUrl(entry?.url ?? "", assetServer.manifestUrl)
+      );
+      const packText = await packResponse.text();
+      expect(packResponse.status).toBe(200);
+      expect(new TextEncoder().encode(packText).byteLength).toBe(
+        entry?.byteLength
+      );
+      expect(await sha256Text(packText)).toBe(entry?.sha256);
+    } finally {
+      await closeServer(assetServer.server);
+    }
+  });
+
   it("loads and filters remote packs by the active non-en-es language pair", async () => {
     const requestedUrls: string[] = [];
     const remotePack = createPack("level-1a", "asset-fr", "city", "ville", "en-fr");
@@ -433,6 +481,191 @@ describe("background asset packs", () => {
       targetText: "ciudad"
     });
     expect(repository.packs.map((pack) => pack.assetVersion)).toEqual(["asset-old"]);
+  });
+
+  it("accepts v2 remote packs after checksum and byte length validation", async () => {
+    const remotePack = createPack("level-1a", "asset-new", "garden", "jardin");
+    const repository = new InMemoryAssetPackRepository();
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      fetchJson: async (url) => {
+        if (url.endsWith("/manifest.json")) {
+          return createManifestWithPacks("asset-new", [remotePack]);
+        }
+
+        return remotePack;
+      }
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.source).toBe("remote-pack");
+    expect(context.renderUnits[0]).toMatchObject({
+      sourceText: "garden",
+      targetText: "jardin"
+    });
+    expect(repository.packs.map((pack) => pack.identity)).toEqual([
+      buildAssetPackIdentity(remotePack)
+    ]);
+  });
+
+  it("rejects remote packs with checksum mismatches and keeps cached fallback", async () => {
+    const cachedPack = createPack("level-1a", "asset-old", "city", "ciudad");
+    const remotePack = createPack("level-1a", "asset-new", "garden", "jardin");
+    const repository = new InMemoryAssetPackRepository([cachedPack]);
+    const requestedUrls: string[] = [];
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      fetchJson: async (url) => {
+        requestedUrls.push(url);
+        if (url.endsWith("/manifest.json")) {
+          const manifest = await createManifestWithPacks("asset-new", [remotePack]);
+          return {
+            ...manifest,
+            packs: manifest.packs.map((entry) => ({
+              ...entry,
+              sha256:
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }))
+          };
+        }
+
+        return remotePack;
+      }
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.source).toBe("cached-pack");
+    await waitFor(() =>
+      requestedUrls.includes(
+        "https://cdn.example/assets/en-es/packs/asset-new/level-1a.json"
+      )
+    );
+    expect(repository.packs.map((pack) => pack.identity)).toEqual([
+      buildAssetPackIdentity(cachedPack)
+    ]);
+  });
+
+  it("rejects remote packs with byte length mismatches and keeps cached fallback", async () => {
+    const cachedPack = createPack("level-1a", "asset-old", "city", "ciudad");
+    const remotePack = createPack("level-1a", "asset-new", "garden", "jardin");
+    const repository = new InMemoryAssetPackRepository([cachedPack]);
+    const requestedUrls: string[] = [];
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      fetchJson: async (url) => {
+        requestedUrls.push(url);
+        if (url.endsWith("/manifest.json")) {
+          const manifest = await createManifestWithPacks("asset-new", [remotePack]);
+          return {
+            ...manifest,
+            packs: manifest.packs.map((entry) => ({
+              ...entry,
+              byteLength: entry.byteLength + 1
+            }))
+          };
+        }
+
+        return remotePack;
+      }
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.source).toBe("cached-pack");
+    await waitFor(() =>
+      requestedUrls.includes(
+        "https://cdn.example/assets/en-es/packs/asset-new/level-1a.json"
+      )
+    );
+    expect(repository.packs.map((pack) => pack.identity)).toEqual([
+      buildAssetPackIdentity(cachedPack)
+    ]);
+  });
+
+  it("rejects manifests with a minimum extension version above the runtime", async () => {
+    const cachedPack = createPack("level-1a", "asset-old", "city", "ciudad");
+    const remotePack = createPack("level-1a", "asset-new", "garden", "jardin");
+    const repository = new InMemoryAssetPackRepository([cachedPack]);
+    const requestedUrls: string[] = [];
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      fetchJson: async (url) => {
+        requestedUrls.push(url);
+        if (url.endsWith("/manifest.json")) {
+          return {
+            ...(await createManifestWithPacks("asset-new", [remotePack])),
+            minimumExtensionVersion: "999.0.0"
+          };
+        }
+
+        return remotePack;
+      }
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.source).toBe("cached-pack");
+    await waitFor(() =>
+      requestedUrls.includes("https://cdn.example/assets/en-es/manifest.json")
+    );
+    expect(requestedUrls).not.toContain(
+      "https://cdn.example/assets/en-es/packs/asset-new/level-1a.json"
+    );
+    expect(repository.packs.map((pack) => pack.identity)).toEqual([
+      buildAssetPackIdentity(cachedPack)
+    ]);
+  });
+
+  it("accepts rollback manifests pointing to older immutable packs without deleting valid cached packs", async () => {
+    const cachedNewPack = createPack("level-1a", "asset-new", "garden", "jardin");
+    const cachedNeighborPack = createPack(
+      "level-1b",
+      "asset-new",
+      "bridge",
+      "puente"
+    );
+    const rollbackPack = createPack("level-1a", "asset-old", "city", "ciudad");
+    const repository = new InMemoryAssetPackRepository([
+      cachedNewPack,
+      cachedNeighborPack
+    ]);
+    const service = new BackgroundAssetPackService({
+      assetBaseUrl: "https://cdn.example/assets",
+      repository,
+      loadRuntimeConfig: () => Promise.resolve(createRuntimeConfig()),
+      fetchJson: async (url) => {
+        if (url.endsWith("/manifest.json")) {
+          return createManifestWithPacks("asset-old", [rollbackPack]);
+        }
+
+        return rollbackPack;
+      }
+    });
+
+    const context = await service.loadActiveContext();
+
+    expect(context.source).toBe("cached-pack");
+    expect(context.assetVersion).toBe("asset-new");
+    await waitFor(() =>
+      repository.packs.some(
+        (pack) => pack.identity === buildAssetPackIdentity(rollbackPack)
+      )
+    );
+    expect(repository.packs.map((pack) => pack.identity).sort()).toEqual(
+      [cachedNewPack, cachedNeighborPack, rollbackPack]
+        .map((pack) => buildAssetPackIdentity(pack))
+        .sort()
+    );
   });
 
   it("returns cached packs without waiting for a slow remote refresh", async () => {
@@ -665,6 +898,42 @@ function createPack(
     ],
     lexemes: [createLexeme(0, sourceLemma, targetLemma, languagePair)]
   };
+}
+
+async function createManifestWithPacks(
+  assetVersion: string,
+  packs: readonly AssetPack[],
+  languagePair: LanguagePairId = "en-es"
+) {
+  return {
+    schemaVersion: "2.0.0",
+    assetVersion,
+    languagePair,
+    publishedAt: "2026-05-01T00:00:00.000Z",
+    packs: await Promise.all(
+      packs.map(async (pack) => {
+        const bodyText = JSON.stringify(pack);
+        return {
+          bandId: pack.bandId,
+          assetVersion: pack.assetVersion,
+          languagePair: pack.languagePair,
+          url: `packs/${encodeURIComponent(pack.assetVersion)}/${encodeURIComponent(pack.bandId)}.json`,
+          sha256: await sha256Text(bodyText),
+          byteLength: new TextEncoder().encode(bodyText).byteLength
+        };
+      })
+    )
+  };
+}
+
+async function sha256Text(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text)
+  );
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function createRenderUnit(

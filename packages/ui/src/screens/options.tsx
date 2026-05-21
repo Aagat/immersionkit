@@ -97,12 +97,14 @@ export function ExtensionOptions({
   advancedDiagnostics,
   exactActiveBandId,
   bandOptions = [],
+  account = { status: "signed-out" },
   supportCategory = "bug",
   supportDescription = "",
   supportIncludeExcerpts = false,
   supportStatusMessage,
   supportErrorMessage,
   isGeneratingSupportReport = false,
+  isSubmittingSupportFeedback = false,
   onSectionChange,
   onSave,
   onReload,
@@ -122,7 +124,10 @@ export function ExtensionOptions({
   onSupportDescriptionChange,
   onSupportIncludeExcerptsChange,
   onDownloadSupportReport,
-  onCopySupportSummary
+  onCopySupportSummary,
+  onSubmitSupportFeedback,
+  onPreviewSignIn,
+  onPreviewLogout
 }: ExtensionOptionsProps) {
   const [localActive, setLocalActive] = useState<OptionsSection>(initialSection);
   const active = activeSection ?? localActive;
@@ -205,7 +210,15 @@ export function ExtensionOptions({
                 savedSiteCount={savedSiteCount}
                 sentenceHelpEnabled={sentenceHelpEnabled}
                 provider={provider}
+                account={account}
                 onOpenSection={setActive}
+              />
+            </TabsContent>
+            <TabsContent value="Account" className="m-0">
+              <OptionsAccountPanel
+                account={account}
+                onPreviewSignIn={onPreviewSignIn}
+                onPreviewLogout={onPreviewLogout}
               />
             </TabsContent>
             <TabsContent value="Reading" className="m-0">
@@ -259,11 +272,13 @@ export function ExtensionOptions({
                 statusMessage={supportStatusMessage}
                 errorMessage={supportErrorMessage}
                 isGenerating={isGeneratingSupportReport}
+                isSubmitting={isSubmittingSupportFeedback}
                 onCategoryChange={onSupportCategoryChange}
                 onDescriptionChange={onSupportDescriptionChange}
                 onIncludeExcerptsChange={onSupportIncludeExcerptsChange}
                 onDownloadReport={onDownloadSupportReport}
                 onCopySummary={onCopySupportSummary}
+                onSubmitFeedback={onSubmitSupportFeedback}
               />
             </TabsContent>
             {showAdvanced ? (
@@ -290,7 +305,7 @@ export function ExtensionOptions({
     <ImmersionFrame variant="settings">
       <BrowserChrome
         title="ImmersionKit Options"
-        url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : active === "Support" ? "#support" : ""}`}
+        url={`chrome-extension://immersionkit/options.html${active === "Advanced" ? "#advanced" : active === "Support" ? "#support" : active === "Account" ? "#account" : ""}`}
         appFrame
       >
         {optionsContent}
@@ -316,6 +331,10 @@ function OptionsHeader({
     Overview: [
       "Options",
       "Quick status across reading, curriculum, sites, and local progress."
+    ],
+    Account: [
+      "Account",
+      "Preview access, account status, and local learning data."
     ],
     Reading: [
       "Reading",
@@ -390,6 +409,7 @@ function OptionsOverviewPanel({
   savedSiteCount = 0,
   sentenceHelpEnabled,
   provider,
+  account,
   onOpenSection
 }: Pick<
   ExtensionOptionsProps,
@@ -403,6 +423,7 @@ function OptionsOverviewPanel({
   | "savedSiteCount"
   | "sentenceHelpEnabled"
   | "provider"
+  | "account"
 > & {
   onOpenSection: (section: OptionsSection) => void;
 }) {
@@ -424,7 +445,19 @@ function OptionsOverviewPanel({
             curriculum, local progress, and site behavior.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
+        <CardContent className="grid gap-3 md:grid-cols-4">
+          <OverviewTile
+            title="Account"
+            value={account?.status === "signed-in" ? "Signed in" : "Sign in required"}
+            detail={
+              account?.status === "signed-in"
+                ? `${account.email}. Learning progress stays local.`
+                : "Preview sign-in unlocks reading mode; learning progress stays local."
+            }
+            icon="shield"
+            action="Open Account"
+            onAction={() => onOpenSection("Account")}
+          />
           <OverviewTile
             title="Reading"
             value={`${discoveryRatePercent}% new word pace`}
@@ -483,6 +516,99 @@ function OptionsOverviewPanel({
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function OptionsAccountPanel({
+  account = { status: "signed-out" },
+  onPreviewSignIn,
+  onPreviewLogout
+}: Pick<
+  ExtensionOptionsProps,
+  "account" | "onPreviewSignIn" | "onPreviewLogout"
+>) {
+  const signedIn = account.status === "signed-in";
+  const notRequired = account.status === "not-required";
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Preview account</CardTitle>
+          <CardDescription>
+            {notRequired
+              ? "This build can use local reading mode without preview sign-in."
+              : signedIn
+                ? "You are signed in for the ImmersionKit preview."
+                : "Preview sign-in is required before reading mode turns on."}
+          </CardDescription>
+          <CardAction>
+            <Badge variant={signedIn ? "default" : "secondary"}>
+              {notRequired ? "Local preview" : signedIn ? account.previewStatus : "Signed out"}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {notRequired ? (
+            <p className="text-sm text-muted-foreground">
+              Account-required preview builds use Google sign-in for access,
+              support, and activation measurement. This build keeps reading mode
+              available locally.
+            </p>
+          ) : signedIn ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <CompactMetric label="Email" value={account.email} icon="message" />
+              <CompactMetric
+                label="Preview status"
+                value={account.previewStatus}
+                icon="check"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                Sign in with Google to activate preview access for this install.
+                ImmersionKit keeps learning progress and reading history on this
+                device.
+              </p>
+              <Button className="w-fit" onClick={onPreviewSignIn}>
+                <IkIcon name="link" dataIcon="inline-start" />
+                Continue with Google
+              </Button>
+            </div>
+          )}
+        </CardContent>
+        {signedIn ? (
+          <CardFooter className="flex-wrap gap-2 border-t pt-3">
+            <Button variant="outline" onClick={onPreviewLogout}>
+              Log out
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Logging out stops account-required reading mode but keeps local
+              learning data on this device.
+            </span>
+          </CardFooter>
+        ) : null}
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Local learning data</CardTitle>
+          <CardDescription>
+            Account identity is separate from learning progress.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <CompactMetric label="Learning progress" value="Local" icon="shield" />
+          <CompactMetric label="Reading history" value="Local" icon="book" />
+          <CompactMetric label="Preview access" value="Account" icon="lock" />
+          <p className="text-sm text-muted-foreground">
+            Preview sign-in supports access, support, and high-level activation
+            measurement. It does not sync vocabulary, review history, or page
+            text.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -797,7 +923,7 @@ function CompactMetric({
         <IkIcon name={icon} className="text-muted-foreground" />
         <span className="truncate text-sm text-muted-foreground">{label}</span>
       </div>
-      <strong className="shrink-0 text-sm font-medium">{value}</strong>
+      <strong className="min-w-0 truncate text-right text-sm font-medium">{value}</strong>
     </div>
   );
 }
@@ -1666,11 +1792,13 @@ function OptionsSupportPanel({
   statusMessage,
   errorMessage,
   isGenerating = false,
+  isSubmitting = false,
   onCategoryChange,
   onDescriptionChange,
   onIncludeExcerptsChange,
   onDownloadReport,
-  onCopySummary
+  onCopySummary,
+  onSubmitFeedback
 }: {
   category?: SupportIssueCategory;
   description?: string;
@@ -1678,12 +1806,15 @@ function OptionsSupportPanel({
   statusMessage?: string | null;
   errorMessage?: string | null;
   isGenerating?: boolean;
+  isSubmitting?: boolean;
   onCategoryChange?: (category: SupportIssueCategory) => void;
   onDescriptionChange?: (description: string) => void;
   onIncludeExcerptsChange?: (include: boolean) => void;
   onDownloadReport?: () => void;
   onCopySummary?: () => void;
+  onSubmitFeedback?: () => void;
 }) {
+  const busy = isGenerating || isSubmitting;
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
       <Card>
@@ -1779,7 +1910,7 @@ function OptionsSupportPanel({
           </CardContent>
           <CardFooter className="flex-wrap gap-2 border-t pt-3">
             <Button
-              disabled={isGenerating}
+              disabled={busy}
               onClick={onDownloadReport}
             >
               <IkIcon name="document" dataIcon="inline-start" />
@@ -1787,11 +1918,19 @@ function OptionsSupportPanel({
             </Button>
             <Button
               variant="outline"
-              disabled={isGenerating}
+              disabled={busy}
               onClick={onCopySummary}
             >
               <IkIcon name="message" dataIcon="inline-start" />
               Copy summary
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={onSubmitFeedback}
+            >
+              <IkIcon name="link" dataIcon="inline-start" />
+              {isSubmitting ? "Sending..." : "Send feedback"}
             </Button>
           </CardFooter>
         </Card>

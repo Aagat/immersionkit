@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { ExtensionPopup } from "@immersionkit/ui";
 import {
+  RuntimeMessageType,
+  type PreviewAccountState as RuntimePreviewAccountState
+} from "@immersionkit/shared";
+import {
   PROFICIENCY_SEED_OPTIONS,
   getSiteEnabledForHost,
   loadActiveTabContext,
@@ -18,8 +22,9 @@ import {
   type SiteSettingsMap,
   type VocabStats
 } from "../app-state/settings-state";
+import { sendRuntimeMessage } from "../runtime-client";
 import { POPUP_OVERLAY_RESIZE_MESSAGE_TYPE } from "../shared/popup-overlay";
-import { DIAGNOSTICS_ENABLED } from "../build-profile";
+import { ACCOUNT_REQUIRED, DIAGNOSTICS_ENABLED } from "../build-profile";
 import {
   DEBUG_OVERLAY_TOGGLE_MESSAGE_TYPE,
   type DebugOverlayToggleResponse
@@ -62,6 +67,8 @@ export function PopupApp() {
   const [vocabStats, setVocabStats] = useState<VocabStats>(EMPTY_STATS);
   const [checkpointPreview, setCheckpointPreview] =
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
+  const [accountState, setAccountState] =
+    useState<RuntimePreviewAccountState | null>(null);
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
@@ -75,13 +82,15 @@ export function PopupApp() {
       loadedSiteSettings,
       loadedVocabStats,
       loadedCheckpointPreview,
-      loadedFirstRunIntroVisible
+      loadedFirstRunIntroVisible,
+      loadedAccountState
     ] = await Promise.all([
       loadSettingsState(),
       loadSiteSettingsMap(),
       loadVocabStats(),
       loadCheckpointEligibilityPreview(),
-      loadFirstRunIntroVisible()
+      loadFirstRunIntroVisible(),
+      loadPreviewAccountState()
     ]);
 
     return {
@@ -90,7 +99,8 @@ export function PopupApp() {
       loadedSiteSettings,
       loadedVocabStats,
       loadedCheckpointPreview,
-      loadedFirstRunIntroVisible
+      loadedFirstRunIntroVisible,
+      loadedAccountState
     };
   }, []);
 
@@ -106,6 +116,7 @@ export function PopupApp() {
       setVocabStats(snapshot.loadedVocabStats);
       setCheckpointPreview(snapshot.loadedCheckpointPreview);
       setShowFirstRunIntro(snapshot.loadedFirstRunIntroVisible);
+      setAccountState(snapshot.loadedAccountState);
     } catch {
       setErrorMessage("Unable to load your reading controls right now.");
     } finally {
@@ -135,6 +146,14 @@ export function PopupApp() {
 
       setSiteSettings(nextSiteSettings);
       await notifySettingsRefresh(activeTab.tabId);
+      void sendRuntimeMessage({
+        type: RuntimeMessageType.QueueActivationEvent,
+        eventName: "pause_resume",
+        properties: {
+          surface: "popup",
+          action: nextEnabled ? "resume" : "pause"
+        }
+      });
     } catch {
       setErrorMessage("Could not update this site's reading mode.");
     } finally {
@@ -179,6 +198,18 @@ export function PopupApp() {
     openSupportOptionsPage();
   }, []);
 
+  const handlePreviewSignIn = useCallback(() => {
+    setErrorMessage(null);
+    void startPreviewSignIn()
+      .then((state) => {
+        setAccountState(state);
+        void refreshSnapshot();
+      })
+      .catch(() => {
+        setErrorMessage("Could not start preview sign-in. Open Account settings and try again.");
+      });
+  }, [refreshSnapshot]);
+
   const handleDismissFirstRunIntro = useCallback(async () => {
     setShowFirstRunIntro(false);
     await markFirstRunIntroSeen();
@@ -217,6 +248,7 @@ export function PopupApp() {
           total: vocabStats.total
         }}
         learningDays={vocabStats.daily}
+        account={toUiAccountState(accountState)}
         onSiteToggle={() => {
           void handleSiteToggle();
         }}
@@ -229,9 +261,61 @@ export function PopupApp() {
         onDismissIntro={() => {
           void handleDismissFirstRunIntro();
         }}
+        onPreviewSignIn={handlePreviewSignIn}
       />
     </>
   );
+}
+
+async function loadPreviewAccountState(): Promise<RuntimePreviewAccountState | null> {
+  const response = await sendRuntimeMessage({
+    type: RuntimeMessageType.GetAccountState
+  });
+  return response?.ok ? response.state : null;
+}
+
+async function startPreviewSignIn(): Promise<RuntimePreviewAccountState | null> {
+  const response = await sendRuntimeMessage({
+    type: RuntimeMessageType.StartAccountLogin,
+    provider: "google"
+  });
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "preview-sign-in-failed");
+  }
+  return response.state;
+}
+
+function toUiAccountState(state: RuntimePreviewAccountState | null) {
+  if (!state) {
+    return ACCOUNT_REQUIRED
+      ? { status: "signed-out" as const }
+      : { status: "not-required" as const };
+  }
+  if (state && !state.accountRequired) {
+    return { status: "not-required" as const };
+  }
+  if (state.status !== "signed-in" || !state.profile) {
+    return { status: "signed-out" as const };
+  }
+  return {
+    status: "signed-in" as const,
+    email: state.profile.email,
+    previewStatus: state.profile.previewStatus
+  };
+}
+
+export function openAccountOptionsPage(): void {
+  if (typeof chrome === "undefined" || !chrome.runtime) {
+    return;
+  }
+
+  const accountUrl = chrome.runtime.getURL?.("options.html#account");
+  if (accountUrl && chrome.tabs?.create) {
+    chrome.tabs.create({ url: accountUrl });
+    return;
+  }
+
+  chrome.runtime.openOptionsPage?.();
 }
 
 export function openSupportOptionsPage(): void {

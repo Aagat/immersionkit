@@ -27,6 +27,8 @@ import {
   toggleSentenceSourceReveal
 } from "./sentence-renderer";
 import type { RuntimeState } from "./state";
+import { RuntimeMessageType } from "@immersionkit/shared";
+import { sendRuntimeMessage } from "../runtime-client";
 
 export function setupInteractionHooks(runtimeState: RuntimeState) {
   document.addEventListener(
@@ -166,6 +168,7 @@ function emitTokenActivatedEvent(
       sourceEvent
     };
     runtimeState.processing?.evidenceTracker.recordAssist(metadata);
+    queueHelpOpened("word");
 
     window.dispatchEvent(
       new CustomEvent<TokenActivatedDetail>(IMMERSIONKIT_TOKEN_ACTIVATED_EVENT, {
@@ -186,6 +189,7 @@ function emitTokenActivatedEvent(
     sourceEvent
   };
   runtimeState.processing?.evidenceTracker.recordPhraseAssist(phraseMetadata);
+  queueHelpOpened("phrase");
   openPhraseTokenPopover(runtimeState, tokenElement, detail);
 
   return true;
@@ -201,5 +205,18 @@ function emitSentenceNoteActivated(
   }
 
   openSentenceNotePopover(runtimeState, detail.note, detail);
+  queueHelpOpened("sentence");
   return true;
+}
+
+function queueHelpOpened(helpSurface: "word" | "phrase" | "sentence"): void {
+  void sendRuntimeMessage({
+    type: RuntimeMessageType.QueueActivationEvent,
+    eventName: "help_opened",
+    properties: {
+      surface: "content",
+      helpSurface,
+      action: "open"
+    }
+  });
 }

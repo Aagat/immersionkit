@@ -13,7 +13,7 @@ export default defineManifest({
     48: "icons/icon-48.png",
     128: "icons/icon-128.png"
   },
-  permissions: ["activeTab", "offscreen", "scripting", "storage", "tts"],
+  permissions: ["activeTab", "identity", "offscreen", "scripting", "storage", "tts"],
   host_permissions: ["http://*/*", "https://*/*"],
   content_security_policy: {
     extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"

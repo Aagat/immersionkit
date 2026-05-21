@@ -1,0 +1,13 @@
+name = "immersionkit-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "immersionkit-preview"
+database_id = "replace-with-cloudflare-d1-database-id"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "ASSET_BUCKET"
+bucket_name = "immersionkit-asset-releases"

@@ -139,10 +139,13 @@ export function installChromeStub(initialStorage: StorageValues = {}): ChromeTes
       for (const listener of listeners) {
         let response: unknown;
         let didRespond = false;
-        listener(message, sender, (value) => {
+        const result = listener(message, sender, (value) => {
           didRespond = true;
           response = value;
         });
+        if (!didRespond && result === true) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
         if (didRespond) {
           responses.push(response);
         }

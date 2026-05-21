@@ -2,6 +2,7 @@ import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   ActiveAssetContext,
   ContentAssetContext,
+  GetAccountStateResponse,
   GetContentAnalysisContextMessage,
   GetContentAnalysisContextResponse,
   GetAssetContextMessage,
@@ -15,10 +16,13 @@ import type {
   SetUserDataMessage,
   GetUserVocabMessage,
   GetUserVocabResponse,
+  LogoutAccountResponse,
   SetVocabStatusMessage,
   SetVocabStatusResponse,
   GraduateCheckpointResponse,
   PingResponse,
+  QueueActivationEventMessage,
+  QueueActivationEventResponse,
   QueueSentenceCandidatesMessage,
   QueueSentenceCandidatesResponse,
   RefreshActiveTabMessage,
@@ -32,7 +36,10 @@ import type {
   MutateUserDataResponse,
   SentenceTranslationResultMessage,
   SpeakTextMessage,
-  SpeakTextResponse
+  SpeakTextResponse,
+  StartAccountLoginResponse,
+  SubmitFeedbackMessage,
+  SubmitFeedbackResponse
 } from "@immersionkit/shared";
 
 import { getBackgroundAssetPackService } from "./asset-packs";
@@ -60,6 +67,9 @@ import {
   USER_DATA_KEYS
 } from "../storage/user-data-repository";
 import { BackgroundTextToSpeechService } from "./tts";
+import { ImmersionKitApiClient } from "./api-client";
+import { BackgroundAccountService } from "./account-service";
+import { BackgroundActivationEventQueue } from "./event-queue";
 
 type BackgroundHandledRuntimeMessage = Exclude<
   RuntimeMessage,
@@ -90,6 +100,14 @@ export class BackgroundRuntimeCoordinator {
   private readonly contentContext: ContentContextService;
   private readonly assetPacks = getBackgroundAssetPackService();
   private readonly tts = new BackgroundTextToSpeechService();
+  private readonly apiClient = new ImmersionKitApiClient();
+  private readonly accountService = new BackgroundAccountService({
+    apiClient: this.apiClient
+  });
+  private readonly eventQueue = new BackgroundActivationEventQueue({
+    accountService: this.accountService,
+    apiClient: this.apiClient
+  });
   private readonly runtimeMessageHandlers: RuntimeMessageHandlerMap = {
     [RuntimeMessageType.Ping]: (_message, _sender, sendResponse) => {
       sendResponse({
@@ -103,12 +121,32 @@ export class BackgroundRuntimeCoordinator {
       void this.handleRefreshActiveTab(sendResponse);
       return true;
     },
+    [RuntimeMessageType.GetAccountState]: (_message, _sender, sendResponse) => {
+      void this.handleGetAccountState(sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.StartAccountLogin]: (_message, sender, sendResponse) => {
+      void this.handleStartAccountLogin(sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.LogoutAccount]: (_message, sender, sendResponse) => {
+      void this.handleLogoutAccount(sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.QueueActivationEvent]: (message, _sender, sendResponse) => {
+      void this.handleQueueActivationEvent(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.SubmitFeedback]: (message, sender, sendResponse) => {
+      void this.handleSubmitFeedback(message, sender, sendResponse);
+      return true;
+    },
     [RuntimeMessageType.GetLearningItems]: (message, _sender, sendResponse) => {
       void this.handleGetLearningItems(message, sendResponse);
       return true;
     },
-    [RuntimeMessageType.GetUserData]: (message, _sender, sendResponse) => {
-      void this.handleGetUserData(message, sendResponse);
+    [RuntimeMessageType.GetUserData]: (message, sender, sendResponse) => {
+      void this.handleGetUserData(message, sender, sendResponse);
       return true;
     },
     [RuntimeMessageType.SetUserData]: (message, sender, sendResponse) => {
@@ -202,11 +240,20 @@ export class BackgroundRuntimeCoordinator {
     this.isBooted = true;
     void this.prepareAssetPacks();
     void this.backfillLearningItemBands();
+    void this.accountService.ensureInstallIdentity();
+    void this.eventQueue.queueEvent({
+      eventName: "active_day",
+      properties: { surface: "background", dayIndex: 0 }
+    });
 
     chrome.runtime.onInstalled.addListener((details) => {
       diagnosticInfo("ImmersionKit background service worker installed.");
       if (details.reason === "install") {
         void showFirstRunGuidance();
+        void this.eventQueue.queueEvent({
+          eventName: "install_registered",
+          properties: { surface: "background" }
+        });
       }
       void this.prepareAssetPacks();
       void this.backfillLearningItemBands();
@@ -361,6 +408,141 @@ export class BackgroundRuntimeCoordinator {
     }
   }
 
+  private async handleGetAccountState(
+    sendResponse: (response: GetAccountStateResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        state: await this.accountService.getState()
+      });
+    } catch (error) {
+      console.warn("ImmersionKit account state read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "account-state-read-failed"
+      });
+    }
+  }
+
+  private async handleStartAccountLogin(
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: StartAccountLoginResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "account-login-forbidden"
+      });
+      return;
+    }
+
+    try {
+      const state = await this.accountService.startGoogleLogin();
+      void this.eventQueue.queueEvent({
+        eventName: "signup_completed",
+        properties: { surface: "options" }
+      });
+      void refreshTabsAfterCurriculumProgression(undefined);
+      sendResponse({ ok: true, state });
+    } catch (error) {
+      console.warn("ImmersionKit account login failed.", error);
+      sendResponse({
+        ok: false,
+        error: "account-login-failed"
+      });
+    }
+  }
+
+  private async handleLogoutAccount(
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: LogoutAccountResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "account-logout-forbidden"
+      });
+      return;
+    }
+
+    try {
+      const state = await this.accountService.logout();
+      void refreshTabsAfterCurriculumProgression(undefined);
+      sendResponse({ ok: true, state });
+    } catch (error) {
+      console.warn("ImmersionKit account logout failed.", error);
+      sendResponse({
+        ok: false,
+        error: "account-logout-failed"
+      });
+    }
+  }
+
+  private async handleQueueActivationEvent(
+    message: QueueActivationEventMessage,
+    sendResponse: (response: QueueActivationEventResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        queued: await this.eventQueue.queueEvent({
+          eventName: message.eventName,
+          properties: message.properties
+        })
+      });
+    } catch (error) {
+      console.warn("ImmersionKit activation event rejected.", error);
+      sendResponse({
+        ok: false,
+        error: "activation-event-rejected"
+      });
+    }
+  }
+
+  private async handleSubmitFeedback(
+    message: SubmitFeedbackMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: SubmitFeedbackResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "feedback-submit-forbidden"
+      });
+      return;
+    }
+
+    try {
+      const install = await this.accountService.ensureInstallIdentity();
+      const session = await this.accountService.loadSessionForApi();
+      let submitted = false;
+      if (this.apiClient.isConfigured()) {
+        await this.apiClient.submitFeedback(
+          {
+            category: message.category,
+            description: message.description,
+            diagnostics: createBackendFeedbackDiagnostics(message.diagnostics),
+            installId: install.installId
+          },
+          { accessToken: session?.accessToken ?? null }
+        );
+        submitted = true;
+      }
+      const queuedTelemetry = await this.eventQueue.queueEvent({
+        eventName: "feedback_submitted",
+        properties: { surface: "options", action: "submit" }
+      });
+      sendResponse({ ok: true, submitted, queuedTelemetry });
+    } catch (error) {
+      console.warn("ImmersionKit feedback submit failed.", error);
+      sendResponse({
+        ok: false,
+        error: "feedback-submit-failed"
+      });
+    }
+  }
+
   private async handleGetAssetContext(
     message: GetAssetContextMessage,
     sendResponse: (response: GetAssetContextResponse) => void
@@ -384,8 +566,17 @@ export class BackgroundRuntimeCoordinator {
 
   private async handleGetUserData(
     message: GetUserDataMessage,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response: GetUserDataResponse) => void
   ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "user-data-read-forbidden"
+      });
+      return;
+    }
+
     try {
       sendResponse({
         ok: true,
@@ -685,6 +876,15 @@ export class BackgroundRuntimeCoordinator {
         bandIds: context.bandIds,
         missingBandIds: context.missingBandIds
       });
+      void this.eventQueue.queueEvent({
+        eventName: context.source === "empty" ? "asset_fallback" : "asset_load",
+        properties: {
+          surface: "background",
+          assetSource: context.source,
+          assetVersion: context.assetVersion ?? undefined,
+          count: context.renderUnits.length
+        }
+      });
     } catch (error) {
       console.warn("ImmersionKit failed to prepare asset packs.", error);
     }
@@ -712,6 +912,44 @@ function createContentAssetContext(context: ActiveAssetContext): ContentAssetCon
     bandIds: context.bandIds,
     missingBandIds: context.missingBandIds
   };
+}
+
+function createBackendFeedbackDiagnostics(input: unknown): Record<string, string | number> {
+  const diagnostics: Record<string, string | number> = {
+    timezoneOffsetMinutes: new Date().getTimezoneOffset()
+  };
+  const bundle = isPlainRecord(input) ? input : {};
+  const extension = isPlainRecord(bundle.extension) ? bundle.extension : {};
+  const browser = isPlainRecord(bundle.browser) ? bundle.browser : {};
+
+  const extensionVersion = readNonEmptyString(extension.version);
+  if (extensionVersion) {
+    diagnostics.extensionVersion = extensionVersion;
+  }
+
+  const buildProfile = readNonEmptyString(extension.buildProfile);
+  if (
+    buildProfile === "development" ||
+    buildProfile === "preview" ||
+    buildProfile === "production"
+  ) {
+    diagnostics.buildProfile = buildProfile;
+  }
+
+  const locale = readNonEmptyString(browser.language);
+  if (locale) {
+    diagnostics.locale = locale;
+  }
+
+  return diagnostics;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readNonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 async function showFirstRunGuidance(): Promise<void> {

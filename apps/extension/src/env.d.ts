@@ -3,6 +3,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_IMMERSIONKIT_ASSET_BASE_URL?: string;
+  readonly VITE_IMMERSIONKIT_API_BASE_URL?: string;
+  readonly VITE_IMMERSIONKIT_ACCOUNT_REQUIRED?: string;
   readonly VITE_IMMERSIONKIT_BUILD_PROFILE?: string;
 }
 

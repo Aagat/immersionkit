@@ -20,6 +20,11 @@ import type { SentenceGrammarCard } from "../curriculum/grammar";
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
   RefreshActiveTab = "settings/refresh-active-tab",
+  GetAccountState = "account/get-state",
+  StartAccountLogin = "account/start-login",
+  LogoutAccount = "account/logout",
+  QueueActivationEvent = "telemetry/queue-activation-event",
+  SubmitFeedback = "feedback/submit",
   GetAssetContext = "assets/get-context",
   GetLearningItems = "learning-items/get",
   GetUserData = "user-data/get",
@@ -44,6 +49,94 @@ export type PingMessage = {
 
 export type RefreshActiveTabMessage = {
   type: RuntimeMessageType.RefreshActiveTab;
+};
+
+export type PreviewAccountStatus = "signed-out" | "signed-in";
+
+export type PreviewAccountProvider = "google" | "github";
+
+export type PreviewAccountProfile = {
+  userId: string;
+  email: string;
+  provider: PreviewAccountProvider;
+  previewStatus: "active" | "pending" | "disabled";
+  signedInAt: string;
+};
+
+export type PreviewInstallIdentity = {
+  installId: string;
+  languagePair: LanguagePairId;
+  extensionVersion: string;
+  assetVersion: string | null;
+  registeredAt: string | null;
+  registrationState: "local" | "registered";
+};
+
+export type PreviewAccountState = {
+  accountRequired: boolean;
+  status: PreviewAccountStatus;
+  profile: PreviewAccountProfile | null;
+  install: PreviewInstallIdentity;
+  signInProvider: "google";
+  canStartSignIn: boolean;
+};
+
+export type GetAccountStateMessage = {
+  type: RuntimeMessageType.GetAccountState;
+};
+
+export type StartAccountLoginMessage = {
+  type: RuntimeMessageType.StartAccountLogin;
+  provider: "google";
+};
+
+export type LogoutAccountMessage = {
+  type: RuntimeMessageType.LogoutAccount;
+};
+
+export type ActivationEventName =
+  | "install_registered"
+  | "signup_completed"
+  | "supported_page_seen"
+  | "reading_rendered"
+  | "help_opened"
+  | "sentence_help_interest"
+  | "pause_resume"
+  | "active_day"
+  | "feedback_submitted"
+  | "asset_load"
+  | "asset_fallback"
+  | "error_bucket";
+
+export type ActivationEventProperties = Partial<{
+  surface: "popup" | "options" | "content" | "background";
+  helpSurface: "word" | "phrase" | "sentence";
+  action: "pause" | "resume" | "open" | "close" | "submit";
+  assetSource: AssetContextLoadSource;
+  assetVersion: string;
+  errorBucket: string;
+  count: number;
+  dayIndex: 0 | 1 | 2 | 7;
+}>;
+
+export type QueueActivationEventMessage = {
+  type: RuntimeMessageType.QueueActivationEvent;
+  eventName: ActivationEventName;
+  properties?: ActivationEventProperties;
+};
+
+export type FeedbackCategory =
+  | "bug"
+  | "quality"
+  | "translation"
+  | "page-compatibility"
+  | "other";
+
+export type SubmitFeedbackMessage = {
+  type: RuntimeMessageType.SubmitFeedback;
+  category: FeedbackCategory;
+  description: string;
+  diagnostics?: unknown;
 };
 
 export type GetAssetContextMessage = {
@@ -197,6 +290,11 @@ export type QualifiedExposureEventMessage = QualifiedExposureEvent & {
 export type RuntimeMessage =
   | PingMessage
   | RefreshActiveTabMessage
+  | GetAccountStateMessage
+  | StartAccountLoginMessage
+  | LogoutAccountMessage
+  | QueueActivationEventMessage
+  | SubmitFeedbackMessage
   | GetAssetContextMessage
   | GetLearningItemsMessage
   | GetUserDataMessage
@@ -241,6 +339,42 @@ export type RefreshActiveTabResponse =
       reason: string;
       tabId: number | null;
     };
+
+export type GetAccountStateResponse =
+  | {
+      ok: true;
+      state: PreviewAccountState;
+    }
+  | RuntimeErrorResponse;
+
+export type StartAccountLoginResponse =
+  | {
+      ok: true;
+      state: PreviewAccountState;
+    }
+  | RuntimeErrorResponse;
+
+export type LogoutAccountResponse =
+  | {
+      ok: true;
+      state: PreviewAccountState;
+    }
+  | RuntimeErrorResponse;
+
+export type QueueActivationEventResponse =
+  | {
+      ok: true;
+      queued: boolean;
+    }
+  | RuntimeErrorResponse;
+
+export type SubmitFeedbackResponse =
+  | {
+      ok: true;
+      submitted: boolean;
+      queuedTelemetry: boolean;
+    }
+  | RuntimeErrorResponse;
 
 export type GetAssetContextResponse =
   | {
@@ -414,6 +548,11 @@ export type SpeakTextResponse =
 export type RuntimeResponseByType = {
   [RuntimeMessageType.Ping]: PingResponse;
   [RuntimeMessageType.RefreshActiveTab]: RefreshActiveTabResponse | RuntimeErrorResponse;
+  [RuntimeMessageType.GetAccountState]: GetAccountStateResponse;
+  [RuntimeMessageType.StartAccountLogin]: StartAccountLoginResponse;
+  [RuntimeMessageType.LogoutAccount]: LogoutAccountResponse;
+  [RuntimeMessageType.QueueActivationEvent]: QueueActivationEventResponse;
+  [RuntimeMessageType.SubmitFeedback]: SubmitFeedbackResponse;
   [RuntimeMessageType.GetAssetContext]: GetAssetContextResponse;
   [RuntimeMessageType.GetLearningItems]: GetLearningItemsResponse;
   [RuntimeMessageType.GetUserData]: GetUserDataResponse;
