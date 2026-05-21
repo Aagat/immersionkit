@@ -3,6 +3,7 @@ import type {
   ActiveAssetContext,
   ContentAssetContext,
   GetAccountStateResponse,
+  GetTabZoomResponse,
   GetContentAnalysisContextMessage,
   GetContentAnalysisContextResponse,
   GetAssetContextMessage,
@@ -119,6 +120,10 @@ export class BackgroundRuntimeCoordinator {
     },
     [RuntimeMessageType.RefreshActiveTab]: (_message, _sender, sendResponse) => {
       void this.handleRefreshActiveTab(sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetTabZoom]: (_message, sender, sendResponse) => {
+      void this.handleGetTabZoom(sender, sendResponse);
       return true;
     },
     [RuntimeMessageType.GetAccountState]: (_message, _sender, sendResponse) => {
@@ -343,9 +348,10 @@ export class BackgroundRuntimeCoordinator {
       return;
     }
 
-    let sent = await sendPopupOverlayToggleMessageToTab(tab.id);
+    const zoomFactor = await getTabZoomFactor(tab.id);
+    let sent = await sendPopupOverlayToggleMessageToTab(tab.id, zoomFactor);
     if (!sent && (await injectContentScriptsIntoTab(tab.id))) {
-      sent = await sendPopupOverlayToggleMessageToTab(tab.id);
+      sent = await sendPopupOverlayToggleMessageToTab(tab.id, zoomFactor);
     }
 
     if (!sent) {
@@ -369,6 +375,24 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "sentence-queue-failed"
+      });
+    }
+  }
+
+  private async handleGetTabZoom(
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: GetTabZoomResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        zoomFactor: await getTabZoomFactor(sender.tab?.id ?? null)
+      });
+    } catch (error) {
+      console.warn("ImmersionKit tab zoom read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "tab-zoom-read-failed"
       });
     }
   }
@@ -1000,16 +1024,42 @@ async function getActiveTabId(): Promise<number | null> {
   });
 }
 
-async function sendPopupOverlayToggleMessageToTab(tabId: number): Promise<boolean> {
+async function sendPopupOverlayToggleMessageToTab(
+  tabId: number,
+  zoomFactor: number
+): Promise<boolean> {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(
       tabId,
-      { type: POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE },
+      { type: POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE, zoomFactor },
       (response?: PopupOverlayToggleResponse) => {
         resolve(!chrome.runtime.lastError && Boolean(response?.ok));
       }
     );
   });
+}
+
+async function getTabZoomFactor(tabId: number | null): Promise<number> {
+  if (typeof tabId !== "number" || !chrome.tabs?.getZoom) {
+    return 1;
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.getZoom(tabId, (zoomFactor) => {
+      if (chrome.runtime.lastError) {
+        resolve(1);
+        return;
+      }
+
+      resolve(normalizeZoomFactor(zoomFactor));
+    });
+  });
+}
+
+function normalizeZoomFactor(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.min(5, Math.max(0.25, value))
+    : 1;
 }
 
 async function injectContentScriptsIntoTab(tabId: number): Promise<boolean> {

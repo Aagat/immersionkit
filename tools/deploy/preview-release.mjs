@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -8,20 +9,18 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
 
-const previewExtensionKey = [
-  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyA4QKqDOBwbZpzl/CO/m",
-  "SAJnPNP7lHdcEYLOYkXAUf+gCPkCNkHhheYNllYnZ7Iw9BIC8NBywIPnzobDmK4h1",
-  "N3IzAKG4iuTPov6MxMIcFYMl3Bypc4MT1X0WRAKvP06qw0dNq3F4DTGvR9756cRc",
-  "VGKwXBtpuG8M7Ukx6TzLBpVdR1ksC+gKd2yhn4GmTfuDGTOwD6iI/3G0TEMpDZE",
-  "HNP81p4CcTIzr7R7snUZr55tw+DIyYyL2mOpgJL9xssdGA+/3+oNQim1ja9EFRCE",
-  "UdjudyXplRq2ybrtnSyMhtuAweZzTKxGsq5cz15XsDVoNhuU6zQCF8UGFnY+HXp",
-  "X/wIDAQAB"
-].join("");
+const extensionIdentity = JSON.parse(
+  readFileSync(
+    join(repoRoot, "apps/extension/extension-identity.json"),
+    "utf8"
+  )
+);
+const previewExtensionKey = extensionIdentity.publicManifestKeyParts.join("");
 
 const defaults = {
   apiBaseUrl: "https://immersionkit-api.secondary-4cc.workers.dev",
   assetBaseUrl: "https://pub-e554fa2b8b81455caf0be40404e3959a.r2.dev/assets",
-  expectedExtensionId: "lllcimijmblmggimefiojaahcccglcmf",
+  expectedExtensionId: extensionIdentity.expectedExtensionId,
   extensionFolderName: "immersionkit-extension-preview",
   extensionKey: previewExtensionKey,
   pagesBranch: "main",

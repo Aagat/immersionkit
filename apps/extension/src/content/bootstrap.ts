@@ -20,6 +20,7 @@ import {
   parseSentenceTranslationResults,
   renderSentenceTranslations
 } from "./sentence-renderer";
+import { setupPageZoomTracking } from "./page-zoom";
 import { setupPopupOverlayMessageHook } from "./popup-overlay";
 import { createRuntimeState, type RuntimeState } from "./state";
 
@@ -42,6 +43,7 @@ export async function bootContentRuntime() {
   document.documentElement.setAttribute(IMMERSIONKIT_ROOT_ATTRIBUTE, "true");
   applyUiTheme();
   pingBackground();
+  setupPageZoomTracking();
 
   const runtimeState = createRuntimeState();
   if (DIAGNOSTICS_ENABLED) {

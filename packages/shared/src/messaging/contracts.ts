@@ -20,6 +20,7 @@ import type { SentenceGrammarCard } from "../curriculum/grammar";
 export enum RuntimeMessageType {
   Ping = "runtime/ping",
   RefreshActiveTab = "settings/refresh-active-tab",
+  GetTabZoom = "tabs/get-zoom",
   GetAccountState = "account/get-state",
   StartAccountLogin = "account/start-login",
   LogoutAccount = "account/logout",
@@ -49,6 +50,10 @@ export type PingMessage = {
 
 export type RefreshActiveTabMessage = {
   type: RuntimeMessageType.RefreshActiveTab;
+};
+
+export type GetTabZoomMessage = {
+  type: RuntimeMessageType.GetTabZoom;
 };
 
 export type PreviewAccountStatus = "signed-out" | "signed-in";
@@ -290,6 +295,7 @@ export type QualifiedExposureEventMessage = QualifiedExposureEvent & {
 export type RuntimeMessage =
   | PingMessage
   | RefreshActiveTabMessage
+  | GetTabZoomMessage
   | GetAccountStateMessage
   | StartAccountLoginMessage
   | LogoutAccountMessage
@@ -339,6 +345,13 @@ export type RefreshActiveTabResponse =
       reason: string;
       tabId: number | null;
     };
+
+export type GetTabZoomResponse =
+  | {
+      ok: true;
+      zoomFactor: number;
+    }
+  | RuntimeErrorResponse;
 
 export type GetAccountStateResponse =
   | {
@@ -548,6 +561,7 @@ export type SpeakTextResponse =
 export type RuntimeResponseByType = {
   [RuntimeMessageType.Ping]: PingResponse;
   [RuntimeMessageType.RefreshActiveTab]: RefreshActiveTabResponse | RuntimeErrorResponse;
+  [RuntimeMessageType.GetTabZoom]: GetTabZoomResponse;
   [RuntimeMessageType.GetAccountState]: GetAccountStateResponse;
   [RuntimeMessageType.StartAccountLogin]: StartAccountLoginResponse;
   [RuntimeMessageType.LogoutAccount]: LogoutAccountResponse;

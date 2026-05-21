@@ -5,6 +5,7 @@ export const POPUP_OVERLAY_RESIZE_MESSAGE_TYPE =
 
 export type PopupOverlayToggleMessage = {
   type: typeof POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE;
+  zoomFactor?: number;
 };
 
 export type PopupOverlayResizeMessage = {
@@ -29,7 +30,8 @@ export function isPopupOverlayToggleMessage(
     Boolean(message) &&
     typeof message === "object" &&
     !Array.isArray(message) &&
-    (message as { type?: unknown }).type === POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE
+    (message as { type?: unknown }).type === POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE &&
+    isOptionalZoomFactor((message as { zoomFactor?: unknown }).zoomFactor)
   );
 }
 
@@ -43,4 +45,8 @@ export function isPopupOverlayResizeMessage(
     (message as { type?: unknown }).type === POPUP_OVERLAY_RESIZE_MESSAGE_TYPE &&
     typeof (message as { height?: unknown }).height === "number"
   );
+}
+
+function isOptionalZoomFactor(value: unknown): boolean {
+  return value === undefined || (typeof value === "number" && Number.isFinite(value));
 }

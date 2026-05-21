@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +10,13 @@ const repoRoot = resolve(scriptDir, "../..");
 const siteRoot = join(repoRoot, "apps/share-site");
 const sourceRoot = join(siteRoot, "src");
 const distRoot = join(siteRoot, "dist");
+const extensionIdentity = JSON.parse(
+  readFileSync(
+    join(repoRoot, "apps/extension/extension-identity.json"),
+    "utf8"
+  )
+);
+const defaultExtensionKey = extensionIdentity.publicManifestKeyParts.join("");
 const publicBaseUrl = normalizePublicBaseUrl(
   process.env.IK_SHARE_SITE_PUBLIC_BASE_URL ?? "http://127.0.0.1:4175"
 );
@@ -26,7 +34,7 @@ const accountRequired =
   process.env.IK_SHARE_EXTENSION_ACCOUNT_REQUIRED ?? "false";
 const extensionKey = normalizeOptionalString(
   process.env.IK_SHARE_EXTENSION_KEY
-);
+) ?? defaultExtensionKey;
 const extensionFolderName =
   process.env.IK_SHARE_EXTENSION_FOLDER_NAME ?? "immersionkit-extension-preview";
 const downloadFileName =
