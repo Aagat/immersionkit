@@ -1,0 +1,313 @@
+:root {
+  color-scheme: light;
+  --ink: #17211d;
+  --muted: #51615b;
+  --paper: #fbfbf7;
+  --line: #d9ddd1;
+  --leaf: #2f6f52;
+  --leaf-strong: #1d553e;
+  --gold: #d29a2d;
+  --mist: #edf2eb;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+.hero {
+  min-height: 72vh;
+  background:
+    linear-gradient(90deg, rgb(15 22 19 / 88%) 0%, rgb(15 22 19 / 62%) 48%, rgb(15 22 19 / 16%) 100%),
+    url("./media/kyoto-slow-season.png") center / cover;
+  color: var(--white);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.topbar {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 22px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.brand,
+.topbar-link,
+.primary-action,
+.secondary-action {
+  text-decoration: none;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.brand img {
+  border-radius: 8px;
+}
+
+.topbar-link {
+  color: rgb(255 255 255 / 86%);
+  font-weight: 650;
+}
+
+.hero-copy {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 52px 0 70px;
+  align-self: center;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  margin: 0;
+  font-size: 4rem;
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.14;
+  letter-spacing: 0;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.lede {
+  max-width: 670px;
+  margin: 20px 0 0;
+  color: rgb(255 255 255 / 88%);
+  font-size: 1.16rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.primary-action,
+.secondary-action {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0 18px;
+  font-weight: 750;
+}
+
+.primary-action {
+  background: var(--white);
+  color: var(--leaf-strong);
+}
+
+.secondary-action {
+  border: 1px solid rgb(255 255 255 / 54%);
+  color: var(--white);
+}
+
+.release-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 150px));
+  gap: 12px;
+  margin: 34px 0 0;
+}
+
+.release-meta div {
+  border-left: 2px solid var(--gold);
+  padding-left: 12px;
+}
+
+dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.hero dt {
+  color: rgb(255 255 255 / 66%);
+}
+
+dd {
+  margin: 3px 0 0;
+  font-weight: 750;
+}
+
+.section {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 64px 0;
+}
+
+.install-section,
+.split-section,
+.checksum-section {
+  border-bottom: 1px solid var(--line);
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.steps li,
+.notes-grid article {
+  min-height: 142px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 18px;
+}
+
+.steps strong,
+.steps span {
+  display: block;
+}
+
+.steps span,
+.notes-grid p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+code {
+  padding: 0.12rem 0.3rem;
+  border-radius: 5px;
+  background: var(--mist);
+  color: var(--leaf-strong);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+}
+
+.split-section {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.checksum-section {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.5fr);
+  gap: 28px;
+}
+
+.checksum-list {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.checksum-list div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 16px;
+}
+
+.checksum-list dd {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.checksum-list code {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+  .hero {
+    min-height: 68vh;
+    background:
+      linear-gradient(180deg, rgb(15 22 19 / 90%) 0%, rgb(15 22 19 / 72%) 58%, rgb(15 22 19 / 34%) 100%),
+      url("./media/kyoto-slow-season.png") center / cover;
+  }
+
+  .hero-copy {
+    padding-top: 36px;
+  }
+
+  h1 {
+    font-size: 2.8rem;
+  }
+
+  .release-meta,
+  .steps,
+  .split-section,
+  .notes-grid,
+  .checksum-section {
+    grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    display: block;
+  }
+}

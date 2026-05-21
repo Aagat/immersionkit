@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmersionKit Preview</title>
+    <meta
+      name="description"
+      content="Private ImmersionKit preview download for Chrome."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="topbar" aria-label="Preview">
+        <a class="brand" href="/">
+          <img src="./media/icon-128.png" alt="" width="32" height="32" />
+          <span>ImmersionKit</span>
+        </a>
+        <a class="topbar-link" href="#install">Install</a>
+      </nav>
+
+      <section class="hero-copy" aria-labelledby="page-title">
+        <p class="eyebrow">Private Chrome preview</p>
+        <h1 id="page-title">ImmersionKit</h1>
+        <p class="lede">
+          Download the preview extension zip, load it unpacked in Chrome, and
+          try Spanish immersion on normal web pages.
+        </p>
+        <div class="actions">
+          <a
+            class="primary-action"
+            href="./downloads/__DOWNLOAD_FILE__"
+            download="__DOWNLOAD_FILE__"
+          >
+            Download Chrome zip
+          </a>
+          <a class="secondary-action" href="#install">View install steps</a>
+        </div>
+        <dl class="release-meta" aria-label="Release metadata">
+          <div>
+            <dt>Build</dt>
+            <dd>__EXTENSION_VERSION__</dd>
+          </div>
+          <div>
+            <dt>Updated</dt>
+            <dd>__BUILD_DATE__</dd>
+          </div>
+          <div>
+            <dt>Size</dt>
+            <dd>__DOWNLOAD_SIZE__</dd>
+          </div>
+        </dl>
+      </section>
+    </header>
+
+    <main>
+      <section id="install" class="section install-section">
+        <div class="section-heading">
+          <p class="eyebrow">Chrome setup</p>
+          <h2>Load it unpacked</h2>
+        </div>
+        <ol class="steps">
+          <li>
+            <strong>Download the zip.</strong>
+            <span>Unzip it so you have an ImmersionKit extension folder.</span>
+          </li>
+          <li>
+            <strong>Open Chrome extensions.</strong>
+            <span>Go to <code>chrome://extensions</code>.</span>
+          </li>
+          <li>
+            <strong>Enable Developer mode.</strong>
+            <span>Use the toggle in the top-right corner.</span>
+          </li>
+          <li>
+            <strong>Choose Load unpacked.</strong>
+            <span>Select the unzipped ImmersionKit folder.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section split-section">
+        <div>
+          <p class="eyebrow">What to expect</p>
+          <h2>Built for quiet reading</h2>
+        </div>
+        <div class="notes-grid">
+          <article>
+            <h3>Local-first progress</h3>
+            <p>Learning state stays in the browser profile.</p>
+          </article>
+          <article>
+            <h3>Normal pages</h3>
+            <p>Try articles, blogs, docs, and other readable HTTP pages.</p>
+          </article>
+          <article>
+            <h3>Preview build</h3>
+            <p>This is not a Chrome Web Store release yet.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section checksum-section" aria-labelledby="checksum-title">
+        <div>
+          <p class="eyebrow">Download integrity</p>
+          <h2 id="checksum-title">Zip details</h2>
+        </div>
+        <dl class="checksum-list">
+          <div>
+            <dt>File</dt>
+            <dd>__DOWNLOAD_FILE__</dd>
+          </div>
+          <div>
+            <dt>SHA-256</dt>
+            <dd><code>__DOWNLOAD_SHA256__</code></dd>
+          </div>
+          <div>
+            <dt>Assets</dt>
+            <dd>__ASSET_BASE_URL__</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+  </body>
+</html>

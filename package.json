@@ -14,6 +14,8 @@
     "assets:release:publish": "pnpm assets:release:build && node tools/assets/publish-release-assets.mjs",
     "assets:pull-tts-models": "node tools/assets/pull-tts-models.mjs",
     "deploy:preview": "pnpm api:migrate:remote && pnpm api:deploy && pnpm assets:release:publish",
+    "share-site:build": "pnpm --filter @immersionkit/share-site build",
+    "share-site:serve": "pnpm --filter @immersionkit/share-site serve",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "build:local-assets": "VITE_IMMERSIONKIT_ASSET_BASE_URL=http://127.0.0.1:8787/assets pnpm build",
     "build:production": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build:production",
