@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   createExtensionManifest,
+  EXTENSION_VERSION,
   resolveExtensionKey,
   STABLE_EXTENSION_ID,
   STABLE_EXTENSION_KEY
@@ -13,6 +14,7 @@ describe("extension manifest identity", () => {
 
     expect(manifest.key).toBe(STABLE_EXTENSION_KEY);
     expect(extensionIdFromKey(manifest.key)).toBe(STABLE_EXTENSION_ID);
+    expect(manifest.version).toBe(EXTENSION_VERSION);
   });
 
   it("keeps explicit public key overrides deliberate", () => {

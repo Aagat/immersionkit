@@ -16,6 +16,13 @@ const extensionIdentity = JSON.parse(
   )
 );
 const previewExtensionKey = extensionIdentity.publicManifestKeyParts.join("");
+const extensionRelease = JSON.parse(
+  readFileSync(
+    join(repoRoot, "apps/extension/extension-release.json"),
+    "utf8"
+  )
+);
+const previewExtensionVersion = normalizeExtensionVersion(extensionRelease.version);
 
 const defaults = {
   apiBaseUrl: "https://immersionkit-api.secondary-4cc.workers.dev",
@@ -23,6 +30,7 @@ const defaults = {
   expectedExtensionId: extensionIdentity.expectedExtensionId,
   extensionFolderName: "immersionkit-extension-preview",
   extensionKey: previewExtensionKey,
+  extensionVersion: previewExtensionVersion,
   pagesBranch: "main",
   pagesProject: "immersionkit-preview",
   sitePublicBaseUrl: "https://immersionkit-preview.pages.dev"
@@ -41,6 +49,7 @@ Useful flags:
   --skip-assets
   --skip-site-build
   --skip-site-deploy
+  --allow-same-extension-version
   --site-public-url=<url>
   --api-base-url=<url>
   --asset-base-url=<url>
@@ -85,6 +94,7 @@ async function releasePreview(parsedFlags, resolvedConfig) {
   }
 
   assertPreviewExtensionId(resolvedConfig);
+  await assertPreviewExtensionVersionIsNew(parsedFlags, resolvedConfig);
 
   if (!isEnabled(parsedFlags["skip-migrations"])) {
     await run("pnpm", ["api:migrate:remote"], { dryRun });
@@ -125,6 +135,11 @@ async function deployShareSite(parsedFlags, resolvedConfig) {
   if (!dryRun && !isEnabled(parsedFlags["allow-dirty"])) {
     await assertCleanGit();
   }
+  await assertPreviewExtensionVersionIsNew(parsedFlags, {
+    ...resolvedConfig,
+    extensionVersion:
+      readBuiltShareSiteExtensionVersion() ?? resolvedConfig.extensionVersion
+  });
 
   const args = [
     "exec",
@@ -275,6 +290,7 @@ function resolveConfig(parsedFlags, env) {
       env.IK_PREVIEW_EXTENSION_KEY ??
       env.IK_SHARE_EXTENSION_KEY ??
       defaults.extensionKey,
+    extensionVersion: defaults.extensionVersion,
     pagesBranch:
       parsedFlags["pages-branch"] ??
       env.IK_PREVIEW_PAGES_BRANCH ??
@@ -300,8 +316,56 @@ function assertPreviewExtensionId(resolvedConfig) {
   );
 }
 
+async function assertPreviewExtensionVersionIsNew(parsedFlags, resolvedConfig) {
+  if (isEnabled(parsedFlags["allow-same-extension-version"])) {
+    return;
+  }
+
+  const candidateVersion = normalizeExtensionVersion(
+    resolvedConfig.extensionVersion
+  );
+  const releaseMetadata = await fetchOptionalJson(
+    `${resolvedConfig.sitePublicBaseUrl}/release.json`
+  );
+  const deployedVersion = normalizeOptionalExtensionVersion(
+    releaseMetadata?.extensionVersion
+  );
+
+  if (deployedVersion !== candidateVersion) {
+    return;
+  }
+
+  throw new Error(
+    [
+      `Preview release would redeploy extension version ${candidateVersion}, which is already live.`,
+      "Bump apps/extension/extension-release.json before deploying a new extension zip.",
+      "Use --allow-same-extension-version only for an intentional same-version rebuild."
+    ].join("\n")
+  );
+}
+
+function readBuiltShareSiteExtensionVersion() {
+  try {
+    const metadata = JSON.parse(
+      readFileSync(join(repoRoot, "apps/share-site/dist/release.json"), "utf8")
+    );
+    return normalizeOptionalExtensionVersion(metadata?.extensionVersion);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, { cache: "no-store" });
+  assert(response.ok, `${url} returned HTTP ${response.status}.`);
+  return response.json();
+}
+
+async function fetchOptionalJson(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (response.status === 404) {
+    return null;
+  }
   assert(response.ok, `${url} returned HTTP ${response.status}.`);
   return response.json();
 }
@@ -426,6 +490,19 @@ function normalizeUrl(value) {
     throw new Error("Expected a non-empty URL.");
   }
   return normalized;
+}
+
+function normalizeExtensionVersion(value) {
+  const normalized = String(value ?? "").trim();
+  if (!/^\d+(?:\.\d+){0,3}$/.test(normalized)) {
+    throw new Error("Expected a Chrome extension version with 1-4 numeric parts.");
+  }
+  return normalized;
+}
+
+function normalizeOptionalExtensionVersion(value) {
+  const normalized = String(value ?? "").trim();
+  return normalized ? normalizeExtensionVersion(normalized) : null;
 }
 
 function extensionIdFromKey(key) {

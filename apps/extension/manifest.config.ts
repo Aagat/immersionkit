@@ -1,5 +1,6 @@
 import { defineManifest } from "@crxjs/vite-plugin";
 import extensionIdentity from "./extension-identity.json";
+import extensionRelease from "./extension-release.json";
 
 declare const process: { env?: Record<string, string | undefined> };
 
@@ -10,6 +11,7 @@ interface ExtensionManifestOptions {
 export const STABLE_EXTENSION_ID = extensionIdentity.expectedExtensionId;
 export const STABLE_EXTENSION_KEY =
   extensionIdentity.publicManifestKeyParts.join("");
+export const EXTENSION_VERSION = extensionRelease.version;
 
 export function resolveExtensionKey(extensionKey?: string | null): string {
   return extensionKey?.trim() || STABLE_EXTENSION_KEY;
@@ -21,7 +23,7 @@ export function createExtensionManifest(options: ExtensionManifestOptions = {}) 
     manifest_version: 3,
     name: "ImmersionKit",
     short_name: "ImmersionKit",
-    version: "0.1.0",
+    version: EXTENSION_VERSION,
     description:
       "Learn Spanish while browsing with calm inline word and phrase support, local progress, and optional sentence help.",
     key: extensionKey,
