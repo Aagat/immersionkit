@@ -422,7 +422,114 @@ function OptionsOverviewPanel({
 > & {
   onOpenSection: (section: OptionsSection) => void;
 }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <PreviewAccountCard
+        account={account}
+        onPreviewSignIn={onPreviewSignIn}
+        onPreviewLogout={onPreviewLogout}
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <OverviewSummaryCard
+          discoveryRatePercent={discoveryRatePercent}
+          readingLevel={readingLevel}
+          checkpoint={checkpoint}
+          currentFocus={currentFocus}
+          siteSummary={siteSummary}
+          pausedSiteCount={pausedSiteCount}
+          savedSiteCount={savedSiteCount}
+          onOpenSection={onOpenSection}
+        />
+        <LocalLearningDataCard />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <LearningSnapshotCard stats={stats} />
+        <PreviewStateCard
+          checkpoint={checkpoint}
+          sentenceHelpEnabled={sentenceHelpEnabled}
+          provider={provider}
+          savedSiteCount={savedSiteCount}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OverviewSummaryCard({
+  discoveryRatePercent,
+  readingLevel,
+  checkpoint,
+  currentFocus,
+  siteSummary,
+  pausedSiteCount = 0,
+  savedSiteCount = 0,
+  onOpenSection
+}: Pick<
+  ExtensionOptionsProps,
+  | "discoveryRatePercent"
+  | "readingLevel"
+  | "checkpoint"
+  | "currentFocus"
+  | "siteSummary"
+  | "pausedSiteCount"
+  | "savedSiteCount"
+> & {
+  onOpenSection: (section: OptionsSection) => void;
+}) {
   const readingLevelLabel = readingLevel ?? "Beginner";
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Overview</CardTitle>
+        <CardDescription>
+          The main loop stays in the browser; these pages control pace,
+          curriculum, local progress, and site behavior.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <OverviewTile
+          title="Reading"
+          value={`${discoveryRatePercent}% new word pace`}
+          detail={`${readingLevelLabel} starting point with a density preview.`}
+          icon="book"
+          action="Open Reading"
+          onAction={() => onOpenSection("Reading")}
+        />
+        <OverviewTile
+          title="Curriculum"
+          value={checkpoint?.currentBand ?? "Starting"}
+          detail={
+            currentFocus
+              ? `${currentFocus.levelLabel}: ${currentFocus.learnerTitle}`
+              : "Current focus appears after curriculum loads."
+          }
+          icon="band"
+          action="Open Reading"
+          onAction={() => onOpenSection("Reading")}
+        />
+        <OverviewTile
+          title="Sites"
+          value={`${pausedSiteCount} paused`}
+          detail={`${savedSiteCount} saved site choices. ${siteSummary ?? ""}`.trim()}
+          icon="link"
+          action="Open Sites"
+          onAction={() => onOpenSection("Sites")}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PreviewStateCard({
+  checkpoint,
+  sentenceHelpEnabled,
+  provider,
+  savedSiteCount = 0
+}: Pick<
+  ExtensionOptionsProps,
+  "checkpoint" | "sentenceHelpEnabled" | "provider" | "savedSiteCount"
+>) {
   const sentenceHelpLabel =
     provider === "openai"
       ? sentenceHelpEnabled
@@ -431,82 +538,31 @@ function OptionsOverviewPanel({
       : "Sentence help off";
 
   return (
-    <div className="flex flex-col gap-4">
-      <OptionsAccountPanel
-        account={account}
-        onPreviewSignIn={onPreviewSignIn}
-        onPreviewLogout={onPreviewLogout}
-      />
-      <Card>
-        <CardHeader>
-          <CardTitle>Overview</CardTitle>
-          <CardDescription>
-            The main loop stays in the browser; these pages control pace,
-            curriculum, local progress, and site behavior.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <OverviewTile
-            title="Reading"
-            value={`${discoveryRatePercent}% new word pace`}
-            detail={`${readingLevelLabel} starting point with a density preview.`}
-            icon="book"
-            action="Open Reading"
-            onAction={() => onOpenSection("Reading")}
-          />
-          <OverviewTile
-            title="Curriculum"
-            value={checkpoint?.currentBand ?? "Starting"}
-            detail={
-              currentFocus
-                ? `${currentFocus.levelLabel}: ${currentFocus.learnerTitle}`
-                : "Current focus appears after curriculum loads."
-            }
-            icon="band"
-            action="Open Reading"
-            onAction={() => onOpenSection("Reading")}
-          />
-          <OverviewTile
-            title="Sites"
-            value={`${pausedSiteCount} paused`}
-            detail={`${savedSiteCount} saved site choices. ${siteSummary ?? ""}`.trim()}
-            icon="link"
-            action="Open Sites"
-            onAction={() => onOpenSection("Sites")}
-          />
-        </CardContent>
-      </Card>
-      <LearningSnapshotCard stats={stats} />
-      <Card>
-        <CardHeader>
-          <CardTitle>Preview state</CardTitle>
-          <CardDescription>
-            Quick release-facing checks before final screenshots.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <CompactMetric
-            label="Reading band"
-            value={checkpoint?.nextBand ?? "Next band"}
-            icon="band"
-          />
-          <CompactMetric
-            label="Sentence help"
-            value={sentenceHelpLabel}
-            icon="translate"
-          />
-          <CompactMetric
-            label="Site choices"
-            value={savedSiteCount}
-            icon="link"
-          />
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Preview state</CardTitle>
+        <CardDescription>
+          Quick release-facing checks before final screenshots.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <CompactMetric
+          label="Reading band"
+          value={checkpoint?.nextBand ?? "Next band"}
+          icon="band"
+        />
+        <CompactMetric
+          label="Sentence help"
+          value={sentenceHelpLabel}
+          icon="translate"
+        />
+        <CompactMetric label="Site choices" value={savedSiteCount} icon="link" />
+      </CardContent>
+    </Card>
   );
 }
 
-function OptionsAccountPanel({
+function PreviewAccountCard({
   account = { status: "signed-out" },
   onPreviewSignIn,
   onPreviewLogout
@@ -518,31 +574,31 @@ function OptionsAccountPanel({
   const notRequired = account.status === "not-required";
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card className={!signedIn && !notRequired ? "border-primary/60 shadow-sm" : undefined}>
-        <CardHeader>
-          <CardTitle>Preview account</CardTitle>
-          <CardDescription>
+    <Card
+      className={!signedIn && !notRequired ? "border-primary/60 shadow-sm" : undefined}
+    >
+      <CardHeader>
+        <CardTitle>Preview account</CardTitle>
+        <CardDescription>
+          {notRequired
+            ? "This build can use local reading mode without preview sign-in."
+            : signedIn
+              ? "You are signed in for the ImmersionKit preview."
+              : "Preview sign-in is required before reading mode turns on."}
+        </CardDescription>
+        <CardAction>
+          <Badge variant={signedIn || !notRequired ? "default" : "secondary"}>
             {notRequired
-              ? "This build can use local reading mode without preview sign-in."
+              ? "Local preview"
               : signedIn
-                ? "You are signed in for the ImmersionKit preview."
-                : "Preview sign-in is required before reading mode turns on."}
-          </CardDescription>
-          <CardAction>
-            <Badge variant={signedIn || !notRequired ? "default" : "secondary"}>
-              {notRequired ? "Local preview" : signedIn ? account.previewStatus : "Sign in required"}
-            </Badge>
-          </CardAction>
-        </CardHeader>
+                ? account.previewStatus
+                : "Sign in required"}
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      {!notRequired ? (
         <CardContent className="flex flex-col gap-4">
-          {notRequired ? (
-            <p className="text-sm text-muted-foreground">
-              Account-required preview builds use Google sign-in for access,
-              support, and activation measurement. This build keeps reading mode
-              available locally.
-            </p>
-          ) : signedIn ? (
+          {signedIn ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <CompactMetric label="Email" value={account.email} icon="message" />
               <CompactMetric
@@ -565,37 +621,41 @@ function OptionsAccountPanel({
             </div>
           )}
         </CardContent>
-        {signedIn ? (
-          <CardFooter className="flex-wrap gap-2 border-t pt-3">
-            <Button variant="outline" onClick={onPreviewLogout}>
-              Log out
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Logging out stops account-required reading mode but keeps local
-              learning data on this device.
-            </span>
-          </CardFooter>
-        ) : null}
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Local learning data</CardTitle>
-          <CardDescription>
-            Account identity is separate from learning progress.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <CompactMetric label="Learning progress" value="Local" icon="shield" />
-          <CompactMetric label="Reading history" value="Local" icon="book" />
-          <CompactMetric label="Preview access" value="Account" icon="lock" />
-          <p className="text-sm text-muted-foreground">
-            Preview sign-in supports access, support, and high-level activation
-            measurement. It does not sync vocabulary, review history, or page
-            text.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+      ) : null}
+      {signedIn ? (
+        <CardFooter className="flex-wrap gap-2 border-t pt-3">
+          <Button variant="outline" onClick={onPreviewLogout}>
+            Log out
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Logging out stops account-required reading mode but keeps local
+            learning data on this device.
+          </span>
+        </CardFooter>
+      ) : null}
+    </Card>
+  );
+}
+
+function LocalLearningDataCard() {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Local learning data</CardTitle>
+        <CardDescription>
+          Account identity is separate from learning progress.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <CompactMetric label="Learning progress" value="Local" icon="shield" />
+        <CompactMetric label="Reading history" value="Local" icon="book" />
+        <CompactMetric label="Preview access" value="Account" icon="lock" />
+        <p className="text-sm text-muted-foreground">
+          Preview sign-in supports access, support, and high-level activation
+          measurement. It does not sync vocabulary, review history, or page text.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
