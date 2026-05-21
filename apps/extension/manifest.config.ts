@@ -47,6 +47,7 @@ export function createExtensionManifest(options: ExtensionManifestOptions = {}) 
     },
     action: {
       default_title: "ImmersionKit",
+      default_popup: "popup.html",
       default_icon: {
         16: "icons/icon-16.png",
         32: "icons/icon-32.png",

@@ -24,6 +24,12 @@ describe("extension manifest identity", () => {
   it("falls back to the committed public key for blank overrides", () => {
     expect(resolveExtensionKey("   ")).toBe(STABLE_EXTENSION_KEY);
   });
+
+  it("declares the native popup as the unsupported-page fallback", () => {
+    const manifest = createExtensionManifest();
+
+    expect(manifest.action?.default_popup).toBe("popup.html");
+  });
 });
 
 function extensionIdFromKey(key: string | undefined): string {

@@ -77,7 +77,6 @@ export function ExtensionPopup({
   bandTitle = "Reading band 1",
   bandSubtitle = "Words + phrases",
   progressValue = 38,
-  progressLabel = "42 / 120 reading evidence items",
   progressDetail = "A few more reading evidence items will widen your range.",
   metrics,
   learningStats,
@@ -106,74 +105,73 @@ export function ExtensionPopup({
       className={
         chromeFrame
           ? "absolute inset-x-3 top-3 sm:inset-x-auto sm:right-6 sm:top-6 sm:w-[360px]"
-          : "w-[360px] max-w-[100vw]"
+          : "w-[360px] min-w-[360px] overflow-x-hidden"
       }
     >
-      <PopupPanel>
-        <PopupHeader
+      {supported ? (
+        <PopupPanel>
+          <PopupHeader
+            onOpenSettings={onOpenSettings}
+            debugAvailable={debugAvailable}
+            onOpenDebug={onOpenDebug}
+            onReportIssue={onReportIssue}
+          />
+          {errorMessage ? (
+            <Alert>
+              <WarningCircleIcon aria-hidden="true" />
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          ) : null}
+          {firstRunIntro ? (
+            <Alert>
+              <IkIcon name="shield" />
+              <AlertTitle>Read normally with small doses of Spanish.</AlertTitle>
+              <AlertDescription>
+                Words and phrases appear gently on supported pages. Pause any site
+                or adjust your pace in settings.
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-fit"
+                  onClick={onDismissIntro}
+                >
+                  Got it
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {account.status === "signed-out" ? (
+            <SignedOutPopup
+              onPreviewSignIn={onPreviewSignIn}
+              onOpenSettings={onOpenSettings}
+            />
+          ) : (
+            <SupportedPopup
+              bandTitle={bandTitle}
+              bandSubtitle={bandSubtitle}
+              progress={progress}
+              progressDetail={progressDetail}
+              enabled={enabled}
+              metrics={metrics}
+              learningStats={learningStats}
+              learningDays={learningDays}
+              isSavingSite={isSavingSite}
+              onSiteToggle={() => {
+                if (onSiteToggle) {
+                  onSiteToggle();
+                  return;
+                }
+                setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
+              }}
+            />
+          )}
+        </PopupPanel>
+      ) : (
+        <UnsupportedPopup
+          unsupportedMessage={unsupportedMessage}
           onOpenSettings={onOpenSettings}
-          debugAvailable={debugAvailable}
-          onOpenDebug={onOpenDebug}
-          onReportIssue={onReportIssue}
         />
-        {errorMessage ? (
-          <Alert>
-            <WarningCircleIcon aria-hidden="true" />
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        {firstRunIntro ? (
-          <Alert>
-            <IkIcon name="shield" />
-            <AlertTitle>Read normally with small doses of Spanish.</AlertTitle>
-            <AlertDescription>
-              Words and phrases appear gently on supported pages. Pause any site
-              or adjust your pace in settings.
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 w-fit"
-                onClick={onDismissIntro}
-              >
-                Got it
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {account.status === "signed-out" ? (
-          <SignedOutPopup
-            onPreviewSignIn={onPreviewSignIn}
-            onOpenSettings={onOpenSettings}
-          />
-        ) : supported ? (
-          <SupportedPopup
-            bandTitle={bandTitle}
-            bandSubtitle={bandSubtitle}
-            progress={progress}
-            progressDetail={progressDetail}
-            enabled={enabled}
-            metrics={metrics}
-            learningStats={learningStats}
-            learningDays={learningDays}
-            isSavingSite={isSavingSite}
-            onSiteToggle={() => {
-              if (onSiteToggle) {
-                onSiteToggle();
-                return;
-              }
-              setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
-            }}
-          />
-        ) : (
-          <UnsupportedPopup
-            unsupportedMessage={unsupportedMessage}
-            bandTitle={bandTitle}
-            progress={progress}
-            progressLabel={progressLabel}
-            onOpenSettings={onOpenSettings}
-          />
-        )}
-      </PopupPanel>
+      )}
     </div>
   );
 
@@ -431,19 +429,14 @@ function BandProgress({ value, detail }: { value: number; detail: string }) {
 
 function UnsupportedPopup({
   unsupportedMessage,
-  bandTitle,
-  progress,
-  progressLabel,
   onOpenSettings
 }: {
   unsupportedMessage: string;
-  bandTitle: string;
-  progress: number;
-  progressLabel: string;
   onOpenSettings?: () => void;
 }) {
   return (
-    <>
+    <section className="flex flex-col gap-4 bg-background p-4">
+      <PopupBrand />
       <Card>
         <CardHeader>
           <Badge variant="secondary" className="w-fit">
@@ -453,60 +446,13 @@ function UnsupportedPopup({
           <CardDescription>{unsupportedMessage}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button size="icon-lg" variant="outline" aria-label="Controls unavailable" disabled>
-            <IkIcon name="power" />
-          </Button>
-          <p className="mt-3 text-sm text-muted-foreground">Controls unavailable</p>
+          <p className="text-sm text-muted-foreground">Controls unavailable</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex-row gap-3">
-          <IkIcon name="shield" className="text-muted-foreground" />
-          <CardDescription>
-            We skip private, browser, form-heavy, and sensitive pages. Reading
-            mode works on normal articles, blogs, and docs.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{bandTitle}</CardTitle>
-          <CardDescription>{progressLabel}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProgressBlock
-            value={progress}
-            detail="Your progress is saved and will be ready when you return to a supported page."
-          />
-        </CardContent>
-      </Card>
-      <LocalFooter text="Your reading data stays on this device." />
       <Button variant="outline" onClick={onOpenSettings}>
         Open settings
       </Button>
-    </>
-  );
-}
-
-function ProgressBlock({
-  value,
-  label,
-  detail
-}: {
-  value: number;
-  label?: string;
-  detail?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      {label || detail ? (
-        <div className="flex flex-col gap-1 text-sm">
-          {label ? <span className="font-medium">{label}</span> : null}
-          {detail ? <span className="text-muted-foreground">{detail}</span> : null}
-        </div>
-      ) : null}
-      <Progress value={value} />
-    </div>
+    </section>
   );
 }
 
@@ -600,9 +546,23 @@ function formatStatCount(value: number): string {
 
 function PopupPanel({ children }: { children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-2xl bg-card p-4 shadow-xl ring-1 ring-foreground/10">
+    <section className="flex flex-col gap-4 overflow-x-hidden rounded-2xl bg-card p-4 shadow-xl ring-1 ring-foreground/10">
       {children}
     </section>
+  );
+}
+
+function PopupBrand() {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm"
+        aria-hidden="true"
+      >
+        IK
+      </span>
+      <span className="truncate text-base font-medium">ImmersionKit</span>
+    </div>
   );
 }
 
@@ -619,15 +579,7 @@ function PopupHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm"
-          aria-hidden="true"
-        >
-          IK
-        </span>
-        <span className="truncate text-base font-medium">ImmersionKit</span>
-      </div>
+      <PopupBrand />
       <div className="flex shrink-0 items-center gap-2">
         {debugAvailable ? (
           <Button

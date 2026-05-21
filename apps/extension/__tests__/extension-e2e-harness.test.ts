@@ -7,7 +7,13 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { chromium, type BrowserContext, type Page, type Worker } from "playwright";
+import {
+  chromium,
+  type BrowserContext,
+  type Frame,
+  type Page,
+  type Worker
+} from "playwright";
 import { startAssetPackServer } from "../../../tools/assets/asset-pack-server.mjs";
 import { getExtensionLaunchOptions } from "../../../tools/browser-launch-mode.mjs";
 
@@ -106,9 +112,14 @@ describe("extension E2E harness", () => {
       timeout: 10_000
     });
     const popupText = await popup.locator("body").innerText();
+    expect(popupText).toContain("ImmersionKit");
     expect(popupText).toContain("does not expose a page URL");
     expect(popupText).toContain("article, blog, or docs page");
     expect(popupText).toContain("Controls unavailable");
+    await expectPopupFrameWidth(popup);
+    expect(await popup.getByRole("button", { name: "Open settings" }).count()).toBe(
+      1
+    );
   }, 60_000);
 
   it("loads the built CRXJS extension and exercises content, popup, options, and diagnostics", async () => {
@@ -183,16 +194,48 @@ describe("extension E2E harness", () => {
     await setFixtureSiteEnabled(serviceWorker, true);
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-ik-token-id]", { timeout: 10_000 });
+    await page.bringToFront();
+    const overlayResponse = await serviceWorker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (typeof tab?.id !== "number") {
+        return null;
+      }
+
+      return chrome.tabs.sendMessage(tab.id, {
+        type: "immersionkit/popup-overlay/toggle",
+        zoomFactor: 1
+      });
+    });
+    expect(overlayResponse).toMatchObject({ ok: true, visible: true });
+    const overlayFrame = await waitForPopupOverlayFrame(page);
+    await overlayFrame.waitForSelector("text=Reading report", { timeout: 10_000 });
+    const overlayOverflow = await overlayFrame.evaluate(() => {
+      const root = document.getElementById("root");
+      return Math.max(
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth,
+        root?.scrollWidth ?? 0
+      ) - window.innerWidth;
+    });
+    expect(overlayOverflow).toBeLessThanOrEqual(0);
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`, {
       waitUntil: "domcontentloaded"
     });
-    await popup.waitForSelector("text=ImmersionKit", { timeout: 10_000 });
+    await popup.waitForSelector("text=This page is not supported", {
+      timeout: 10_000
+    });
     const popupText = await popup.locator("body").innerText();
+    expect(popupText).toContain("ImmersionKit");
     expect(popupText).toContain("This page is not supported");
     expect(popupText).toContain("article, blog, or docs page");
-    expect(popupText).toContain("Your reading data stays on this device.");
+    expect(popupText).toContain("Controls unavailable");
+    expect(popupText).not.toContain("Your reading data stays on this device.");
+    await expectPopupFrameWidth(popup);
+    expect(await popup.getByRole("button", { name: "Open settings" }).count()).toBe(
+      1
+    );
 
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`, {
@@ -607,5 +650,38 @@ async function readAssetCacheSnapshot(serviceWorker: Worker): Promise<{
     } finally {
       database.close();
     }
+  });
+}
+
+async function waitForPopupOverlayFrame(page: Page): Promise<Frame> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const frame = page
+      .frames()
+      .find((candidate) =>
+        candidate.url().includes("popup.html?surface=overlay")
+      );
+    if (frame) {
+      return frame;
+    }
+
+    await page.waitForTimeout(100);
+  }
+
+  throw new Error("Timed out waiting for ImmersionKit popup overlay frame.");
+}
+
+async function expectPopupFrameWidth(page: Page): Promise<void> {
+  const frameWidth = await page.locator("[data-ik-frame='popup']").evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    const styles = window.getComputedStyle(node);
+    return {
+      width: Math.round(rect.width),
+      minWidth: styles.minWidth
+    };
+  });
+
+  expect(frameWidth).toEqual({
+    width: 360,
+    minWidth: "360px"
   });
 }

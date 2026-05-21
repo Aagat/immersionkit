@@ -71,6 +71,10 @@ import { BackgroundTextToSpeechService } from "./tts";
 import { ImmersionKitApiClient } from "./api-client";
 import { BackgroundAccountService } from "./account-service";
 import { BackgroundActivationEventQueue } from "./event-queue";
+import {
+  canUseActionOverlayForTab,
+  resolveActionPopupPathForTab
+} from "./action-popup";
 
 type BackgroundHandledRuntimeMessage = Exclude<
   RuntimeMessage,
@@ -268,6 +272,8 @@ export class BackgroundRuntimeCoordinator {
       this.dispatchRuntimeMessage(message, sender, sendResponse)
     );
 
+    this.installActionPopupRouting();
+
     chrome.action?.onClicked.addListener((tab) => {
       void this.handleActionClick(tab);
     });
@@ -340,7 +346,7 @@ export class BackgroundRuntimeCoordinator {
   }
 
   private async handleActionClick(tab: chrome.tabs.Tab): Promise<void> {
-    if (!isHttpTab(tab) || typeof tab.id !== "number") {
+    if (!canUseActionOverlayForTab(tab) || typeof tab.id !== "number") {
       diagnosticInfo("ImmersionKit popup overlay skipped.", {
         reason: "unsupported-tab",
         url: tab.url ?? null
@@ -360,6 +366,62 @@ export class BackgroundRuntimeCoordinator {
         tabId: tab.id
       });
     }
+  }
+
+  private installActionPopupRouting(): void {
+    if (!chrome.action?.setPopup || !chrome.tabs) {
+      return;
+    }
+
+    chrome.tabs.onActivated?.addListener((activeInfo) => {
+      void this.updateActionPopupForTabId(activeInfo.tabId);
+    });
+
+    chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
+      if (!changeInfo.url && changeInfo.status !== "loading") {
+        return;
+      }
+
+      void this.updateActionPopupForTab({
+        ...tab,
+        id: typeof tab.id === "number" ? tab.id : tabId,
+        url: changeInfo.url ?? tab.url
+      });
+    });
+
+    chrome.windows?.onFocusChanged?.addListener((windowId) => {
+      if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        return;
+      }
+
+      void this.refreshActiveTabActionPopup(windowId);
+    });
+
+    chrome.runtime.onStartup?.addListener(() => {
+      void this.refreshActiveTabActionPopup();
+    });
+
+    void this.refreshActiveTabActionPopup();
+  }
+
+  private async refreshActiveTabActionPopup(windowId?: number): Promise<void> {
+    const tab = await getActiveTab(windowId);
+    if (tab) {
+      await this.updateActionPopupForTab(tab);
+    }
+  }
+
+  private async updateActionPopupForTabId(tabId: number): Promise<void> {
+    const tab = await getTabById(tabId);
+    await this.updateActionPopupForTab(tab ?? ({ id: tabId } as chrome.tabs.Tab));
+  }
+
+  private async updateActionPopupForTab(tab: chrome.tabs.Tab): Promise<void> {
+    if (typeof tab.id !== "number") {
+      return;
+    }
+
+    await setActionPopupForTab(tab.id, resolveActionPopupPathForTab(tab));
   }
 
   private async handleQueueSentenceCandidates(
@@ -1006,10 +1068,6 @@ function isExtensionPageSender(sender: chrome.runtime.MessageSender): boolean {
   );
 }
 
-function isHttpTab(tab: chrome.tabs.Tab): boolean {
-  return typeof tab.url === "string" && /^https?:\/\//i.test(tab.url);
-}
-
 async function getActiveTabId(): Promise<number | null> {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -1020,6 +1078,61 @@ async function getActiveTabId(): Promise<number | null> {
 
       const activeTabId = tabs[0]?.id;
       resolve(typeof activeTabId === "number" ? activeTabId : null);
+    });
+  });
+}
+
+async function getActiveTab(windowId?: number): Promise<chrome.tabs.Tab | null> {
+  return new Promise((resolve) => {
+    const queryInfo: chrome.tabs.QueryInfo =
+      typeof windowId === "number"
+        ? { active: true, windowId }
+        : { active: true, currentWindow: true };
+
+    chrome.tabs.query(queryInfo, (tabs) => {
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+
+      resolve(tabs[0] ?? null);
+    });
+  });
+}
+
+async function getTabById(tabId: number): Promise<chrome.tabs.Tab | null> {
+  if (!chrome.tabs?.get) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+
+      resolve(tab ?? null);
+    });
+  });
+}
+
+async function setActionPopupForTab(tabId: number, popup: string): Promise<void> {
+  if (!chrome.action?.setPopup) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    chrome.action.setPopup({ tabId, popup }, () => {
+      if (chrome.runtime.lastError) {
+        diagnosticInfo("ImmersionKit action popup routing skipped.", {
+          reason: "set-popup-failed",
+          tabId,
+          message: chrome.runtime.lastError.message
+        });
+      }
+
+      resolve();
     });
   });
 }
