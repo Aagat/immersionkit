@@ -70,8 +70,8 @@ if (includeHostedAssets) {
   });
 }
 await cp(
-  join(repoRoot, "apps/extension/public/design-assets/kyoto-slow-season.png"),
-  join(distRoot, "media/kyoto-slow-season.png")
+  join(sourceRoot, "media/spanish-plaza-preview.png"),
+  join(distRoot, "media/spanish-plaza-preview.png")
 );
 await cp(
   join(repoRoot, "apps/extension/public/icons/icon-128.png"),

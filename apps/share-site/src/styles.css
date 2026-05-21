@@ -37,7 +37,7 @@ a {
   min-height: 72vh;
   background:
     linear-gradient(90deg, rgb(15 22 19 / 88%) 0%, rgb(15 22 19 / 62%) 48%, rgb(15 22 19 / 16%) 100%),
-    url("./media/kyoto-slow-season.png") center / cover;
+    url("./media/spanish-plaza-preview.png") center / cover;
   color: var(--white);
   display: grid;
   grid-template-rows: auto 1fr;
@@ -288,7 +288,7 @@ code {
     min-height: 68vh;
     background:
       linear-gradient(180deg, rgb(15 22 19 / 90%) 0%, rgb(15 22 19 / 72%) 58%, rgb(15 22 19 / 34%) 100%),
-      url("./media/kyoto-slow-season.png") center / cover;
+      url("./media/spanish-plaza-preview.png") center / cover;
   }
 
   .hero-copy {
