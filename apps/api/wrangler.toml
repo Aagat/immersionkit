@@ -2,10 +2,18 @@ name = "immersionkit-api"
 main = "src/index.ts"
 compatibility_date = "2026-05-20"
 
+[vars]
+ASSET_PUBLIC_BASE_URL = "https://immersionkit-asset-releases.<account>.r2.dev/assets"
+GOOGLE_REDIRECT_URI = "https://<stable-extension-id>.chromiumapp.org/oauth/google"
+SESSION_TTL_DAYS = "30"
+OAUTH_STATE_TTL_MINUTES = "10"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "immersionkit-preview"
-database_id = "replace-with-cloudflare-d1-database-id"
+# Replace this with the id returned by:
+# pnpm --filter @immersionkit/api exec wrangler d1 create immersionkit-preview
+database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
 [[r2_buckets]]

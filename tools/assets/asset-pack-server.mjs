@@ -97,7 +97,7 @@ async function handleAssetRequest(
   }
 }
 
-async function buildAssetPacks(repoRoot) {
+export async function buildAssetPacks(repoRoot) {
   const renderUnitAsset = await readJson(
     join(repoRoot, "apps/extension/src/assets/en-es.render-units.v1.json")
   );
@@ -179,7 +179,7 @@ async function buildAssetPacks(repoRoot) {
   };
 }
 
-async function buildTtsAssets(repoRoot) {
+export async function buildTtsAssets(repoRoot) {
   const voicesRoot = join(repoRoot, "apps/extension/src/assets/tts/en-es/piper");
   const entries = await readdir(voicesRoot, { withFileTypes: true });
   const voicesById = new Map();

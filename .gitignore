@@ -11,6 +11,8 @@ __pycache__/
 *.py[cod]
 tools/importers/outputs/generated/
 .env
+.dev.vars
+apps/api/.dev.vars
 
 # Large local Piper TTS model binaries. Restore with `pnpm assets:pull-tts-models`.
 /apps/extension/src/assets/tts/**/*.onnx

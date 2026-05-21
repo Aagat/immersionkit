@@ -20,7 +20,7 @@ class RecordingStatement implements D1PreparedStatement {
   }
 
   async all<T = unknown>(): Promise<{ results: T[] }> {
-    return { results: [] };
+    return { results: this.db.results as T[] };
   }
 
   async run(): Promise<{ success: boolean }> {
@@ -31,6 +31,7 @@ class RecordingStatement implements D1PreparedStatement {
 
 class RecordingD1 implements D1Database {
   runs: Array<{ query: string; values: unknown[] }> = [];
+  results: unknown[] = [];
 
   prepare(query: string): D1PreparedStatement {
     return new RecordingStatement(this, query);
@@ -97,5 +98,43 @@ describe("extension route contracts", () => {
       "ins_123",
       "chrome",
     ]);
+  });
+
+  it("returns asset release URLs for runtime-shaped R2 keys", async () => {
+    const db = new RecordingD1();
+    db.results = [
+      {
+        id: "rel_preview_en_es_asset-v1",
+        channel: "preview",
+        language_pair: "en-es",
+        schema_version: 2,
+        asset_version: "asset-v1",
+        manifest_key: "assets/en-es/manifest.json",
+        manifest_sha256:
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        manifest_byte_length: 128,
+        minimum_extension_version: "0.1.0",
+        published_at: "2026-05-21T00:00:00.000Z",
+      },
+    ];
+    const response = await handleRequest(
+      new Request(
+        "https://api.example.test/asset-releases?channel=preview&languagePair=en-es",
+      ),
+      {
+        ...createEnv(db),
+        ASSET_PUBLIC_BASE_URL: "https://assets.example.test/assets",
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      releases: [
+        {
+          manifestKey: "assets/en-es/manifest.json",
+          manifestUrl: "https://assets.example.test/assets/en-es/manifest.json",
+        },
+      ],
+    });
   });
 });

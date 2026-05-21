@@ -15,6 +15,20 @@ function normalizePublicBaseUrl(value: string | undefined): string | null {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
 
+function buildPublicAssetUrl(publicBaseUrl: string | null, key: string): string | null {
+  if (!publicBaseUrl) {
+    return null;
+  }
+
+  const normalizedKey = key.replace(/^\/+/, "");
+  const assetPrefix = "assets/";
+  if (publicBaseUrl.endsWith("/assets") && normalizedKey.startsWith(assetPrefix)) {
+    return `${publicBaseUrl}/${normalizedKey.slice(assetPrefix.length)}`;
+  }
+
+  return `${publicBaseUrl}/${normalizedKey}`;
+}
+
 async function registerInstall(request: Request, env: Env): Promise<Response> {
   const body = assertPlainObject(await readJson(request), "payload");
   assertOnlyKeys(body, "payload", [
@@ -137,7 +151,7 @@ async function listAssetReleases(request: Request, env: Env): Promise<Response> 
       schemaVersion: release.schema_version,
       assetVersion: release.asset_version,
       manifestKey: release.manifest_key,
-      manifestUrl: publicBaseUrl ? `${publicBaseUrl}/${release.manifest_key}` : null,
+      manifestUrl: buildPublicAssetUrl(publicBaseUrl, release.manifest_key),
       sha256: release.manifest_sha256,
       byteLength: release.manifest_byte_length,
       minimumExtensionVersion: release.minimum_extension_version,
