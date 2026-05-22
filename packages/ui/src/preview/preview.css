@@ -148,12 +148,12 @@ body {
 
 .ik-workshop-viewport[data-viewport="popup"] {
   display: grid;
-  justify-content: start;
+  justify-content: center;
   padding: 18px;
 }
 
 .ik-workshop-viewport[data-viewport="popup"] > [data-ik-frame="popup"] {
-  width: 392px;
+  width: 360px;
 }
 
 .ik-workshop-viewport[data-viewport="desktop"] {

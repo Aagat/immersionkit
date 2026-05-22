@@ -43,6 +43,21 @@ const USER_DATA_KEY_DEFINITIONS = [
   },
   {
     key: USER_DATA_KEYS.firstRunIntro
+  },
+  {
+    key: USER_DATA_KEYS.accountProfile
+  },
+  {
+    key: USER_DATA_KEYS.accountSession
+  },
+  {
+    key: USER_DATA_KEYS.installIdentity
+  },
+  {
+    key: USER_DATA_KEYS.telemetryState
+  },
+  {
+    key: USER_DATA_KEYS.entitlementCache
   }
 ] as const satisfies readonly UserDataKeyDefinition[];
 

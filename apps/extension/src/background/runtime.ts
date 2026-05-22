@@ -2,6 +2,8 @@ import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   ActiveAssetContext,
   ContentAssetContext,
+  GetAccountStateResponse,
+  GetTabZoomResponse,
   GetContentAnalysisContextMessage,
   GetContentAnalysisContextResponse,
   GetAssetContextMessage,
@@ -15,10 +17,13 @@ import type {
   SetUserDataMessage,
   GetUserVocabMessage,
   GetUserVocabResponse,
+  LogoutAccountResponse,
   SetVocabStatusMessage,
   SetVocabStatusResponse,
   GraduateCheckpointResponse,
   PingResponse,
+  QueueActivationEventMessage,
+  QueueActivationEventResponse,
   QueueSentenceCandidatesMessage,
   QueueSentenceCandidatesResponse,
   RefreshActiveTabMessage,
@@ -32,7 +37,10 @@ import type {
   MutateUserDataResponse,
   SentenceTranslationResultMessage,
   SpeakTextMessage,
-  SpeakTextResponse
+  SpeakTextResponse,
+  StartAccountLoginResponse,
+  SubmitFeedbackMessage,
+  SubmitFeedbackResponse
 } from "@immersionkit/shared";
 
 import { getBackgroundAssetPackService } from "./asset-packs";
@@ -60,6 +68,13 @@ import {
   USER_DATA_KEYS
 } from "../storage/user-data-repository";
 import { BackgroundTextToSpeechService } from "./tts";
+import { ImmersionKitApiClient } from "./api-client";
+import { BackgroundAccountService } from "./account-service";
+import { BackgroundActivationEventQueue } from "./event-queue";
+import {
+  canUseActionOverlayForTab,
+  resolveActionPopupPathForTab
+} from "./action-popup";
 
 type BackgroundHandledRuntimeMessage = Exclude<
   RuntimeMessage,
@@ -90,6 +105,14 @@ export class BackgroundRuntimeCoordinator {
   private readonly contentContext: ContentContextService;
   private readonly assetPacks = getBackgroundAssetPackService();
   private readonly tts = new BackgroundTextToSpeechService();
+  private readonly apiClient = new ImmersionKitApiClient();
+  private readonly accountService = new BackgroundAccountService({
+    apiClient: this.apiClient
+  });
+  private readonly eventQueue = new BackgroundActivationEventQueue({
+    accountService: this.accountService,
+    apiClient: this.apiClient
+  });
   private readonly runtimeMessageHandlers: RuntimeMessageHandlerMap = {
     [RuntimeMessageType.Ping]: (_message, _sender, sendResponse) => {
       sendResponse({
@@ -103,12 +126,36 @@ export class BackgroundRuntimeCoordinator {
       void this.handleRefreshActiveTab(sendResponse);
       return true;
     },
+    [RuntimeMessageType.GetTabZoom]: (_message, sender, sendResponse) => {
+      void this.handleGetTabZoom(sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.GetAccountState]: (_message, _sender, sendResponse) => {
+      void this.handleGetAccountState(sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.StartAccountLogin]: (_message, sender, sendResponse) => {
+      void this.handleStartAccountLogin(sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.LogoutAccount]: (_message, sender, sendResponse) => {
+      void this.handleLogoutAccount(sender, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.QueueActivationEvent]: (message, _sender, sendResponse) => {
+      void this.handleQueueActivationEvent(message, sendResponse);
+      return true;
+    },
+    [RuntimeMessageType.SubmitFeedback]: (message, sender, sendResponse) => {
+      void this.handleSubmitFeedback(message, sender, sendResponse);
+      return true;
+    },
     [RuntimeMessageType.GetLearningItems]: (message, _sender, sendResponse) => {
       void this.handleGetLearningItems(message, sendResponse);
       return true;
     },
-    [RuntimeMessageType.GetUserData]: (message, _sender, sendResponse) => {
-      void this.handleGetUserData(message, sendResponse);
+    [RuntimeMessageType.GetUserData]: (message, sender, sendResponse) => {
+      void this.handleGetUserData(message, sender, sendResponse);
       return true;
     },
     [RuntimeMessageType.SetUserData]: (message, sender, sendResponse) => {
@@ -202,11 +249,20 @@ export class BackgroundRuntimeCoordinator {
     this.isBooted = true;
     void this.prepareAssetPacks();
     void this.backfillLearningItemBands();
+    void this.accountService.ensureInstallIdentity();
+    void this.eventQueue.queueEvent({
+      eventName: "active_day",
+      properties: { surface: "background", dayIndex: 0 }
+    });
 
     chrome.runtime.onInstalled.addListener((details) => {
       diagnosticInfo("ImmersionKit background service worker installed.");
       if (details.reason === "install") {
         void showFirstRunGuidance();
+        void this.eventQueue.queueEvent({
+          eventName: "install_registered",
+          properties: { surface: "background" }
+        });
       }
       void this.prepareAssetPacks();
       void this.backfillLearningItemBands();
@@ -215,6 +271,8 @@ export class BackgroundRuntimeCoordinator {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) =>
       this.dispatchRuntimeMessage(message, sender, sendResponse)
     );
+
+    this.installActionPopupRouting();
 
     chrome.action?.onClicked.addListener((tab) => {
       void this.handleActionClick(tab);
@@ -288,7 +346,7 @@ export class BackgroundRuntimeCoordinator {
   }
 
   private async handleActionClick(tab: chrome.tabs.Tab): Promise<void> {
-    if (!isHttpTab(tab) || typeof tab.id !== "number") {
+    if (!canUseActionOverlayForTab(tab) || typeof tab.id !== "number") {
       diagnosticInfo("ImmersionKit popup overlay skipped.", {
         reason: "unsupported-tab",
         url: tab.url ?? null
@@ -296,9 +354,10 @@ export class BackgroundRuntimeCoordinator {
       return;
     }
 
-    let sent = await sendPopupOverlayToggleMessageToTab(tab.id);
+    const zoomFactor = await getTabZoomFactor(tab.id);
+    let sent = await sendPopupOverlayToggleMessageToTab(tab.id, zoomFactor);
     if (!sent && (await injectContentScriptsIntoTab(tab.id))) {
-      sent = await sendPopupOverlayToggleMessageToTab(tab.id);
+      sent = await sendPopupOverlayToggleMessageToTab(tab.id, zoomFactor);
     }
 
     if (!sent) {
@@ -307,6 +366,62 @@ export class BackgroundRuntimeCoordinator {
         tabId: tab.id
       });
     }
+  }
+
+  private installActionPopupRouting(): void {
+    if (!chrome.action?.setPopup || !chrome.tabs) {
+      return;
+    }
+
+    chrome.tabs.onActivated?.addListener((activeInfo) => {
+      void this.updateActionPopupForTabId(activeInfo.tabId);
+    });
+
+    chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
+      if (!changeInfo.url && changeInfo.status !== "loading") {
+        return;
+      }
+
+      void this.updateActionPopupForTab({
+        ...tab,
+        id: typeof tab.id === "number" ? tab.id : tabId,
+        url: changeInfo.url ?? tab.url
+      });
+    });
+
+    chrome.windows?.onFocusChanged?.addListener((windowId) => {
+      if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        return;
+      }
+
+      void this.refreshActiveTabActionPopup(windowId);
+    });
+
+    chrome.runtime.onStartup?.addListener(() => {
+      void this.refreshActiveTabActionPopup();
+    });
+
+    void this.refreshActiveTabActionPopup();
+  }
+
+  private async refreshActiveTabActionPopup(windowId?: number): Promise<void> {
+    const tab = await getActiveTab(windowId);
+    if (tab) {
+      await this.updateActionPopupForTab(tab);
+    }
+  }
+
+  private async updateActionPopupForTabId(tabId: number): Promise<void> {
+    const tab = await getTabById(tabId);
+    await this.updateActionPopupForTab(tab ?? ({ id: tabId } as chrome.tabs.Tab));
+  }
+
+  private async updateActionPopupForTab(tab: chrome.tabs.Tab): Promise<void> {
+    if (typeof tab.id !== "number") {
+      return;
+    }
+
+    await setActionPopupForTab(tab.id, resolveActionPopupPathForTab(tab));
   }
 
   private async handleQueueSentenceCandidates(
@@ -322,6 +437,24 @@ export class BackgroundRuntimeCoordinator {
       sendResponse({
         ok: false,
         error: "sentence-queue-failed"
+      });
+    }
+  }
+
+  private async handleGetTabZoom(
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: GetTabZoomResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        zoomFactor: await getTabZoomFactor(sender.tab?.id ?? null)
+      });
+    } catch (error) {
+      console.warn("ImmersionKit tab zoom read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "tab-zoom-read-failed"
       });
     }
   }
@@ -361,6 +494,141 @@ export class BackgroundRuntimeCoordinator {
     }
   }
 
+  private async handleGetAccountState(
+    sendResponse: (response: GetAccountStateResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        state: await this.accountService.getState()
+      });
+    } catch (error) {
+      console.warn("ImmersionKit account state read failed.", error);
+      sendResponse({
+        ok: false,
+        error: "account-state-read-failed"
+      });
+    }
+  }
+
+  private async handleStartAccountLogin(
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: StartAccountLoginResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "account-login-forbidden"
+      });
+      return;
+    }
+
+    try {
+      const state = await this.accountService.startGoogleLogin();
+      void this.eventQueue.queueEvent({
+        eventName: "signup_completed",
+        properties: { surface: "options" }
+      });
+      void refreshTabsAfterCurriculumProgression(undefined);
+      sendResponse({ ok: true, state });
+    } catch (error) {
+      console.warn("ImmersionKit account login failed.", error);
+      sendResponse({
+        ok: false,
+        error: "account-login-failed"
+      });
+    }
+  }
+
+  private async handleLogoutAccount(
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: LogoutAccountResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "account-logout-forbidden"
+      });
+      return;
+    }
+
+    try {
+      const state = await this.accountService.logout();
+      void refreshTabsAfterCurriculumProgression(undefined);
+      sendResponse({ ok: true, state });
+    } catch (error) {
+      console.warn("ImmersionKit account logout failed.", error);
+      sendResponse({
+        ok: false,
+        error: "account-logout-failed"
+      });
+    }
+  }
+
+  private async handleQueueActivationEvent(
+    message: QueueActivationEventMessage,
+    sendResponse: (response: QueueActivationEventResponse) => void
+  ) {
+    try {
+      sendResponse({
+        ok: true,
+        queued: await this.eventQueue.queueEvent({
+          eventName: message.eventName,
+          properties: message.properties
+        })
+      });
+    } catch (error) {
+      console.warn("ImmersionKit activation event rejected.", error);
+      sendResponse({
+        ok: false,
+        error: "activation-event-rejected"
+      });
+    }
+  }
+
+  private async handleSubmitFeedback(
+    message: SubmitFeedbackMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: SubmitFeedbackResponse) => void
+  ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "feedback-submit-forbidden"
+      });
+      return;
+    }
+
+    try {
+      const install = await this.accountService.ensureInstallIdentity();
+      const session = await this.accountService.loadSessionForApi();
+      let submitted = false;
+      if (this.apiClient.isConfigured()) {
+        await this.apiClient.submitFeedback(
+          {
+            category: message.category,
+            description: message.description,
+            diagnostics: createBackendFeedbackDiagnostics(message.diagnostics),
+            installId: install.installId
+          },
+          { accessToken: session?.accessToken ?? null }
+        );
+        submitted = true;
+      }
+      const queuedTelemetry = await this.eventQueue.queueEvent({
+        eventName: "feedback_submitted",
+        properties: { surface: "options", action: "submit" }
+      });
+      sendResponse({ ok: true, submitted, queuedTelemetry });
+    } catch (error) {
+      console.warn("ImmersionKit feedback submit failed.", error);
+      sendResponse({
+        ok: false,
+        error: "feedback-submit-failed"
+      });
+    }
+  }
+
   private async handleGetAssetContext(
     message: GetAssetContextMessage,
     sendResponse: (response: GetAssetContextResponse) => void
@@ -384,8 +652,17 @@ export class BackgroundRuntimeCoordinator {
 
   private async handleGetUserData(
     message: GetUserDataMessage,
+    sender: chrome.runtime.MessageSender,
     sendResponse: (response: GetUserDataResponse) => void
   ) {
+    if (!isExtensionPageSender(sender)) {
+      sendResponse({
+        ok: false,
+        error: "user-data-read-forbidden"
+      });
+      return;
+    }
+
     try {
       sendResponse({
         ok: true,
@@ -685,6 +962,15 @@ export class BackgroundRuntimeCoordinator {
         bandIds: context.bandIds,
         missingBandIds: context.missingBandIds
       });
+      void this.eventQueue.queueEvent({
+        eventName: context.source === "empty" ? "asset_fallback" : "asset_load",
+        properties: {
+          surface: "background",
+          assetSource: context.source,
+          assetVersion: context.assetVersion ?? undefined,
+          count: context.renderUnits.length
+        }
+      });
     } catch (error) {
       console.warn("ImmersionKit failed to prepare asset packs.", error);
     }
@@ -712,6 +998,44 @@ function createContentAssetContext(context: ActiveAssetContext): ContentAssetCon
     bandIds: context.bandIds,
     missingBandIds: context.missingBandIds
   };
+}
+
+function createBackendFeedbackDiagnostics(input: unknown): Record<string, string | number> {
+  const diagnostics: Record<string, string | number> = {
+    timezoneOffsetMinutes: new Date().getTimezoneOffset()
+  };
+  const bundle = isPlainRecord(input) ? input : {};
+  const extension = isPlainRecord(bundle.extension) ? bundle.extension : {};
+  const browser = isPlainRecord(bundle.browser) ? bundle.browser : {};
+
+  const extensionVersion = readNonEmptyString(extension.version);
+  if (extensionVersion) {
+    diagnostics.extensionVersion = extensionVersion;
+  }
+
+  const buildProfile = readNonEmptyString(extension.buildProfile);
+  if (
+    buildProfile === "development" ||
+    buildProfile === "preview" ||
+    buildProfile === "production"
+  ) {
+    diagnostics.buildProfile = buildProfile;
+  }
+
+  const locale = readNonEmptyString(browser.language);
+  if (locale) {
+    diagnostics.locale = locale;
+  }
+
+  return diagnostics;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readNonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 async function showFirstRunGuidance(): Promise<void> {
@@ -744,10 +1068,6 @@ function isExtensionPageSender(sender: chrome.runtime.MessageSender): boolean {
   );
 }
 
-function isHttpTab(tab: chrome.tabs.Tab): boolean {
-  return typeof tab.url === "string" && /^https?:\/\//i.test(tab.url);
-}
-
 async function getActiveTabId(): Promise<number | null> {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -762,16 +1082,97 @@ async function getActiveTabId(): Promise<number | null> {
   });
 }
 
-async function sendPopupOverlayToggleMessageToTab(tabId: number): Promise<boolean> {
+async function getActiveTab(windowId?: number): Promise<chrome.tabs.Tab | null> {
+  return new Promise((resolve) => {
+    const queryInfo: chrome.tabs.QueryInfo =
+      typeof windowId === "number"
+        ? { active: true, windowId }
+        : { active: true, currentWindow: true };
+
+    chrome.tabs.query(queryInfo, (tabs) => {
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+
+      resolve(tabs[0] ?? null);
+    });
+  });
+}
+
+async function getTabById(tabId: number): Promise<chrome.tabs.Tab | null> {
+  if (!chrome.tabs?.get) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        resolve(null);
+        return;
+      }
+
+      resolve(tab ?? null);
+    });
+  });
+}
+
+async function setActionPopupForTab(tabId: number, popup: string): Promise<void> {
+  if (!chrome.action?.setPopup) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    chrome.action.setPopup({ tabId, popup }, () => {
+      if (chrome.runtime.lastError) {
+        diagnosticInfo("ImmersionKit action popup routing skipped.", {
+          reason: "set-popup-failed",
+          tabId,
+          message: chrome.runtime.lastError.message
+        });
+      }
+
+      resolve();
+    });
+  });
+}
+
+async function sendPopupOverlayToggleMessageToTab(
+  tabId: number,
+  zoomFactor: number
+): Promise<boolean> {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(
       tabId,
-      { type: POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE },
+      { type: POPUP_OVERLAY_TOGGLE_MESSAGE_TYPE, zoomFactor },
       (response?: PopupOverlayToggleResponse) => {
         resolve(!chrome.runtime.lastError && Boolean(response?.ok));
       }
     );
   });
+}
+
+async function getTabZoomFactor(tabId: number | null): Promise<number> {
+  if (typeof tabId !== "number" || !chrome.tabs?.getZoom) {
+    return 1;
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.getZoom(tabId, (zoomFactor) => {
+      if (chrome.runtime.lastError) {
+        resolve(1);
+        return;
+      }
+
+      resolve(normalizeZoomFactor(zoomFactor));
+    });
+  });
+}
+
+function normalizeZoomFactor(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.min(5, Math.max(0.25, value))
+    : 1;
 }
 
 async function injectContentScriptsIntoTab(tabId: number): Promise<boolean> {

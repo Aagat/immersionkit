@@ -16,6 +16,11 @@ import type {
   PhraseActivatedDetail,
   TokenActivatedDetail
 } from "./contracts";
+import {
+  getCachedPageZoomFactor,
+  getInversePageZoomFactor,
+  refreshPageZoomFactor
+} from "./page-zoom";
 import type { SentenceNoteMetadata } from "./sentence-renderer";
 
 export type ContentPopoverRuntimeState = {
@@ -74,9 +79,12 @@ const CONTENT_POPOVER_STYLES = `
     --font-heading: var(--font-mono);
     box-sizing: border-box;
     display: block;
-    width: clamp(260px, 28vw, 340px);
-    max-width: calc(100vw - 20px);
-    max-height: min(62vh, calc(100vh - 20px), 560px);
+    width: min(
+      clamp(232px, var(--ik-popover-fluid-width, 24vw), 308px),
+      var(--ik-popover-max-width, calc(100vw - 20px))
+    );
+    max-width: var(--ik-popover-max-width, calc(100vw - 20px));
+    max-height: var(--ik-popover-max-height, min(78vh, calc(100vh - 20px), 500px));
     margin: 0;
     border: 0;
     padding: 0;
@@ -93,14 +101,44 @@ const CONTENT_POPOVER_STYLES = `
   }
 
   :host([data-ik-popover-kind="sentence"]) {
-    width: clamp(300px, 36vw, 480px);
-    max-height: min(68vh, calc(100vh - 20px), 620px);
+    width: min(
+      clamp(280px, var(--ik-sentence-popover-fluid-width, 34vw), 430px),
+      var(--ik-popover-max-width, calc(100vw - 20px))
+    );
+    max-height: var(
+      --ik-sentence-popover-max-height,
+      min(78vh, calc(100vh - 20px), 560px)
+    );
   }
 
   .ik-content-popover-card {
     max-height: inherit;
     overflow: auto;
     overscroll-behavior: contain;
+  }
+
+  :host(:not([data-ik-popover-kind="sentence"])) .ik-content-popover-card {
+    overflow: visible;
+  }
+
+  :host([data-ik-compact-viewport="true"]) {
+    width: min(
+      clamp(220px, var(--ik-compact-popover-fluid-width, 32vw), 292px),
+      var(--ik-popover-max-width, calc(100vw - 20px))
+    );
+    max-height: calc(100vh - 20px);
+  }
+
+  :host([data-ik-compact-viewport="true"][data-ik-popover-kind="sentence"]) {
+    width: min(
+      clamp(260px, var(--ik-compact-sentence-popover-fluid-width, 42vw), 390px),
+      var(--ik-popover-max-width, calc(100vw - 20px))
+    );
+  }
+
+  :host([data-ik-compact-viewport="true"]) .ik-content-popover-card {
+    gap: 0.5rem;
+    padding: 0.625rem;
   }
 
   .ik-popover-light-dom-mirror-slot {
@@ -308,6 +346,8 @@ export function mountPopover(
   anchorElement: HTMLElement,
   extraCleanup?: () => void
 ) {
+  applyPopoverZoom(popover, getCachedPageZoomFactor());
+  popover.style.visibility = "hidden";
   document.body.append(popover);
   showPopoverInTopLayer(popover);
 
@@ -327,9 +367,36 @@ export function mountPopover(
     hidePopoverFromTopLayer(popover);
   };
 
-  if (!positionPopover(popover, anchorElement)) {
-    closePopover(runtimeState);
-    return;
+  const positionAtCurrentZoom = () => {
+    applyPopoverZoom(popover, getCachedPageZoomFactor());
+    if (!positionPopover(popover, anchorElement)) {
+      return false;
+    }
+
+    popover.style.visibility = "";
+    return true;
+  };
+
+  if (!positionAtCurrentZoom()) {
+    void refreshPageZoomFactor().then(() => {
+      if (runtimeState.popover !== popover || !popover.isConnected) {
+        return;
+      }
+
+      if (!positionAtCurrentZoom()) {
+        closePopover(runtimeState);
+      }
+    });
+  } else {
+    void refreshPageZoomFactor().then(() => {
+      if (runtimeState.popover !== popover || !popover.isConnected) {
+        return;
+      }
+
+      if (!positionAtCurrentZoom()) {
+        closePopover(runtimeState);
+      }
+    });
   }
 
   window.addEventListener("scroll", monitorPopover, true);
@@ -430,9 +497,22 @@ function createPopoverViewportMonitor(
         return;
       }
 
+      applyPopoverZoom(popover, getCachedPageZoomFactor());
       if (!anchorElement.isConnected || !positionPopover(popover, anchorElement)) {
         closePopover(runtimeState);
+        return;
       }
+
+      void refreshPageZoomFactor().then(() => {
+        if (runtimeState.popover !== popover || !popover.isConnected) {
+          return;
+        }
+
+        applyPopoverZoom(popover, getCachedPageZoomFactor());
+        if (!anchorElement.isConnected || !positionPopover(popover, anchorElement)) {
+          closePopover(runtimeState);
+        }
+      });
     });
   }) as PopoverViewportMonitor;
 
@@ -446,6 +526,52 @@ function createPopoverViewportMonitor(
   };
 
   return monitorPopover;
+}
+
+function applyPopoverZoom(popover: HTMLDivElement, zoomFactor: number): void {
+  const inverseZoom = getInversePageZoomFactor(zoomFactor);
+  const zoomCompensatedWidth = window.innerWidth * zoomFactor;
+  const zoomCompensatedHeight = window.innerHeight * zoomFactor;
+  popover.style.transformOrigin = "top left";
+  popover.style.transform = `scale(${inverseZoom})`;
+  popover.style.setProperty(
+    "--ik-popover-fluid-width",
+    `${zoomCompensatedWidth * 0.24}px`
+  );
+  popover.style.setProperty(
+    "--ik-sentence-popover-fluid-width",
+    `${zoomCompensatedWidth * 0.34}px`
+  );
+  popover.style.setProperty(
+    "--ik-compact-popover-fluid-width",
+    `${zoomCompensatedWidth * 0.32}px`
+  );
+  popover.style.setProperty(
+    "--ik-compact-sentence-popover-fluid-width",
+    `${zoomCompensatedWidth * 0.42}px`
+  );
+  popover.style.setProperty(
+    "--ik-popover-max-width",
+    `${Math.max(220, zoomCompensatedWidth - 20)}px`
+  );
+  popover.style.setProperty(
+    "--ik-popover-max-height",
+    `${Math.max(160, Math.min(zoomCompensatedHeight * 0.78, zoomCompensatedHeight - 20, 500))}px`
+  );
+  popover.style.setProperty(
+    "--ik-sentence-popover-max-height",
+    `${Math.max(220, Math.min(zoomCompensatedHeight * 0.78, zoomCompensatedHeight - 20, 560))}px`
+  );
+  popover.setAttribute("data-ik-page-zoom", String(zoomFactor));
+  if (isZoomCompensatedCompactViewport(zoomFactor)) {
+    popover.setAttribute("data-ik-compact-viewport", "true");
+  } else {
+    popover.removeAttribute("data-ik-compact-viewport");
+  }
+}
+
+function isZoomCompensatedCompactViewport(zoomFactor: number): boolean {
+  return window.innerHeight * zoomFactor <= 620 || window.innerWidth * zoomFactor <= 760;
 }
 
 function positionPopover(

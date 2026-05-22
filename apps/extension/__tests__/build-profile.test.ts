@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   areDiagnosticsEnabled,
+  isAccountRequiredBuild,
   normalizeBuildProfile
 } from "../src/build-profile";
 import { shouldShowAdvancedTabForLocation } from "../src/options/App";
@@ -52,6 +53,17 @@ describe("extension build profile", () => {
     const productionTabs = settingsTabs.filter((tab) => tab !== "Advanced");
 
     expect(productionTabs).toContain("Support");
+    expect(productionTabs).not.toContain("Account");
+    expect(productionTabs).not.toContain("Curriculum");
     expect(productionTabs).not.toContain("Advanced");
+  });
+
+  it("requires accounts by default only for production preview builds", () => {
+    expect(isAccountRequiredBuild(undefined, "diagnostic")).toBe(false);
+    expect(isAccountRequiredBuild(undefined, "production")).toBe(true);
+    expect(isAccountRequiredBuild("false", "production")).toBe(false);
+    expect(isAccountRequiredBuild("0", "production")).toBe(false);
+    expect(isAccountRequiredBuild("true", "diagnostic")).toBe(true);
+    expect(isAccountRequiredBuild("1", "diagnostic")).toBe(true);
   });
 });

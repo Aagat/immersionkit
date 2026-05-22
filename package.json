@@ -5,8 +5,22 @@
   "packageManager": "pnpm@10.17.0",
   "scripts": {
     "dev": "pnpm --filter @immersionkit/extension dev",
+    "api:dev": "pnpm --filter @immersionkit/api dev",
+    "api:migrate:local": "pnpm --filter @immersionkit/api migrate:local",
+    "api:migrate:remote": "pnpm --filter @immersionkit/api migrate:remote",
+    "api:deploy": "pnpm --filter @immersionkit/api run deploy",
+    "api:deploy:preview": "pnpm --filter @immersionkit/api run deploy:preview",
     "asset-packs:serve": "node tools/assets/asset-pack-server.mjs",
+    "assets:release:build": "node tools/assets/build-release-assets.mjs",
+    "assets:release:publish": "pnpm assets:release:build && node tools/assets/publish-release-assets.mjs",
     "assets:pull-tts-models": "node tools/assets/pull-tts-models.mjs",
+    "deploy:preview": "node tools/deploy/preview-release.mjs release",
+    "deploy:preview:backend": "pnpm api:migrate:remote && pnpm api:deploy:preview && pnpm assets:release:publish",
+    "deploy:preview:verify": "node tools/deploy/preview-release.mjs verify",
+    "share-site:build": "pnpm --filter @immersionkit/share-site build",
+    "share-site:build:preview": "node tools/deploy/preview-release.mjs build-site",
+    "share-site:deploy:preview": "node tools/deploy/preview-release.mjs deploy-site",
+    "share-site:serve": "pnpm --filter @immersionkit/share-site serve",
     "build": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build",
     "build:local-assets": "VITE_IMMERSIONKIT_ASSET_BASE_URL=http://127.0.0.1:8787/assets pnpm build",
     "build:production": "pnpm --filter @immersionkit/shared build && pnpm --filter @immersionkit/extension build:production",
@@ -38,6 +52,7 @@
     "playwright": "^1.53.0",
     "rev-dep": "^2.13.2",
     "typescript": "^5.7.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "4.91.0"
   }
 }

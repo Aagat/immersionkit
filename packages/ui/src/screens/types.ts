@@ -3,6 +3,7 @@ export type SiteControlState = "on" | "paused";
 export type ArticleState = "supported" | "word" | "phrase" | "sentence";
 export type OptionsSection =
   | "Overview"
+  | "Account"
   | "Reading"
   | "Curriculum"
   | "Sites"
@@ -57,7 +58,6 @@ export type MetricIconName =
 export const settingsTabs: OptionsSection[] = [
   "Overview",
   "Reading",
-  "Curriculum",
   "Sites",
   "Translation",
   "Support",
@@ -161,6 +161,19 @@ export type OptionsBandOption = {
   label: string;
 };
 
+export type PreviewAccountState =
+  | {
+      status: "not-required";
+    }
+  | {
+      status: "signed-out";
+    }
+  | {
+      status: "signed-in";
+      email: string;
+      previewStatus: string;
+    };
+
 export type ExtensionOptionsProps = {
   initialSection?: OptionsSection;
   activeSection?: OptionsSection;
@@ -192,12 +205,14 @@ export type ExtensionOptionsProps = {
   advancedDiagnostics?: OptionsAdvancedDiagnostics | null;
   exactActiveBandId?: string | null;
   bandOptions?: readonly OptionsBandOption[];
+  account?: PreviewAccountState;
   supportCategory?: SupportIssueCategory;
   supportDescription?: string;
   supportIncludeExcerpts?: boolean;
   supportStatusMessage?: string | null;
   supportErrorMessage?: string | null;
   isGeneratingSupportReport?: boolean;
+  isSubmittingSupportFeedback?: boolean;
   onSectionChange?: (section: OptionsSection) => void;
   onSave?: () => void;
   onReload?: () => void;
@@ -221,6 +236,9 @@ export type ExtensionOptionsProps = {
   onSupportIncludeExcerptsChange?: (include: boolean) => void;
   onDownloadSupportReport?: () => void;
   onCopySupportSummary?: () => void;
+  onSubmitSupportFeedback?: () => void;
+  onPreviewSignIn?: () => void;
+  onPreviewLogout?: () => void;
 };
 
 export type ExtensionPopupProps = {
@@ -238,6 +256,7 @@ export type ExtensionPopupProps = {
   metrics?: PopupMetric[];
   learningStats?: PopupLearningStats;
   learningDays?: readonly PopupLearningDayStats[];
+  account?: PreviewAccountState;
   unsupportedMessage?: string;
   firstRunIntro?: boolean;
   errorMessage?: string | null;
@@ -248,4 +267,5 @@ export type ExtensionPopupProps = {
   onOpenDebug?: () => void;
   onReportIssue?: () => void;
   onDismissIntro?: () => void;
+  onPreviewSignIn?: () => void;
 };

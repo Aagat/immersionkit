@@ -18,6 +18,8 @@ import type { PageDiagnosticsSnapshot } from "../diagnostics/page-diagnostics";
 import type { ContentSupportContextSnapshot } from "../support/report";
 import { readContentSupportContext } from "./support-context";
 import { summarizeProcessingContext } from "./debug-trace-store";
+import { RuntimeMessageType } from "@immersionkit/shared";
+import { sendRuntimeMessage } from "../runtime-client";
 
 export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   if (runtimeState.refreshPromise) {
@@ -106,6 +108,12 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       return;
     }
 
+    queueActivationEvent("supported_page_seen", {
+      surface: "content",
+      assetSource: processingContext.renderAssetInfo.source,
+      assetVersion: processingContext.renderAssetInfo.assetVersion ?? undefined
+    });
+
     const wordRenderIndexes = buildWordRenderIndexes(processingContext.renderUnits, {
       bandPreference: getCurriculumBandPreference(processingContext.curriculumConfig)
     });
@@ -144,6 +152,18 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       runtimeState.debugTrace?.markProcessing(debugRunId);
     }
     processRoots(state, [document.body]);
+    if (
+      state.diagnostics.injectedTokens > 0 ||
+      state.diagnostics.injectedPhrases > 0
+    ) {
+      queueActivationEvent("reading_rendered", {
+        surface: "content",
+        count:
+          state.diagnostics.injectedTokens + state.diagnostics.injectedPhrases,
+        assetSource: processingContext.renderAssetInfo.source,
+        assetVersion: processingContext.renderAssetInfo.assetVersion ?? undefined
+      });
+    }
     setupMutationObserver(state, processRoots);
     if (debugRunId) {
       runtimeState.debugTrace?.markActive(debugRunId);
@@ -154,6 +174,22 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   });
 
   return runtimeState.refreshPromise;
+}
+
+function queueActivationEvent(
+  eventName: "supported_page_seen" | "reading_rendered",
+  properties: {
+    surface: "content";
+    count?: number;
+    assetSource: "remote-pack" | "cached-pack" | "empty";
+    assetVersion?: string;
+  }
+): void {
+  void sendRuntimeMessage({
+    type: RuntimeMessageType.QueueActivationEvent,
+    eventName,
+    properties
+  });
 }
 
 function stopProcessing(runtimeState: RuntimeState) {

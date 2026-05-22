@@ -354,11 +354,13 @@ export function evaluateCurriculumEligibility(
 
   if (typeof input.score === "number" && Number.isFinite(input.score)) {
     if (input.score < activeBand.difficultyLimits.minimumScore) {
-      return createEligibilityDecision(
-        config.configId,
-        activeBand,
-        "below-active-band-difficulty"
-      );
+      if (input.unitType !== "word") {
+        return createEligibilityDecision(
+          config.configId,
+          activeBand,
+          "below-active-band-difficulty"
+        );
+      }
     }
 
     if (input.score > activeBand.difficultyLimits.maximumScore) {

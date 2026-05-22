@@ -262,26 +262,12 @@ const scenarios: readonly WorkshopScenario[] = [
     title: "Options Reading",
     group: "Options",
     viewport: "desktop",
-    description: "Reading pace, starting point, and density preview.",
+    description: "Curriculum overview, reading controls, and roadmap.",
     render: () => (
       <ExtensionOptions
         {...baseOptionsProps}
         initialSection="Reading"
         activeSection="Reading"
-      />
-    )
-  },
-  {
-    id: "options-curriculum",
-    title: "Options Curriculum",
-    group: "Options",
-    viewport: "desktop",
-    description: "Curriculum roadmap with current focus and next band.",
-    render: () => (
-      <ExtensionOptions
-        {...baseOptionsProps}
-        initialSection="Curriculum"
-        activeSection="Curriculum"
       />
     )
   },
@@ -657,7 +643,7 @@ function ComponentCatalog() {
               <Switch aria-label="Enable sentence help" />
             </div>
             <Slider value={[8]} min={0} max={20} aria-label="Discovery rate" />
-            <RadioGroup defaultValue="False beginner" className="grid gap-2">
+            <RadioGroup defaultValue="Beginner" className="grid gap-2">
               <label className="flex items-center gap-2">
                 <RadioGroupItem value="Beginner" /> Beginner
               </label>

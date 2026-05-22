@@ -34,18 +34,23 @@ import { diagnosticInfo } from "../shared/logger";
 
 const LOCAL_DEV_ASSET_BASE_URL = "http://127.0.0.1:8787/assets";
 const FIRST_RUN_REMOTE_LOAD_TIMEOUT_MS = 2500;
+const FALLBACK_EXTENSION_VERSION = "0.1.0";
 
 export type AssetPackManifestEntry = {
   bandId: string;
   url: string;
   assetVersion?: string;
   languagePair?: LanguagePairId;
+  sha256?: string;
+  byteLength?: number;
 };
 
 export type AssetPackManifest = {
   schemaVersion: string;
   assetVersion: string;
   languagePair: LanguagePairId;
+  publishedAt?: string;
+  minimumExtensionVersion?: string;
   packs: AssetPackManifestEntry[];
 };
 
@@ -109,7 +114,12 @@ export interface AssetPackRepository {
   retainOnly(identities: readonly string[]): Promise<void>;
 }
 
-type FetchJson = (url: string) => Promise<unknown>;
+type FetchedJsonBody = {
+  json: unknown;
+  bodyText: string;
+};
+
+type FetchJson = (url: string) => Promise<unknown | FetchedJsonBody>;
 
 type AssetPackServiceOptions = {
   assetBaseUrl?: string | null;
@@ -241,6 +251,10 @@ export class BackgroundAssetPackService {
             remoteResult.missingBandIds
           )
         : [];
+    const activeCachedPacks = await this.repository.getLatestPacksForBands(
+      languagePair,
+      bandIds
+    );
     const packsForContext = [...remoteResult.packs, ...cachedMissingPacks];
     const loadedBandIds = new Set(packsForContext.map((pack) => pack.bandId));
     const cachedAt = new Date().toISOString();
@@ -250,7 +264,9 @@ export class BackgroundAssetPackService {
     });
     if (stored) {
       await this.repository.retainOnly(
-        packsForContext.map((pack) => buildAssetPackIdentity(pack))
+        [...packsForContext, ...activeCachedPacks].map((pack) =>
+          buildAssetPackIdentity(pack)
+        )
       );
     }
 
@@ -275,11 +291,19 @@ export class BackgroundAssetPackService {
 
     try {
       const manifestUrl = buildManifestUrl(this.assetBaseUrl, languagePair);
+      const fetchedManifest = await this.fetchJson(manifestUrl);
       const manifest = validateAssetPackManifest(
-        await this.fetchJson(manifestUrl),
+        readFetchedJson(fetchedManifest).json,
         languagePair
       );
       if (!manifest) {
+        return { status: "failure" };
+      }
+      if (
+        manifest.minimumExtensionVersion &&
+        compareVersionStrings(readExtensionVersion(), manifest.minimumExtensionVersion) <
+          0
+      ) {
         return { status: "failure" };
       }
 
@@ -302,7 +326,12 @@ export class BackgroundAssetPackService {
         requestedEntries.map(async (entry) => {
           const packUrl = resolvePackUrl(entry.url, manifestUrl);
           sourceUrlByBandId.set(entry.bandId, packUrl);
-          return validateAssetPack(await this.fetchJson(packUrl), {
+          const fetchedPack = readFetchedJson(await this.fetchJson(packUrl));
+          if (!(await validateFetchedPackBytes(fetchedPack, entry))) {
+            return null;
+          }
+
+          return validateAssetPack(fetchedPack.json, {
             bandId: entry.bandId,
             assetVersion: entry.assetVersion ?? manifest.assetVersion,
             languagePair: manifest.languagePair
@@ -503,6 +532,20 @@ export function resolveActiveAssetBandWindow(
     activeBands.push(orderedBands[0]);
   }
   const windowIds = new Set<string>();
+  const activeBandOrders = activeBands.flatMap((band) =>
+    typeof band.order === "number" ? [band.order] : []
+  );
+  const maxActiveOrder =
+    activeBandOrders.length > 0 ? Math.max(...activeBandOrders) : null;
+
+  if (maxActiveOrder !== null) {
+    const unlockedBandIds = new Set(profile?.unlockedBandIds ?? []);
+    for (const band of orderedBands) {
+      if (band.order <= maxActiveOrder && unlockedBandIds.has(band.bandId)) {
+        windowIds.add(band.bandId);
+      }
+    }
+  }
 
   for (const activeBand of activeBands) {
     const activeIndex = Math.max(
@@ -546,6 +589,7 @@ export function validateAssetPackManifest(
   if (expectedLanguagePair && languagePair !== expectedLanguagePair) {
     return null;
   }
+  const requiresPackIntegrity = getSchemaMajorVersion(schemaVersion) >= 2;
 
   const packs = input.packs.flatMap((entry): AssetPackManifestEntry[] => {
     if (!isRecord(entry)) {
@@ -561,13 +605,29 @@ export function validateAssetPackManifest(
     if (entryLanguagePair && entryLanguagePair !== languagePair) {
       return [];
     }
+    const sha256 = readSha256(entry.sha256);
+    const byteLength = readPositiveInteger(entry.byteLength);
+    if (
+      requiresPackIntegrity &&
+      (!sha256 || byteLength === null)
+    ) {
+      return [];
+    }
+    if (
+      (entry.sha256 !== undefined && !sha256) ||
+      (entry.byteLength !== undefined && byteLength === null)
+    ) {
+      return [];
+    }
 
     return [
       {
         bandId,
         url,
         assetVersion: readString(entry.assetVersion) ?? undefined,
-        languagePair: entryLanguagePair ?? undefined
+        languagePair: entryLanguagePair ?? undefined,
+        sha256: sha256 ?? undefined,
+        byteLength: byteLength ?? undefined
       }
     ];
   });
@@ -580,6 +640,8 @@ export function validateAssetPackManifest(
     schemaVersion,
     assetVersion,
     languagePair,
+    publishedAt: readString(input.publishedAt) ?? undefined,
+    minimumExtensionVersion: readString(input.minimumExtensionVersion) ?? undefined,
     packs
   };
 }
@@ -693,13 +755,17 @@ function buildBandWindowKey(
   return `${languagePair}\u0000${bandIds.join("\u0000")}`;
 }
 
-async function fetchJson(url: string): Promise<unknown> {
+async function fetchJson(url: string): Promise<FetchedJsonBody> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Asset pack request failed: ${response.status}`);
   }
 
-  return response.json();
+  const bodyText = await response.text();
+  return {
+    json: JSON.parse(bodyText),
+    bodyText
+  };
 }
 
 function withTimeout<T>(
@@ -1011,8 +1077,101 @@ function readNonNegativeInteger(value: unknown): number | null {
     : null;
 }
 
+function readPositiveInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
+}
+
 function readLanguagePair(value: unknown): LanguagePairId | null {
   return isLanguagePairId(value) ? value : null;
+}
+
+function readSha256(value: unknown): string | null {
+  const input = readString(value);
+  return input && /^[a-f0-9]{64}$/.test(input) ? input : null;
+}
+
+function readFetchedJson(input: unknown | FetchedJsonBody): FetchedJsonBody {
+  if (
+    isRecord(input) &&
+    "json" in input &&
+    typeof input.bodyText === "string"
+  ) {
+    return {
+      json: input.json,
+      bodyText: input.bodyText
+    };
+  }
+
+  return {
+    json: input,
+    bodyText: JSON.stringify(input)
+  };
+}
+
+async function validateFetchedPackBytes(
+  fetchedPack: FetchedJsonBody,
+  entry: AssetPackManifestEntry
+): Promise<boolean> {
+  if (!entry.sha256 && entry.byteLength === undefined) {
+    return true;
+  }
+
+  const bytes = new TextEncoder().encode(fetchedPack.bodyText);
+  if (entry.byteLength !== undefined && bytes.byteLength !== entry.byteLength) {
+    return false;
+  }
+  if (entry.sha256 && (await computeSha256(bytes)) !== entry.sha256) {
+    return false;
+  }
+
+  return true;
+}
+
+async function computeSha256(bytes: Uint8Array): Promise<string> {
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength
+  ) as ArrayBuffer;
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function getSchemaMajorVersion(schemaVersion: string): number {
+  const match = schemaVersion.match(/^(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function readExtensionVersion(): string {
+  try {
+    return chrome.runtime.getManifest().version;
+  } catch {
+    return FALLBACK_EXTENSION_VERSION;
+  }
+}
+
+function compareVersionStrings(left: string, right: string): number {
+  const leftParts = parseVersionParts(left);
+  const rightParts = parseVersionParts(right);
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const comparison = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+
+  return 0;
+}
+
+function parseVersionParts(version: string): number[] {
+  return version
+    .split(/[.-]/)
+    .map((part) => Number(part))
+    .filter((part) => Number.isInteger(part) && part >= 0);
 }
 
 function deleteStoredRowsForPack(

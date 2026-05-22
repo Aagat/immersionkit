@@ -77,11 +77,11 @@ export function ExtensionPopup({
   bandTitle = "Reading band 1",
   bandSubtitle = "Words + phrases",
   progressValue = 38,
-  progressLabel = "42 / 120 reading evidence items",
   progressDetail = "A few more reading evidence items will widen your range.",
   metrics,
   learningStats,
   learningDays,
+  account = { status: "signed-in", email: "", previewStatus: "Active" },
   unsupportedMessage = "Open a normal HTTP(S) article, blog, or docs page to use reading mode.",
   firstRunIntro = false,
   errorMessage = null,
@@ -91,7 +91,8 @@ export function ExtensionPopup({
   onOpenSettings,
   onOpenDebug,
   onReportIssue,
-  onDismissIntro
+  onDismissIntro,
+  onPreviewSignIn
 }: ExtensionPopupProps) {
   const [localSiteState, setLocalSiteState] =
     useState<SiteControlState>(initialSiteState);
@@ -103,70 +104,74 @@ export function ExtensionPopup({
     <div
       className={
         chromeFrame
-          ? "absolute inset-x-4 top-4 sm:inset-x-auto sm:right-8 sm:top-8 sm:w-[392px]"
-          : "w-[392px]"
+          ? "absolute inset-x-3 top-3 sm:inset-x-auto sm:right-6 sm:top-6 sm:w-[360px]"
+          : "w-[360px] min-w-[360px] overflow-x-hidden"
       }
     >
-      <PopupPanel>
-        <PopupHeader
-          onOpenSettings={onOpenSettings}
-          debugAvailable={debugAvailable}
-          onOpenDebug={onOpenDebug}
-          onReportIssue={onReportIssue}
-        />
-        {errorMessage ? (
-          <Alert>
-            <WarningCircleIcon aria-hidden="true" />
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        {firstRunIntro ? (
-          <Alert>
-            <IkIcon name="shield" />
-            <AlertTitle>Read normally with small doses of Spanish.</AlertTitle>
-            <AlertDescription>
-              Words and phrases appear gently on supported pages. Pause any site
-              or adjust your pace in settings.
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 w-fit"
-                onClick={onDismissIntro}
-              >
-                Got it
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {supported ? (
-          <SupportedPopup
-            bandTitle={bandTitle}
-            bandSubtitle={bandSubtitle}
-            progress={progress}
-            progressDetail={progressDetail}
-            enabled={enabled}
-            metrics={metrics}
-            learningStats={learningStats}
-            learningDays={learningDays}
-            isSavingSite={isSavingSite}
-            onSiteToggle={() => {
-              if (onSiteToggle) {
-                onSiteToggle();
-                return;
-              }
-              setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
-            }}
-          />
-        ) : (
-          <UnsupportedPopup
-            unsupportedMessage={unsupportedMessage}
-            bandTitle={bandTitle}
-            progress={progress}
-            progressLabel={progressLabel}
+      {supported ? (
+        <PopupPanel>
+          <PopupHeader
             onOpenSettings={onOpenSettings}
+            debugAvailable={debugAvailable}
+            onOpenDebug={onOpenDebug}
+            onReportIssue={onReportIssue}
           />
-        )}
-      </PopupPanel>
+          {errorMessage ? (
+            <Alert>
+              <WarningCircleIcon aria-hidden="true" />
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          ) : null}
+          {firstRunIntro ? (
+            <Alert>
+              <IkIcon name="shield" />
+              <AlertTitle>Read normally with small doses of Spanish.</AlertTitle>
+              <AlertDescription>
+                Words and phrases appear gently on supported pages. Pause any site
+                or adjust your pace in settings.
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-fit"
+                  onClick={onDismissIntro}
+                >
+                  Got it
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {account.status === "signed-out" ? (
+            <SignedOutPopup
+              onPreviewSignIn={onPreviewSignIn}
+              onOpenSettings={onOpenSettings}
+            />
+          ) : (
+            <SupportedPopup
+              bandTitle={bandTitle}
+              bandSubtitle={bandSubtitle}
+              progress={progress}
+              progressDetail={progressDetail}
+              enabled={enabled}
+              metrics={metrics}
+              learningStats={learningStats}
+              learningDays={learningDays}
+              isSavingSite={isSavingSite}
+              onSiteToggle={() => {
+                if (onSiteToggle) {
+                  onSiteToggle();
+                  return;
+                }
+                setLocalSiteState((value) => (value === "on" ? "paused" : "on"));
+              }}
+            />
+          )}
+        </PopupPanel>
+      ) : (
+        <UnsupportedPopup
+          unsupportedMessage={unsupportedMessage}
+          onOpenSettings={onOpenSettings}
+        />
+      )}
     </div>
   );
 
@@ -184,6 +189,41 @@ export function ExtensionPopup({
         {popupContent}
       </BrowserChrome>
     </ImmersionFrame>
+  );
+}
+
+function SignedOutPopup({
+  onPreviewSignIn,
+  onOpenSettings
+}: {
+  onPreviewSignIn?: () => void;
+  onOpenSettings?: () => void;
+}) {
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <Badge variant="secondary" className="w-fit">
+            Preview account required
+          </Badge>
+          <CardTitle>Sign in for preview</CardTitle>
+          <CardDescription>
+            ImmersionKit requires preview sign-in before reading mode turns on.
+            Your learning progress and reading history stay local on this device.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <Button onClick={onPreviewSignIn}>
+            <IkIcon name="link" dataIcon="inline-start" />
+            Sign in for preview with Google
+          </Button>
+          <Button variant="outline" onClick={onOpenSettings}>
+            Open settings
+          </Button>
+        </CardContent>
+      </Card>
+      <LocalFooter text="Preview sign-in is for access and support; it does not sync learning progress." />
+    </>
   );
 }
 
@@ -264,10 +304,10 @@ function LearningReportCard({
   const total = Math.max(stats.total, 0);
 
   return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
         <div className="flex min-w-0 items-center gap-4">
-          <h2 className="shrink-0 text-2xl font-semibold">Reading report</h2>
+          <h2 className="shrink-0 text-xl font-semibold">Reading report</h2>
           <Badge
             variant="outline"
             className="shrink-0 rounded-xl px-3 py-1 text-sm font-normal"
@@ -275,7 +315,7 @@ function LearningReportCard({
             {formatStatCount(total)} tracked
           </Badge>
         </div>
-        <p className="truncate text-base text-muted-foreground">
+        <p className="truncate text-sm text-muted-foreground">
           {bandTitle} · {bandSubtitle}
         </p>
       </div>
@@ -293,14 +333,14 @@ function WeeklyWordBars({ days }: { days: readonly PopupLearningDayStats[] }) {
   return (
     <ChartContainer
       config={weeklyWordsChartConfig}
-      className="h-56 w-full"
-      initialDimension={{ width: 344, height: 224 }}
+      className="h-40 w-full"
+      initialDimension={{ width: 328, height: 160 }}
     >
       <BarChart
         accessibilityLayer
         data={chartData}
         margin={{ left: 0, right: 0, top: 6, bottom: 0 }}
-        barSize={22}
+        barSize={18}
       >
         <XAxis
           dataKey="label"
@@ -345,8 +385,8 @@ function WeeklyWordBars({ days }: { days: readonly PopupLearningDayStats[] }) {
 
 function TodayStats({ stats }: { stats: PopupLearningDayStats }) {
   return (
-    <div className="flex flex-col gap-4" aria-label="Today's words">
-      <span className="text-base text-muted-foreground">Today</span>
+    <div className="flex flex-col gap-3" aria-label="Today's words">
+      <span className="text-sm text-muted-foreground">Today</span>
       <div className="grid grid-cols-4 text-center">
         {[
           { label: "Comfort", value: stats.comfortable, className: "text-chart-1" },
@@ -358,10 +398,10 @@ function TodayStats({ stats }: { stats: PopupLearningDayStats }) {
             key={item.label}
             className="min-w-0 border-l border-border first:border-l-0"
           >
-            <div className={`truncate text-3xl font-medium leading-none ${item.className}`}>
+            <div className={`truncate text-2xl font-medium leading-none ${item.className}`}>
               {formatStatCount(item.value)}
             </div>
-            <div className="mt-2 truncate text-sm text-foreground">{item.label}</div>
+            <div className="mt-1.5 truncate text-xs text-foreground">{item.label}</div>
           </div>
         ))}
       </div>
@@ -373,14 +413,14 @@ function BandProgress({ value, detail }: { value: number; detail: string }) {
   const percent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3 text-base">
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-3 text-sm">
         <span className="font-medium">Band progress</span>
         <span>{Math.round(percent)}%</span>
       </div>
       <Progress
         value={percent}
-        className="h-2.5 bg-muted [&_[data-slot=progress-indicator]]:bg-chart-1"
+        className="h-2 bg-muted [&_[data-slot=progress-indicator]]:bg-chart-1"
       />
       <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </div>
@@ -389,19 +429,14 @@ function BandProgress({ value, detail }: { value: number; detail: string }) {
 
 function UnsupportedPopup({
   unsupportedMessage,
-  bandTitle,
-  progress,
-  progressLabel,
   onOpenSettings
 }: {
   unsupportedMessage: string;
-  bandTitle: string;
-  progress: number;
-  progressLabel: string;
   onOpenSettings?: () => void;
 }) {
   return (
-    <>
+    <section className="flex flex-col gap-4 bg-background p-4">
+      <PopupBrand />
       <Card>
         <CardHeader>
           <Badge variant="secondary" className="w-fit">
@@ -411,60 +446,13 @@ function UnsupportedPopup({
           <CardDescription>{unsupportedMessage}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button size="icon-lg" variant="outline" aria-label="Controls unavailable" disabled>
-            <IkIcon name="power" />
-          </Button>
-          <p className="mt-3 text-sm text-muted-foreground">Controls unavailable</p>
+          <p className="text-sm text-muted-foreground">Controls unavailable</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex-row gap-3">
-          <IkIcon name="shield" className="text-muted-foreground" />
-          <CardDescription>
-            We skip private, browser, form-heavy, and sensitive pages. Reading
-            mode works on normal articles, blogs, and docs.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{bandTitle}</CardTitle>
-          <CardDescription>{progressLabel}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProgressBlock
-            value={progress}
-            detail="Your progress is saved and will be ready when you return to a supported page."
-          />
-        </CardContent>
-      </Card>
-      <LocalFooter text="Your reading data stays on this device." />
       <Button variant="outline" onClick={onOpenSettings}>
         Open settings
       </Button>
-    </>
-  );
-}
-
-function ProgressBlock({
-  value,
-  label,
-  detail
-}: {
-  value: number;
-  label?: string;
-  detail?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      {label || detail ? (
-        <div className="flex flex-col gap-1 text-sm">
-          {label ? <span className="font-medium">{label}</span> : null}
-          {detail ? <span className="text-muted-foreground">{detail}</span> : null}
-        </div>
-      ) : null}
-      <Progress value={value} />
-    </div>
+    </section>
   );
 }
 
@@ -558,9 +546,23 @@ function formatStatCount(value: number): string {
 
 function PopupPanel({ children }: { children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-6 rounded-[1.75rem] bg-card p-6 shadow-xl ring-1 ring-foreground/10">
+    <section className="flex flex-col gap-4 overflow-x-hidden rounded-2xl bg-card p-4 shadow-xl ring-1 ring-foreground/10">
       {children}
     </section>
+  );
+}
+
+function PopupBrand() {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm"
+        aria-hidden="true"
+      >
+        IK
+      </span>
+      <span className="truncate text-base font-medium">ImmersionKit</span>
+    </div>
   );
 }
 
@@ -577,22 +579,14 @@ function PopupHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-lg font-semibold text-primary-foreground shadow-sm"
-          aria-hidden="true"
-        >
-          IK
-        </span>
-        <span className="truncate text-lg font-medium">ImmersionKit</span>
-      </div>
+      <PopupBrand />
       <div className="flex shrink-0 items-center gap-2">
         {debugAvailable ? (
           <Button
             type="button"
             variant="outline"
             size="icon-lg"
-            className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+            className="size-10 rounded-lg border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-5"
             aria-label="Open debug inspector"
             title="Open debug inspector"
             onClick={onOpenDebug}
@@ -604,7 +598,7 @@ function PopupHeader({
           type="button"
           variant="outline"
           size="icon-lg"
-          className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+          className="size-10 rounded-lg border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-5"
           aria-label="Report issue"
           onClick={onReportIssue}
         >
@@ -614,7 +608,7 @@ function PopupHeader({
           type="button"
           variant="outline"
           size="icon-lg"
-          className="size-12 rounded-xl border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-6"
+          className="size-10 rounded-lg border-border bg-background shadow-sm [&_svg:not([class*='size-'])]:size-5"
           aria-label="Open settings"
           onClick={onOpenSettings}
         >

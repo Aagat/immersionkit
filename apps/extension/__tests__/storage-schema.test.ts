@@ -31,7 +31,12 @@ describe("storage schema contract", () => {
       "curriculum-config",
       "learning-profile",
       "curriculum-progression-diagnostics",
-      "first-run-intro-visible"
+      "first-run-intro-visible",
+      "account-profile",
+      "account-session",
+      "install-identity",
+      "telemetry-state",
+      "entitlement-cache"
     ]);
   });
 

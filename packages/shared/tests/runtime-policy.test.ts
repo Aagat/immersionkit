@@ -188,6 +188,28 @@ describe("runtime curriculum activation", () => {
     });
   });
 
+  it("keeps easier unlocked words eligible for intermediate starting profiles", () => {
+    const decision = evaluateWordRuntimeActivation({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {
+        activeVocabularyBandId: "level-2a",
+        unlockedBandIds: ["level-1a", "level-1b", "level-1c", "level-2a"]
+      },
+      wordEntry: createWordEntry({
+        renderUnitMinBand: "level-1b",
+        frequencyRank: 430
+      }),
+      learningItem: null,
+      status: "new",
+      isDueForReview: false
+    });
+
+    expect(decision).toMatchObject({
+      eligible: true,
+      activeBandId: "level-2a"
+    });
+  });
+
   it("keeps retained previous-band phrases eligible outside the due window", () => {
     const decision = evaluatePhraseRuntimeActivation({
       config: DEFAULT_CURRICULUM_CONFIG,
@@ -387,6 +409,7 @@ function createLearningItem(input: {
 
 function createWordEntry(input: {
   renderUnitMinBand?: string;
+  frequencyRank?: number;
 } = {}): WordRenderEntry {
   return {
     lexemeId: "en:telescope:noun",
@@ -398,7 +421,7 @@ function createWordEntry(input: {
     sourceLemma: "telescope",
     targetLemma: "telescopio",
     pos: "noun",
-    frequencyRank: 2800,
+    frequencyRank: input.frequencyRank ?? 2800,
     confidence: 0.91,
     sourceLanguage: "en",
     targetLanguage: "es",

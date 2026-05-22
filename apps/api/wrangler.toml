@@ -1,0 +1,43 @@
+name = "immersionkit-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-18"
+
+[vars]
+ASSET_PUBLIC_BASE_URL = "https://pub-e554fa2b8b81455caf0be40404e3959a.r2.dev/assets"
+GOOGLE_REDIRECT_URI = "https://lllcimijmblmggimefiojaahcccglcmf.chromiumapp.org/oauth/google"
+SESSION_TTL_DAYS = "30"
+OAUTH_STATE_TTL_MINUTES = "10"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "immersionkit-preview"
+# Replace this with the id returned by:
+# pnpm --filter @immersionkit/api exec wrangler d1 create immersionkit-preview
+database_id = "976f799f-897e-44ae-be1c-040adf2d3627"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "ASSET_BUCKET"
+bucket_name = "immersionkit-asset-releases"
+
+# Explicit preview environment for the currently deployed commercial preview.
+# Keep the top-level config as the default compatibility path until a separate
+# production Worker/D1/R2/OAuth set exists.
+[env.preview]
+name = "immersionkit-api"
+
+[env.preview.vars]
+ASSET_PUBLIC_BASE_URL = "https://pub-e554fa2b8b81455caf0be40404e3959a.r2.dev/assets"
+GOOGLE_REDIRECT_URI = "https://lllcimijmblmggimefiojaahcccglcmf.chromiumapp.org/oauth/google"
+SESSION_TTL_DAYS = "30"
+OAUTH_STATE_TTL_MINUTES = "10"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "immersionkit-preview"
+database_id = "976f799f-897e-44ae-be1c-040adf2d3627"
+migrations_dir = "migrations"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_BUCKET"
+bucket_name = "immersionkit-asset-releases"

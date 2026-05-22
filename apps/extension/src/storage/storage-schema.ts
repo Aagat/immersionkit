@@ -58,7 +58,12 @@ export const STORAGE_SCHEMA = {
     curriculumConfig: "curriculum-config",
     learningProfile: "learning-profile",
     curriculumProgressionDiagnostics: "curriculum-progression-diagnostics",
-    firstRunIntro: "first-run-intro-visible"
+    firstRunIntro: "first-run-intro-visible",
+    accountProfile: "account-profile",
+    accountSession: "account-session",
+    installIdentity: "install-identity",
+    telemetryState: "telemetry-state",
+    entitlementCache: "entitlement-cache"
   },
   stores: {
     sentenceCache: {
