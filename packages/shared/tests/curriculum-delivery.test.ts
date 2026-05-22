@@ -110,9 +110,9 @@ describe("curriculum delivery presentation", () => {
     expect(
       evaluateWordCurriculumContentInventory({
         wordEntry: {
-          sourceLemma: "run",
-          targetLemma: "correr",
-          pos: "verb",
+          sourceLemma: "under",
+          targetLemma: "debajo",
+          pos: "preposition",
           confidence: 0.95,
           frequencyRank: 10
         },

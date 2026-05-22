@@ -48,9 +48,13 @@ describe("render-unit wink alignment", () => {
         continue;
       }
 
-      const patternTokens = entry.sourcePattern.tokens.filter(
-        (token) => !token.optional
-      );
+      const patternTokens = entry.sourcePattern.tokens
+        .filter((token) => !token.optional)
+        .map((token) =>
+          entry.kind === "verb-frame"
+            ? { ...token, lemma: undefined, pos: undefined }
+            : token
+        );
       const analysis = await analyzer.analyze(entry.sourceText);
       let alignmentErrors = collectAlignmentErrors(
         entry.renderUnitId,

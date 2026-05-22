@@ -656,6 +656,13 @@ function evaluateVerbFrameCandidate(input: {
   }
 
   if (isCommandHead(tokens, tokenIndex) && isBaseVerbSurface(token, verbEntry)) {
+    if (isUnsafeCommandAuxiliaryFrame(verbEntry, next)) {
+      return unsafeVerbDecision(
+        verbEntry,
+        "Sentence-initial auxiliary, modal, or negated command frame is unsafe."
+      );
+    }
+
     if (next && isCommandBlockingNextToken(next)) {
       return unsafeVerbDecision(
         verbEntry,
@@ -861,6 +868,25 @@ function isUnsafeHaveAuxiliaryFrame(
   );
 }
 
+function isUnsafeCommandAuxiliaryFrame(
+  verbEntry: VerbRenderEntry,
+  next: AnalyzerToken | undefined
+): boolean {
+  if (next && isNegationToken(next)) {
+    return true;
+  }
+
+  if (verbEntry.sourceLemma === "do") {
+    return next?.pos === "verb" || next?.pos === "auxiliary" || next?.pos === "modal";
+  }
+
+  if (verbEntry.sourceLemma === "have") {
+    return next?.normalized === "to" || next?.pos === "verb";
+  }
+
+  return MODAL_FORMS.has(verbEntry.sourceLemma);
+}
+
 function isCommandHead(tokens: readonly AnalyzerToken[], tokenIndex: number): boolean {
   if (tokenIndex === 0) {
     return true;
@@ -875,6 +901,10 @@ function isCommandBlockingNextToken(token: AnalyzerToken): boolean {
     token.normalized === "you" ||
     SENTENCE_BREAK_TOKENS.has(token.normalized)
   );
+}
+
+function isNegationToken(token: AnalyzerToken): boolean {
+  return NEGATION_TOKENS.has(token.normalized);
 }
 
 function isSentenceAnalyzer(value: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>)): value is SentenceAnalyzer {
@@ -1504,6 +1534,7 @@ const QUESTION_AUXILIARY_FORMS = new Set([
   "would"
 ]);
 const SENTENCE_BREAK_TOKENS = new Set([".", "?", "!"]);
+const NEGATION_TOKENS = new Set(["not", "n't", "nt", "n’t", "never"]);
 const IRREGULAR_PAST_BY_LEMMA = new Map<string, Set<string>>([
   ["be", new Set(["was", "were", "been"])],
   ["become", new Set(["became", "become"])],

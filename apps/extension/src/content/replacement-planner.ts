@@ -223,7 +223,11 @@ export function planTextReplacements(input: {
     sentences,
     analysisContext: context.analysisContext,
     cachedWordRenderDecisions: context.cachedWordRenderDecisions,
-    verbRenderIndex: context.verbRenderIndex
+    verbRenderIndex: context.verbRenderIndex,
+    blockedSpans: [...phraseCandidates.acceptedByStart.values()].map((candidate) => ({
+      start: candidate.start,
+      end: candidate.end
+    }))
   });
   for (const rejection of phraseCandidates.rejected) {
     context.debugSink?.recordPhraseDecision(
@@ -723,6 +727,7 @@ function selectDynamicVerbRenderCandidates(input: {
   analysisContext?: RuntimeAnalysisContext;
   cachedWordRenderDecisions?: Map<string, CachedWordRenderDecision[]>;
   verbRenderIndex?: VerbRenderIndex;
+  blockedSpans?: readonly { start: number; end: number }[];
 }): {
   acceptedByStart: Map<number, DynamicVerbRenderCandidate>;
 } {
@@ -785,6 +790,14 @@ function selectDynamicVerbRenderCandidates(input: {
 
   const selected: DynamicVerbRenderCandidate[] = [];
   for (const candidate of candidates.sort(compareDynamicVerbCandidates)) {
+    if (
+      input.blockedSpans?.some((span) =>
+        spansOverlap(candidate.start, candidate.end, span.start, span.end)
+      )
+    ) {
+      continue;
+    }
+
     if (
       selected.some((existing) =>
         spansOverlap(candidate.start, candidate.end, existing.start, existing.end)

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   evaluateWordCurriculumContentInventory,
   getActiveCurriculumContent,
-  hashSentence
+  hashSentence,
+  type LearningItem
 } from "@immersionkit/shared";
 
 import { processTextNode } from "../src/content/annotate";
@@ -10,7 +11,10 @@ import {
   buildWordRenderIndex,
   buildWordRenderIndexes
 } from "../src/content/word-render-index";
-import type { CachedWordRenderDecision } from "../src/content/storage";
+import type {
+  CachedPhraseMatch,
+  CachedWordRenderDecision
+} from "../src/content/storage";
 import type { WordRenderEntry } from "../src/render-units/render-units";
 import { withFixtureDom } from "./helpers/fixture-dom";
 
@@ -378,6 +382,79 @@ describe("content word render index", () => {
     });
   });
 
+  it("lets accepted phrase spans win over overlapping dynamic verb spans", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sourceSentence = "We take care of the old city.";
+      const textNode = document.createTextNode(sourceSentence);
+      document.body.append(textNode);
+      const sentenceHash = hashSentence(sourceSentence);
+      const renderIndexes = buildWordRenderIndexes([
+        verbUnit({
+          lexemeId: "lx:take:verb",
+          sourceLemma: "take",
+          targetLemma: "tomar"
+        })
+      ]);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "verb-phrase-overlap-test",
+        createNodeId: () => "ikn-verb-phrase-overlap-test",
+        wordRenderIndex: renderIndexes.wordRenderIndex,
+        analyzerPatternWordRenderIndex:
+          renderIndexes.analyzerPatternWordRenderIndex,
+        verbRenderIndex: renderIndexes.verbRenderIndex,
+        cachedWordRenderDecisions: new Map([
+          [
+            sentenceHash,
+            [
+              cachedVerbDecision({
+                sentenceHash,
+                lexemeId: "lx:take:verb",
+                sourceLemma: "take",
+                sourceText: "We take",
+                targetText: "nosotros tomamos",
+                startChar: 0,
+                endChar: 7
+              })
+            ]
+          ]
+        ]),
+        cachedPhraseMatchesBySentenceHash: phraseMatchesFor(sourceSentence, [
+          createPhraseMatch(sourceSentence, {
+            phraseId: "ru:test-take-care-of",
+            sourceText: "take care of",
+            startChar: 3,
+            endChar: 15
+          })
+        ]),
+        learningItemsByUnitRefId: new Map([
+          [
+            "ru:test-take-care-of",
+            createPhraseLearningItem({
+              phraseId: "ru:test-take-care-of",
+              sourceText: "take care of",
+              targetText: "cuidar de"
+            })
+          ]
+        ]),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(result.phraseInjectedCount).toBe(1);
+      expect(document.body.textContent).toContain("We cuidar de the old city.");
+      expect(document.body.textContent).not.toContain("nosotros tomamos");
+      expect(
+        document.querySelector("[data-ik-lexeme-id='lx:take:verb']")
+      ).toBeNull();
+      expect(
+        document.querySelector("[data-ik-phrase-id='ru:test-take-care-of']")
+      ).toBeTruthy();
+    });
+  });
+
   it("does not render stale cached analyzer-pattern inject decisions missing from current render units", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const sourceSentence = "So a few weeks ago, I started asking myself.";
@@ -626,6 +703,67 @@ function verbUnit(input: {
     confidence: 0.94,
     provenance: { source: "manual" }
   } as const;
+}
+
+function phraseMatchesFor(
+  sentence: string,
+  matches: CachedPhraseMatch[]
+): Map<string, CachedPhraseMatch[]> {
+  return new Map([[hashSentence(sentence), matches]]);
+}
+
+function createPhraseMatch(
+  sentence: string,
+  input: {
+    phraseId: string;
+    sourceText: string;
+    startChar: number;
+    endChar: number;
+  }
+): CachedPhraseMatch {
+  return {
+    occurrenceId: `${input.phraseId}:occurrence`,
+    phraseId: input.phraseId,
+    renderUnitId: input.phraseId.startsWith("ru:") ? input.phraseId : undefined,
+    sentenceHash: hashSentence(sentence),
+    sourceText: input.sourceText,
+    normalizedSourceText: input.sourceText.toLowerCase(),
+    sourceKind: "fixed-phrase",
+    category: "fixed-idiom",
+    ruleId: "take-care-of",
+    span: {
+      startToken: 1,
+      endToken: 4,
+      startChar: input.startChar,
+      endChar: input.endChar
+    },
+    confidence: 0.94
+  };
+}
+
+function createPhraseLearningItem(input: {
+  phraseId: string;
+  sourceText: string;
+  targetText: string;
+}): LearningItem {
+  return {
+    itemId: `phrase:${input.phraseId}`,
+    unitRefId: input.phraseId,
+    unitType: "phrase",
+    sourceText: input.sourceText,
+    targetText: input.targetText,
+    status: "new",
+    introducedAt: "2026-04-25T10:00:00.000Z",
+    nextReviewAt: "2026-04-25T10:00:00.000Z",
+    interval: 600000,
+    ease: 2.3,
+    lapses: 0,
+    assistCount: 0,
+    qualifiedExposureCount: 0,
+    consecutiveUnassistedCount: 0,
+    distinctContextCount: 0,
+    suspended: false
+  };
 }
 
 function cachedInjectDecision(input: {

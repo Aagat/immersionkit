@@ -577,6 +577,100 @@ describe("background sentence analysis service", () => {
     });
   });
 
+  it("keeps auxiliary-like command starts from rendering as affirmative imperatives", async () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const doVerbRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:do:verb:frame"
+    );
+    const haveVerbRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:have:verb:frame"
+    );
+    const useVerbRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:use:verb:frame"
+    );
+    if (!doVerbRenderUnit || !haveVerbRenderUnit || !useVerbRenderUnit) {
+      throw new Error("Expected bundled do, have, and use verb-frame render units.");
+    }
+
+    const doNotSentence = "Do not use npm on this project.";
+    const haveToSentence = "Have to use npm on this project.";
+    const analyzer = createAnalyzer("fixture-v1", (sentence, suppliedHash) => {
+      const sentenceHash = suppliedHash ?? hashSentence(sentence);
+      const commonOutput = {
+        analyzerId: "fixture-annotated" as const,
+        analyzerVersion: "fixture-v1",
+        sentenceHash,
+        sourceText: sentence,
+        chunks: [],
+        grammarFeatures: []
+      };
+      if (sentence === doNotSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["Do", "do", "verb", ["VERB", "verb"]],
+            ["not", "not", "adverb", ["ADV", "adverb"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+
+      if (sentence === haveToSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["Have", "have", "verb", ["VERB", "verb"]],
+            ["to", "to", "particle", ["PART", "particle"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+
+      throw new Error(`Unexpected sentence in auxiliary command fixture: ${sentence}`);
+    });
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadRenderUnits: () =>
+        Promise.resolve([doVerbRenderUnit, haveVerbRenderUnit, useVerbRenderUnit]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const analyses = await service.analyzeCandidates([
+      doNotSentence,
+      haveToSentence
+    ].map((sourceText) => ({ sentenceHash: hashSentence(sourceText), sourceText })));
+    const bySentence = new Map(
+      analyses.map((analysis) => [analysis.entry.sourceText, analysis.entry])
+    );
+
+    expect(
+      verbDecision(bySentence.get(doNotSentence), "lx:do:verb", "Do")
+    ).toMatchObject({
+      decision: "skip",
+      patternId: "verb-frame:unsafe"
+    });
+    expect(useVerbDecision(bySentence.get(doNotSentence), "use")).toMatchObject({
+      decision: "skip"
+    });
+    expect(
+      verbDecision(bySentence.get(haveToSentence), "lx:have-tener:verb", "Have")
+    ).toMatchObject({
+      decision: "skip",
+      patternId: "verb-frame:unsafe"
+    });
+  });
+
   it("keeps weak modal frames closed for V1 ambiguous verbs", async () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
     const useVerbRenderUnit = renderUnits.find(
@@ -2054,10 +2148,17 @@ function useVerbDecision(
   entry: SentenceAnalysisEntry | undefined,
   sourceText: string
 ) {
+  return verbDecision(entry, "lx:use:verb", sourceText);
+}
+
+function verbDecision(
+  entry: SentenceAnalysisEntry | undefined,
+  lexemeId: string,
+  sourceText: string
+) {
   return entry?.contextualWordCandidates.find(
     (candidate) =>
-      candidate.lexemeId === "lx:use:verb" &&
-      candidate.tokenText === sourceText
+      candidate.lexemeId === lexemeId && candidate.tokenText === sourceText
   );
 }
 
