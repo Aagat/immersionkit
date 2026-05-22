@@ -119,6 +119,7 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
     });
     if (
       wordRenderIndexes.wordRenderIndex.size === 0 &&
+      wordRenderIndexes.verbRenderIndex.size === 0 &&
       processingContext.sentenceHintPhrases.length === 0
     ) {
       if (debugRunId) {
@@ -135,6 +136,7 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       wordRenderIndex: wordRenderIndexes.wordRenderIndex,
       analyzerPatternWordRenderIndex:
         wordRenderIndexes.analyzerPatternWordRenderIndex,
+      verbRenderIndex: wordRenderIndexes.verbRenderIndex,
       sentenceTranslationEnabled,
       debugTrace: runtimeState.debugTrace
     });

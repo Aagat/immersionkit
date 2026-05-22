@@ -5,10 +5,13 @@ import {
   buildRenderUnitRuntimeIndex,
   buildRuntimePhraseId,
   createSentenceAnalysisEntry,
+  conjugateSpanishVerb,
   findRenderUnitTokenSpans,
+  findVerbRenderEntriesForAnalyzerToken,
   findWordRenderEntriesForAnalyzerToken,
   hashSentence,
   normalizeToken,
+  SPANISH_SUBJECT_PRONOUN_BY_PERSON,
   getLanguagePairDefinition,
   resolveGrammarConcept,
   scoreSentenceSuitability,
@@ -27,7 +30,9 @@ import {
   type RenderUnitEntry,
   type RenderUnitRuntimeIndex,
   type SentenceAnalysisEntry,
+  type SpanishVerbPerson,
   type UserVocabEntry,
+  type VerbRenderEntry,
   type VocabStatus,
   type WordRenderEntry
 } from "@immersionkit/shared";
@@ -423,6 +428,72 @@ function buildContextualWordCandidates(
         rationale: decision.rationale
       });
     }
+
+    const verbEntries = findVerbRenderEntriesForAnalyzerToken({
+      token,
+      index: lookup
+    });
+    for (const verbEntry of verbEntries) {
+      const frameDecision = evaluateVerbFrameCandidate({
+        tokenIndex,
+        analyzerOutput,
+        verbEntry
+      });
+      if (!frameDecision) {
+        continue;
+      }
+
+      const startToken = frameDecision.startToken ?? tokenIndex;
+      const endToken = frameDecision.endToken ?? tokenIndex + 1;
+      const firstToken = analyzerOutput.tokens[startToken];
+      const lastToken = analyzerOutput.tokens[endToken - 1];
+      if (!firstToken || !lastToken) {
+        continue;
+      }
+
+      const sourceText = analyzerOutput.sourceText.slice(
+        firstToken.startOffset,
+        lastToken.endOffset
+      );
+      candidates.push({
+        id: `${analyzerOutput.sentenceHash}:${startToken}-${endToken}:${verbEntry.renderUnitId}:${verbEntry.lexemeId}:${frameDecision.frameType}`,
+        sentenceHash: analyzerOutput.sentenceHash,
+        sentence: analyzerOutput.sourceText,
+        tokenText: sourceText,
+        surfaceText: sourceText,
+        normalizedText: normalizeToken(sourceText),
+        renderUnitId: verbEntry.renderUnitId,
+        renderUnitMinBand: verbEntry.renderUnitMinBand,
+        lexemeId: verbEntry.lexemeId,
+        normalizedSourceText: verbEntry.normalizedSourceText,
+        targetText: frameDecision.targetText,
+        targetLemma: verbEntry.targetInfinitive,
+        candidateLemma: verbEntry.sourceLemma,
+        candidatePos: "verb",
+        frequencyRank: verbEntry.frequencyRank,
+        observedPos: toObservedContextPos(token),
+        chunkType: "verb-phrase",
+        chunkText: sourceText,
+        tokenStart: startToken,
+        tokenEnd: endToken,
+        startChar: firstToken.startOffset,
+        endChar: lastToken.endOffset,
+        leftContextLemmas: analyzerOutput.tokens
+          .slice(Math.max(0, startToken - 3), startToken)
+          .map((entry) => entry.lemma ?? entry.normalized),
+        rightContextLemmas: analyzerOutput.tokens
+          .slice(endToken, endToken + 3)
+          .map((entry) => entry.lemma ?? entry.normalized),
+        nearbyContextSignature: [
+          `verb-frame:${frameDecision.frameType}`
+        ],
+        patternId: `verb-frame:${frameDecision.frameType}`,
+        ambiguityGroup: `verb:${verbEntry.sourceLemma}`,
+        confidence: frameDecision.confidence,
+        decision: frameDecision.decision,
+        rationale: frameDecision.rationale
+      });
+    }
   });
 
   return candidates;
@@ -455,6 +526,355 @@ function evaluateAnalyzerPatternCandidate(input: {
     decision: "inject",
     rationale: "Analyzer pattern matched the approved render unit."
   };
+}
+
+type VerbFrameDecision = {
+  decision: "inject" | "skip";
+  frameType:
+    | "subject-present"
+    | "imperative"
+    | "modal-infinitive"
+    | "to-infinitive"
+    | "present-progressive"
+    | "unsafe";
+  targetText: string;
+  startToken?: number;
+  endToken?: number;
+  confidence: number;
+  rationale: string;
+};
+
+function evaluateVerbFrameCandidate(input: {
+  tokenIndex: number;
+  analyzerOutput: AnalyzerOutput;
+  verbEntry: VerbRenderEntry;
+}): VerbFrameDecision | null {
+  const { tokenIndex, analyzerOutput, verbEntry } = input;
+  const tokens = analyzerOutput.tokens;
+  const token = tokens[tokenIndex];
+  if (!token || !tokenMatchesVerbEntry(token, verbEntry)) {
+    return null;
+  }
+
+  const previous = tokens[tokenIndex - 1];
+  const previous2 = tokens[tokenIndex - 2];
+  const next = tokens[tokenIndex + 1];
+
+  if (isGerundSurface(token) && previous && previous2) {
+    const subjectPerson = readSubjectPronounPerson(previous2);
+    if (subjectPerson && isPresentBeForm(previous)) {
+      const targetText = conjugateProgressiveTarget(
+        verbEntry.targetInfinitive,
+        subjectPerson
+      );
+      if (targetText) {
+        return {
+          decision: "inject",
+          frameType: "present-progressive",
+          startToken: tokenIndex - 2,
+          endToken: tokenIndex + 1,
+          targetText,
+          confidence: 0.9,
+          rationale: "Clear subject + present be + gerund frame matched the approved verb unit."
+        };
+      }
+    }
+  }
+
+  if (previous?.normalized === "to" && isBaseVerbSurface(token, verbEntry)) {
+    return {
+      decision: "inject",
+      frameType: "to-infinitive",
+      targetText: verbEntry.targetInfinitive,
+      confidence: 0.84,
+      rationale: "Infinitive particle before an approved base verb is safe to render as a Spanish infinitive."
+    };
+  }
+
+  if (previous && isModalToken(previous) && isBaseVerbSurface(token, verbEntry)) {
+    if (getV1AmbiguityGroupForWord(verbEntry.sourceLemma)) {
+      return unsafeVerbDecision(
+        verbEntry,
+        "Modal + base verb is too weak for the V1 ambiguous verb inventory."
+      );
+    }
+
+    return {
+      decision: "inject",
+      frameType: "modal-infinitive",
+      targetText: verbEntry.targetInfinitive,
+      confidence: 0.84,
+      rationale: "Modal before an approved base verb is safe to render as a Spanish infinitive."
+    };
+  }
+
+  const subjectPerson = previous ? readSubjectPronounPerson(previous) : null;
+  if (subjectPerson) {
+    if (previous.normalized === "it") {
+      return unsafeVerbDecision(
+        verbEntry,
+        "The pronoun 'it' needs Spanish gender or impersonal context."
+      );
+    }
+
+    if (isQuestionAuxiliaryBeforeSubject(previous2, previous)) {
+      return unsafeVerbDecision(
+        verbEntry,
+        "Question and do-support frames need phrase-level word order handling."
+      );
+    }
+
+    if (isUnsafeHaveAuxiliaryFrame(verbEntry, next)) {
+      return unsafeVerbDecision(
+        verbEntry,
+        "Auxiliary have frames are unsafe for possession-style inline rendering."
+      );
+    }
+
+    if (isLikelyPastOrParticipleSurface(token, verbEntry)) {
+      return unsafeVerbDecision(
+        verbEntry,
+        "Past and participle verb forms are skipped until tense/aspect selection is explicit."
+      );
+    }
+
+    const targetText = conjugateSubjectPresentTarget(
+      verbEntry.targetInfinitive,
+      subjectPerson
+    );
+    if (targetText && isLikelyPresentVerbSurface(token, verbEntry, subjectPerson)) {
+      return {
+        decision: "inject",
+        frameType: "subject-present",
+        startToken: tokenIndex - 1,
+        endToken: tokenIndex + 1,
+        targetText,
+        confidence: 0.88,
+        rationale: "Clear subject pronoun + present verb frame matched the approved verb unit."
+      };
+    }
+  }
+
+  if (isCommandHead(tokens, tokenIndex) && isBaseVerbSurface(token, verbEntry)) {
+    if (next && isCommandBlockingNextToken(next)) {
+      return unsafeVerbDecision(
+        verbEntry,
+        "Sentence-initial auxiliary/question-like command frame is unsafe."
+      );
+    }
+
+    const targetText = conjugateSpanishVerb(verbEntry.targetInfinitive, {
+      mood: "affirmative-tu-imperative"
+    });
+    if (targetText) {
+      return {
+        decision: "inject",
+        frameType: "imperative",
+        targetText,
+        confidence: 0.86,
+        rationale: "Sentence-initial approved base verb matched a safe imperative command frame."
+      };
+    }
+  }
+
+  return unsafeVerbDecision(
+    verbEntry,
+    "No safe local verb frame matched this occurrence."
+  );
+}
+
+function unsafeVerbDecision(
+  verbEntry: VerbRenderEntry,
+  rationale: string
+): VerbFrameDecision {
+  return {
+    decision: "skip",
+    frameType: "unsafe",
+    targetText: verbEntry.targetInfinitive,
+    confidence: 0.5,
+    rationale
+  };
+}
+
+function conjugateSubjectPresentTarget(
+  infinitive: string,
+  person: SpanishVerbPerson
+): string | null {
+  const verb = conjugateSpanishVerb(infinitive, {
+    mood: "present-indicative",
+    person
+  });
+  if (!verb) {
+    return null;
+  }
+
+  return `${SPANISH_SUBJECT_PRONOUN_BY_PERSON[person]} ${verb}`;
+}
+
+function conjugateProgressiveTarget(
+  infinitive: string,
+  person: SpanishVerbPerson
+): string | null {
+  const estar = conjugateSpanishVerb("estar", {
+    mood: "present-indicative",
+    person
+  });
+  const gerund = conjugateSpanishVerb(infinitive, { mood: "gerund" });
+  return estar && gerund ? `${estar} ${gerund}` : null;
+}
+
+function tokenMatchesVerbEntry(token: AnalyzerToken, verbEntry: VerbRenderEntry): boolean {
+  return (
+    token.normalized === verbEntry.normalizedSourceText ||
+    normalizeToken(token.lemma ?? "") === verbEntry.normalizedSourceText
+  );
+}
+
+function isBaseVerbSurface(token: AnalyzerToken, verbEntry: VerbRenderEntry): boolean {
+  return token.normalized === verbEntry.normalizedSourceText;
+}
+
+function isLikelyPresentVerbSurface(
+  token: AnalyzerToken,
+  verbEntry: VerbRenderEntry,
+  person: SpanishVerbPerson
+): boolean {
+  if (isGerundSurface(token) || isLikelyPastOrParticipleSurface(token, verbEntry)) {
+    return false;
+  }
+
+  const expected = englishPresentForms(verbEntry.sourceLemma, person);
+  return expected.size === 0 || expected.has(token.normalized);
+}
+
+function englishPresentForms(
+  lemma: string,
+  person: SpanishVerbPerson
+): Set<string> {
+  const third = person === "third-singular";
+  if (lemma === "be") {
+    return new Set(
+      person === "first-singular"
+        ? ["am"]
+        : person === "second-singular" || person === "first-plural" || person === "third-plural"
+          ? ["are"]
+          : ["is"]
+    );
+  }
+
+  if (lemma === "have") {
+    return new Set(third ? ["has"] : ["have"]);
+  }
+
+  if (lemma === "do") {
+    return new Set(third ? ["does"] : ["do"]);
+  }
+
+  if (lemma === "can" || lemma === "must" || lemma === "should") {
+    return new Set([lemma]);
+  }
+
+  return new Set(third ? [thirdPersonEnglishPresent(lemma)] : [lemma]);
+}
+
+function thirdPersonEnglishPresent(lemma: string): string {
+  if (lemma.endsWith("y") && !/[aeiou]y$/.test(lemma)) {
+    return `${lemma.slice(0, -1)}ies`;
+  }
+
+  if (/(s|sh|ch|x|z|o)$/.test(lemma)) {
+    return `${lemma}es`;
+  }
+
+  return `${lemma}s`;
+}
+
+function isLikelyPastOrParticipleSurface(
+  token: AnalyzerToken,
+  verbEntry: VerbRenderEntry
+): boolean {
+  const normalized = token.normalized;
+  if (IRREGULAR_PAST_BY_LEMMA.get(verbEntry.sourceLemma)?.has(normalized)) {
+    return true;
+  }
+
+  return (
+    normalized !== verbEntry.normalizedSourceText &&
+    (normalized.endsWith("ed") || normalized.endsWith("en"))
+  );
+}
+
+function isGerundSurface(token: AnalyzerToken): boolean {
+  return token.normalized.endsWith("ing");
+}
+
+function readSubjectPronounPerson(token: AnalyzerToken): SpanishVerbPerson | null {
+  if (token.normalized === "i") {
+    return "first-singular";
+  }
+
+  if (token.normalized === "you") {
+    return "second-singular";
+  }
+
+  if (token.normalized === "he" || token.normalized === "she") {
+    return "third-singular";
+  }
+
+  if (token.normalized === "we") {
+    return "first-plural";
+  }
+
+  if (token.normalized === "they") {
+    return "third-plural";
+  }
+
+  return token.normalized === "it" ? "third-singular" : null;
+}
+
+function isPresentBeForm(token: AnalyzerToken): boolean {
+  return token.lemma === "be" && PRESENT_BE_FORMS.has(token.normalized);
+}
+
+function isModalToken(token: AnalyzerToken): boolean {
+  return token.pos === "modal" || MODAL_FORMS.has(token.normalized);
+}
+
+function isQuestionAuxiliaryBeforeSubject(
+  token: AnalyzerToken | undefined,
+  subject: AnalyzerToken
+): boolean {
+  return (
+    Boolean(token) &&
+    QUESTION_AUXILIARY_FORMS.has(token?.normalized ?? "") &&
+    readSubjectPronounPerson(subject) !== null
+  );
+}
+
+function isUnsafeHaveAuxiliaryFrame(
+  verbEntry: VerbRenderEntry,
+  next: AnalyzerToken | undefined
+): boolean {
+  return (
+    verbEntry.sourceLemma === "have" &&
+    (next?.normalized === "to" || next?.pos === "verb")
+  );
+}
+
+function isCommandHead(tokens: readonly AnalyzerToken[], tokenIndex: number): boolean {
+  if (tokenIndex === 0) {
+    return true;
+  }
+
+  return SENTENCE_BREAK_TOKENS.has(tokens[tokenIndex - 1]?.normalized ?? "");
+}
+
+function isCommandBlockingNextToken(token: AnalyzerToken): boolean {
+  return (
+    token.pos === "pronoun" ||
+    token.normalized === "you" ||
+    SENTENCE_BREAK_TOKENS.has(token.normalized)
+  );
 }
 
 function isSentenceAnalyzer(value: SentenceAnalyzer | (() => Promise<SentenceAnalyzer>)): value is SentenceAnalyzer {
@@ -559,6 +979,7 @@ function buildRenderUnitPhraseOccurrences(
   for (const renderUnit of renderUnits) {
     if (
       renderUnit.kind === "single-token" ||
+      renderUnit.kind === "verb-frame" ||
       !shouldEmitRenderUnitOccurrence(renderUnit)
     ) {
       continue;
@@ -808,7 +1229,11 @@ function resolveTokenVocabStatus(
     (entry) => observedPos === entry.pos
   );
   if (!wordEntry) {
-    return "new";
+    const verbEntry = findVerbRenderEntriesForAnalyzerToken({
+      token,
+      index: lookup
+    })[0];
+    return verbEntry ? vocab.get(verbEntry.lexemeId)?.status ?? "new" : "new";
   }
 
   return vocab.get(wordEntry.lexemeId)?.status ?? "new";
@@ -1044,6 +1469,87 @@ function readString(value: unknown): string | null {
 }
 
 const BE_FORMS = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
+const PRESENT_BE_FORMS = new Set(["am", "is", "are"]);
+const MODAL_FORMS = new Set([
+  "can",
+  "could",
+  "may",
+  "might",
+  "must",
+  "shall",
+  "should",
+  "will",
+  "would"
+]);
+const QUESTION_AUXILIARY_FORMS = new Set([
+  "am",
+  "are",
+  "can",
+  "could",
+  "did",
+  "do",
+  "does",
+  "had",
+  "has",
+  "have",
+  "is",
+  "may",
+  "might",
+  "must",
+  "shall",
+  "should",
+  "was",
+  "were",
+  "will",
+  "would"
+]);
+const SENTENCE_BREAK_TOKENS = new Set([".", "?", "!"]);
+const IRREGULAR_PAST_BY_LEMMA = new Map<string, Set<string>>([
+  ["be", new Set(["was", "were", "been"])],
+  ["become", new Set(["became", "become"])],
+  ["begin", new Set(["began", "begun"])],
+  ["break", new Set(["broke", "broken"])],
+  ["bring", new Set(["brought"])],
+  ["build", new Set(["built"])],
+  ["buy", new Set(["bought"])],
+  ["catch", new Set(["caught"])],
+  ["choose", new Set(["chose", "chosen"])],
+  ["come", new Set(["came", "come"])],
+  ["do", new Set(["did", "done"])],
+  ["drink", new Set(["drank", "drunk"])],
+  ["eat", new Set(["ate", "eaten"])],
+  ["fall", new Set(["fell", "fallen"])],
+  ["feel", new Set(["felt"])],
+  ["find", new Set(["found"])],
+  ["get", new Set(["got", "gotten"])],
+  ["give", new Set(["gave", "given"])],
+  ["go", new Set(["went", "gone"])],
+  ["grow", new Set(["grew", "grown"])],
+  ["have", new Set(["had"])],
+  ["hear", new Set(["heard"])],
+  ["know", new Set(["knew", "known"])],
+  ["leave", new Set(["left"])],
+  ["lose", new Set(["lost"])],
+  ["make", new Set(["made"])],
+  ["pay", new Set(["paid"])],
+  ["put", new Set(["put"])],
+  ["read", new Set(["read"])],
+  ["run", new Set(["ran", "run"])],
+  ["say", new Set(["said"])],
+  ["see", new Set(["saw", "seen"])],
+  ["sell", new Set(["sold"])],
+  ["send", new Set(["sent"])],
+  ["sleep", new Set(["slept"])],
+  ["speak", new Set(["spoke", "spoken"])],
+  ["take", new Set(["took", "taken"])],
+  ["tell", new Set(["told"])],
+  ["think", new Set(["thought"])],
+  ["throw", new Set(["threw", "thrown"])],
+  ["understand", new Set(["understood"])],
+  ["wear", new Set(["wore", "worn"])],
+  ["win", new Set(["won"])],
+  ["write", new Set(["wrote", "written"])]
+]);
 const DETERMINERS = new Set(["a", "an", "the"]);
 const DEMONSTRATIVES = new Set(["this", "that", "these", "those"]);
 const POSSESSIVES = new Set(["my", "your", "his", "her", "its", "our", "their"]);

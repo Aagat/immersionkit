@@ -253,6 +253,418 @@ describe("background sentence analysis service", () => {
     expect(decisions.get("stable")).toBe("inject");
   });
 
+  it("gates the bundled use noun render unit behind analyzer noun evidence", async () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const useRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:use:noun:analyzer-pattern"
+    );
+    if (!useRenderUnit) {
+      throw new Error("Expected bundled use noun analyzer-pattern render unit.");
+    }
+
+    const imperativeSentence = "Use --quiet to reduce output overhead.";
+    const imperativeHash = hashSentence(imperativeSentence);
+    const nounSentence = "The use of the phone is prohibited here.";
+    const nounHash = hashSentence(nounSentence);
+    const analyzer = createAnalyzer("fixture-v1", (sentence, suppliedHash) => {
+      const sentenceHash = suppliedHash ?? hashSentence(sentence);
+      if (sentence === imperativeSentence) {
+        return {
+          analyzerId: "fixture-annotated",
+          analyzerVersion: "fixture-v1",
+          sentenceHash,
+          sourceText: sentence,
+          tokens: tokensFromSpecs(sentence, [
+            ["Use", "use", "verb", ["VERB", "verb"]],
+            ["quiet", "quiet", "adjective", ["ADJ", "adjective"]],
+            ["to", "to", "particle", ["PART", "particle"]],
+            ["reduce", "reduce", "verb", ["VERB", "verb"]],
+            ["output", "output", "noun", ["NOUN", "noun"]],
+            ["overhead", "overhead", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ]),
+          chunks: [],
+          grammarFeatures: []
+        };
+      }
+
+      if (sentence === nounSentence) {
+        return {
+          analyzerId: "fixture-annotated",
+          analyzerVersion: "fixture-v1",
+          sentenceHash,
+          sourceText: sentence,
+          tokens: tokensFromSpecs(sentence, [
+            ["The", "the", "determiner", ["DET", "determiner"]],
+            ["use", "use", "noun", ["NOUN", "noun"]],
+            ["of", "of", "preposition", ["ADP", "preposition"]],
+            ["the", "the", "determiner", ["DET", "determiner"]],
+            ["phone", "phone", "noun", ["NOUN", "noun"]],
+            ["is", "be", "auxiliary", ["AUX", "auxiliary"]],
+            ["prohibited", "prohibit", "adjective", ["ADJ", "adjective"]],
+            ["here", "here", "adverb", ["ADV", "adverb"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ]),
+          chunks: [
+            {
+              text: "The use",
+              normalized: "the use",
+              type: "noun-phrase",
+              tokenStart: 0,
+              tokenEnd: 2,
+              confidence: 0.86
+            }
+          ],
+          grammarFeatures: []
+        };
+      }
+
+      throw new Error(`Unexpected sentence in use noun fixture: ${sentence}`);
+    });
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadRenderUnits: () => Promise.resolve([useRenderUnit]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [imperativeAnalysis, nounAnalysis] = await service.analyzeCandidates([
+      { sentenceHash: imperativeHash, sourceText: imperativeSentence },
+      { sentenceHash: nounHash, sourceText: nounSentence }
+    ]);
+    const imperativeUseCandidate =
+      imperativeAnalysis?.entry.contextualWordCandidates.find(
+        (candidate) => candidate.lexemeId === "lx:use:noun"
+      );
+    const nounUseCandidate = nounAnalysis?.entry.contextualWordCandidates.find(
+      (candidate) => candidate.lexemeId === "lx:use:noun"
+    );
+
+    expect(imperativeUseCandidate).toBeUndefined();
+    expect(nounUseCandidate).toMatchObject({
+      decision: "inject",
+      renderUnitId: "ru:use:noun:analyzer-pattern",
+      targetText: "uso",
+      observedPos: "noun"
+    });
+  });
+
+  it("emits safe dynamic use verb decisions without sentence translation", async () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const useVerbRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:use:verb:frame"
+    );
+    if (!useVerbRenderUnit) {
+      throw new Error("Expected bundled use verb-frame render unit.");
+    }
+
+    const commandSentence = "Use --quiet to reduce output overhead.";
+    const secondCommandSentence =
+      "Already have Node? Use npm instead on any version.";
+    const firstPersonSentence = "I use npm on every project.";
+    const secondPersonSentence = "You use npm on every project.";
+    const progressiveSentence = "We are using npm on this project.";
+    const infinitiveSentence = "I want to use npm on this project.";
+    const pastSentence = "I used npm on this project.";
+    const itSentence = "It uses npm on this project.";
+    const questionSentence = "Do you use npm on this project?";
+    const analyzer = createAnalyzer("fixture-v1", (sentence, suppliedHash) => {
+      const sentenceHash = suppliedHash ?? hashSentence(sentence);
+      const commonOutput = {
+        analyzerId: "fixture-annotated" as const,
+        analyzerVersion: "fixture-v1",
+        sentenceHash,
+        sourceText: sentence,
+        chunks: [],
+        grammarFeatures: []
+      };
+      if (sentence === commandSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["Use", "use", "proper-noun", ["PROPN", "proper-noun"]],
+            ["quiet", "quiet", "adjective", ["ADJ", "adjective"]],
+            ["to", "to", "particle", ["PART", "particle"]],
+            ["reduce", "reduce", "verb", ["VERB", "verb"]],
+            ["output", "output", "noun", ["NOUN", "noun"]],
+            ["overhead", "overhead", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === secondCommandSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["Already", "already", "adverb", ["ADV", "adverb"]],
+            ["have", "have", "verb", ["VERB", "verb"]],
+            ["Node", "node", "proper-noun", ["PROPN", "proper-noun"]],
+            ["?", "?", "other", ["PUNCT", "other"]],
+            ["Use", "use", "proper-noun", ["PROPN", "proper-noun"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["instead", "instead", "adverb", ["ADV", "adverb"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["any", "any", "determiner", ["DET", "determiner"]],
+            ["version", "version", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === firstPersonSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["I", "i", "pronoun", ["PRON", "pronoun"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["every", "every", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === secondPersonSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["You", "you", "pronoun", ["PRON", "pronoun"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["every", "every", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === progressiveSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecsWithLemmas(sentence, [
+            ["We", "we", "we", "pronoun", ["PRON", "pronoun"]],
+            ["are", "are", "be", "auxiliary", ["AUX", "auxiliary"]],
+            ["using", "using", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === infinitiveSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["I", "i", "pronoun", ["PRON", "pronoun"]],
+            ["want", "want", "verb", ["VERB", "verb"]],
+            ["to", "to", "particle", ["PART", "particle"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === pastSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecsWithLemmas(sentence, [
+            ["I", "i", "i", "pronoun", ["PRON", "pronoun"]],
+            ["used", "used", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === itSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecsWithLemmas(sentence, [
+            ["It", "it", "it", "pronoun", ["PRON", "pronoun"]],
+            ["uses", "uses", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", ".", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      if (sentence === questionSentence) {
+        return {
+          ...commonOutput,
+          tokens: tokensFromSpecs(sentence, [
+            ["Do", "do", "verb", ["VERB", "verb"]],
+            ["you", "you", "pronoun", ["PRON", "pronoun"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            ["?", "?", "other", ["PUNCT", "other"]]
+          ])
+        };
+      }
+      throw new Error(`Unexpected sentence in verb-frame fixture: ${sentence}`);
+    });
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadRenderUnits: () => Promise.resolve([useVerbRenderUnit]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const analyses = await service.analyzeCandidates([
+      commandSentence,
+      secondCommandSentence,
+      firstPersonSentence,
+      secondPersonSentence,
+      progressiveSentence,
+      infinitiveSentence,
+      pastSentence,
+      itSentence,
+      questionSentence
+    ].map((sourceText) => ({ sentenceHash: hashSentence(sourceText), sourceText })));
+    const bySentence = new Map(
+      analyses.map((analysis) => [analysis.entry.sourceText, analysis.entry])
+    );
+
+    expect(useVerbDecision(bySentence.get(commandSentence), "Use")).toMatchObject({
+      decision: "inject",
+      targetText: "usa",
+      patternId: "verb-frame:imperative"
+    });
+    expect(useVerbDecision(bySentence.get(secondCommandSentence), "Use")).toMatchObject({
+      decision: "inject",
+      targetText: "usa",
+      patternId: "verb-frame:imperative"
+    });
+    expect(useVerbDecision(bySentence.get(firstPersonSentence), "I use")).toMatchObject({
+      decision: "inject",
+      targetText: "yo uso",
+      patternId: "verb-frame:subject-present"
+    });
+    expect(useVerbDecision(bySentence.get(secondPersonSentence), "You use")).toMatchObject({
+      decision: "inject",
+      targetText: "tú usas",
+      patternId: "verb-frame:subject-present"
+    });
+    expect(useVerbDecision(bySentence.get(progressiveSentence), "We are using")).toMatchObject({
+      decision: "inject",
+      targetText: "estamos usando",
+      patternId: "verb-frame:present-progressive"
+    });
+    expect(useVerbDecision(bySentence.get(infinitiveSentence), "use")).toMatchObject({
+      decision: "inject",
+      targetText: "usar",
+      patternId: "verb-frame:to-infinitive"
+    });
+    expect(useVerbDecision(bySentence.get(pastSentence), "used")).toMatchObject({
+      decision: "skip"
+    });
+    expect(useVerbDecision(bySentence.get(itSentence), "uses")).toMatchObject({
+      decision: "skip"
+    });
+    expect(useVerbDecision(bySentence.get(questionSentence), "use")).toMatchObject({
+      decision: "skip"
+    });
+  });
+
+  it("keeps weak modal frames closed for V1 ambiguous verbs", async () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const useVerbRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:use:verb:frame"
+    );
+    const watchVerbRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:watch:verb:frame"
+    );
+    if (!useVerbRenderUnit || !watchVerbRenderUnit) {
+      throw new Error("Expected bundled use and watch verb-frame render units.");
+    }
+
+    const safeSentence = "I can use npm on this project.";
+    const ambiguousSentence = "I can watch the plant from here.";
+    const analyzer = createAnalyzer("fixture-v1", (sentence, suppliedHash) => {
+      const sentenceHash = suppliedHash ?? hashSentence(sentence);
+      if (sentence === safeSentence) {
+        return {
+          analyzerId: "fixture-annotated",
+          analyzerVersion: "fixture-v1",
+          sentenceHash,
+          sourceText: sentence,
+          tokens: tokensFromSpecs(sentence, [
+            ["I", "i", "pronoun", ["PRON", "pronoun"]],
+            ["can", "can", "modal", ["MD", "modal"]],
+            ["use", "use", "verb", ["VERB", "verb"]],
+            ["npm", "npm", "noun", ["NOUN", "noun"]],
+            ["on", "on", "preposition", ["ADP", "preposition"]],
+            ["this", "this", "determiner", ["DET", "determiner"]],
+            ["project", "project", "noun", ["NOUN", "noun"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ]),
+          chunks: [],
+          grammarFeatures: []
+        };
+      }
+
+      if (sentence === ambiguousSentence) {
+        return {
+          analyzerId: "fixture-annotated",
+          analyzerVersion: "fixture-v1",
+          sentenceHash,
+          sourceText: sentence,
+          tokens: tokensFromSpecs(sentence, [
+            ["I", "i", "pronoun", ["PRON", "pronoun"]],
+            ["can", "can", "modal", ["MD", "modal"]],
+            ["watch", "watch", "verb", ["VERB", "verb"]],
+            ["the", "the", "determiner", ["DET", "determiner"]],
+            ["plant", "plant", "noun", ["NOUN", "noun"]],
+            ["from", "from", "preposition", ["ADP", "preposition"]],
+            ["here", "here", "adverb", ["ADV", "adverb"]],
+            [".", ".", "other", ["PUNCT", "other"]]
+          ]),
+          chunks: [],
+          grammarFeatures: []
+        };
+      }
+
+      throw new Error(`Unexpected sentence in modal verb fixture: ${sentence}`);
+    });
+    const service = new SentenceAnalysisService({
+      analyzer,
+      cache: new InMemorySentenceAnalysisCache(),
+      loadRenderUnits: () =>
+        Promise.resolve([useVerbRenderUnit, watchVerbRenderUnit]),
+      loadVocab: () => Promise.resolve(new Map())
+    });
+
+    const [safeAnalysis, ambiguousAnalysis] = await service.analyzeCandidates([
+      { sentenceHash: hashSentence(safeSentence), sourceText: safeSentence },
+      { sentenceHash: hashSentence(ambiguousSentence), sourceText: ambiguousSentence }
+    ]);
+
+    expect(useVerbDecision(safeAnalysis?.entry, "use")).toMatchObject({
+      decision: "inject",
+      targetText: "usar",
+      patternId: "verb-frame:modal-infinitive"
+    });
+    expect(
+      ambiguousAnalysis?.entry.contextualWordCandidates.find(
+        (candidate) => candidate.lexemeId === "lx:watch:verb"
+      )
+    ).toMatchObject({
+      decision: "skip",
+      patternId: "verb-frame:unsafe"
+    });
+  });
+
   it("produces phrase matches, grammar features, and suitability output", async () => {
     const sourceText = "The captain of the football team has been patient.";
     const sentenceHash = hashSentence(sourceText);
@@ -1582,6 +1994,26 @@ function token(
   });
 }
 
+function tokenWithLemma(
+  text: string,
+  normalized: string,
+  lemma: string,
+  pos: string,
+  startOffset: number,
+  endOffset: number,
+  tags: string[]
+) {
+  return normalizeAnalyzerToken({
+    text,
+    normalized,
+    lemma,
+    pos,
+    tags,
+    startOffset,
+    endOffset
+  });
+}
+
 function tokensFromSpecs(
   sourceText: string,
   specs: readonly (readonly [string, string, string, readonly string[]])[]
@@ -1598,6 +2030,35 @@ function tokensFromSpecs(
     searchStart = endOffset;
     return token(text, normalized, pos, startOffset, endOffset, [...tags]);
   });
+}
+
+function tokensFromSpecsWithLemmas(
+  sourceText: string,
+  specs: readonly (readonly [string, string, string, string, readonly string[]])[]
+) {
+  let searchStart = 0;
+
+  return specs.map(([text, normalized, lemma, pos, tags]) => {
+    const startOffset = sourceText.indexOf(text, searchStart);
+    if (startOffset < 0) {
+      throw new Error(`Token ${text} was not found in fixture sentence.`);
+    }
+
+    const endOffset = startOffset + text.length;
+    searchStart = endOffset;
+    return tokenWithLemma(text, normalized, lemma, pos, startOffset, endOffset, [...tags]);
+  });
+}
+
+function useVerbDecision(
+  entry: SentenceAnalysisEntry | undefined,
+  sourceText: string
+) {
+  return entry?.contextualWordCandidates.find(
+    (candidate) =>
+      candidate.lexemeId === "lx:use:verb" &&
+      candidate.tokenText === sourceText
+  );
 }
 
 function createWordInventory(): WordInventoryEntry[] {

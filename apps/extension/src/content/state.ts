@@ -28,6 +28,7 @@ import type {
 import type { ContentWrapperRegistryState } from "./wrapper-registry";
 import type {
   AnalyzerPatternWordRenderIndex,
+  VerbRenderIndex,
   WordRenderIndex
 } from "./word-render-index";
 
@@ -63,6 +64,7 @@ export type ProcessingState = {
   samplingSeed: string;
   wordRenderIndex: WordRenderIndex;
   analyzerPatternWordRenderIndex: AnalyzerPatternWordRenderIndex;
+  verbRenderIndex: VerbRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   learningItemsByUnitRefId: Map<string, LearningItem>;
   sentenceHintPhrases: string[];
@@ -102,6 +104,7 @@ export function createProcessingState(input: {
   processingContext: ProcessingContext;
   wordRenderIndex: WordRenderIndex;
   analyzerPatternWordRenderIndex: AnalyzerPatternWordRenderIndex;
+  verbRenderIndex: VerbRenderIndex;
   sentenceTranslationEnabled: boolean;
   debugTrace?: DebugTraceStore | null;
 }): ProcessingState {
@@ -117,6 +120,7 @@ export function createProcessingState(input: {
     samplingSeed: `${window.location.hostname}${window.location.pathname}`,
     wordRenderIndex: input.wordRenderIndex,
     analyzerPatternWordRenderIndex: input.analyzerPatternWordRenderIndex,
+    verbRenderIndex: input.verbRenderIndex,
     vocabByLexemeId: processingContext.vocabByLexemeId,
     learningItemsByUnitRefId: processingContext.learningItemsByUnitRefId,
     sentenceHintPhrases: processingContext.sentenceHintPhrases,

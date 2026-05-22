@@ -23,7 +23,7 @@ export type TokenMetadata = {
   sourceLemma: string;
   lexemeId: string;
   renderUnitId: string | null;
-  pos: SafeInjectionPos;
+  pos: SafeInjectionPos | "verb";
   status: VocabStatus;
   wordKind: InjectedWordKind;
   sentence: string | null;

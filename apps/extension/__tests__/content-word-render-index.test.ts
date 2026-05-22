@@ -132,6 +132,41 @@ describe("content word render index", () => {
     });
   });
 
+  it("does not pre-render analyzer-gated use noun units in imperative contexts", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sourceText =
+        "Use --quiet to reduce output overhead. Already have Node? Use npm instead (works on any version).";
+      const textNode = document.createTextNode(sourceText);
+      document.body.append(textNode);
+      const renderIndexes = buildWordRenderIndexes([
+        wordUnit({
+          lexemeId: "lx:use:noun",
+          sourceLemma: "use",
+          targetLemma: "uso",
+          pos: "noun",
+          matchMode: "analyzer-pattern",
+          frequencyRank: 240
+        })
+      ]);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "imperative-use-word-test",
+        createNodeId: () => "ikn-imperative-use-word-test",
+        wordRenderIndex: renderIndexes.wordRenderIndex,
+        analyzerPatternWordRenderIndex:
+          renderIndexes.analyzerPatternWordRenderIndex,
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(false);
+      expect(document.body.textContent).toContain(sourceText);
+      expect(document.body.textContent).not.toContain("Uso --quiet");
+      expect(document.body.textContent).not.toContain("Uso npm");
+    });
+  });
+
   it("renders analyzer-pattern words after cached analyzer inject decisions", async () => {
     await withFixtureDom("article-basic.html", ({ document }) => {
       const sourceSentence = "There is a great need for clean water.";
@@ -192,6 +227,154 @@ describe("content word render index", () => {
       expect(result.replaced).toBe(true);
       expect(document.body.textContent).toContain("great necesidad for");
       expect(document.body.textContent).not.toContain("cached-necesidad");
+    });
+  });
+
+  it("renders analyzer-gated use noun units after cached noun evidence", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sourceSentence = "The use of the phone is prohibited here.";
+      const textNode = document.createTextNode(sourceSentence);
+      document.body.append(textNode);
+      const sentenceHash = hashSentence(sourceSentence);
+      const renderIndexes = buildWordRenderIndexes([
+        wordUnit({
+          lexemeId: "lx:use:noun",
+          sourceLemma: "use",
+          targetLemma: "uso",
+          pos: "noun",
+          matchMode: "analyzer-pattern",
+          frequencyRank: 240
+        })
+      ]);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "noun-use-word-test",
+        createNodeId: () => "ikn-noun-use-word-test",
+        wordRenderIndex: renderIndexes.wordRenderIndex,
+        analyzerPatternWordRenderIndex:
+          renderIndexes.analyzerPatternWordRenderIndex,
+        cachedWordRenderDecisions: new Map([
+          [
+            sentenceHash,
+            [
+              cachedInjectDecision({
+                sentenceHash,
+                lexemeId: "lx:use:noun",
+                sourceLemma: "use",
+                targetLemma: "uso",
+                pos: "noun",
+                frequencyRank: 240
+              })
+            ]
+          ]
+        ]),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(document.body.textContent).toContain(
+        "The uso of the phone is prohibited here."
+      );
+    });
+  });
+
+  it("renders cached dynamic verb command decisions with their analyzed target", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sourceSentence = "Use --quiet to reduce output overhead.";
+      const textNode = document.createTextNode(sourceSentence);
+      document.body.append(textNode);
+      const sentenceHash = hashSentence(sourceSentence);
+      const renderIndexes = buildWordRenderIndexes([
+        verbUnit({
+          lexemeId: "lx:use:verb",
+          sourceLemma: "use",
+          targetLemma: "usar"
+        })
+      ]);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "verb-use-command-test",
+        createNodeId: () => "ikn-verb-use-command-test",
+        wordRenderIndex: renderIndexes.wordRenderIndex,
+        analyzerPatternWordRenderIndex:
+          renderIndexes.analyzerPatternWordRenderIndex,
+        verbRenderIndex: renderIndexes.verbRenderIndex,
+        cachedWordRenderDecisions: new Map([
+          [
+            sentenceHash,
+            [
+              cachedVerbDecision({
+                sentenceHash,
+                lexemeId: "lx:use:verb",
+                sourceLemma: "use",
+                sourceText: "Use",
+                targetText: "usa",
+                startChar: 0,
+                endChar: 3
+              })
+            ]
+          ]
+        ]),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(document.body.textContent).toContain(
+        "Usa --quiet to reduce output overhead."
+      );
+      expect(document.body.textContent).not.toContain("Uso --quiet");
+    });
+  });
+
+  it("renders cached dynamic verb phrase decisions without reusing noun targets", async () => {
+    await withFixtureDom("article-basic.html", ({ document }) => {
+      const sourceSentence = "I use npm on every project.";
+      const textNode = document.createTextNode(sourceSentence);
+      document.body.append(textNode);
+      const sentenceHash = hashSentence(sourceSentence);
+      const renderIndexes = buildWordRenderIndexes([
+        verbUnit({
+          lexemeId: "lx:use:verb",
+          sourceLemma: "use",
+          targetLemma: "usar"
+        })
+      ]);
+
+      const result = processTextNode(textNode, {
+        discoveryRate: 1,
+        samplingSeed: "verb-use-subject-test",
+        createNodeId: () => "ikn-verb-use-subject-test",
+        wordRenderIndex: renderIndexes.wordRenderIndex,
+        analyzerPatternWordRenderIndex:
+          renderIndexes.analyzerPatternWordRenderIndex,
+        verbRenderIndex: renderIndexes.verbRenderIndex,
+        cachedWordRenderDecisions: new Map([
+          [
+            sentenceHash,
+            [
+              cachedVerbDecision({
+                sentenceHash,
+                lexemeId: "lx:use:verb",
+                sourceLemma: "use",
+                sourceText: "I use",
+                targetText: "yo uso",
+                startChar: 0,
+                endChar: 5
+              })
+            ]
+          ]
+        ]),
+        vocabByLexemeId: new Map(),
+        isKnownWordForScoring: () => false
+      });
+
+      expect(result.replaced).toBe(true);
+      expect(document.body.textContent).toContain("Yo uso npm on every project.");
+      expect(document.body.textContent).not.toContain("I usar npm");
     });
   });
 
@@ -406,6 +589,45 @@ function wordUnit(input: TestWordUnit) {
   } as const;
 }
 
+function verbUnit(input: {
+  lexemeId: string;
+  sourceLemma: string;
+  targetLemma: string;
+  frequencyRank?: number | null;
+}) {
+  return {
+    renderUnitId: `ru:${input.sourceLemma}:verb:frame`,
+    lexemeIds: [input.lexemeId],
+    kind: "verb-frame",
+    renderPolicy: "inline",
+    sourceText: input.sourceLemma,
+    normalizedSourceText: input.sourceLemma,
+    targetText: input.targetLemma,
+    normalizedTargetText: input.targetLemma,
+    sourcePattern: {
+      matchMode: "analyzer-pattern",
+      tokens: [
+        {
+          normal: input.sourceLemma,
+          lemma: input.sourceLemma,
+          pos: "verb",
+          role: "verb"
+        }
+      ]
+    },
+    replacement: {
+      startToken: 0,
+      endToken: 1,
+      targetText: input.targetLemma
+    },
+    pos: "verb",
+    minBand: "level-1a",
+    frequencyRank: input.frequencyRank ?? 100,
+    confidence: 0.94,
+    provenance: { source: "manual" }
+  } as const;
+}
+
 function cachedInjectDecision(input: {
   sentenceHash: string;
   lexemeId: string;
@@ -428,5 +650,36 @@ function cachedInjectDecision(input: {
     confidence: 0.99,
     decision: "inject",
     rationale: "Analyzer pattern matched the approved render unit."
+  };
+}
+
+function cachedVerbDecision(input: {
+  sentenceHash: string;
+  lexemeId: string;
+  sourceLemma: string;
+  sourceText: string;
+  targetText: string;
+  startChar: number;
+  endChar: number;
+}): CachedWordRenderDecision {
+  return {
+    sentenceHash: input.sentenceHash,
+    lexemeId: input.lexemeId,
+    renderUnitId: `ru:${input.sourceLemma}:verb:frame`,
+    renderUnitMinBand: "level-1a",
+    normalizedSourceText: input.sourceLemma,
+    normalizedText: input.sourceText.toLowerCase(),
+    sourceText: input.sourceText,
+    targetText: input.targetText,
+    candidateLemma: input.sourceLemma,
+    candidatePos: "verb",
+    frequencyRank: 100,
+    confidence: 0.91,
+    tokenStart: 0,
+    tokenEnd: 1,
+    startChar: input.startChar,
+    endChar: input.endChar,
+    decision: "inject",
+    rationale: "Clear local verb frame matched the approved verb unit."
   };
 }
