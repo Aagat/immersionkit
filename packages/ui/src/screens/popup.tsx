@@ -93,7 +93,6 @@ export function ExtensionPopup({
   onOpenSettings,
   onOpenDebug,
   onReportIssue,
-  onDismissIntro,
   onPreviewSignIn
 }: ExtensionPopupProps) {
   const [localSiteState, setLocalSiteState] =
@@ -125,22 +124,7 @@ export function ExtensionPopup({
             </Alert>
           ) : null}
           {firstRunIntro ? (
-            <Alert>
-              <IkIcon name="shield" />
-              <AlertTitle>Read normally with small doses of Spanish.</AlertTitle>
-              <AlertDescription>
-                Words and phrases appear gently on supported pages. Pause any site
-                or adjust your pace in settings.
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3 w-fit"
-                  onClick={onDismissIntro}
-                >
-                  Got it
-                </Button>
-              </AlertDescription>
-            </Alert>
+            <FirstRunSetupPrompt onOpenSettings={onOpenSettings} />
           ) : null}
           {account.status === "signed-out" ? (
             <SignedOutPopup
@@ -172,6 +156,7 @@ export function ExtensionPopup({
       ) : (
         <UnsupportedPopup
           unsupportedMessage={unsupportedMessage}
+          firstRunIntro={firstRunIntro}
           onOpenSettings={onOpenSettings}
         />
       )}
@@ -227,6 +212,31 @@ function SignedOutPopup({
       </Card>
       <LocalFooter text="Preview sign-in is for access and support; it does not sync learning progress." />
     </>
+  );
+}
+
+function FirstRunSetupPrompt({
+  onOpenSettings
+}: {
+  onOpenSettings?: () => void;
+}) {
+  return (
+    <Alert>
+      <IkIcon name="shield" />
+      <AlertTitle>Finish setup in Settings.</AlertTitle>
+      <AlertDescription>
+        Sign in for preview, choose your starting level, and set the Spanish
+        density before reading mode turns on.
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 w-fit"
+          onClick={onOpenSettings}
+        >
+          Open settings
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -460,14 +470,19 @@ function BandProgress({ value, detail }: { value: number; detail: string }) {
 
 function UnsupportedPopup({
   unsupportedMessage,
+  firstRunIntro,
   onOpenSettings
 }: {
   unsupportedMessage: string;
+  firstRunIntro?: boolean;
   onOpenSettings?: () => void;
 }) {
   return (
     <section className="flex flex-col gap-4 bg-background p-4">
       <PopupBrand />
+      {firstRunIntro ? (
+        <FirstRunSetupPrompt onOpenSettings={onOpenSettings} />
+      ) : null}
       <Card>
         <CardHeader>
           <Badge variant="secondary" className="w-fit">

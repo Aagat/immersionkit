@@ -106,6 +106,8 @@ export function OptionsApp() {
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewSignInPending, setIsPreviewSignInPending] = useState(false);
+  const [isCompletingFirstRun, setIsCompletingFirstRun] = useState(false);
   const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
   const [isGeneratingSupportReport, setIsGeneratingSupportReport] =
     useState(false);
@@ -366,9 +368,9 @@ export function OptionsApp() {
     []
   );
 
-  const handleSave = useCallback(async () => {
+  const persistCurrentSettings = useCallback(async (successMessage: string) => {
     if (!settingsState) {
-      return;
+      return false;
     }
 
     setErrorMessage(null);
@@ -382,7 +384,7 @@ export function OptionsApp() {
     if (settingsState.settings.provider === "openai" && !providerKeyValid) {
       setErrorMessage("Enter a valid OpenAI API key before saving.");
       setActiveTab("translation");
-      return;
+      return false;
     }
 
     const normalizedState: SettingsState = {
@@ -416,13 +418,19 @@ export function OptionsApp() {
         )
       );
       await notifySettingsRefresh();
-      setStatusMessage("Settings saved.");
+      setStatusMessage(successMessage);
+      return true;
     } catch {
       setErrorMessage("Unable to save settings. Try again.");
+      return false;
     } finally {
       setIsSaving(false);
     }
   }, [curriculumDiagnostics?.profile, settingsState]);
+
+  const handleSave = useCallback(async () => {
+    await persistCurrentSettings("Settings saved.");
+  }, [persistCurrentSettings]);
 
   const handleClearApiKey = useCallback(() => {
     setSettingsState((current) => {
@@ -472,9 +480,26 @@ export function OptionsApp() {
     await markFirstRunIntroSeen();
   }, []);
 
+  const handleCompleteFirstRunIntro = useCallback(async () => {
+    setIsCompletingFirstRun(true);
+    try {
+      const saved = await persistCurrentSettings(
+        "Setup complete. Open a supported page to start reading."
+      );
+      if (!saved) {
+        return;
+      }
+      setShowFirstRunIntro(false);
+      await markFirstRunIntroSeen();
+    } finally {
+      setIsCompletingFirstRun(false);
+    }
+  }, [persistCurrentSettings]);
+
   const handlePreviewSignIn = useCallback(async () => {
     setErrorMessage(null);
     setStatusMessage(null);
+    setIsPreviewSignInPending(true);
     try {
       const response = await sendRuntimeMessage({
         type: RuntimeMessageType.StartAccountLogin,
@@ -488,6 +513,8 @@ export function OptionsApp() {
       await loadState();
     } catch {
       setErrorMessage("Could not start Google preview sign-in. Try again.");
+    } finally {
+      setIsPreviewSignInPending(false);
     }
   }, [loadState]);
 
@@ -681,6 +708,8 @@ export function OptionsApp() {
       errorMessage={errorMessage}
       isSaving={isSaving}
       isLoading={isLoading}
+      isPreviewSignInPending={isPreviewSignInPending}
+      isCompletingFirstRun={isCompletingFirstRun}
       discoveryRatePercent={discoveryRatePercent}
       readingLevel={toUiReadingLevel(settingsState?.proficiencySeed)}
       stats={{
@@ -746,6 +775,9 @@ export function OptionsApp() {
       }}
       onDismissIntro={() => {
         void handleDismissFirstRunIntro();
+      }}
+      onCompleteFirstRun={() => {
+        void handleCompleteFirstRunIntro();
       }}
       onDiscoveryRateChange={handleDiscoveryRateChange}
       onReadingLevelChange={(level) => {

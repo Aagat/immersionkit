@@ -192,6 +192,8 @@ export type ExtensionOptionsProps = {
   errorMessage?: string | null;
   isSaving?: boolean;
   isLoading?: boolean;
+  isPreviewSignInPending?: boolean;
+  isCompletingFirstRun?: boolean;
   discoveryRatePercent?: number;
   readingLevel?: ReadingLevel;
   stats?: OptionsStats;
@@ -225,6 +227,7 @@ export type ExtensionOptionsProps = {
   onSave?: () => void;
   onReload?: () => void;
   onDismissIntro?: () => void;
+  onCompleteFirstRun?: () => void | Promise<void>;
   onDiscoveryRateChange?: (percent: number) => void;
   onReadingLevelChange?: (level: ReadingLevel) => void;
   onExactBandChange?: (bandId: string) => void;
@@ -245,7 +248,7 @@ export type ExtensionOptionsProps = {
   onDownloadSupportReport?: () => void;
   onCopySupportSummary?: () => void;
   onSubmitSupportFeedback?: () => void;
-  onPreviewSignIn?: () => void;
+  onPreviewSignIn?: () => void | Promise<void>;
   onPreviewLogout?: () => void;
 };
 
@@ -275,6 +278,5 @@ export type ExtensionPopupProps = {
   onOpenSettings?: () => void;
   onOpenDebug?: () => void;
   onReportIssue?: () => void;
-  onDismissIntro?: () => void;
   onPreviewSignIn?: () => void;
 };

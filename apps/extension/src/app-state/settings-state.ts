@@ -444,7 +444,7 @@ export async function loadCheckpointEligibilityPreview(): Promise<CheckpointElig
 
 export async function loadFirstRunIntroVisible(): Promise<boolean> {
   const storage = await getUserDataValues([FIRST_RUN_INTRO_STORAGE_KEY]);
-  return storage[FIRST_RUN_INTRO_STORAGE_KEY] !== false;
+  return storage[FIRST_RUN_INTRO_STORAGE_KEY] === true;
 }
 
 export async function markFirstRunIntroSeen(): Promise<void> {

@@ -669,6 +669,10 @@ describe("options state", () => {
     const indexedDbStub = installIndexedDbStub();
 
     try {
+      await expect(loadFirstRunIntroVisible()).resolves.toBe(false);
+      await setUserDataValues({
+        "first-run-intro-visible": true
+      });
       await expect(loadFirstRunIntroVisible()).resolves.toBe(true);
       await markFirstRunIntroSeen();
       await expect(loadFirstRunIntroVisible()).resolves.toBe(false);
