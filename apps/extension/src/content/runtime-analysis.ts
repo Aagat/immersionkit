@@ -13,11 +13,16 @@ export type CachedWordRenderDecision = {
   renderUnitMinBand?: string;
   normalizedSourceText?: string;
   normalizedText: string;
+  sourceText?: string;
   targetText?: string;
   candidateLemma?: string;
   candidatePos?: ContextualWordCandidate["candidatePos"];
   frequencyRank?: number | null;
   confidence?: number;
+  tokenStart?: number;
+  tokenEnd?: number;
+  startChar?: number;
+  endChar?: number;
   decision: "inject" | "skip";
   rationale?: string;
 };
@@ -306,11 +311,16 @@ function normalizeCachedWordRenderDecision(
     renderUnitMinBand: candidate.renderUnitMinBand,
     normalizedSourceText: candidate.normalizedSourceText,
     normalizedText,
+    sourceText: candidate.surfaceText ?? candidate.tokenText,
     targetText: candidate.targetText ?? candidate.targetLemma,
     candidateLemma: candidate.candidateLemma,
     candidatePos: candidate.candidatePos,
     frequencyRank: candidate.frequencyRank,
     confidence: candidate.confidence,
+    tokenStart: candidate.tokenStart,
+    tokenEnd: candidate.tokenEnd,
+    startChar: candidate.startChar,
+    endChar: candidate.endChar,
     decision: candidate.decision,
     rationale: candidate.rationale
   };

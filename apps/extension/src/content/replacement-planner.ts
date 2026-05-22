@@ -31,7 +31,8 @@ import {
 import { preserveWordCasing, segmentText } from "./tokenize";
 import {
   createAnalyzerPatternWordRenderKey,
-  type AnalyzerPatternWordRenderIndex
+  type AnalyzerPatternWordRenderIndex,
+  type VerbRenderIndex
 } from "./word-render-index";
 import {
   createWordDecisionTrace,
@@ -48,6 +49,7 @@ export type ReplacementPlannerContext = {
   targetLanguage: SupportedTargetLanguage;
   wordRenderIndex: Map<string, WordRenderEntry>;
   analyzerPatternWordRenderIndex?: AnalyzerPatternWordRenderIndex;
+  verbRenderIndex?: VerbRenderIndex;
   vocabByLexemeId: Map<string, UserVocabEntry>;
   isKnownWordForScoring: (word: string) => boolean;
   isDueForReview?: (lexemeId: string) => boolean;
@@ -177,6 +179,19 @@ type PhraseRenderCandidate = {
   isDueForReview: boolean;
 };
 
+type DynamicVerbRenderCandidate = {
+  decision: CachedWordRenderDecision;
+  wordEntry: WordRenderEntry;
+  start: number;
+  end: number;
+  sourceText: string;
+  targetText: string;
+  sentence: {
+    text: string;
+    hash: string;
+  };
+};
+
 export type PhraseRenderRejection = {
   phraseId: string;
   reason: string;
@@ -202,6 +217,17 @@ export function planTextReplacements(input: {
     analysisContext: context.analysisContext,
     learningItemsByUnitRefId: context.learningItemsByUnitRefId,
     shouldActivatePhrase: context.shouldActivatePhrase
+  });
+  const dynamicVerbCandidates = selectDynamicVerbRenderCandidates({
+    sourceText,
+    sentences,
+    analysisContext: context.analysisContext,
+    cachedWordRenderDecisions: context.cachedWordRenderDecisions,
+    verbRenderIndex: context.verbRenderIndex,
+    blockedSpans: [...phraseCandidates.acceptedByStart.values()].map((candidate) => ({
+      start: candidate.start,
+      end: candidate.end
+    }))
   });
   for (const rejection of phraseCandidates.rejected) {
     context.debugSink?.recordPhraseDecision(
@@ -254,6 +280,11 @@ export function planTextReplacements(input: {
       continue;
     }
 
+    const dynamicVerbCandidate = dynamicVerbCandidates.acceptedByStart.get(
+      segment.start
+    );
+    const dynamicVerbDecision = dynamicVerbCandidate?.decision ?? null;
+
     if (segment.kind === "text") {
       continue;
     }
@@ -285,6 +316,7 @@ export function planTextReplacements(input: {
         })
       : null;
     const wordEntry =
+      dynamicVerbCandidate?.wordEntry ??
       context.wordRenderIndex.get(segment.normalized) ??
       findCurrentAnalyzerPatternWordEntry(
         cachedInjectDecision,
@@ -306,17 +338,24 @@ export function planTextReplacements(input: {
       continue;
     }
 
+    const sourceToken = dynamicVerbCandidate?.sourceText ?? segment.value;
+    const normalizedSourceToken = normalizeToken(sourceToken) || segment.normalized;
+    const spanStart = dynamicVerbCandidate?.start ?? segment.start;
+    const spanEnd = dynamicVerbCandidate?.end ?? segment.end;
+    const targetLemma = dynamicVerbCandidate?.targetText ?? wordEntry.targetLemma;
+    const contextInjectDecision = dynamicVerbDecision ?? cachedInjectDecision;
+
     const status = getVocabStatus(wordEntry.lexemeId, context.vocabByLexemeId);
     if (status === "ignored") {
       context.debugSink?.recordTokenDecision(
         createWordDecisionTrace({
           nodeId: context.nodeId,
-          sourceToken: segment.value,
-          normalizedSourceToken: segment.normalized,
-          targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+          sourceToken,
+          normalizedSourceToken,
+          targetToken: preserveWordCasing(sourceToken, targetLemma),
           sentenceHash: sentence?.hash ?? null,
-          start: segment.start,
-          end: segment.end,
+          start: spanStart,
+          end: spanEnd,
           wordEntry,
           status,
           finalAction: "skipped-ignored",
@@ -343,12 +382,12 @@ export function planTextReplacements(input: {
         context.debugSink?.recordTokenDecision(
           createWordDecisionTrace({
             nodeId: context.nodeId,
-            sourceToken: segment.value,
-            normalizedSourceToken: segment.normalized,
-            targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+            sourceToken,
+            normalizedSourceToken,
+            targetToken: preserveWordCasing(sourceToken, targetLemma),
             sentenceHash: sentence?.hash ?? null,
-            start: segment.start,
-            end: segment.end,
+            start: spanStart,
+            end: spanEnd,
             wordEntry,
             status,
             learningItem,
@@ -365,7 +404,7 @@ export function planTextReplacements(input: {
     }
 
     const samplingSeed =
-      `${context.samplingSeed}:${segment.normalized}:${offsetBase + segment.start}`;
+      `${context.samplingSeed}:${normalizedSourceToken}:${offsetBase + spanStart}`;
     const sampling = evaluateDiscoverySampling(
       samplingSeed,
       context.discoveryRate,
@@ -379,12 +418,12 @@ export function planTextReplacements(input: {
       context.debugSink?.recordTokenDecision(
         createWordDecisionTrace({
           nodeId: context.nodeId,
-          sourceToken: segment.value,
-          normalizedSourceToken: segment.normalized,
-          targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+          sourceToken,
+          normalizedSourceToken,
+          targetToken: preserveWordCasing(sourceToken, targetLemma),
           sentenceHash: sentence?.hash ?? null,
-          start: segment.start,
-          end: segment.end,
+          start: spanStart,
+          end: spanEnd,
           wordEntry,
           status,
           learningItem,
@@ -405,7 +444,7 @@ export function planTextReplacements(input: {
           sentenceHash: sentence.hash,
           lexemeId: wordEntry.lexemeId,
           renderUnitId: wordEntry.renderUnitId,
-          sourceToken: segment.value
+          sourceToken
         })
       : null;
     if (cachedSkipDecision) {
@@ -413,12 +452,12 @@ export function planTextReplacements(input: {
       context.debugSink?.recordTokenDecision(
         createWordDecisionTrace({
           nodeId: context.nodeId,
-          sourceToken: segment.value,
-          normalizedSourceToken: segment.normalized,
-          targetToken: preserveWordCasing(segment.value, wordEntry.targetLemma),
+          sourceToken,
+          normalizedSourceToken,
+          targetToken: preserveWordCasing(sourceToken, targetLemma),
           sentenceHash: sentence?.hash ?? null,
-          start: segment.start,
-          end: segment.end,
+          start: spanStart,
+          end: spanEnd,
           wordEntry,
           status,
           learningItem,
@@ -444,14 +483,14 @@ export function planTextReplacements(input: {
     }
 
     const tokenId = `${context.nodeId}-t${tokenIndex}`;
-    const targetToken = preserveWordCasing(segment.value, wordEntry.targetLemma);
+    const targetToken = preserveWordCasing(sourceToken, targetLemma);
     spans.push({
       kind: "word",
       tokenId,
       nodeId: context.nodeId,
-      start: segment.start,
-      end: segment.end,
-      sourceToken: segment.value,
+      start: spanStart,
+      end: spanEnd,
+      sourceToken,
       targetToken,
       sentence,
       wordEntry,
@@ -465,12 +504,12 @@ export function planTextReplacements(input: {
       createWordDecisionTrace({
         tokenId,
         nodeId: context.nodeId,
-        sourceToken: segment.value,
-        normalizedSourceToken: segment.normalized,
+        sourceToken,
+        normalizedSourceToken,
         targetToken,
         sentenceHash: sentence?.hash ?? null,
-        start: segment.start,
-        end: segment.end,
+        start: spanStart,
+        end: spanEnd,
         wordEntry,
         status,
         learningItem,
@@ -489,13 +528,13 @@ export function planTextReplacements(input: {
                 seed: samplingSeed
               },
         contextDecision: {
-          evaluated: Boolean(cachedInjectDecision),
+          evaluated: Boolean(contextInjectDecision),
           decision: "inject",
-          rationale: cachedInjectDecision?.rationale ?? null
+          rationale: contextInjectDecision?.rationale ?? null
         },
         finalAction: "injected",
         explanation:
-          cachedInjectDecision?.rationale ??
+          contextInjectDecision?.rationale ??
           "Token passed render-unit, vocab, curriculum, sampling, and context gates."
       })
     );
@@ -507,6 +546,7 @@ export function planTextReplacements(input: {
     } else {
       discoveryCount += 1;
     }
+    coveredUntil = Math.max(coveredUntil, spanEnd);
   }
 
   const scoredSentenceCandidates = scoreSentenceCandidates(
@@ -679,6 +719,174 @@ function selectPhraseRenderCandidates(input: {
     rejected,
     curriculumSkippedCount
   };
+}
+
+function selectDynamicVerbRenderCandidates(input: {
+  sourceText: string;
+  sentences: ReturnType<typeof segmentSentences>;
+  analysisContext?: RuntimeAnalysisContext;
+  cachedWordRenderDecisions?: Map<string, CachedWordRenderDecision[]>;
+  verbRenderIndex?: VerbRenderIndex;
+  blockedSpans?: readonly { start: number; end: number }[];
+}): {
+  acceptedByStart: Map<number, DynamicVerbRenderCandidate>;
+} {
+  const acceptedByStart = new Map<number, DynamicVerbRenderCandidate>();
+  if (
+    !input.verbRenderIndex ||
+    (!input.analysisContext && !input.cachedWordRenderDecisions)
+  ) {
+    return { acceptedByStart };
+  }
+
+  const candidates: DynamicVerbRenderCandidate[] = [];
+  for (const sentence of input.sentences) {
+    const decisions =
+      input.analysisContext?.bySentenceHash.get(sentence.hash)?.wordDecisions ??
+      input.cachedWordRenderDecisions?.get(sentence.hash) ??
+      [];
+    if (decisions.length === 0) {
+      continue;
+    }
+
+    for (const decision of decisions) {
+      if (
+        decision.decision !== "inject" ||
+        decision.candidatePos !== "verb" ||
+        !decision.lexemeId ||
+        !decision.renderUnitId ||
+        !decision.targetText?.trim()
+      ) {
+        continue;
+      }
+
+      const wordEntry = input.verbRenderIndex.get(
+        createAnalyzerPatternWordRenderKey(decision.renderUnitId, decision.lexemeId)
+      );
+      if (!wordEntry) {
+        continue;
+      }
+
+      const resolvedSpan = resolveDynamicVerbSpanInSourceText({
+        sourceText: input.sourceText,
+        sentence,
+        decision
+      });
+      if (!resolvedSpan) {
+        continue;
+      }
+
+      candidates.push({
+        decision,
+        wordEntry,
+        start: resolvedSpan.start,
+        end: resolvedSpan.end,
+        sourceText: resolvedSpan.sourceText,
+        targetText: decision.targetText.trim(),
+        sentence
+      });
+    }
+  }
+
+  const selected: DynamicVerbRenderCandidate[] = [];
+  for (const candidate of candidates.sort(compareDynamicVerbCandidates)) {
+    if (
+      input.blockedSpans?.some((span) =>
+        spansOverlap(candidate.start, candidate.end, span.start, span.end)
+      )
+    ) {
+      continue;
+    }
+
+    if (
+      selected.some((existing) =>
+        spansOverlap(candidate.start, candidate.end, existing.start, existing.end)
+      )
+    ) {
+      continue;
+    }
+
+    selected.push(candidate);
+    acceptedByStart.set(candidate.start, candidate);
+  }
+
+  return { acceptedByStart };
+}
+
+function resolveDynamicVerbSpanInSourceText(input: {
+  sourceText: string;
+  sentence: SentenceSegment;
+  decision: CachedWordRenderDecision;
+}): { start: number; end: number; sourceText: string } | null {
+  if (
+    typeof input.decision.startChar === "number" &&
+    typeof input.decision.endChar === "number"
+  ) {
+    const directStart = input.sentence.start + input.decision.startChar;
+    const directEnd = input.sentence.start + input.decision.endChar;
+    const directMatch = toResolvedDynamicVerbSpan(input, directStart, directEnd);
+    if (directMatch) {
+      return directMatch;
+    }
+  }
+
+  const normalizedNeedle = normalizePhraseText(
+    input.decision.sourceText || input.decision.normalizedText
+  );
+  if (!normalizedNeedle) {
+    return null;
+  }
+
+  const normalizedMap = buildNormalizedSentenceOffsetMap(
+    input.sourceText.slice(input.sentence.start, input.sentence.end)
+  );
+  const normalizedHaystack = normalizePhraseText(normalizedMap.normalizedText);
+  const candidateStarts = findAllPhraseStartOffsets(
+    normalizedHaystack,
+    normalizedNeedle
+  );
+  const closestStart = candidateStarts.sort(
+    (left, right) =>
+      Math.abs(left - (input.decision.startChar ?? 0)) -
+      Math.abs(right - (input.decision.startChar ?? 0))
+  )[0];
+  if (closestStart === undefined) {
+    return null;
+  }
+
+  const relativeStart = normalizedMap.charStarts[closestStart];
+  const relativeEnd = normalizedMap.charEnds[closestStart + normalizedNeedle.length - 1];
+  if (relativeStart === undefined || relativeEnd === undefined) {
+    return null;
+  }
+
+  return toResolvedDynamicVerbSpan(
+    input,
+    input.sentence.start + relativeStart,
+    input.sentence.start + relativeEnd
+  );
+}
+
+function toResolvedDynamicVerbSpan(
+  input: {
+    sourceText: string;
+    sentence: SentenceSegment;
+    decision: CachedWordRenderDecision;
+  },
+  start: number,
+  end: number
+): { start: number; end: number; sourceText: string } | null {
+  if (start < input.sentence.start || end > input.sentence.end || end <= start) {
+    return null;
+  }
+
+  const sourceText = input.sourceText.slice(start, end);
+  const expectedSourceText = input.decision.sourceText || input.decision.normalizedText;
+  if (normalizePhraseText(sourceText) !== normalizePhraseText(expectedSourceText)) {
+    return null;
+  }
+
+  return { start, end, sourceText };
 }
 
 function createInjectedPhraseTrace(
@@ -1144,6 +1352,25 @@ function comparePhraseCandidates(
 
   if (left.confidence !== right.confidence) {
     return right.confidence - left.confidence;
+  }
+
+  return left.start - right.start;
+}
+
+function compareDynamicVerbCandidates(
+  left: DynamicVerbRenderCandidate,
+  right: DynamicVerbRenderCandidate
+): number {
+  const leftLength = left.end - left.start;
+  const rightLength = right.end - right.start;
+  if (leftLength !== rightLength) {
+    return rightLength - leftLength;
+  }
+
+  const leftConfidence = left.decision.confidence ?? 0;
+  const rightConfidence = right.decision.confidence ?? 0;
+  if (leftConfidence !== rightConfidence) {
+    return rightConfidence - leftConfidence;
   }
 
   return left.start - right.start;

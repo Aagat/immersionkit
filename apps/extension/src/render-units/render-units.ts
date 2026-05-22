@@ -23,6 +23,7 @@ export { getRenderUnitSentenceHints } from "@immersionkit/shared";
 export type {
   RenderUnitPhraseTarget,
   RenderUnitRuntimeIndex,
+  VerbRenderEntry,
   WordRenderEntry
 } from "@immersionkit/shared";
 

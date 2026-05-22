@@ -111,7 +111,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "big -> grande",
       "good -> bueno/buena"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: ["cog-01-near-identical", "cog-02-final-e-descriptors"],
     vocabularyMaxFrequencyRank: 600,
     phraseChunks: ["at home", "right now", "a lot", "very good", "good idea", "clear adjective+noun spans"],
@@ -147,7 +147,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "mother -> madre",
       "sometimes -> a veces"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: ["cog-01-near-identical", "cog-02-final-e-descriptors"],
     vocabularyMaxFrequencyRank: 900,
     phraseChunks: ["in the morning", "on Monday", "at school", "this week", "sometimes", "every week", "literal noun chunks with connectors"],
@@ -176,7 +176,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "easy -> fácil",
       "much -> mucho/mucha"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-01-near-identical",
       "cog-02-final-e-descriptors",
@@ -210,7 +210,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "appointment -> cita",
       "train -> tren"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-01-near-identical",
       "cog-02-final-e-descriptors",
@@ -244,7 +244,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "problem -> problema",
       "solution -> solución"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-01-near-identical",
       "cog-02-final-e-descriptors",
@@ -278,7 +278,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "same -> mismo/misma",
       "hospital -> hospital"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-01-near-identical",
       "cog-02-final-e-descriptors",
@@ -317,7 +317,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "clearly -> claramente",
       "movement -> movimiento"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-01-near-identical",
       "cog-03-tion-sion",
@@ -351,7 +351,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "habit -> hábito",
       "experience -> experiencia"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-03-tion-sion",
       "cog-04-ty-dad",
@@ -385,7 +385,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "economic -> económico/económica",
       "purpose -> propósito"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-03-tion-sion",
       "cog-05-ly-mente",
@@ -425,7 +425,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "organization -> organización",
       "participation -> participación"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-03-tion-sion",
       "cog-04-ty-dad",
@@ -464,7 +464,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "responsibility -> responsabilidad",
       "conclusion -> conclusión"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-03-tion-sion",
       "cog-04-ty-dad",
@@ -511,7 +511,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "regulation -> regulación",
       "tendency -> tendencia"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-03-tion-sion",
       "cog-04-ty-dad",
@@ -556,7 +556,7 @@ export const DEFAULT_CURRICULUM_CONTENT: readonly CurriculumBandContent[] = [
       "interpretation -> interpretación",
       "criterion -> criterio"
     ],
-    allowedPartsOfSpeech: ["noun", "adjective", "adverb"],
+    allowedPartsOfSpeech: ["noun", "adjective", "adverb", "verb"],
     cognatePatternIds: [
       "cog-03-tion-sion",
       "cog-04-ty-dad",

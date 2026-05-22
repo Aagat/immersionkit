@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_CURRICULUM_CONFIG,
   buildRenderUnitRuntimeIndex,
+  conjugateSpanishVerb,
   normalizeToken,
   resolveRenderUnitPhraseTarget
 } from "@immersionkit/shared";
@@ -231,6 +232,93 @@ describe("render unit assets", () => {
     });
     expect(getRenderUnitSentenceHints(renderUnits)).toEqual(
       expect.arrayContaining(["first time", "one more time", "every time"])
+    );
+  });
+
+  it("keeps bare use analyzer-gated so verb contexts do not pre-render as uso", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const useRenderUnit = renderUnits.find(
+      (entry) => entry.renderUnitId === "ru:use:noun:analyzer-pattern"
+    );
+
+    expect(useRenderUnit).toMatchObject({
+      lexemeIds: ["lx:use:noun"],
+      kind: "single-token",
+      renderPolicy: "inline",
+      sourceText: "use",
+      targetText: "uso",
+      pos: "noun",
+      sourcePattern: {
+        matchMode: "analyzer-pattern",
+        tokens: [
+          {
+            normal: "use",
+            lemma: "use",
+            pos: "noun"
+          }
+        ]
+      }
+    });
+    expect(runtimeIndex.preferredWordByNormalizedForm.get("use")).toBeUndefined();
+    expect(runtimeIndex.exactSingleTokenWordEntriesByNormalizedForm.get("use")).toBeUndefined();
+    expect(
+      runtimeIndex.analyzerPatternWordEntriesByFirstToken
+        .get("use")
+        ?.map((entry) => entry.renderUnitId)
+    ).toContain("ru:use:noun:analyzer-pattern");
+  });
+
+  it("keeps managed verb-frame units analyzer-gated and out of exact word indexes", () => {
+    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
+    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
+    const verbFrameIds = runtimeIndex.verbRenderEntries.map(
+      (entry) => entry.renderUnitId
+    );
+
+    expect(verbFrameIds.length).toBeGreaterThanOrEqual(175);
+    expect(verbFrameIds).toContain("ru:use:verb:frame");
+    expect(verbFrameIds).toContain("ru:have:verb:frame");
+    expect(verbFrameIds).not.toContain("ru:be:verb:frame");
+    expect(runtimeIndex.preferredWordByNormalizedForm.get("use")).toBeUndefined();
+    expect(runtimeIndex.exactSingleTokenWordEntriesByNormalizedForm.get("use")).toBeUndefined();
+    expect(
+      runtimeIndex.verbRenderEntriesByNormalizedForm
+        .get("use")
+        ?.map((entry) => entry.targetInfinitive)
+    ).toContain("usar");
+  });
+
+  it("conjugates approved Spanish verb targets for safe verb frames", () => {
+    expect(
+      conjugateSpanishVerb("usar", {
+        mood: "present-indicative",
+        person: "first-singular"
+      })
+    ).toBe("uso");
+    expect(
+      conjugateSpanishVerb("tener", {
+        mood: "present-indicative",
+        person: "third-singular"
+      })
+    ).toBe("tiene");
+    expect(
+      conjugateSpanishVerb("hacer", { mood: "affirmative-tu-imperative" })
+    ).toBe("haz");
+    expect(
+      conjugateSpanishVerb("ir", {
+        mood: "present-indicative",
+        person: "first-plural"
+      })
+    ).toBe("vamos");
+    expect(
+      conjugateSpanishVerb("decir", {
+        mood: "present-indicative",
+        person: "third-plural"
+      })
+    ).toBe("dicen");
+    expect(conjugateSpanishVerb("dormir", { mood: "gerund" })).toBe(
+      "durmiendo"
     );
   });
 

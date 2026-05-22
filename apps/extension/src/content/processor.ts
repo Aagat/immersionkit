@@ -62,6 +62,7 @@ export function processRoots(state: ProcessingState, roots: ParentNode[]) {
         createNodeId: () => createNodeId(state),
         wordRenderIndex: state.wordRenderIndex,
         analyzerPatternWordRenderIndex: state.analyzerPatternWordRenderIndex,
+        verbRenderIndex: state.verbRenderIndex,
         vocabByLexemeId: state.vocabByLexemeId,
         analysisContext: state.analysisCache.analysisContext,
         cachedWordRenderDecisions: state.analysisCache.cachedWordRenderDecisions,

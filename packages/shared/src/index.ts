@@ -40,6 +40,7 @@ export * from "./text/phrases";
 export * from "./text/sentences";
 export * from "./text/tokenize";
 export * from "./replacement/render-units";
+export * from "./replacement/spanish-verbs";
 export {
   buildCanonicalPhraseKey,
   detectAdjectiveNounPatterns,

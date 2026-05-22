@@ -134,6 +134,7 @@ export const CURRICULUM_BAND_UNIT_TYPES = [
 ] as const;
 export const RENDER_UNIT_KINDS = [
   "single-token",
+  "verb-frame",
   "fixed-phrase",
   "grammar-phrase",
   "subject-verb-phrase",
@@ -385,13 +386,15 @@ export type ContextualWordCandidate = {
   targetText?: string;
   targetLemma: string;
   candidateLemma: string;
-  candidatePos: SafeInjectionPos;
+  candidatePos: SafeInjectionPos | "verb";
   frequencyRank?: number | null;
   observedPos: ObservedContextPos;
   chunkType: ContextChunkType;
   chunkText?: string;
   tokenStart?: number;
   tokenEnd?: number;
+  startChar?: number;
+  endChar?: number;
   leftContextLemmas?: string[];
   rightContextLemmas?: string[];
   nearbyContextSignature: string[];

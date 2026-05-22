@@ -35,7 +35,7 @@ export type ContextualAmbiguityRule = {
   blockedContextEvidence: ReadonlySet<string>;
 };
 
-const SAFE_INJECTABLE_POS = new Set(SAFE_INJECTION_POS_VALUES);
+const SAFE_INJECTABLE_POS = new Set<string>(SAFE_INJECTION_POS_VALUES);
 
 const toPosSet = (
   values: ReadonlyArray<ObservedContextPos>

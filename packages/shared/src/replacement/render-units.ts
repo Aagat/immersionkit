@@ -23,7 +23,28 @@ export type WordRenderEntry = {
   targetText: string;
   sourceLemma: string;
   targetLemma: string;
-  pos: SafeInjectionPos;
+  pos: SafeInjectionPos | "verb";
+  frequencyRank: number | null;
+  confidence: number;
+  exampleSentenceEnglish?: string;
+  exampleSentenceNative?: string;
+  inflections?: string[];
+  sourceLanguage?: SupportedSourceLanguage;
+  targetLanguage?: SupportedTargetLanguage;
+  sourceDataset?: string;
+};
+
+export type VerbRenderEntry = {
+  lexemeId: string;
+  renderUnitId: string;
+  renderUnitMinBand: string;
+  renderUnitMatchMode: RenderUnitEntry["sourcePattern"]["matchMode"];
+  normalizedSourceText: string;
+  targetText: string;
+  sourceLemma: string;
+  targetLemma: string;
+  targetInfinitive: string;
+  pos: "verb";
   frequencyRank: number | null;
   confidence: number;
   exampleSentenceEnglish?: string;
@@ -44,6 +65,8 @@ export type RenderUnitRuntimeIndex = {
   preferredWordByNormalizedForm: Map<string, WordRenderEntry>;
   analyzerPatternWordEntries: WordRenderEntry[];
   analyzerPatternWordEntriesByFirstToken: Map<string, WordRenderEntry[]>;
+  verbRenderEntries: VerbRenderEntry[];
+  verbRenderEntriesByNormalizedForm: Map<string, VerbRenderEntry[]>;
   phraseEntriesByNormalizedSourceText: Map<string, RenderUnitEntry[]>;
   sentenceHelpHintByNormalizedSourceText: Map<string, string>;
   phraseTargetByNormalizedSourceText: Map<string, RenderUnitPhraseTarget>;
@@ -71,6 +94,8 @@ export function buildRenderUnitRuntimeIndex(
   const preferredWordByNormalizedForm = new Map<string, WordRenderEntry>();
   const analyzerPatternWordEntries: WordRenderEntry[] = [];
   const analyzerPatternWordEntriesByFirstToken = new Map<string, WordRenderEntry[]>();
+  const verbRenderEntries: VerbRenderEntry[] = [];
+  const verbRenderEntriesByNormalizedForm = new Map<string, VerbRenderEntry[]>();
   const phraseEntriesByNormalizedSourceText = new Map<string, RenderUnitEntry[]>();
   const sentenceHelpHintByNormalizedSourceText = new Map<string, string>();
   const phraseTargetByNormalizedSourceText = new Map<string, RenderUnitPhraseTarget>();
@@ -86,13 +111,37 @@ export function buildRenderUnitRuntimeIndex(
     renderUnitById.set(renderUnit.renderUnitId, renderUnit);
     minBandByRenderUnitId.set(renderUnit.renderUnitId, renderUnit.minBand);
 
-    if (renderUnit.kind !== "single-token") {
+    if (renderUnit.kind !== "single-token" && renderUnit.kind !== "verb-frame") {
       registerPhraseRenderUnit({
         renderUnit,
         phraseEntriesByNormalizedSourceText,
         sentenceHelpHintByNormalizedSourceText,
         phraseTargetByNormalizedSourceText
       });
+    }
+
+    if (isVerbFrameRenderUnit(renderUnit)) {
+      const entry = renderUnitToVerbRenderEntry(renderUnit);
+      if (entry) {
+        verbRenderEntries.push(entry);
+        registerVerbRenderKey(
+          verbRenderEntriesByNormalizedForm,
+          entry,
+          entry.normalizedSourceText
+        );
+        registerVerbRenderKey(
+          verbRenderEntriesByNormalizedForm,
+          entry,
+          renderUnit.sourceText
+        );
+        for (const inflection of renderUnit.inflections ?? []) {
+          registerVerbRenderKey(verbRenderEntriesByNormalizedForm, entry, inflection);
+        }
+        for (const key of readAnalyzerPatternFirstTokenKeys(renderUnit)) {
+          registerVerbRenderKey(verbRenderEntriesByNormalizedForm, entry, key);
+        }
+      }
+      continue;
     }
 
     if (!isSingleTokenInlineWordRenderUnit(renderUnit)) {
@@ -129,6 +178,8 @@ export function buildRenderUnitRuntimeIndex(
     preferredWordByNormalizedForm,
     analyzerPatternWordEntries,
     analyzerPatternWordEntriesByFirstToken,
+    verbRenderEntries,
+    verbRenderEntriesByNormalizedForm,
     phraseEntriesByNormalizedSourceText,
     sentenceHelpHintByNormalizedSourceText,
     phraseTargetByNormalizedSourceText,
@@ -154,6 +205,7 @@ export function resolveRenderUnitPhraseTarget(
   const match = entriesOrIndex.find(
     (entry) =>
       entry.kind !== "single-token" &&
+      entry.kind !== "verb-frame" &&
       (entry.renderPolicy === "inline" || entry.renderPolicy === "phrase-only") &&
       entry.sourcePattern.matchMode === "exact" &&
       entry.normalizedSourceText === normalized &&
@@ -181,6 +233,7 @@ export function getRenderUnitSentenceHints(
   for (const entry of entriesOrIndex) {
     if (
       entry.kind === "single-token" ||
+      entry.kind === "verb-frame" ||
       (entry.renderPolicy !== "sentence-help-only" &&
         entry.renderPolicy !== "phrase-only" &&
         entry.renderPolicy !== "inline")
@@ -241,6 +294,25 @@ export function isAnalyzerPatternWordRenderUnit(
   );
 }
 
+export function isVerbFrameRenderUnit(
+  entry: RenderUnitEntry
+): entry is RenderUnitEntry & {
+  pos: "verb";
+  targetText: string;
+  normalizedTargetText: string;
+} {
+  return (
+    entry.kind === "verb-frame" &&
+    entry.renderPolicy === "inline" &&
+    entry.sourcePattern.matchMode === "analyzer-pattern" &&
+    entry.sourcePattern.tokens.length === 1 &&
+    entry.pos === "verb" &&
+    !entry.normalizedSourceText.includes(" ") &&
+    entry.lexemeIds.length > 0 &&
+    hasUsableTarget(entry)
+  );
+}
+
 export function renderUnitToWordRenderEntry(
   entry: RenderUnitEntry,
   lexemesById: ReadonlyMap<string, LexemeEntry> = new Map()
@@ -283,6 +355,49 @@ export function renderUnitToWordRenderEntry(
   };
 }
 
+export function renderUnitToVerbRenderEntry(
+  entry: RenderUnitEntry,
+  lexemesById: ReadonlyMap<string, LexemeEntry> = new Map()
+): VerbRenderEntry | null {
+  if (!isVerbFrameRenderUnit(entry)) {
+    return null;
+  }
+
+  const lexemeId = entry.lexemeIds[0];
+  if (!lexemeId) {
+    return null;
+  }
+
+  const lexeme = lexemesById.get(lexemeId);
+  const targetText = entry.replacement?.targetText ?? entry.targetText;
+  if (!targetText.trim()) {
+    return null;
+  }
+
+  return {
+    lexemeId: lexeme?.lexemeId ?? lexemeId,
+    renderUnitId: entry.renderUnitId,
+    renderUnitMinBand: entry.minBand,
+    renderUnitMatchMode: entry.sourcePattern.matchMode,
+    normalizedSourceText: entry.normalizedSourceText,
+    targetText: targetText.trim(),
+    sourceLemma: entry.normalizedSourceText,
+    targetLemma: targetText.trim(),
+    targetInfinitive: targetText.trim(),
+    pos: "verb",
+    frequencyRank: entry.frequencyRank ?? lexeme?.frequencyRank ?? null,
+    confidence: entry.confidence,
+    exampleSentenceEnglish:
+      entry.exampleSentenceEnglish ?? lexeme?.exampleSentenceEnglish,
+    exampleSentenceNative:
+      entry.exampleSentenceNative ?? lexeme?.exampleSentenceNative,
+    inflections: entry.inflections ?? lexeme?.inflections,
+    sourceLanguage: entry.sourceLanguage ?? DEFAULT_SOURCE_LANGUAGE,
+    targetLanguage: entry.targetLanguage ?? DEFAULT_TARGET_LANGUAGE,
+    sourceDataset: "render-units"
+  };
+}
+
 export function findWordRenderEntriesForAnalyzerToken(input: {
   token: Pick<AnalyzerToken, "normalized" | "lemma">;
   tokenIndex: number;
@@ -310,6 +425,19 @@ export function findWordRenderEntriesForAnalyzerToken(input: {
       : [];
 
   return uniqueWordRenderEntries([...exactEntries, ...analyzerEntries]);
+}
+
+export function findVerbRenderEntriesForAnalyzerToken(input: {
+  token: Pick<AnalyzerToken, "normalized" | "lemma">;
+  index: RenderUnitRuntimeIndex;
+}): VerbRenderEntry[] {
+  const keys = new Set([
+    input.token.normalized,
+    input.token.lemma ? normalizeToken(input.token.lemma) : ""
+  ]);
+  return uniqueVerbRenderEntries(
+    [...keys].flatMap((key) => input.index.verbRenderEntriesByNormalizedForm.get(key) ?? [])
+  );
 }
 
 export function findRenderUnitTokenSpans(
@@ -393,6 +521,25 @@ export function uniqueWordRenderEntries(
 ): WordRenderEntry[] {
   const seen = new Set<string>();
   const output: WordRenderEntry[] = [];
+
+  for (const entry of entries) {
+    const key = `${entry.renderUnitId}:${entry.lexemeId}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    output.push(entry);
+  }
+
+  return output;
+}
+
+export function uniqueVerbRenderEntries(
+  entries: readonly VerbRenderEntry[]
+): VerbRenderEntry[] {
+  const seen = new Set<string>();
+  const output: VerbRenderEntry[] = [];
 
   for (const entry of entries) {
     const key = `${entry.renderUnitId}:${entry.lexemeId}`;
@@ -570,6 +717,25 @@ function addWordRenderForm(
   entry: WordRenderEntry
 ) {
   const normalized = normalizeToken(form);
+  if (!normalized) {
+    return;
+  }
+
+  const existing = lookup.get(normalized);
+  if (existing) {
+    existing.push(entry);
+    return;
+  }
+
+  lookup.set(normalized, [entry]);
+}
+
+function registerVerbRenderKey(
+  lookup: Map<string, VerbRenderEntry[]>,
+  entry: VerbRenderEntry,
+  rawKey: string
+) {
+  const normalized = normalizeToken(rawKey);
   if (!normalized) {
     return;
   }
