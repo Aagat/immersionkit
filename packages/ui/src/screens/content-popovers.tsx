@@ -535,7 +535,10 @@ function useSpeechAction(
           });
       }}
     >
-      <IkIcon name="volume" />
+      <IkIcon
+        name={speechStatus === "loading" ? "spinner" : "volume"}
+        className={speechStatus === "loading" ? "animate-spin" : undefined}
+      />
     </Button>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ExtensionPopup } from "@immersionkit/ui";
+import { ExtensionPopup, type PopupAssetPackStatus } from "@immersionkit/ui";
 import {
   RuntimeMessageType,
   type PreviewAccountState as RuntimePreviewAccountState
@@ -60,6 +60,12 @@ const EMPTY_CHECKPOINT_PREVIEW: CheckpointEligibilityPreview = {
   unmetRequirements: []
 };
 
+type PopupAssetContextMetadata = {
+  source: "remote-pack" | "cached-pack" | "empty";
+  assetVersion: string | null;
+  renderUnitCount: number;
+};
+
 export function PopupApp() {
   const [activeTab, setActiveTab] = useState<ActiveTabContext>(DEFAULT_TAB_CONTEXT);
   const [settingsState, setSettingsState] = useState<SettingsState | null>(null);
@@ -69,6 +75,9 @@ export function PopupApp() {
     useState<CheckpointEligibilityPreview>(EMPTY_CHECKPOINT_PREVIEW);
   const [accountState, setAccountState] =
     useState<RuntimePreviewAccountState | null>(null);
+  const [assetPackStatus, setAssetPackStatus] = useState<PopupAssetPackStatus>({
+    state: "idle"
+  });
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSite, setIsSavingSite] = useState(false);
@@ -216,6 +225,7 @@ export function PopupApp() {
   }, []);
 
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
+  const uiAccountState = toUiAccountState(accountState);
   const proficiencyLabel =
     PROFICIENCY_SEED_OPTIONS.find((option) => option.id === settingsState?.proficiencySeed)
       ?.label ?? "Beginner";
@@ -224,6 +234,35 @@ export function PopupApp() {
     checkpointPreview,
     vocabStats
   });
+
+  useEffect(() => {
+    if (
+      !activeTab.isSupportedPage ||
+      !siteEnabled ||
+      uiAccountState.status === "signed-out"
+    ) {
+      setAssetPackStatus({ state: "idle" });
+      return;
+    }
+
+    let cancelled = false;
+    setAssetPackStatus({ state: "loading" });
+    void loadPopupAssetPackStatus()
+      .then((status) => {
+        if (!cancelled) {
+          setAssetPackStatus(status);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAssetPackStatus({ state: "fallback" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab.isSupportedPage, activeTab.tabId, siteEnabled, uiAccountState.status]);
 
   return (
     <>
@@ -240,6 +279,7 @@ export function PopupApp() {
         firstRunIntro={showFirstRunIntro}
         errorMessage={errorMessage}
         isSavingSite={isSavingSite}
+        assetPackStatus={assetPackStatus}
         learningStats={{
           comfortable: vocabStats.known,
           practice: vocabStats.learning,
@@ -248,7 +288,7 @@ export function PopupApp() {
           total: vocabStats.total
         }}
         learningDays={vocabStats.daily}
-        account={toUiAccountState(accountState)}
+        account={uiAccountState}
         onSiteToggle={() => {
           void handleSiteToggle();
         }}
@@ -283,6 +323,63 @@ async function startPreviewSignIn(): Promise<RuntimePreviewAccountState | null> 
     throw new Error(response?.error ?? "preview-sign-in-failed");
   }
   return response.state;
+}
+
+export async function loadPopupAssetPackStatus(): Promise<PopupAssetPackStatus> {
+  const response = await sendRuntimeMessage({
+    type: RuntimeMessageType.GetAssetContext,
+    includeRenderUnits: false
+  });
+  if (!response?.ok) {
+    return { state: "fallback" };
+  }
+
+  const metadata = readAssetContextMetadata(response.context);
+  if (!metadata || metadata.source === "empty") {
+    return metadata
+      ? {
+          state: "fallback",
+          source: metadata.source,
+          assetVersion: metadata.assetVersion,
+          renderUnitCount: metadata.renderUnitCount
+        }
+      : { state: "fallback" };
+  }
+
+  return {
+    state: "ready",
+    source: metadata.source,
+    assetVersion: metadata.assetVersion,
+    renderUnitCount: metadata.renderUnitCount
+  };
+}
+
+function readAssetContextMetadata(input: unknown): PopupAssetContextMetadata | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return null;
+  }
+
+  const record = input as Record<string, unknown>;
+  const source = record.source;
+  const renderUnitCount =
+    typeof record.renderUnitCount === "number"
+      ? record.renderUnitCount
+      : Array.isArray(record.renderUnits)
+        ? record.renderUnits.length
+        : null;
+  if (
+    (source !== "remote-pack" && source !== "cached-pack" && source !== "empty") ||
+    renderUnitCount === null
+  ) {
+    return null;
+  }
+
+  return {
+    source,
+    assetVersion:
+      typeof record.assetVersion === "string" ? record.assetVersion : null,
+    renderUnitCount
+  };
 }
 
 function toUiAccountState(state: RuntimePreviewAccountState | null) {

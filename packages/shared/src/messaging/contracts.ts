@@ -166,6 +166,16 @@ export type ActiveAssetContext = {
 
 export type ContentAssetContext = ActiveAssetContext;
 
+export type AssetContextMetadata = {
+  languagePair: LanguagePairId;
+  source: AssetContextLoadSource;
+  assetVersion: string | null;
+  bandIds: string[];
+  missingBandIds: string[];
+  renderUnitCount: number;
+  sentenceHintPhraseCount: number;
+};
+
 export type GetLearningItemsMessage = {
   type: RuntimeMessageType.GetLearningItems;
   unitRefIds?: string[];
@@ -392,7 +402,7 @@ export type SubmitFeedbackResponse =
 export type GetAssetContextResponse =
   | {
       ok: true;
-      context: ActiveAssetContext | ContentAssetContext;
+      context: ActiveAssetContext | ContentAssetContext | AssetContextMetadata;
     }
   | RuntimeErrorResponse;
 

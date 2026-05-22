@@ -51,6 +51,7 @@ export type MetricIconName =
   | "power"
   | "shield"
   | "spark"
+  | "spinner"
   | "terminal"
   | "translate"
   | "volume";
@@ -81,6 +82,13 @@ export type PopupLearningStats = {
 export type PopupLearningDayStats = PopupLearningStats & {
   date?: string;
   label: string;
+};
+
+export type PopupAssetPackStatus = {
+  state: "idle" | "loading" | "ready" | "fallback";
+  source?: "remote-pack" | "cached-pack" | "empty";
+  assetVersion?: string | null;
+  renderUnitCount?: number;
 };
 
 export type OptionsStats = {
@@ -261,6 +269,7 @@ export type ExtensionPopupProps = {
   firstRunIntro?: boolean;
   errorMessage?: string | null;
   isSavingSite?: boolean;
+  assetPackStatus?: PopupAssetPackStatus;
   debugAvailable?: boolean;
   onSiteToggle?: () => void;
   onOpenSettings?: () => void;

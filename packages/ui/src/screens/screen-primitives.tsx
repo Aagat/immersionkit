@@ -3,6 +3,7 @@ import {
   BookOpenIcon,
   CaretRightIcon,
   CheckCircleIcon,
+  CircleNotchIcon,
   EyeSlashIcon,
   FileTextIcon,
   GearIcon,
@@ -46,6 +47,7 @@ const iconMap = {
   power: PowerIcon,
   shield: ShieldCheckIcon,
   spark: SparkleIcon,
+  spinner: CircleNotchIcon,
   terminal: TerminalWindowIcon,
   translate: TranslateIcon,
   volume: SpeakerHighIcon
