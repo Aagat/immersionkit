@@ -3,7 +3,6 @@ import type {
   SentenceAnalysisResult,
   SentenceRankingReason,
   SentenceTranslationResult,
-  UserVocabEntry,
   VocabStatus
 } from "@immersionkit/shared";
 import type { WordRenderEntry } from "../render-units/render-units";
