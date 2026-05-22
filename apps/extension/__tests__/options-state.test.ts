@@ -20,7 +20,7 @@ import {
   summarizeGrammarEvidenceStats
 } from "../src/app-state/settings-state";
 import { getCheckpointStatus } from "../src/options/App";
-import { formatPopupProgressCopy } from "../src/popup/App";
+import { formatPopupProgressCopy, loadPopupAssetPackStatus } from "../src/popup/App";
 import {
   IndexedDbUserVocabRepository,
   loadUserDataValues,
@@ -580,6 +580,57 @@ describe("options state", () => {
     expect(combinedCopy).toMatch(/reading history/i);
     expect(combinedCopy).toMatch(/local evidence/i);
     expect(combinedCopy).toMatch(/supported pages/i);
+  });
+
+  it("loads popup asset status with a metadata-only asset context request", async () => {
+    const chromeStub = installChromeStub({
+      "asset-render-units": {
+        schemaVersion: "1.0.0",
+        assetVersion: "asset-test",
+        languagePair: "en-es",
+        entries: [
+          {
+            renderUnitId: "ru:test-city",
+            lexemeIds: ["lx:city:noun"],
+            kind: "single-token",
+            renderPolicy: "inline",
+            sourceText: "city",
+            normalizedSourceText: "city",
+            targetText: "ciudad",
+            normalizedTargetText: "ciudad",
+            sourcePattern: {
+              matchMode: "exact",
+              tokens: [{ normal: "city", lemma: "city", pos: "noun" }]
+            },
+            replacement: {
+              startToken: 0,
+              endToken: 1,
+              targetText: "ciudad"
+            },
+            pos: "noun",
+            minBand: "level-1a",
+            frequencyRank: 12,
+            confidence: 0.98,
+            provenance: { source: "manual" }
+          }
+        ]
+      }
+    });
+
+    try {
+      await expect(loadPopupAssetPackStatus()).resolves.toMatchObject({
+        state: "ready",
+        source: "cached-pack",
+        assetVersion: "asset-test",
+        renderUnitCount: 1
+      });
+      expect(chromeStub.sentMessages).toContainEqual({
+        type: "assets/get-context",
+        includeRenderUnits: false
+      });
+    } finally {
+      chromeStub.restore();
+    }
   });
 
   it("requests explicit checkpoint graduation through the background runtime", async () => {

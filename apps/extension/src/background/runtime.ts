@@ -1,7 +1,7 @@
 import { RuntimeMessageType } from "@immersionkit/shared";
 import type {
   ActiveAssetContext,
-  ContentAssetContext,
+  AssetContextMetadata,
   GetAccountStateResponse,
   GetTabZoomResponse,
   GetContentAnalysisContextMessage,
@@ -639,7 +639,7 @@ export class BackgroundRuntimeCoordinator {
         ok: true,
         context: message.includeRenderUnits
           ? context
-          : createContentAssetContext(context)
+          : createAssetContextMetadata(context)
       });
     } catch (error) {
       console.warn("ImmersionKit asset context read failed.", error);
@@ -988,15 +988,15 @@ export class BackgroundRuntimeCoordinator {
   }
 }
 
-function createContentAssetContext(context: ActiveAssetContext): ContentAssetContext {
+function createAssetContextMetadata(context: ActiveAssetContext): AssetContextMetadata {
   return {
     languagePair: context.languagePair,
-    renderUnits: context.renderUnits,
-    sentenceHintPhrases: context.sentenceHintPhrases,
     source: context.source,
     assetVersion: context.assetVersion,
     bandIds: context.bandIds,
-    missingBandIds: context.missingBandIds
+    missingBandIds: context.missingBandIds,
+    renderUnitCount: context.renderUnits.length,
+    sentenceHintPhraseCount: context.sentenceHintPhrases.length
   };
 }
 

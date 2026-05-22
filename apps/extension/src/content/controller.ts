@@ -21,6 +21,9 @@ import { summarizeProcessingContext } from "./debug-trace-store";
 import { RuntimeMessageType } from "@immersionkit/shared";
 import { sendRuntimeMessage } from "../runtime-client";
 
+const ASSET_PACK_LOADING_DELAY_MS = 300;
+const ASSET_PACK_LOADING_INDICATOR_ID = "immersionkit-asset-pack-loading";
+
 export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   if (runtimeState.refreshPromise) {
     return runtimeState.refreshPromise;
@@ -39,6 +42,7 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
       ? collectPageSentenceHashes(document.body)
       : [];
     let processingContext: Awaited<ReturnType<typeof loadProcessingContext>>;
+    const dismissAssetPackLoadingIndicator = scheduleAssetPackLoadingIndicator();
     try {
       processingContext = await loadProcessingContext(
         window.location.hostname,
@@ -58,6 +62,8 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
         hostname: window.location.hostname
       });
       return;
+    } finally {
+      dismissAssetPackLoadingIndicator();
     }
     const sentenceTranslationEnabled = isSentenceTranslationEnabled(
       processingContext.settings.sentenceTranslationEnabled,
@@ -174,6 +180,97 @@ export function refreshProcessing(runtimeState: RuntimeState): Promise<void> {
   });
 
   return runtimeState.refreshPromise;
+}
+
+export function scheduleAssetPackLoadingIndicator(): () => void {
+  let host: HTMLElement | null = null;
+  const timeoutId = window.setTimeout(() => {
+    if (!document.body) {
+      return;
+    }
+
+    document.getElementById(ASSET_PACK_LOADING_INDICATOR_ID)?.remove();
+    host = document.createElement("div");
+    host.id = ASSET_PACK_LOADING_INDICATOR_ID;
+    host.setAttribute("data-immersionkit-ignore", "true");
+    host.setAttribute("data-ik-asset-pack-loading", "true");
+
+    const shadowRoot = host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = `
+      :host {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 2147483647;
+        pointer-events: none;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: min(280px, calc(100vw - 32px));
+        border: 1px solid rgba(23, 63, 54, 0.16);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.96);
+        color: #173f36;
+        box-shadow: 0 10px 30px rgba(23, 63, 54, 0.14);
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(23, 63, 54, 0.22);
+        border-top-color: #173f36;
+        border-radius: 999px;
+        animation: ik-spin 0.8s linear infinite;
+        flex: 0 0 auto;
+      }
+
+      .label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @keyframes ik-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `;
+
+    const indicator = document.createElement("div");
+    indicator.className = "indicator";
+    indicator.setAttribute("role", "status");
+    indicator.setAttribute("aria-live", "polite");
+
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    spinner.setAttribute("aria-hidden", "true");
+
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = "Getting ImmersionKit assets...";
+
+    indicator.append(spinner, label);
+    shadowRoot.append(style, indicator);
+    document.body.append(host);
+  }, ASSET_PACK_LOADING_DELAY_MS);
+
+  return () => {
+    window.clearTimeout(timeoutId);
+    const indicator =
+      host ?? document.getElementById(ASSET_PACK_LOADING_INDICATOR_ID);
+    indicator?.remove();
+    host = null;
+  };
 }
 
 function queueActivationEvent(

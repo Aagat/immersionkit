@@ -260,9 +260,13 @@ function createDefaultRuntimeResponse(
     return undefined;
   }
 
+  const context = createAssetContext(storageValues);
   return {
     ok: true,
-    context: createAssetContext(storageValues)
+    context:
+      isRecord(message) && message.includeRenderUnits === false
+        ? createAssetContextMetadata(context)
+        : context
   };
 }
 
@@ -333,6 +337,18 @@ function createAssetContext(storageValues: StorageValues) {
     assetVersion: null,
     bandIds: [],
     missingBandIds: []
+  };
+}
+
+function createAssetContextMetadata(context: ReturnType<typeof createAssetContext>) {
+  return {
+    languagePair: context.languagePair,
+    source: context.source,
+    assetVersion: context.assetVersion,
+    bandIds: context.bandIds,
+    missingBandIds: context.missingBandIds,
+    renderUnitCount: context.renderUnits.length,
+    sentenceHintPhraseCount: context.sentenceHintPhrases.length
   };
 }
 

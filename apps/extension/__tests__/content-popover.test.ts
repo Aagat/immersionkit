@@ -157,6 +157,71 @@ describe("content popover speaker controls", () => {
       await waitForReactScheduler();
     });
   });
+
+  it("shows a spinner in the speaker button while pronunciation is loading", async () => {
+    let resolveSpeak: (() => void) | null = null;
+    const onSpeak = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSpeak = resolve;
+        })
+    );
+
+    await withFixtureDom("article-basic.html", async ({ wait }) => {
+      const popover = renderWordPopover(createWordDetail(), {
+        onClose: vi.fn(),
+        onStatusAction: vi.fn(),
+        onSpeak
+      });
+
+      queryVisibleSpeakButton(popover).click();
+      await wait(0);
+      await waitForReactScheduler();
+
+      const loadingButton = queryVisibleSpeakButton(popover);
+      expect(loadingButton.disabled).toBe(true);
+      expect(loadingButton.getAttribute("aria-busy")).toBe("true");
+      expect(loadingButton.getAttribute("data-ik-speak-status")).toBe("loading");
+      expect(loadingButton.querySelector("svg.animate-spin")).toBeTruthy();
+
+      resolveSpeak?.();
+      await wait(0);
+      await waitForReactScheduler();
+
+      const idleButton = queryVisibleSpeakButton(popover);
+      expect(idleButton.disabled).toBe(false);
+      expect(idleButton.getAttribute("data-ik-speak-status")).toBe("idle");
+      expect(idleButton.querySelector("svg.animate-spin")).toBeNull();
+      unmountReactPopover(popover);
+      await waitForReactScheduler();
+    });
+  });
+
+  it("leaves the speaker button retryable after pronunciation errors", async () => {
+    const onSpeak = vi.fn(() => Promise.reject(new Error("tts failed")));
+
+    await withFixtureDom("article-basic.html", async ({ wait }) => {
+      const popover = renderWordPopover(createWordDetail(), {
+        onClose: vi.fn(),
+        onStatusAction: vi.fn(),
+        onSpeak
+      });
+
+      queryVisibleSpeakButton(popover).click();
+      await wait(0);
+      await waitForReactScheduler();
+      await wait(0);
+      await waitForReactScheduler();
+
+      const button = queryVisibleSpeakButton(popover);
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute("data-ik-speak-status")).toBe("error");
+      expect(button.getAttribute("aria-label")).toBe("Retry pronunciation");
+      expect(button.querySelector("svg.animate-spin")).toBeNull();
+      unmountReactPopover(popover);
+      await waitForReactScheduler();
+    });
+  });
 });
 
 function setViewport(window: Window, width: number, height: number) {
@@ -227,6 +292,17 @@ function querySpeakButton(popover: HTMLElement): HTMLButtonElement {
   );
   if (!button) {
     throw new Error("Expected popover speaker button.");
+  }
+
+  return button;
+}
+
+function queryVisibleSpeakButton(popover: HTMLElement): HTMLButtonElement {
+  const button = popover.shadowRoot?.querySelector<HTMLButtonElement>(
+    `[${POPOVER_SPEAK_ACTION_ATTRIBUTE}="true"]`
+  );
+  if (!button) {
+    throw new Error("Expected visible popover speaker button.");
   }
 
   return button;

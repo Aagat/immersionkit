@@ -25,6 +25,7 @@ import {
 } from "./screen-primitives";
 import type {
   ExtensionPopupProps,
+  PopupAssetPackStatus,
   PopupLearningDayStats,
   PopupLearningStats,
   SiteControlState
@@ -86,6 +87,7 @@ export function ExtensionPopup({
   firstRunIntro = false,
   errorMessage = null,
   isSavingSite = false,
+  assetPackStatus = { state: "idle" },
   debugAvailable = false,
   onSiteToggle,
   onOpenSettings,
@@ -156,6 +158,7 @@ export function ExtensionPopup({
               learningStats={learningStats}
               learningDays={learningDays}
               isSavingSite={isSavingSite}
+              assetPackStatus={assetPackStatus}
               onSiteToggle={() => {
                 if (onSiteToggle) {
                   onSiteToggle();
@@ -237,6 +240,7 @@ function SupportedPopup({
   learningDays,
   enabled,
   isSavingSite,
+  assetPackStatus,
   onSiteToggle
 }: {
   bandTitle: string;
@@ -248,6 +252,7 @@ function SupportedPopup({
   learningDays: ExtensionPopupProps["learningDays"];
   enabled: boolean;
   isSavingSite: boolean;
+  assetPackStatus: PopupAssetPackStatus;
   onSiteToggle: () => void;
 }) {
   const stats = resolvePopupLearningStats(learningStats, metrics);
@@ -255,6 +260,7 @@ function SupportedPopup({
 
   return (
     <>
+      <AssetPackStatusRow status={assetPackStatus} />
       <LearningReportCard
         bandTitle={bandTitle}
         bandSubtitle={bandSubtitle}
@@ -275,6 +281,31 @@ function SupportedPopup({
         {enabled ? "Turn off" : "Turn on"}
       </Button>
     </>
+  );
+}
+
+function AssetPackStatusRow({ status }: { status: PopupAssetPackStatus }) {
+  if (status.state === "idle" || status.state === "ready") {
+    return null;
+  }
+
+  const loading = status.state === "loading";
+  const label = loading
+    ? "Getting reading assets..."
+    : "Reading assets unavailable";
+
+  return (
+    <div
+      aria-live="polite"
+      className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground"
+      data-ik-asset-pack-status={status.state}
+    >
+      <IkIcon
+        name={loading ? "spinner" : "info"}
+        className={loading ? "animate-spin" : undefined}
+      />
+      <span className="min-w-0 truncate">{label}</span>
+    </div>
   );
 }
 
