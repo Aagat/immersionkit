@@ -78,34 +78,45 @@ const FIRST_RUN_STEPS = [
   {
     id: "account",
     label: "Account",
-    title: "Sign in for preview",
-    description:
-      "Activate this install before reading mode turns on."
+    title: "Welcome to ImmersionKit",
+    description: "Let's get ImmersionKit ready for reading."
   },
   {
     id: "level",
     label: "Level",
     title: "Choose your starting point",
     description:
-      "Pick the Spanish reading range that should appear first."
+      "What is your current Spanish level?"
   },
   {
     id: "density",
     label: "Density",
-    title: "Set the Spanish density",
+    title: "Choose your Spanish density",
     description:
-      "Choose how many new words and phrases should appear while you read."
+      "Pick how often Spanish words and phrases should appear while you read."
   },
   {
     id: "start",
     label: "Start",
-    title: "Start reading normally",
+    title: "Setup is complete",
     description:
-      "Open a supported page and use the popup to pause or adjust later."
+      "Open any page in English and ImmersionKit will start automatically."
   }
 ] as const;
 
 type FirstRunStepId = (typeof FIRST_RUN_STEPS)[number]["id"];
+
+function getDensityLabel(discoveryRatePercent: number) {
+  if (discoveryRatePercent <= 4) {
+    return "Sparse";
+  }
+
+  if (discoveryRatePercent >= 14) {
+    return "Dense";
+  }
+
+  return "Medium";
+}
 
 export function ExtensionOptions({
   initialSection = "Overview",
@@ -502,7 +513,7 @@ function FirstRunOnboardingWizard({
       >
         <DialogHeader>
           <Badge variant="secondary" className="w-fit">
-            First-run setup
+            Setup
           </Badge>
           <DialogTitle>{step.title}</DialogTitle>
           <DialogDescription>{step.description}</DialogDescription>
@@ -607,7 +618,7 @@ function FirstRunStepContent({
     );
   }
 
-  return <FirstRunStartStep account={account} />;
+  return <FirstRunStartStep />;
 }
 
 function FirstRunAccountStep({
@@ -625,14 +636,14 @@ function FirstRunAccountStep({
         <div>
           <h3 className="text-sm font-medium">
             {signedIn
-              ? "Preview access is active"
+              ? "ImmersionKit is ready"
               : notRequired
                 ? "This build can read locally"
-                : "Preview sign-in unlocks reading mode"}
+                : "Sign in to download curriculum"}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Signup is for access, support, and high-level activation measurement.
-            It does not turn ImmersionKit into sync.
+            Signing in lets ImmersionKit download the Spanish curriculum for
+            this install. Your learning progress stays on this device.
           </p>
         </div>
         {signedIn ? (
@@ -643,10 +654,11 @@ function FirstRunAccountStep({
         <h3 className="text-sm font-medium">What stays on this device</h3>
         <CompactMetric label="Learning progress" value="Local" icon="shield" />
         <CompactMetric label="Reading history" value="Local" icon="book" />
-        <CompactMetric label="Provider keys" value="Local" icon="lock" />
+        <CompactMetric label="Translation keys" value="Local" icon="lock" />
         <p className="text-sm text-muted-foreground">
-          ImmersionKit sends high-level preview events, not page text, inline
-          words, vocabulary, provider keys, or review history.
+          ImmersionKit only sends basic account and activation information. It
+          never sends page content, inline words, vocabulary, translation keys,
+          or review history.
         </p>
       </div>
     </div>
@@ -669,7 +681,7 @@ function FirstRunLevelStep({
     <FieldSet>
       <FieldLegend>Starting level</FieldLegend>
       <FieldDescription>
-        This seeds the first reading band. It can be changed later from Reading.
+        This is only a starting point. You can always change it later.
       </FieldDescription>
       <RadioGroup
         value={resolvedReadingLevel}
@@ -703,13 +715,15 @@ function FirstRunDensityStep({
   discoveryRatePercent = 8,
   onDiscoveryRateChange
 }: Pick<ExtensionOptionsProps, "discoveryRatePercent" | "onDiscoveryRateChange">) {
+  const densityLabel = getDensityLabel(discoveryRatePercent);
+
   return (
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <FieldGroup className="min-w-0">
         <Field>
           <div className="flex items-center justify-between gap-3">
-            <FieldLabel htmlFor="first-run-discovery-rate">New word pace</FieldLabel>
-            <span className="text-sm font-medium">{discoveryRatePercent}%</span>
+            <FieldLabel htmlFor="first-run-discovery-rate">Spanish density</FieldLabel>
+            <span className="text-sm font-medium">{densityLabel}</span>
           </div>
           <Slider
             id="first-run-discovery-rate"
@@ -720,12 +734,13 @@ function FirstRunDensityStep({
             onValueChange={(value) => onDiscoveryRateChange?.(value[0] ?? 0)}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Subtle</span>
-            <span>Balanced</span>
-            <span>Bold</span>
+            <span>Sparse</span>
+            <span>Medium</span>
+            <span>Dense</span>
           </div>
           <FieldDescription>
-            Real pages may be sparser when context is ambiguous or unsafe.
+            Start sparse for lighter reading, or choose dense when you want more
+            Spanish on each page.
           </FieldDescription>
         </Field>
       </FieldGroup>
@@ -734,34 +749,22 @@ function FirstRunDensityStep({
   );
 }
 
-function FirstRunStartStep({
-  account = { status: "signed-out" }
-}: Pick<ExtensionOptionsProps, "account">) {
+function FirstRunStartStep() {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
-        <h3 className="text-sm font-medium">First page</h3>
-        <CompactMetric label="Supported pages" value="Articles, blogs, docs" icon="book" />
-        <CompactMetric label="Inline Spanish" value="Sparse by design" icon="spark" />
-        <p className="text-sm text-muted-foreground">
-          Open a normal HTTP(S) page. ImmersionKit keeps the page readable and
-          skips browser, private, form, code, and sensitive areas.
-        </p>
+    <div className="flex flex-col items-center gap-4 rounded-lg border bg-background px-6 py-7 text-center">
+      <div className="relative shrink-0" aria-hidden="true">
+        <div className="grid size-20 place-items-center rounded-lg border-2 border-primary bg-primary text-primary-foreground shadow-sm">
+          <span className="text-2xl font-semibold">IK</span>
+        </div>
+        <span className="absolute -right-2 -bottom-2 grid size-8 place-items-center rounded-lg border bg-background text-primary shadow-sm">
+          <IkIcon name="check" className="size-5" weight="fill" />
+        </span>
       </div>
-      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
-        <h3 className="text-sm font-medium">Control</h3>
-        <CompactMetric
-          label="Preview account"
-          value={account.status === "signed-in" ? "Signed in" : "Ready"}
-          icon="check"
-        />
-        <CompactMetric label="Pause or resume" value="Popup" icon="pause" />
-        <CompactMetric label="Sentence help" value="Optional" icon="translate" />
-        <p className="text-sm text-muted-foreground">
-          Use the popup for site controls. Sentence help stays off unless you
-          configure a provider later.
-        </p>
-      </div>
+      <p className="max-w-xl text-sm text-muted-foreground">
+        Open an English article, blog, or docs page. ImmersionKit will add
+        Spanish automatically while keeping the page readable. Use the extension
+        popup anytime to pause or adjust density.
+      </p>
     </div>
   );
 }
@@ -782,7 +785,7 @@ function getFirstRunPrimaryLabel({
   }
 
   if (stepId === "start") {
-    return isCompletingFirstRun ? "Saving setup..." : "Start reading";
+    return isCompletingFirstRun ? "Saving setup..." : "Finish setup";
   }
 
   return "Continue";
@@ -855,7 +858,7 @@ function OptionsOverviewPanel({
 }
 
 function OverviewSummaryCard({
-  discoveryRatePercent,
+  discoveryRatePercent = 8,
   readingLevel,
   checkpoint,
   currentFocus,
@@ -876,6 +879,7 @@ function OverviewSummaryCard({
   onOpenSection: (section: OptionsSection) => void;
 }) {
   const readingLevelLabel = readingLevel ?? "Beginner";
+  const densityLabel = getDensityLabel(discoveryRatePercent);
 
   return (
     <Card className="h-full">
@@ -889,7 +893,7 @@ function OverviewSummaryCard({
       <CardContent className="flex flex-col gap-3">
         <OverviewTile
           title="Reading"
-          value={`${discoveryRatePercent}% new word pace`}
+          value={`${densityLabel} Spanish density`}
           detail={`${readingLevelLabel} starting point with a density preview.`}
           icon="book"
           action="Open Reading"
@@ -1111,6 +1115,7 @@ function OptionsReadingPanel({
   const [localReadingLevel, setLocalReadingLevel] =
     useState<ReadingLevel>("Beginner");
   const resolvedReadingLevel = readingLevel ?? localReadingLevel;
+  const densityLabel = getDensityLabel(discoveryRatePercent);
   const activeLevel = learningPath.find((level) => level.active);
   const chooseReadingLevel = (level: ReadingLevel) => {
     setLocalReadingLevel(level);
@@ -1137,8 +1142,8 @@ function OptionsReadingPanel({
             <FieldGroup className="min-w-0">
               <Field>
                 <div className="flex items-center justify-between gap-3">
-                  <FieldLabel htmlFor="settings-discovery-rate">New word pace</FieldLabel>
-                  <span className="text-sm font-medium">{discoveryRatePercent}%</span>
+                  <FieldLabel htmlFor="settings-discovery-rate">Spanish density</FieldLabel>
+                  <span className="text-sm font-medium">{densityLabel}</span>
                 </div>
                 <Slider
                   id="settings-discovery-rate"
@@ -1149,9 +1154,9 @@ function OptionsReadingPanel({
                   onValueChange={(value) => onDiscoveryRateChange?.(value[0] ?? 0)}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Subtle</span>
-                  <span>Balanced</span>
-                  <span>Bold</span>
+                  <span>Sparse</span>
+                  <span>Medium</span>
+                  <span>Dense</span>
                 </div>
               </Field>
             </FieldGroup>
@@ -1225,14 +1230,9 @@ function DensityPreview({
 }: {
   discoveryRatePercent: number;
 }) {
-  const densityLabel =
-    discoveryRatePercent <= 4
-      ? "Subtle"
-      : discoveryRatePercent >= 14
-        ? "Bold"
-        : "Balanced";
-  const showBalanced = discoveryRatePercent >= 6;
-  const showBold = discoveryRatePercent >= 12;
+  const densityLabel = getDensityLabel(discoveryRatePercent);
+  const showMedium = discoveryRatePercent >= 6;
+  const showDense = discoveryRatePercent >= 12;
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
@@ -1244,11 +1244,11 @@ function DensityPreview({
         <p>
           The morning{" "}
           <InlineMark status="learning">rutina</InlineMark>{" "}
-          stays readable while the page introduces a few useful words.
+          stays readable while the page adds a few Spanish words.
         </p>
         <p>
           You can follow the main idea, notice a familiar{" "}
-          {showBalanced ? (
+          {showMedium ? (
             <InlineMark kind="phrase" status="learning">frase</InlineMark>
           ) : (
             "phrase"
@@ -1256,18 +1256,17 @@ function DensityPreview({
           , and keep moving through the article.
         </p>
         <p>
-          At a {densityLabel.toLowerCase()} pace,{" "}
-          {showBold ? (
+          At {densityLabel.toLowerCase()} density,{" "}
+          {showDense ? (
             <InlineMark status="new">palabras nuevas</InlineMark>
           ) : (
             "new words"
           )}{" "}
-          still appear only when context looks safe.
+          appear at a pace that keeps the article readable.
         </p>
       </div>
       <p className="text-xs text-muted-foreground">
-        Real pages may be sparser when ambiguity, forms, code, or sensitive
-        areas are skipped.
+        Forms, code, and private fields are left alone.
       </p>
     </div>
   );

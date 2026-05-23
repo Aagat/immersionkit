@@ -139,8 +139,8 @@ describe("extension options first-run wizard", () => {
           await wait(0);
           await waitForReactScheduler();
 
-          expect(document.body.textContent).toContain("Sign in for preview");
-          expect(document.body.textContent).toContain("Preview sign-in unlocks reading mode");
+          expect(document.body.textContent).toContain("Welcome to ImmersionKit");
+          expect(document.body.textContent).toContain("Sign in to download curriculum");
           clickButtonByText(document, "Sign in with Google");
           expect(previewSignIn).toHaveBeenCalledTimes(1);
           expect(completeFirstRun).not.toHaveBeenCalled();
@@ -192,11 +192,11 @@ describe("extension options first-run wizard", () => {
           expect(readingLevelChange).toHaveBeenCalledWith("Intermediate");
           clickButtonByText(document, "Continue");
           await wait(0);
-          expect(document.body.textContent).toContain("Set the Spanish density");
+          expect(document.body.textContent).toContain("Choose your Spanish density");
           clickButtonByText(document, "Continue");
           await wait(0);
-          expect(document.body.textContent).toContain("Start reading normally");
-          clickButtonByText(document, "Start reading");
+          expect(document.body.textContent).toContain("Setup is complete");
+          clickButtonByText(document, "Finish setup");
           expect(completeFirstRun).toHaveBeenCalledTimes(1);
         } finally {
           flushSync(() => {

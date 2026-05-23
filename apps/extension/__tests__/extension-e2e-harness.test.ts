@@ -87,13 +87,13 @@ describe("extension E2E harness", () => {
       .toBe(true);
 
     const optionsText = await options.locator("body").innerText();
-    expect(optionsText).toContain("First-run setup");
+    expect(optionsText).toContain("Setup");
     expect(optionsText).toContain("Starting level");
-    expect(optionsText).toContain("This seeds the first reading band");
+    expect(optionsText).toContain("This is only a starting point");
 
     await options.getByRole("radio", { name: "Intermediate" }).click();
     await options.getByRole("button", { name: "Continue" }).click();
-    await options.waitForSelector("text=Set the Spanish density", {
+    await options.waitForSelector("text=Choose your Spanish density", {
       timeout: 5_000
     });
     const discoveryRateInput = options.locator("#first-run-discovery-rate");
@@ -103,10 +103,10 @@ describe("extension E2E harness", () => {
       await options.keyboard.press("ArrowRight");
     }
     await options.getByRole("button", { name: "Continue" }).click();
-    await options.waitForSelector("text=Start reading normally", {
+    await options.waitForSelector("text=Setup is complete", {
       timeout: 5_000
     });
-    await options.getByRole("button", { name: "Start reading" }).click();
+    await options.getByRole("button", { name: "Finish setup" }).click();
     await expect
       .poll(() => readUserDataValueFromExtensionPage(options, "first-run-intro-visible"))
       .toBe(false);
@@ -118,7 +118,7 @@ describe("extension E2E harness", () => {
     await options.waitForSelector("text=Quick status across account", {
       timeout: 10_000
     });
-    expect(await options.locator("text=First-run setup").count()).toBe(0);
+    expect(await options.locator("text=Setup is complete").count()).toBe(0);
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`, {

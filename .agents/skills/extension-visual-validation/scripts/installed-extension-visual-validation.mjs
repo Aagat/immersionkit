@@ -333,7 +333,7 @@ async function captureOptions(context, extensionId) {
   await options.goto(`chrome-extension://${extensionId}/options.html`, {
     waitUntil: "domcontentloaded"
   });
-  await options.waitForSelector("text=New word pace", { timeout: 10_000 });
+  await options.waitForSelector("text=Spanish density", { timeout: 10_000 });
   await options.waitForTimeout(500);
   const optionsGeneral = join(screenshotDir, "03-installed-options-general.png");
   await options.screenshot({ path: optionsGeneral, fullPage: false });

@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { createRoot } from "react-dom/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ExtensionOptions,
   ExtensionPopup,
+  type ReadingLevel,
   PhraseHelpPopoverContent,
   ReadingPage,
   SentenceHelpPopoverContent,
@@ -360,14 +361,7 @@ const scenarios: readonly WorkshopScenario[] = [
     group: "Options",
     viewport: "desktop",
     description: "First-run explanation in Options.",
-    render: () => (
-      <ExtensionOptions
-        {...baseOptionsProps}
-        initialSection="Overview"
-        activeSection="Overview"
-        firstRunIntro
-      />
-    )
+    render: () => <OptionsFirstRunPreview />
   },
   {
     id: "options-saving",
@@ -417,6 +411,39 @@ const groups: readonly ScenarioGroup[] = [
   "Options",
   "Components"
 ] as const;
+
+function OptionsFirstRunPreview() {
+  const [signedIn, setSignedIn] = useState(false);
+  const [discoveryRatePercent, setDiscoveryRatePercent] = useState(
+    baseOptionsProps.discoveryRatePercent ?? 8
+  );
+  const [readingLevel, setReadingLevel] = useState<ReadingLevel>(
+    baseOptionsProps.readingLevel ?? "False beginner"
+  );
+
+  return (
+    <ExtensionOptions
+      {...baseOptionsProps}
+      discoveryRatePercent={discoveryRatePercent}
+      readingLevel={readingLevel}
+      account={
+        signedIn
+          ? {
+              status: "signed-in",
+              email: "reader@example.com",
+              previewStatus: "active"
+            }
+          : { status: "signed-out" }
+      }
+      initialSection="Overview"
+      activeSection="Overview"
+      firstRunIntro
+      onPreviewSignIn={() => setSignedIn(true)}
+      onDiscoveryRateChange={setDiscoveryRatePercent}
+      onReadingLevelChange={setReadingLevel}
+    />
+  );
+}
 
 function PreviewApp() {
   const params = new URLSearchParams(window.location.search);
