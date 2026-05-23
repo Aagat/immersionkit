@@ -187,22 +187,43 @@ try {
     console.log(`[service-worker:${message.type()}] ${message.text()}`);
   });
 
-  await serviceWorker.evaluate(async () => {
+  await serviceWorker.evaluate(async (seedProductionAccount) => {
+    const userDataEntries = {
+      settings: {
+        enabled: true,
+        discoveryRate: 1,
+        targetLanguage: "es",
+        sentenceTranslationEnabled: false,
+        provider: "none"
+      }
+    };
+    if (seedProductionAccount) {
+      userDataEntries["account-profile"] = {
+        userId: "ik-smoke-user",
+        email: "smoke@example.invalid",
+        provider: "google",
+        previewStatus: "active",
+        signedInAt: new Date().toISOString()
+      };
+      userDataEntries["account-session"] = {
+        accessToken: "ik-smoke-token",
+        expiresAt: "2099-05-21T10:00:00.000Z"
+      };
+    }
+
     const database = await openImmersionKitDatabaseForUserData();
     try {
       const transaction = database.transaction("user-data", "readwrite");
-      transaction.objectStore("user-data").put({
-        key: "settings",
-        value: {
-          enabled: true,
-          discoveryRate: 1,
-          targetLanguage: "es",
-          sentenceTranslationEnabled: false,
-          provider: "none"
-        },
-        schemaVersion: 1,
-        updatedAt: new Date().toISOString()
-      });
+      const store = transaction.objectStore("user-data");
+      const updatedAt = new Date().toISOString();
+      for (const [key, value] of Object.entries(userDataEntries)) {
+        store.put({
+          key,
+          value,
+          schemaVersion: 1,
+          updatedAt
+        });
+      }
       await transactionDone(transaction);
     } finally {
       database.close();
@@ -284,7 +305,7 @@ try {
         store.createIndex(indexName, keyPath, { unique: false });
       }
     }
-  });
+  }, expectProductionBuild);
 
   const page = await context.newPage();
   page.on("console", (message) => {

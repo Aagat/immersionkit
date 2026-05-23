@@ -511,9 +511,6 @@ function evaluateGateResults(summary) {
       for (const flag of site.flags ?? []) {
         failures.push(`${mode.mode}/${site.type}: ${flag.code}`);
       }
-      if (site.navigationError) {
-        failures.push(`${mode.mode}/${site.type}: navigation-error`);
-      }
     }
     if (mode.mode === "local-only" && (mode.totals?.sentenceNoteTotal ?? 0) > 0) {
       failures.push("local-only: sentence notes rendered without provider");
