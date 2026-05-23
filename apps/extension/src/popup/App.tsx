@@ -13,7 +13,6 @@ import {
   loadSettingsState,
   loadSiteSettingsMap,
   loadVocabStats,
-  markFirstRunIntroSeen,
   notifySettingsRefresh,
   upsertSiteEnabledState,
   type ActiveTabContext,
@@ -219,11 +218,6 @@ export function PopupApp() {
       });
   }, [refreshSnapshot]);
 
-  const handleDismissFirstRunIntro = useCallback(async () => {
-    setShowFirstRunIntro(false);
-    await markFirstRunIntroSeen();
-  }, []);
-
   const siteEnabled = getSiteEnabledForHost(siteSettings, activeTab.hostname);
   const uiAccountState = toUiAccountState(accountState);
   const proficiencyLabel =
@@ -298,9 +292,6 @@ export function PopupApp() {
           void handleOpenDebug();
         }}
         onReportIssue={handleReportIssue}
-        onDismissIntro={() => {
-          void handleDismissFirstRunIntro();
-        }}
         onPreviewSignIn={handlePreviewSignIn}
       />
     </>

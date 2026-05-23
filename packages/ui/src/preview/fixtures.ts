@@ -43,8 +43,7 @@ export const supportedPopupProps: ExtensionPopupProps = {
   learningStats: popupLearningStats,
   learningDays: popupLearningDays,
   onSiteToggle: noop,
-  onOpenSettings: noop,
-  onDismissIntro: noop
+  onOpenSettings: noop
 };
 
 const optionsStats: NonNullable<ExtensionOptionsProps["stats"]> = {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowClockwiseIcon,
   CheckCircleIcon,
@@ -16,6 +16,14 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import {
   Field,
   FieldContent,
@@ -66,6 +74,39 @@ const DEFAULT_TTS_PLAYBACK_RATES: TtsPlaybackRateSettings = {
   sentence: 1
 };
 
+const FIRST_RUN_STEPS = [
+  {
+    id: "account",
+    label: "Account",
+    title: "Sign in for preview",
+    description:
+      "Activate this install before reading mode turns on."
+  },
+  {
+    id: "level",
+    label: "Level",
+    title: "Choose your starting point",
+    description:
+      "Pick the Spanish reading range that should appear first."
+  },
+  {
+    id: "density",
+    label: "Density",
+    title: "Set the Spanish density",
+    description:
+      "Choose how many new words and phrases should appear while you read."
+  },
+  {
+    id: "start",
+    label: "Start",
+    title: "Start reading normally",
+    description:
+      "Open a supported page and use the popup to pause or adjust later."
+  }
+] as const;
+
+type FirstRunStepId = (typeof FIRST_RUN_STEPS)[number]["id"];
+
 export function ExtensionOptions({
   initialSection = "Overview",
   activeSection,
@@ -76,6 +117,8 @@ export function ExtensionOptions({
   errorMessage,
   isSaving = false,
   isLoading = false,
+  isPreviewSignInPending = false,
+  isCompletingFirstRun = false,
   discoveryRatePercent = 8,
   readingLevel,
   stats,
@@ -109,6 +152,7 @@ export function ExtensionOptions({
   onSave,
   onReload,
   onDismissIntro,
+  onCompleteFirstRun,
   onDiscoveryRateChange,
   onReadingLevelChange,
   onExactBandChange,
@@ -154,26 +198,19 @@ export function ExtensionOptions({
           onReload={onReload}
         />
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 md:p-6">
-          {firstRunIntro ? (
-            <Alert>
-              <IkIcon name="shield" />
-              <AlertDescription>
-                Start with normal reading. ImmersionKit adds small doses of
-                Spanish on supported pages. Progress and reading history stay
-                on this device, you can pause any site, and your starting point
-                and pace stay adjustable. Sentence help is optional and sends
-                selected text only after you turn it on.
-              </AlertDescription>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 w-fit"
-                onClick={onDismissIntro}
-              >
-                Got it
-              </Button>
-            </Alert>
-          ) : null}
+          <FirstRunOnboardingWizard
+            open={firstRunIntro}
+            account={account}
+            discoveryRatePercent={discoveryRatePercent}
+            readingLevel={readingLevel}
+            isLoading={isLoading}
+            isPreviewSignInPending={isPreviewSignInPending}
+            isCompletingFirstRun={isCompletingFirstRun}
+            onPreviewSignIn={onPreviewSignIn}
+            onReadingLevelChange={onReadingLevelChange}
+            onDiscoveryRateChange={onDiscoveryRateChange}
+            onCompleteFirstRun={onCompleteFirstRun ?? onDismissIntro}
+          />
           {statusMessage ? (
             <Alert>
               <CheckCircleIcon aria-hidden="true" />
@@ -387,6 +424,368 @@ function OptionsHeader({
       </div>
     </header>
   );
+}
+
+function FirstRunOnboardingWizard({
+  open,
+  account = { status: "signed-out" },
+  discoveryRatePercent = 8,
+  readingLevel,
+  isLoading = false,
+  isPreviewSignInPending = false,
+  isCompletingFirstRun = false,
+  onPreviewSignIn,
+  onReadingLevelChange,
+  onDiscoveryRateChange,
+  onCompleteFirstRun
+}: Pick<
+  ExtensionOptionsProps,
+  | "account"
+  | "discoveryRatePercent"
+  | "readingLevel"
+  | "isLoading"
+  | "isPreviewSignInPending"
+  | "isCompletingFirstRun"
+  | "onPreviewSignIn"
+  | "onReadingLevelChange"
+  | "onDiscoveryRateChange"
+  | "onCompleteFirstRun"
+> & {
+  open: boolean;
+}) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = FIRST_RUN_STEPS[stepIndex] ?? FIRST_RUN_STEPS[0];
+  const accountReady = account.status !== "signed-out";
+  const canMoveNext = step.id !== "account" || accountReady;
+  const isFinalStep = step.id === "start";
+  const primaryLabel = getFirstRunPrimaryLabel({
+    stepId: step.id,
+    accountReady,
+    isPreviewSignInPending,
+    isCompletingFirstRun
+  });
+
+  useEffect(() => {
+    if (!open) {
+      setStepIndex(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && accountReady && stepIndex === 0) {
+      setStepIndex(1);
+    }
+  }, [accountReady, open, stepIndex]);
+
+  const handlePrimaryAction = () => {
+    if (step.id === "account" && !accountReady) {
+      void onPreviewSignIn?.();
+      return;
+    }
+
+    if (isFinalStep) {
+      void onCompleteFirstRun?.();
+      return;
+    }
+
+    if (canMoveNext) {
+      setStepIndex((current) => Math.min(current + 1, FIRST_RUN_STEPS.length - 1));
+    }
+  };
+
+  return (
+    <Dialog open={open} modal>
+      <DialogContent
+        showCloseButton={false}
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader>
+          <Badge variant="secondary" className="w-fit">
+            First-run setup
+          </Badge>
+          <DialogTitle>{step.title}</DialogTitle>
+          <DialogDescription>{step.description}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <Progress value={((stepIndex + 1) / FIRST_RUN_STEPS.length) * 100} />
+          <ol className="grid gap-2 sm:grid-cols-4">
+            {FIRST_RUN_STEPS.map((item, index) => (
+              <li
+                key={item.id}
+                className={cn(
+                  "flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm",
+                  index === stepIndex && "border-primary/50"
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border text-xs",
+                    index <= stepIndex && "border-primary bg-primary text-primary-foreground"
+                  )}
+                >
+                  {index + 1}
+                </span>
+                <span className="truncate">{item.label}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <FirstRunStepContent
+          stepId={step.id}
+          account={account}
+          readingLevel={readingLevel}
+          discoveryRatePercent={discoveryRatePercent}
+          onReadingLevelChange={onReadingLevelChange}
+          onDiscoveryRateChange={onDiscoveryRateChange}
+        />
+        <DialogFooter>
+          {stepIndex > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isCompletingFirstRun || isPreviewSignInPending}
+              onClick={() => setStepIndex((current) => Math.max(0, current - 1))}
+            >
+              Back
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            disabled={
+              isLoading ||
+              isPreviewSignInPending ||
+              isCompletingFirstRun ||
+              (!canMoveNext && step.id !== "account")
+            }
+            onClick={handlePrimaryAction}
+          >
+            {primaryLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FirstRunStepContent({
+  stepId,
+  account = { status: "signed-out" },
+  readingLevel,
+  discoveryRatePercent,
+  onReadingLevelChange,
+  onDiscoveryRateChange
+}: Pick<
+  ExtensionOptionsProps,
+  | "account"
+  | "readingLevel"
+  | "discoveryRatePercent"
+  | "onReadingLevelChange"
+  | "onDiscoveryRateChange"
+> & {
+  stepId: FirstRunStepId;
+}) {
+  if (stepId === "account") {
+    return <FirstRunAccountStep account={account} />;
+  }
+
+  if (stepId === "level") {
+    return (
+      <FirstRunLevelStep
+        readingLevel={readingLevel}
+        onReadingLevelChange={onReadingLevelChange}
+      />
+    );
+  }
+
+  if (stepId === "density") {
+    return (
+      <FirstRunDensityStep
+        discoveryRatePercent={discoveryRatePercent ?? 8}
+        onDiscoveryRateChange={onDiscoveryRateChange}
+      />
+    );
+  }
+
+  return <FirstRunStartStep account={account} />;
+}
+
+function FirstRunAccountStep({
+  account = { status: "signed-out" }
+}: Pick<ExtensionOptionsProps, "account">) {
+  const signedIn = account.status === "signed-in";
+  const notRequired = account.status === "not-required";
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+        <Badge variant={signedIn || notRequired ? "default" : "secondary"} className="w-fit">
+          {notRequired ? "Local preview" : signedIn ? account.previewStatus : "Required"}
+        </Badge>
+        <div>
+          <h3 className="text-sm font-medium">
+            {signedIn
+              ? "Preview access is active"
+              : notRequired
+                ? "This build can read locally"
+                : "Preview sign-in unlocks reading mode"}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Signup is for access, support, and high-level activation measurement.
+            It does not turn ImmersionKit into sync.
+          </p>
+        </div>
+        {signedIn ? (
+          <CompactMetric label="Email" value={account.email} icon="message" />
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+        <h3 className="text-sm font-medium">What stays on this device</h3>
+        <CompactMetric label="Learning progress" value="Local" icon="shield" />
+        <CompactMetric label="Reading history" value="Local" icon="book" />
+        <CompactMetric label="Provider keys" value="Local" icon="lock" />
+        <p className="text-sm text-muted-foreground">
+          ImmersionKit sends high-level preview events, not page text, inline
+          words, vocabulary, provider keys, or review history.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FirstRunLevelStep({
+  readingLevel,
+  onReadingLevelChange
+}: Pick<ExtensionOptionsProps, "readingLevel" | "onReadingLevelChange">) {
+  const [localReadingLevel, setLocalReadingLevel] =
+    useState<ReadingLevel>("Beginner");
+  const resolvedReadingLevel = readingLevel ?? localReadingLevel;
+  const chooseReadingLevel = (level: ReadingLevel) => {
+    setLocalReadingLevel(level);
+    onReadingLevelChange?.(level);
+  };
+
+  return (
+    <FieldSet>
+      <FieldLegend>Starting level</FieldLegend>
+      <FieldDescription>
+        This seeds the first reading band. It can be changed later from Reading.
+      </FieldDescription>
+      <RadioGroup
+        value={resolvedReadingLevel}
+        onValueChange={(value) => chooseReadingLevel(value as ReadingLevel)}
+        className="mt-3 grid gap-2"
+      >
+        <ReadingLevelChoice
+          idPrefix="first-run-reading-level"
+          value="Beginner"
+          title="Beginner"
+          copy="Just starting. Simple words and phrases."
+        />
+        <ReadingLevelChoice
+          idPrefix="first-run-reading-level"
+          value="False beginner"
+          title="False beginner"
+          copy="I know some basics but need more exposure."
+        />
+        <ReadingLevelChoice
+          idPrefix="first-run-reading-level"
+          value="Intermediate"
+          title="Intermediate"
+          copy="Comfortable with most everyday reading."
+        />
+      </RadioGroup>
+    </FieldSet>
+  );
+}
+
+function FirstRunDensityStep({
+  discoveryRatePercent = 8,
+  onDiscoveryRateChange
+}: Pick<ExtensionOptionsProps, "discoveryRatePercent" | "onDiscoveryRateChange">) {
+  return (
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <FieldGroup className="min-w-0">
+        <Field>
+          <div className="flex items-center justify-between gap-3">
+            <FieldLabel htmlFor="first-run-discovery-rate">New word pace</FieldLabel>
+            <span className="text-sm font-medium">{discoveryRatePercent}%</span>
+          </div>
+          <Slider
+            id="first-run-discovery-rate"
+            min={0}
+            max={20}
+            step={1}
+            value={[discoveryRatePercent]}
+            onValueChange={(value) => onDiscoveryRateChange?.(value[0] ?? 0)}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Subtle</span>
+            <span>Balanced</span>
+            <span>Bold</span>
+          </div>
+          <FieldDescription>
+            Real pages may be sparser when context is ambiguous or unsafe.
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
+      <DensityPreview discoveryRatePercent={discoveryRatePercent} />
+    </div>
+  );
+}
+
+function FirstRunStartStep({
+  account = { status: "signed-out" }
+}: Pick<ExtensionOptionsProps, "account">) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+        <h3 className="text-sm font-medium">First page</h3>
+        <CompactMetric label="Supported pages" value="Articles, blogs, docs" icon="book" />
+        <CompactMetric label="Inline Spanish" value="Sparse by design" icon="spark" />
+        <p className="text-sm text-muted-foreground">
+          Open a normal HTTP(S) page. ImmersionKit keeps the page readable and
+          skips browser, private, form, code, and sensitive areas.
+        </p>
+      </div>
+      <div className="flex flex-col gap-3 rounded-lg border bg-background p-3">
+        <h3 className="text-sm font-medium">Control</h3>
+        <CompactMetric
+          label="Preview account"
+          value={account.status === "signed-in" ? "Signed in" : "Ready"}
+          icon="check"
+        />
+        <CompactMetric label="Pause or resume" value="Popup" icon="pause" />
+        <CompactMetric label="Sentence help" value="Optional" icon="translate" />
+        <p className="text-sm text-muted-foreground">
+          Use the popup for site controls. Sentence help stays off unless you
+          configure a provider later.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function getFirstRunPrimaryLabel({
+  stepId,
+  accountReady,
+  isPreviewSignInPending,
+  isCompletingFirstRun
+}: {
+  stepId: FirstRunStepId;
+  accountReady: boolean;
+  isPreviewSignInPending: boolean;
+  isCompletingFirstRun: boolean;
+}) {
+  if (stepId === "account" && !accountReady) {
+    return isPreviewSignInPending ? "Signing in..." : "Sign in with Google";
+  }
+
+  if (stepId === "start") {
+    return isCompletingFirstRun ? "Saving setup..." : "Start reading";
+  }
+
+  return "Continue";
 }
 
 function OptionsOverviewPanel({
@@ -924,15 +1323,17 @@ function SiteControlsCard({
 }
 
 function ReadingLevelChoice({
+  idPrefix = "reading-level",
   value,
   title,
   copy
 }: {
+  idPrefix?: string;
   value: ReadingLevel;
   title: string;
   copy: string;
 }) {
-  const id = `reading-level-${value.toLowerCase().replace(/\s+/g, "-")}`;
+  const id = `${idPrefix}-${value.toLowerCase().replace(/\s+/g, "-")}`;
 
   return (
     <Field

@@ -75,11 +75,11 @@ describe("extension E2E harness", () => {
     );
   });
 
-  it("opens Options on fresh install and persists first-run dismissal", async () => {
+  it("opens Options on fresh install and persists first-run setup", async () => {
     const { context, extensionId } = await launchBuiltExtension();
     const options = await waitForExtensionOptionsPage(context, extensionId);
 
-    await options.waitForSelector("text=Start with normal reading", {
+    await options.waitForSelector("text=Choose your starting point", {
       timeout: 10_000
     });
     await expect
@@ -87,22 +87,38 @@ describe("extension E2E harness", () => {
       .toBe(true);
 
     const optionsText = await options.locator("body").innerText();
-    expect(optionsText).toContain("small doses of Spanish");
-    expect(optionsText).toContain("Progress and reading history stay on this device");
-    expect(optionsText).toContain("pause any site");
-    expect(optionsText).toContain("starting point and pace");
-    expect(optionsText).toContain("Sentence help is optional");
+    expect(optionsText).toContain("First-run setup");
+    expect(optionsText).toContain("Starting level");
+    expect(optionsText).toContain("This seeds the first reading band");
 
-    await options.getByRole("button", { name: "Got it" }).click();
+    await options.getByRole("radio", { name: "Intermediate" }).click();
+    await options.getByRole("button", { name: "Continue" }).click();
+    await options.waitForSelector("text=Set the Spanish density", {
+      timeout: 5_000
+    });
+    const discoveryRateInput = options.locator("#first-run-discovery-rate");
+    await discoveryRateInput.focus();
+    await options.keyboard.press("Home");
+    for (let step = 0; step < 7; step += 1) {
+      await options.keyboard.press("ArrowRight");
+    }
+    await options.getByRole("button", { name: "Continue" }).click();
+    await options.waitForSelector("text=Start reading normally", {
+      timeout: 5_000
+    });
+    await options.getByRole("button", { name: "Start reading" }).click();
     await expect
       .poll(() => readUserDataValueFromExtensionPage(options, "first-run-intro-visible"))
       .toBe(false);
+    const setupSettings = await readSettingsFromExtensionPage(options);
+    expect(setupSettings.discoveryRate).toBe(0.07);
+    expect(setupSettings.proficiencySeed).toBe("intermediate");
 
     await options.reload({ waitUntil: "domcontentloaded" });
     await options.waitForSelector("text=Quick status across account", {
       timeout: 10_000
     });
-    expect(await options.locator("text=Start with normal reading").count()).toBe(0);
+    expect(await options.locator("text=First-run setup").count()).toBe(0);
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`, {
@@ -371,6 +387,7 @@ async function launchBuiltExtension(): Promise<{
 }
 
 async function seedSettings(serviceWorker: Worker): Promise<void> {
+  await writeUserData(serviceWorker, "first-run-intro-visible", false);
   await writeUserData(serviceWorker, "settings", {
     enabled: true,
     discoveryRate: 1,
