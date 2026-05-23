@@ -226,6 +226,14 @@ WHERE channel = ${sqlString(input.channel)}
   AND language_pair = ${sqlString(input.languagePair)}
   AND asset_version <> ${sqlString(input.assetVersion)};
 
+DELETE FROM asset_releases
+WHERE manifest_key = ${sqlString(input.manifestObjectKey)}
+  AND NOT (
+    channel = ${sqlString(input.channel)}
+    AND language_pair = ${sqlString(input.languagePair)}
+    AND asset_version = ${sqlString(input.assetVersion)}
+  );
+
 INSERT INTO asset_releases (
   id,
   channel,
