@@ -3,6 +3,7 @@ import {
   DEFAULT_CURRICULUM_CONTENT,
   CURATED_PHRASE_TARGET_LEXICON,
   FIXED_PHRASE_LEXICON,
+  REVIEW_INTERVALS_MS,
   evaluateCurriculumBandTransition,
   evaluateCurriculumEligibility,
   evaluatePhraseCurriculumContentInventory,
@@ -12,6 +13,7 @@ import {
   normalizePhraseText,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
+  scheduleQualifiedExposure,
   type CurriculumDefinition,
   type CurriculumConfig,
   type LearningItem
@@ -37,6 +39,8 @@ const BASE_ITEM: LearningItem = {
   distinctContextCount: 2,
   suspended: false
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe("curriculum configuration", () => {
   it("provides configurable default levels and ordered bands", () => {
@@ -132,6 +136,91 @@ describe("curriculum configuration", () => {
       nextBand: expect.objectContaining({ bandId: "level-1b" }),
       unmetRequirements: []
     });
+  });
+
+  it("simulates scheduler-qualified progression readiness across every default band", () => {
+    const orderedBands = [...DEFAULT_CURRICULUM_CONFIG.bands].sort(
+      (left, right) => left.order - right.order
+    );
+    let allItems: LearningItem[] = [];
+
+    for (const [bandIndex, band] of orderedBands.entries()) {
+      const trainedItems = createSchedulerQualifiedTransitionItems({
+        bandId: band.bandId,
+        startAtMs: Date.parse("2026-04-01T09:00:00.000Z") + bandIndex * 3 * DAY_MS
+      });
+      allItems = [
+        ...allItems.filter((item) => item.bandId !== band.bandId),
+        ...trainedItems
+      ];
+
+      for (const item of trainedItems) {
+        expect(item).toMatchObject({
+          status: "reviewing",
+          qualifiedExposureCount: 2,
+          consecutiveUnassistedCount: 2,
+          distinctContextCount: 2
+        });
+      }
+
+      const implicitDecision = evaluateCurriculumBandTransition(
+        DEFAULT_CURRICULUM_CONFIG,
+        {
+          bandId: band.bandId,
+          items: allItems,
+          recentLapseRate: 0,
+          checkpointPassed: false
+        }
+      );
+      const explicitDecision = evaluateCurriculumBandTransition(
+        DEFAULT_CURRICULUM_CONFIG,
+        {
+          bandId: band.bandId,
+          items: allItems,
+          recentLapseRate: 0,
+          checkpointPassed: true
+        }
+      );
+
+      if (!implicitDecision.nextBand) {
+        expect(band.bandId).toBe("level-5b");
+        expect(implicitDecision).toMatchObject({
+          eligible: true,
+          nextBand: null,
+          unmetRequirements: []
+        });
+        expect(explicitDecision).toMatchObject({
+          eligible: true,
+          nextBand: null,
+          unmetRequirements: []
+        });
+        continue;
+      }
+
+      if (band.unlockRequirements.checkpointRequired) {
+        expect(implicitDecision).toMatchObject({
+          eligible: false,
+          unmetRequirements: ["checkpoint"]
+        });
+        expect(explicitDecision).toMatchObject({
+          eligible: true,
+          nextBand: expect.objectContaining({
+            bandId: implicitDecision.nextBand.bandId
+          }),
+          unmetRequirements: []
+        });
+        continue;
+      }
+
+      expect(implicitDecision).toMatchObject({
+        eligible: true,
+        unmetRequirements: []
+      });
+      expect(explicitDecision).toMatchObject({
+        eligible: true,
+        unmetRequirements: []
+      });
+    }
   });
 
   it("does not require a checkpoint when there is no next band", () => {
@@ -713,5 +802,52 @@ function createTransitionItem(
     unitRefId: `lexeme-city-${index}`,
     sourceText: `city ${index}`,
     ...overrides
+  };
+}
+
+function createSchedulerQualifiedTransitionItems(input: {
+  bandId: string;
+  startAtMs: number;
+}): LearningItem[] {
+  return Array.from({ length: 4 }, (_unused, index) => {
+    let item = createNewTransitionItem(index, input.bandId, input.startAtMs);
+    item = scheduleQualifiedExposure(item, {
+      now: new Date(input.startAtMs).toISOString(),
+      wasAssisted: false,
+      isDistinctContext: true
+    }).item;
+    item = scheduleQualifiedExposure(item, {
+      now: new Date(input.startAtMs + DAY_MS).toISOString(),
+      wasAssisted: false,
+      isDistinctContext: true
+    }).item;
+    return item;
+  });
+}
+
+function createNewTransitionItem(
+  index: number,
+  bandId: string,
+  introducedAtMs: number
+): LearningItem {
+  const introducedAt = new Date(introducedAtMs).toISOString();
+  return {
+    itemId: `word:sim-${bandId}-${index}`,
+    unitRefId: `sim-${bandId}-${index}`,
+    unitType: "word",
+    sourceText: `simulation ${index}`,
+    targetText: `simulacion ${index}`,
+    status: "new",
+    bandId,
+    introducedAt,
+    nextReviewAt: introducedAt,
+    interval: REVIEW_INTERVALS_MS[0],
+    ease: 2.3,
+    lapses: 0,
+    assistCount: 0,
+    qualifiedExposureCount: 0,
+    consecutiveUnassistedCount: 0,
+    distinctContextCount: 0,
+    suspended: false
   };
 }

@@ -1,4 +1,8 @@
-import { RuntimeMessageType } from "@immersionkit/shared";
+import {
+  DEFAULT_CURRICULUM_CONFIG,
+  RuntimeMessageType,
+  evaluateCurriculumBandTransition
+} from "@immersionkit/shared";
 import type {
   GrammarFeatureMatch,
   LearningItem,
@@ -567,6 +571,190 @@ describe("background learning item service", () => {
       exposureCount: 2,
       lastSeenAt: "2026-04-18T10:08:00.000Z"
     });
+  });
+
+  it("counts different sentences and hosts as distinct qualified exposure contexts", async () => {
+    const history = new InMemoryLearningHistoryRepository({
+      contextHistory: createContextHistory("2026-04-18T10:00:00.000Z")
+    });
+    const items = new InMemoryLearningItemRepository({
+      "word:lexeme-city": createLearningItem({
+        qualifiedExposureCount: 1,
+        distinctContextCount: 1,
+        nextReviewAt: "2026-04-18T09:30:00.000Z"
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    await service.recordQualifiedExposure({
+      type: RuntimeMessageType.QualifiedExposureEvent,
+      eventId: "exposure-new-sentence",
+      itemId: "word:lexeme-city",
+      sentenceHash: "sentence-3",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      occurredAt: "2026-04-18T10:08:00.000Z",
+      wasAssisted: false,
+      confidence: 0.72,
+      distinctContextKey: "fixtures.immersionkit.test:sentence-3"
+    });
+    const item = await service.recordQualifiedExposure({
+      type: RuntimeMessageType.QualifiedExposureEvent,
+      eventId: "exposure-new-host",
+      itemId: "word:lexeme-city",
+      sentenceHash: "sentence-2",
+      hostname: "other.immersionkit.test",
+      sessionId: "session-1",
+      occurredAt: "2026-04-18T10:09:00.000Z",
+      wasAssisted: false,
+      confidence: 0.72,
+      distinctContextKey: "other.immersionkit.test:sentence-2"
+    });
+
+    expect(item?.qualifiedExposureCount).toBe(3);
+    expect(item?.distinctContextCount).toBe(3);
+    expect(history.contextHistory["word:lexeme-city"]?.contexts).toEqual([
+      expect.objectContaining({ key: "fixtures.immersionkit.test:sentence-2" }),
+      expect.objectContaining({ key: "fixtures.immersionkit.test:sentence-3" }),
+      expect.objectContaining({ key: "other.immersionkit.test:sentence-2" })
+    ]);
+  });
+
+  it("records not-due qualified exposures without creating review events or moving the schedule", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository({
+      "word:lexeme-city": createLearningItem({
+        qualifiedExposureCount: 0,
+        consecutiveUnassistedCount: 0,
+        distinctContextCount: 0,
+        nextReviewAt: "2026-04-18T11:00:00.000Z",
+        interval: 24 * 60 * 60 * 1000
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordQualifiedExposure({
+      type: RuntimeMessageType.QualifiedExposureEvent,
+      eventId: "exposure-not-due",
+      itemId: "word:lexeme-city",
+      sentenceHash: "sentence-4",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      occurredAt: "2026-04-18T10:00:00.000Z",
+      wasAssisted: false,
+      confidence: 0.72,
+      distinctContextKey: "fixtures.immersionkit.test:sentence-4"
+    });
+
+    expect(item).toMatchObject({
+      qualifiedExposureCount: 1,
+      consecutiveUnassistedCount: 1,
+      distinctContextCount: 1,
+      nextReviewAt: "2026-04-18T11:00:00.000Z",
+      interval: 24 * 60 * 60 * 1000
+    });
+    expect(history.reviewEvents).toHaveLength(0);
+  });
+
+  it("keeps assisted exposures from satisfying progression readiness", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const assistedItemId = "word:lexeme-assisted";
+    const items = new InMemoryLearningItemRepository({
+      "word:lexeme-ready-1": createLearningItem({
+        itemId: "word:lexeme-ready-1",
+        unitRefId: "lexeme-ready-1",
+        bandId: "level-1a",
+        status: "reviewing",
+        qualifiedExposureCount: 2,
+        consecutiveUnassistedCount: 2,
+        distinctContextCount: 2
+      }),
+      "word:lexeme-ready-2": createLearningItem({
+        itemId: "word:lexeme-ready-2",
+        unitRefId: "lexeme-ready-2",
+        bandId: "level-1a",
+        status: "reviewing",
+        qualifiedExposureCount: 2,
+        consecutiveUnassistedCount: 2,
+        distinctContextCount: 2
+      }),
+      "word:lexeme-ready-3": createLearningItem({
+        itemId: "word:lexeme-ready-3",
+        unitRefId: "lexeme-ready-3",
+        bandId: "level-1a",
+        status: "reviewing",
+        qualifiedExposureCount: 2,
+        consecutiveUnassistedCount: 2,
+        distinctContextCount: 2
+      }),
+      [assistedItemId]: createLearningItem({
+        itemId: assistedItemId,
+        unitRefId: "lexeme-assisted",
+        bandId: "level-1a",
+        status: "reviewing",
+        qualifiedExposureCount: 2,
+        consecutiveUnassistedCount: 2,
+        distinctContextCount: 1
+      })
+    });
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordQualifiedExposure({
+      type: RuntimeMessageType.QualifiedExposureEvent,
+      eventId: "exposure-assisted",
+      itemId: assistedItemId,
+      sentenceHash: "sentence-assisted",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      occurredAt: "2026-04-18T10:00:00.000Z",
+      wasAssisted: true,
+      confidence: 0.72,
+      distinctContextKey: "fixtures.immersionkit.test:sentence-assisted"
+    });
+
+    expect(item).toMatchObject({
+      qualifiedExposureCount: 3,
+      consecutiveUnassistedCount: 0,
+      distinctContextCount: 2
+    });
+    expect(history.reviewEvents).toEqual([
+      expect.objectContaining({
+        itemId: assistedItemId,
+        grade: "hard"
+      })
+    ]);
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: Object.values(items.items),
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toContain("evidence-breadth");
+  });
+
+  it("does not create missing phrase items from loose qualified exposure evidence", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository();
+    const service = new BackgroundLearningItemService(history, items);
+
+    const item = await service.recordQualifiedExposure({
+      type: RuntimeMessageType.QualifiedExposureEvent,
+      eventId: "exposure-phrase-missing",
+      itemId: "phrase:missing",
+      sentenceHash: "sentence-phrase",
+      hostname: "fixtures.immersionkit.test",
+      sessionId: "session-1",
+      occurredAt: "2026-04-18T10:00:00.000Z",
+      wasAssisted: false,
+      confidence: 0.72,
+      distinctContextKey: "fixtures.immersionkit.test:sentence-phrase"
+    });
+
+    expect(item).toBeNull();
+    expect(history.reviewEvents).toHaveLength(0);
+    expect(history.contextHistory).toEqual({});
+    expect(items.items).toEqual({});
   });
 
   it("keeps all learning state behind repositories", async () => {

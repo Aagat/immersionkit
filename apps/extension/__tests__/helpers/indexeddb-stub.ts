@@ -27,10 +27,12 @@ export type IndexedDbTestStub = {
 
 export function installIndexedDbStub(): IndexedDbTestStub {
   const existingIndexedDb = globalThis.indexedDB;
+  const existingIDBKeyRange = globalThis.IDBKeyRange;
   const databases = new Map<string, DatabaseState>();
 
   resetIndexedDbConnectionForTests();
   globalThis.indexedDB = createFactory(databases) as IDBFactory;
+  globalThis.IDBKeyRange = createKeyRangeFactory() as typeof IDBKeyRange;
 
   return {
     clear() {
@@ -41,10 +43,28 @@ export function installIndexedDbStub(): IndexedDbTestStub {
       resetIndexedDbConnectionForTests();
       if (existingIndexedDb) {
         globalThis.indexedDB = existingIndexedDb;
-        return;
+      } else {
+        delete (globalThis as { indexedDB?: IDBFactory }).indexedDB;
       }
 
-      delete (globalThis as { indexedDB?: IDBFactory }).indexedDB;
+      if (existingIDBKeyRange) {
+        globalThis.IDBKeyRange = existingIDBKeyRange;
+      } else {
+        delete (globalThis as { IDBKeyRange?: typeof IDBKeyRange }).IDBKeyRange;
+      }
+    }
+  };
+}
+
+function createKeyRangeFactory(): Partial<typeof IDBKeyRange> {
+  return {
+    only(value: IDBValidKey): IDBKeyRange {
+      return {
+        lower: value,
+        upper: value,
+        lowerOpen: false,
+        upperOpen: false
+      } as IDBKeyRange;
     }
   };
 }
