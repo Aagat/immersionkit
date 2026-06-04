@@ -20,9 +20,7 @@ migrations_dir = "migrations"
 binding = "ASSET_BUCKET"
 bucket_name = "immersionkit-asset-releases-example"
 
-# Explicit preview environment for the currently deployed commercial preview.
-# Keep the top-level config as the default compatibility path until a separate
-# production Worker/D1/R2/OAuth set exists.
+# Example environment. Replace all resource names and IDs before deploying.
 [env.preview]
 name = "immersionkit-api-example"
 
