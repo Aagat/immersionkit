@@ -41,99 +41,17 @@ if (serviceWorkerLoader.includes("localhost:")) {
 const smokeFixtures = [
   {
     route: "/",
-    label: "spec-workflow",
-    fileName: "article-spec-workflow.html",
-    codeBlockNeedle: "account-export",
+    label: "public-example-article",
+    fileName: "article-basic.html",
     requiredText: [
-      "Like any workflow",
-      "not need to write release maps",
-      "feature boundary or slice is up to you",
-      "create zero friction",
-      "This supports deliberate",
-      "rely on"
+      "The local",
+      "opens early on Saturday morning",
+      "Families often visit",
+      "peaceful path",
+      "Published March 4, 2026"
     ],
-    forbiddenText: [
-      "así any workflow",
-      "asi any workflow",
-      "necesidad to write",
-      "arriba to you",
-      "cero friction",
-      "Este supports",
-      "encima stable",
-      "encima estable"
-    ],
-    forbiddenCodeText: ["cuenta"]
-  },
-  {
-    route: "/incident-review",
-    label: "incident-review",
-    fileName: "article-incident-review.html",
-    codeBlockNeedle: "manual_check",
-    requiredText: [
-      "can light up the timeline",
-      "hidden right after the deploy marker",
-      "plant a manual check",
-      "can watch",
-      "queue drain",
-      "move up slowly"
-    ],
-    forbiddenText: [
-      "lata light",
-      "lata watch",
-      "luz up",
-      "planta a manual",
-      "derecho after",
-      "ahorita after",
-      "arriba slowly",
-      "encima-call"
-    ],
-    forbiddenCodeText: ["planta"]
-  },
-  {
-    route: "/metrics-notebook",
-    label: "metrics-notebook",
-    fileName: "article-metrics-notebook.html",
-    codeBlockNeedle: "weekly_rate",
-    requiredText: [
-      "Like a bug",
-      "This means zero rows can move",
-      "fine for",
-      "left the control chart open"
-    ],
-    forbiddenText: [
-      "así a bug",
-      "asi a bug",
-      "Este means",
-      "cero rows",
-      "lata move",
-      "multa for",
-      "izquierda the control"
-    ],
-    forbiddenCodeText: ["período"]
-  },
-  {
-    route: "/api-migration",
-    label: "api-migration",
-    fileName: "article-api-migration.html",
-    codeBlockNeedle: "legacy_export_route",
-    requiredText: [
-      "Well,",
-      "reads like a checklist",
-      "left the fallback on",
-      "This can sound cautious",
-      "does not need a large"
-    ],
-    forbiddenText: [
-      "Pozo,",
-      "pozo,",
-      "así a checklist",
-      "asi a checklist",
-      "izquierda the fallback",
-      "encima because",
-      "lata sound",
-      "necesidad a large"
-    ],
-    forbiddenCodeText: ["encima"]
+    forbiddenText: [],
+    forbiddenCodeText: []
   }
 ];
 
@@ -627,11 +545,11 @@ function assertFixtureReplacementQuality(fixture, contentSnapshot) {
     }
   }
 
-  if (!codeBlockText.includes(fixture.codeBlockNeedle)) {
+  if (fixture.codeBlockNeedle && !codeBlockText.includes(fixture.codeBlockNeedle)) {
     throw new Error(`${fixture.label} code block was not present.`);
   }
 
-  for (const snippet of fixture.forbiddenCodeText) {
+  for (const snippet of fixture.forbiddenCodeText ?? []) {
     if (codeBlockText.includes(snippet)) {
       throw new Error(`${fixture.label} translated inside a code block.`);
     }

@@ -5,9 +5,7 @@
     "apps/extension/public/ort/**",
     "apps/extension/public/tts/**",
     "apps/extension/src/assets/**",
-    "fixtures/**",
-    "tools/importers/inputs/**",
-    "tools/importers/outputs/**"
+    "fixtures/**"
   ],
   "rules": [
     {

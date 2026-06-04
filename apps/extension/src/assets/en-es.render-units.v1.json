@@ -1,0 +1,261 @@
+{
+  "schemaVersion": "1.0.0",
+  "assetVersion": "example-2026.06.05",
+  "languagePair": "en-es",
+  "generatedAt": "2026-06-05T00:00:00.000Z",
+  "entries": [
+    {
+      "renderUnitId": "ru:city:noun:exact",
+      "lexemeIds": ["lx:city:noun"],
+      "kind": "single-token",
+      "renderPolicy": "inline",
+      "sourceText": "city",
+      "normalizedSourceText": "city",
+      "targetText": "ciudad",
+      "normalizedTargetText": "ciudad",
+      "sourcePattern": {
+        "matchMode": "exact",
+        "tokens": [{ "normal": "city", "lemma": "city", "pos": "noun" }]
+      },
+      "replacement": { "startToken": 0, "endToken": 1, "targetText": "ciudad" },
+      "minBand": "level-1a",
+      "frequencyRank": 120,
+      "confidence": 0.95,
+      "provenance": { "source": "manual", "notes": "Public example asset row." },
+      "exampleSentenceEnglish": "The city park opens early.",
+      "exampleSentenceNative": "El parque de la ciudad abre temprano."
+    },
+    {
+      "renderUnitId": "ru:garden:noun:exact",
+      "lexemeIds": ["lx:garden:noun"],
+      "kind": "single-token",
+      "renderPolicy": "inline",
+      "sourceText": "garden",
+      "normalizedSourceText": "garden",
+      "targetText": "jardin",
+      "normalizedTargetText": "jardin",
+      "sourcePattern": {
+        "matchMode": "exact",
+        "tokens": [{ "normal": "garden", "lemma": "garden", "pos": "noun" }]
+      },
+      "replacement": { "startToken": 0, "endToken": 1, "targetText": "jardin" },
+      "minBand": "level-1a",
+      "frequencyRank": 380,
+      "confidence": 0.94,
+      "provenance": { "source": "manual", "notes": "Public example asset row." },
+      "exampleSentenceEnglish": "The garden is quiet today.",
+      "exampleSentenceNative": "El jardin esta tranquilo hoy."
+    },
+    {
+      "renderUnitId": "ru:important:adjective:exact",
+      "lexemeIds": ["lx:important:adjective"],
+      "kind": "single-token",
+      "renderPolicy": "inline",
+      "sourceText": "important",
+      "normalizedSourceText": "important",
+      "targetText": "importante",
+      "normalizedTargetText": "importante",
+      "sourcePattern": {
+        "matchMode": "exact",
+        "tokens": [
+          { "normal": "important", "lemma": "important", "pos": "adjective" }
+        ]
+      },
+      "replacement": {
+        "startToken": 0,
+        "endToken": 1,
+        "targetText": "importante"
+      },
+      "minBand": "level-1a",
+      "frequencyRank": 260,
+      "confidence": 0.95,
+      "provenance": { "source": "manual", "notes": "Public example asset row." },
+      "exampleSentenceEnglish": "This is an important note.",
+      "exampleSentenceNative": "Esta es una nota importante."
+    },
+    {
+      "renderUnitId": "ru:use:noun:analyzer-pattern",
+      "lexemeIds": ["lx:use:noun"],
+      "kind": "single-token",
+      "renderPolicy": "inline",
+      "sourceText": "use",
+      "normalizedSourceText": "use",
+      "targetText": "uso",
+      "normalizedTargetText": "uso",
+      "sourcePattern": {
+        "matchMode": "analyzer-pattern",
+        "tokens": [{ "normal": "use", "lemma": "use", "pos": "noun" }]
+      },
+      "replacement": { "startToken": 0, "endToken": 1, "targetText": "uso" },
+      "minBand": "level-2a",
+      "frequencyRank": 500,
+      "confidence": 0.9,
+      "provenance": {
+        "source": "manual",
+        "notes": "Analyzer-gated example to avoid bare verb-context rendering."
+      },
+      "exampleSentenceEnglish": "The use is clear.",
+      "exampleSentenceNative": "El uso es claro."
+    },
+    {
+      "renderUnitId": "ru:use:verb:frame",
+      "lexemeIds": ["lx:use:verb"],
+      "kind": "verb-frame",
+      "renderPolicy": "inline",
+      "sourceText": "use",
+      "normalizedSourceText": "use",
+      "targetText": "usar",
+      "normalizedTargetText": "usar",
+      "sourcePattern": {
+        "matchMode": "analyzer-pattern",
+        "tokens": [{ "normal": "use", "lemma": "use", "pos": "verb" }]
+      },
+      "minBand": "level-2a",
+      "frequencyRank": 210,
+      "confidence": 0.9,
+      "provenance": {
+        "source": "manual",
+        "notes": "Public example verb frame for analyzer-gated conjugation."
+      },
+      "exampleSentenceEnglish": "I use the example app.",
+      "exampleSentenceNative": "Uso la app de ejemplo."
+    },
+    {
+      "renderUnitId": "ru:do:verb:frame",
+      "lexemeIds": ["lx:do:verb"],
+      "kind": "verb-frame",
+      "renderPolicy": "inline",
+      "sourceText": "do",
+      "normalizedSourceText": "do",
+      "targetText": "hacer",
+      "normalizedTargetText": "hacer",
+      "sourcePattern": {
+        "matchMode": "analyzer-pattern",
+        "tokens": [{ "normal": "do", "lemma": "do", "pos": "verb" }]
+      },
+      "minBand": "level-2a",
+      "frequencyRank": 80,
+      "confidence": 0.88,
+      "provenance": {
+        "source": "manual",
+        "notes": "Public example verb frame for unsafe auxiliary checks."
+      },
+      "exampleSentenceEnglish": "I do the work.",
+      "exampleSentenceNative": "Hago el trabajo."
+    },
+    {
+      "renderUnitId": "ru:have:verb:frame",
+      "lexemeIds": ["lx:have-tener:verb"],
+      "kind": "verb-frame",
+      "renderPolicy": "inline",
+      "sourceText": "have",
+      "normalizedSourceText": "have",
+      "targetText": "tener",
+      "normalizedTargetText": "tener",
+      "sourcePattern": {
+        "matchMode": "analyzer-pattern",
+        "tokens": [{ "normal": "have", "lemma": "have", "pos": "verb" }]
+      },
+      "minBand": "level-2a",
+      "frequencyRank": 70,
+      "confidence": 0.88,
+      "provenance": {
+        "source": "manual",
+        "notes": "Public example verb frame for unsafe auxiliary checks."
+      },
+      "exampleSentenceEnglish": "I have time.",
+      "exampleSentenceNative": "Tengo tiempo."
+    },
+    {
+      "renderUnitId": "ru:watch:verb:frame",
+      "lexemeIds": ["lx:watch:verb"],
+      "kind": "verb-frame",
+      "renderPolicy": "inline",
+      "sourceText": "watch",
+      "normalizedSourceText": "watch",
+      "targetText": "mirar",
+      "normalizedTargetText": "mirar",
+      "sourcePattern": {
+        "matchMode": "analyzer-pattern",
+        "tokens": [{ "normal": "watch", "lemma": "watch", "pos": "verb" }]
+      },
+      "minBand": "level-2b",
+      "frequencyRank": 480,
+      "confidence": 0.86,
+      "provenance": {
+        "source": "manual",
+        "notes": "Public example verb frame for ambiguous-modal safety checks."
+      },
+      "exampleSentenceEnglish": "I watch the lesson.",
+      "exampleSentenceNative": "Miro la leccion."
+    },
+    {
+      "renderUnitId": "ru:time-tiempo:noun:exact",
+      "lexemeIds": ["lx:time-tiempo:noun"],
+      "kind": "single-token",
+      "renderPolicy": "inline",
+      "sourceText": "time",
+      "normalizedSourceText": "time",
+      "targetText": "tiempo",
+      "normalizedTargetText": "tiempo",
+      "sourcePattern": {
+        "matchMode": "exact",
+        "tokens": [{ "normal": "time", "lemma": "time", "pos": "noun" }]
+      },
+      "replacement": { "startToken": 0, "endToken": 1, "targetText": "tiempo" },
+      "minBand": "level-1a",
+      "frequencyRank": 90,
+      "confidence": 0.9,
+      "provenance": {
+        "source": "manual",
+        "notes": "Public example row for noun sense disambiguation."
+      },
+      "exampleSentenceEnglish": "The time depends on the plan.",
+      "exampleSentenceNative": "El tiempo depende del plan."
+    },
+    {
+      "renderUnitId": "ru:first-time:fixed-phrase",
+      "lexemeIds": ["lx:time-tiempo:noun"],
+      "kind": "fixed-phrase",
+      "renderPolicy": "inline",
+      "sourceText": "first time",
+      "normalizedSourceText": "first time",
+      "targetText": "primera vez",
+      "normalizedTargetText": "primera vez",
+      "sourcePattern": {
+        "matchMode": "exact",
+        "tokens": [{ "normal": "first" }, { "normal": "time" }]
+      },
+      "replacement": {
+        "startToken": 0,
+        "endToken": 2,
+        "targetText": "primera vez"
+      },
+      "minBand": "level-1a",
+      "confidence": 0.94,
+      "provenance": { "source": "manual", "notes": "Public example phrase row." }
+    },
+    {
+      "renderUnitId": "ru:might-need-to:sentence-help",
+      "lexemeIds": [],
+      "kind": "sentence-help-only",
+      "renderPolicy": "sentence-help-only",
+      "sourceText": "might need to",
+      "normalizedSourceText": "might need to",
+      "sourcePattern": {
+        "matchMode": "analyzer-pattern",
+        "tokens": [
+          { "normal": "might" },
+          { "lemma": "need", "pos": "verb", "role": "verb" },
+          { "normal": "to" }
+        ]
+      },
+      "minBand": "level-2b",
+      "confidence": 0.9,
+      "provenance": {
+        "source": "manual",
+        "notes": "Example non-rendering signal for sentence help."
+      }
+    }
+  ]
+}

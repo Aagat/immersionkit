@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "assetVersion": "example-2026.06.05",
+  "languagePair": "en-es",
+  "entries": [
+    {
+      "sourceText": "public health care system",
+      "targetText": "sistema público de atención médica",
+      "minBand": "level-4a",
+      "sourceKind": "chunk",
+      "category": "noun-chunk",
+      "confidence": 0.9
+    },
+    {
+      "sourceText": "public transport system plan",
+      "targetText": "plan del sistema de transporte público",
+      "minBand": "level-3c",
+      "sourceKind": "chunk",
+      "category": "noun-chunk",
+      "confidence": 0.9
+    },
+    {
+      "sourceText": "the quiet city center",
+      "targetText": "el centro tranquilo de la ciudad",
+      "minBand": "level-2a",
+      "sourceKind": "chunk",
+      "category": "noun-chunk",
+      "confidence": 0.9
+    },
+    {
+      "sourceText": "going to",
+      "targetText": "ir a + infinitivo",
+      "minBand": "level-2b",
+      "sourceKind": "pattern-match",
+      "category": "grammar-carrier",
+      "confidence": 0.9
+    },
+    {
+      "sourceText": "used to",
+      "targetText": "soler + infinitivo",
+      "minBand": "level-3b",
+      "sourceKind": "pattern-match",
+      "category": "grammar-carrier",
+      "confidence": 0.9
+    }
+  ]
+}

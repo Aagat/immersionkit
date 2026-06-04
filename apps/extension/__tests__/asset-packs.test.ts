@@ -26,7 +26,6 @@ import {
   buildPiperVoiceManifestUrl,
   PiperVoiceAssetClient,
   resolvePiperVoiceAssetUrls,
-  validatePiperTtsManifest,
   type TtsVoiceAssetRepository
 } from "../src/background/tts-assets";
 import type { BackgroundRuntimeConfig } from "../src/background/settings";
@@ -205,107 +204,14 @@ describe("background asset packs", () => {
     ]);
   });
 
-  it("serves first-party Piper TTS assets with content types and checksum metadata", async () => {
+  it("serves no first-party Piper TTS assets when the public example tree has none", async () => {
     const assetServer = await startAssetPackServer({ port: 0 });
     try {
-      const manifestResponse = await fetch(
-        assetServer.ttsManifestUrls["es_ES-davefx-medium"]
-      );
-      expect(manifestResponse.status).toBe(200);
-      expect(manifestResponse.headers.get("content-type")).toContain(
-        "application/json"
-      );
-      const manifest = validatePiperTtsManifest(await manifestResponse.json());
-      expect(manifest).toMatchObject({
-        voiceId: "es_ES-davefx-medium",
-        language: "es-ES",
-        engine: "piper",
-        modelBytes: 63201294,
-        configBytes: 4817,
-        modelSha256:
-          "6658b03b1a6c316ee4c265a9896abc1393353c2d9e1bca7d66c2c442e222a917"
-      });
-
-      const modelResponse = await fetch(
-        `${assetServer.baseUrl}/tts/en-es/piper/es_ES-davefx-medium/es_ES-davefx-medium.onnx`
-      );
-      expect(modelResponse.status).toBe(200);
-      expect(modelResponse.headers.get("content-type")).toContain(
-        "application/octet-stream"
-      );
-      expect((await modelResponse.arrayBuffer()).byteLength).toBe(63201294);
-
-      const configResponse = await fetch(
-        `${assetServer.baseUrl}/tts/en-es/piper/es_ES-davefx-medium/es_ES-davefx-medium.onnx.json`
-      );
-      expect(configResponse.status).toBe(200);
-      expect(configResponse.headers.get("content-type")).toContain(
-        "application/json"
-      );
-      expect(await configResponse.json()).toHaveProperty("phoneme_id_map");
-
-      const carlfmManifestResponse = await fetch(
-        assetServer.ttsManifestUrls["es_ES-carlfm-x_low"]
-      );
-      expect(carlfmManifestResponse.status).toBe(200);
-      expect(
-        validatePiperTtsManifest(await carlfmManifestResponse.json())
-      ).toMatchObject({
-        voiceId: "es_ES-carlfm-x_low",
-        language: "es-ES",
-        modelBytes: 28130791
-      });
-
-      const danielaManifestResponse = await fetch(
-        assetServer.ttsManifestUrls["es_AR-daniela-high"]
-      );
-      expect(danielaManifestResponse.status).toBe(200);
-      expect(
-        validatePiperTtsManifest(await danielaManifestResponse.json())
-      ).toMatchObject({
-        voiceId: "es_AR-daniela-high",
-        language: "es-AR",
-        modelBytes: 114199011,
-        modelSha256:
-          "7ceb1fc0dab349418c5b54a639ae9ee595212d7c9ea422220d8419163d5cc985"
-      });
-
-      const claudeManifestResponse = await fetch(
-        assetServer.ttsManifestUrls["es_MX-claude-high"]
-      );
-      expect(claudeManifestResponse.status).toBe(200);
-      expect(
-        validatePiperTtsManifest(await claudeManifestResponse.json())
-      ).toMatchObject({
-        voiceId: "es_MX-claude-high",
-        language: "es-MX",
-        modelBytes: 63122309,
-        modelSha256:
-          "3ef40a71ea63852cd8ab7e6fa7d2ecdcfa67a0b47c9c48e3f10e02ee02083ea0"
-      });
-
-      const sharvardManifestResponse = await fetch(
-        assetServer.ttsManifestUrls["es_ES-sharvard-medium"]
-      );
-      expect(sharvardManifestResponse.status).toBe(200);
-      expect(
-        validatePiperTtsManifest(
-          await sharvardManifestResponse.json(),
-          "es_ES-sharvard-medium-f"
-        )
-      ).toMatchObject({
-        voiceId: "es_ES-sharvard-medium",
-        language: "es-ES",
-        modelBytes: 76733615,
-        speakerCount: 2,
-        speakerIdMap: {
-          M: 0,
-          F: 1
-        }
-      });
+      expect(assetServer.ttsManifestUrl).toBeUndefined();
+      expect(assetServer.ttsManifestUrls).toEqual({});
 
       const missingResponse = await fetch(
-        `${assetServer.baseUrl}/tts/en-es/piper/missing/manifest.json`
+        `${assetServer.baseUrl}/tts/en-es/piper/es_ES-davefx-medium/manifest.json`
       );
       expect(missingResponse.status).toBe(404);
     } finally {

@@ -7,8 +7,8 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
 const languagePair = "en-es";
 const defaultChannel = "preview";
-const defaultBucket = "immersionkit-asset-releases";
-const defaultD1Database = "immersionkit-preview";
+const defaultBucket = "immersionkit-asset-releases-example";
+const defaultD1Database = "immersionkit-preview-example";
 
 const options = parseArgs(process.argv.slice(2));
 const channel = String(

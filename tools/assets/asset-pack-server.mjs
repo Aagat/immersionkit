@@ -181,7 +181,7 @@ export async function buildAssetPacks(repoRoot) {
 
 export async function buildTtsAssets(repoRoot) {
   const voicesRoot = join(repoRoot, "apps/extension/src/assets/tts/en-es/piper");
-  const entries = await readdir(voicesRoot, { withFileTypes: true });
+  const entries = await readdir(voicesRoot, { withFileTypes: true }).catch(() => []);
   const voicesById = new Map();
 
   for (const entry of entries) {

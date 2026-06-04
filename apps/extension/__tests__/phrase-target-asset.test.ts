@@ -15,7 +15,8 @@ describe("phrase target asset", () => {
   it("contains only supported exact-match phrase target entries", () => {
     expect(phraseTargetAsset.schemaVersion).toBe("1.0.0");
     expect(phraseTargetAsset.languagePair).toBe("en-es");
-    expect(phraseTargetAsset.entries.length).toBeGreaterThanOrEqual(1100);
+    expect(phraseTargetAsset.assetVersion).toBe("example-2026.06.05");
+    expect(phraseTargetAsset.entries.length).toBeGreaterThan(0);
 
     const keys = new Set<string>();
     const bandIds = new Set(DEFAULT_CURRICULUM_CONFIG.bands.map((band) => band.bandId));
@@ -42,15 +43,14 @@ describe("phrase target asset", () => {
     }
   });
 
-  it("covers every default phrase band with explicit curated target metadata", () => {
+  it("uses explicit curated target metadata for example bands", () => {
     const countsByBand = new Map<string, number>();
     for (const entry of phraseTargetAsset.entries) {
       countsByBand.set(entry.minBand, (countsByBand.get(entry.minBand) ?? 0) + 1);
     }
 
-    for (const band of DEFAULT_CURRICULUM_CONFIG.bands) {
-      expect(countsByBand.get(band.bandId) ?? 0).toBeGreaterThan(0);
-    }
+    expect(countsByBand.get("level-2a") ?? 0).toBeGreaterThan(0);
+    expect(countsByBand.get("level-3c") ?? 0).toBeGreaterThan(0);
   });
 
   it("uses curated phrase target minBand as the curriculum gate", () => {
@@ -102,91 +102,27 @@ describe("phrase target asset", () => {
     }
   });
 
-  it("includes expanded high-value noun chunks for runtime phrase rendering", () => {
+  it("includes representative public example chunks for runtime phrase rendering", () => {
     expect(phraseTargetAsset.entries).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          sourceText: "renewable energy project plan",
-          targetText: "plan de proyecto de energía renovable",
+          sourceText: "the quiet city center",
+          targetText: "el centro tranquilo de la ciudad",
           sourceKind: "chunk",
           category: "noun-chunk"
         }),
         expect.objectContaining({
-          sourceText: "local government officials meeting",
-          targetText: "reunión de funcionarios del gobierno local",
-          sourceKind: "chunk",
-          category: "noun-chunk"
-        }),
-        expect.objectContaining({
-          sourceText: "emergency response plan update",
-          targetText: "actualización del plan de respuesta de emergencia",
-          sourceKind: "chunk",
-          category: "noun-chunk"
-        }),
-        expect.objectContaining({
-          sourceText: "school board meeting schedule",
-          targetText: "calendario de reuniones de la junta escolar",
-          sourceKind: "chunk",
-          category: "noun-chunk"
-        }),
-        expect.objectContaining({
-          sourceText: "morning routine",
-          targetText: "rutina matutina",
-          sourceKind: "chunk",
-          category: "adjective-noun"
-        }),
-        expect.objectContaining({
-          sourceText: "neighborhood safety meeting",
-          targetText: "reunión de seguridad del vecindario",
-          sourceKind: "chunk",
-          category: "noun-chunk"
-        }),
-        expect.objectContaining({
-          sourceText: "public health guidance",
-          targetText: "orientación de salud pública",
-          sourceKind: "chunk",
-          category: "noun-chunk"
-        }),
-        expect.objectContaining({
-          sourceText: "public library card",
-          targetText: "tarjeta de la biblioteca pública",
+          sourceText: "public transport system plan",
+          targetText: "plan del sistema de transporte público",
           sourceKind: "chunk",
           category: "noun-chunk",
-          minBand: "level-2a"
-        }),
-        expect.objectContaining({
-          sourceText: "data privacy regulation",
-          targetText: "normativa de privacidad de datos",
-          sourceKind: "chunk",
-          category: "noun-chunk",
-          minBand: "level-5a"
-        }),
-        expect.objectContaining({
-          sourceText: "birth certificate",
-          targetText: "certificado de nacimiento",
-          sourceKind: "chunk",
-          category: "noun-chunk",
-          minBand: "level-2c"
-        }),
-        expect.objectContaining({
-          sourceText: "password reset link",
-          targetText: "enlace de restablecimiento de contraseña",
-          sourceKind: "chunk",
-          category: "noun-chunk",
-          minBand: "level-3a"
-        }),
-        expect.objectContaining({
-          sourceText: "research paper abstract",
-          targetText: "resumen de artículo de investigación",
-          sourceKind: "chunk",
-          category: "noun-chunk",
-          minBand: "level-5a"
+          minBand: "level-3c"
         })
       ])
     );
   });
 
-  it("ships at least two thousand reviewed production phrase triggers", () => {
+  it("ships a compact reviewed public example phrase inventory", () => {
     const reviewedSourceTexts = new Set<string>();
     for (const entry of FIXED_PHRASE_LEXICON) {
       reviewedSourceTexts.add(normalizePhraseText(entry.sourceText));
@@ -205,6 +141,8 @@ describe("phrase target asset", () => {
       }
     }
 
-    expect(reviewedSourceTexts.size).toBeGreaterThanOrEqual(2000);
+    expect([...reviewedSourceTexts]).toEqual(
+      expect.arrayContaining(["at home", "first time", "the quiet city center"])
+    );
   });
 });

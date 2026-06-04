@@ -1,14 +1,15 @@
 {
   "name": "@immersionkit/api",
   "version": "0.1.0",
+  "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
     "dev": "wrangler dev --local --port 8789",
-    "migrate:local": "wrangler d1 migrations apply immersionkit-preview --local",
-    "migrate:remote": "wrangler d1 migrations apply immersionkit-preview --remote",
+    "migrate:local": "wrangler d1 migrations apply immersionkit-preview-example --local",
+    "migrate:remote": "wrangler d1 migrations apply immersionkit-preview-example --remote",
     "deploy": "wrangler deploy",
     "deploy:preview": "wrangler deploy --env preview",
     "typecheck": "tsc --noEmit",

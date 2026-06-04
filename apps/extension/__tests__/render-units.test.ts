@@ -16,10 +16,18 @@ import lexemeAsset from "../src/assets/en-es.lexemes.v1.json";
 import renderUnitAsset from "../src/assets/en-es.render-units.v1.json";
 
 describe("render unit assets", () => {
-  it("carries the full deck lexeme inventory without making lexemes renderable", () => {
+  it("ships a small public example lexeme inventory", () => {
     const lexemes = parseLexemeAsset(lexemeAsset);
 
-    expect(lexemes?.entries.length).toBeGreaterThanOrEqual(13_000);
+    expect(lexemes).toMatchObject({
+      languagePair: "en-es",
+      assetVersion: "example-2026.06.05",
+      schemaVersion: "1.0.0"
+    });
+    expect(lexemes?.entries.length).toBeGreaterThan(0);
+    expect(lexemes?.entries.map((entry) => entry.lexemeId)).toEqual(
+      expect.arrayContaining(["lx:city:noun", "lx:garden:noun"])
+    );
   });
 
   it("accepts canonical analyzer-pattern rows and derives sentence-help hints", () => {
@@ -155,9 +163,9 @@ describe("render unit assets", () => {
 
     expect(unresolved).toEqual([]);
     expect(
-      renderUnits?.entries.find((entry) => entry.renderUnitId === "ru:no:adverb:exact")
+      renderUnits?.entries.find((entry) => entry.renderUnitId === "ru:city:noun:exact")
         ?.lexemeIds
-    ).toContain("lx:no:adverb");
+    ).toContain("lx:city:noun");
   });
 
   it("keeps bundled target normalization accent-folded and unsplit", () => {
@@ -204,35 +212,14 @@ describe("render unit assets", () => {
     expect(failures).toEqual([]);
   });
 
-  it("models time as duration by default with occurrence-specific vez phrases", () => {
+  it("includes a phrase-only example with sentence hints", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
     const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
-    const bareTime = runtimeIndex.preferredWordByNormalizedForm.get("time");
-
-    expect(bareTime).toMatchObject({
-      renderUnitId: "ru:time-tiempo:noun:exact",
-      lexemeId: "lx:time-tiempo:noun",
-      targetText: "tiempo"
-    });
     expect(resolveRenderUnitPhraseTarget(runtimeIndex, "first time")).toMatchObject({
       targetText: "primera vez",
       normalizedTargetText: "primera vez"
     });
-    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "last time")).toMatchObject({
-      targetText: "última vez",
-      normalizedTargetText: "ultima vez"
-    });
-    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "next time")).toMatchObject({
-      targetText: "próxima vez",
-      normalizedTargetText: "proxima vez"
-    });
-    expect(resolveRenderUnitPhraseTarget(runtimeIndex, "one more time")).toMatchObject({
-      targetText: "una vez más",
-      normalizedTargetText: "una vez mas"
-    });
-    expect(getRenderUnitSentenceHints(renderUnits)).toEqual(
-      expect.arrayContaining(["first time", "one more time", "every time"])
-    );
+    expect(getRenderUnitSentenceHints(renderUnits)).toContain("might need to");
   });
 
   it("keeps bare use analyzer-gated so verb contexts do not pre-render as uso", () => {
@@ -269,26 +256,6 @@ describe("render unit assets", () => {
     ).toContain("ru:use:noun:analyzer-pattern");
   });
 
-  it("keeps managed verb-frame units analyzer-gated and out of exact word indexes", () => {
-    const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
-    const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
-    const verbFrameIds = runtimeIndex.verbRenderEntries.map(
-      (entry) => entry.renderUnitId
-    );
-
-    expect(verbFrameIds.length).toBeGreaterThanOrEqual(175);
-    expect(verbFrameIds).toContain("ru:use:verb:frame");
-    expect(verbFrameIds).toContain("ru:have:verb:frame");
-    expect(verbFrameIds).not.toContain("ru:be:verb:frame");
-    expect(runtimeIndex.preferredWordByNormalizedForm.get("use")).toBeUndefined();
-    expect(runtimeIndex.exactSingleTokenWordEntriesByNormalizedForm.get("use")).toBeUndefined();
-    expect(
-      runtimeIndex.verbRenderEntriesByNormalizedForm
-        .get("use")
-        ?.map((entry) => entry.targetInfinitive)
-    ).toContain("usar");
-  });
-
   it("conjugates approved Spanish verb targets for safe verb frames", () => {
     expect(
       conjugateSpanishVerb("usar", {
@@ -322,7 +289,7 @@ describe("render unit assets", () => {
     );
   });
 
-  it("does not keep unsafe bare conjugated grammar frames renderable", () => {
+  it("does not include unsafe bare conjugated grammar frames in examples", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset);
     const unsafeRenderableFrames = (renderUnits?.entries ?? [])
       .filter((entry) =>
@@ -339,34 +306,15 @@ describe("render unit assets", () => {
     expect(unsafeRenderableFrames).toEqual([]);
   });
 
-  it("does not keep context-sensitive discourse words as exact inline units", () => {
+  it("keeps context-sensitive discourse words out of exact inline examples", () => {
     const renderUnits = parseRenderUnitAsset(renderUnitAsset)?.entries ?? [];
     const runtimeIndex = buildRenderUnitRuntimeIndex(renderUnits);
-    const demotedIds = renderUnits
-      .filter((entry) => entry.renderPolicy === "sentence-help-only")
-      .map((entry) => entry.renderUnitId);
 
-    for (const unsafeSource of [
-      "a",
-      "as",
-      "so",
-      "that",
-      "there",
-      "like",
-      "over",
-      "party",
-      "paper",
-      "script"
-    ]) {
+    for (const unsafeSource of ["a", "as", "so", "that", "there"]) {
       expect(runtimeIndex.preferredWordByNormalizedForm.get(unsafeSource)).toBeUndefined();
     }
-    expect(demotedIds).toEqual(
-      expect.arrayContaining([
-        "ru:a:adjective:exact",
-        "ru:that:adjective:analyzer-pattern",
-        "ru:paper:noun:exact",
-        "ru:script:single-token"
-      ])
-    );
+    expect(
+      renderUnits.some((entry) => entry.renderPolicy === "sentence-help-only")
+    ).toBe(true);
   });
 });

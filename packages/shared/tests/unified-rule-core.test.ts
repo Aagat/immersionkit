@@ -130,7 +130,7 @@ describe("unified phrase detection helpers", () => {
       detectFixedPhrasesFromAnalyzerOutput(output).map(
         (candidate) => candidate.normalizedSourceText
       )
-    ).toEqual(["take care of", "at least"]);
+    ).toEqual(["going to", "take care of", "at least"]);
     expect(
       detectGrammarCarriersFromAnalyzerOutput(output).map(
         (candidate) => candidate.normalizedSourceText

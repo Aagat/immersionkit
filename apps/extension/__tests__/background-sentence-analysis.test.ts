@@ -1484,11 +1484,11 @@ describe("background sentence analysis service", () => {
     });
   });
 
-  it("resolves newly expanded curated phrase target asset entries", async () => {
-    const sourceText = "The renewable energy project plan needs support.";
+  it("resolves public example curated phrase target asset entries", async () => {
+    const sourceText = "We saw the quiet city center today.";
     const sentenceHash = hashSentence(sourceText);
     const analyzer = createAnalyzer("fixture-v1", () =>
-      createRenewableEnergyPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
+      createQuietCityPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
     );
     const phraseRegistry = new InMemoryPhraseRegistry();
     const service = new SentenceAnalysisService({
@@ -1501,52 +1501,17 @@ describe("background sentence analysis service", () => {
 
     const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
     const chunkPhrase = analysis?.entry.phraseMatches.find(
-      (match) => match.sourceText === "renewable energy project plan"
+      (match) => match.sourceText === "the quiet city center"
     );
 
     expect(chunkPhrase).toMatchObject({
       sourceKind: "chunk",
       category: "noun-chunk",
-      targetText: "plan de proyecto de energía renovable",
-      normalizedTargetText: "plan de proyecto de energia renovable",
-      phraseMinBand: "level-5a",
+      targetText: "el centro tranquilo de la ciudad",
+      normalizedTargetText: "el centro tranquilo de la ciudad",
+      phraseMinBand: "level-2a",
       phraseId:
-        "phrase:chunk:renewable-energy-project-plan:plan-de-proyecto-de-energia-renovable"
-    });
-  });
-
-  it("resolves release-batch curated phrase target asset entries", async () => {
-    const sourceText = "The school board meeting schedule needs support.";
-    const sentenceHash = hashSentence(sourceText);
-    const analyzer = createAnalyzer("fixture-v1", () =>
-      createSchoolBoardPhraseTargetAnalyzerOutput(sourceText, sentenceHash)
-    );
-    const phraseRegistry = new InMemoryPhraseRegistry();
-    const service = new SentenceAnalysisService({
-      analyzer,
-      cache: new InMemorySentenceAnalysisCache(),
-      phraseRegistry,
-      loadRenderUnits: () => Promise.resolve(createRenderUnits()),
-      loadVocab: () => Promise.resolve(new Map())
-    });
-
-    const [analysis] = await service.analyzeCandidates([{ sentenceHash, sourceText }]);
-    const chunkPhrase = analysis?.entry.phraseMatches.find(
-      (match) => match.sourceText === "school board meeting schedule"
-    );
-
-    expect(chunkPhrase).toMatchObject({
-      sourceKind: "chunk",
-      category: "noun-chunk",
-      targetText: "calendario de reuniones de la junta escolar",
-      normalizedTargetText: "calendario de reuniones de la junta escolar",
-      phraseMinBand: "level-3c",
-      phraseId:
-        "phrase:chunk:school-board-meeting-schedule:calendario-de-reuniones-de-la-junta-escolar"
-    });
-    await expect(phraseRegistry.get(chunkPhrase?.phraseId ?? "")).resolves.toMatchObject({
-      canonicalTargetText: "calendario de reuniones de la junta escolar",
-      normalizedTargetText: "calendario de reuniones de la junta escolar"
+        "phrase:chunk:the-quiet-city-center:el-centro-tranquilo-de-la-ciudad"
     });
   });
 
@@ -1951,7 +1916,7 @@ function createPublicTransportPhraseTargetAnalyzerOutput(
   };
 }
 
-function createRenewableEnergyPhraseTargetAnalyzerOutput(
+function createQuietCityPhraseTargetAnalyzerOutput(
   sourceText: string,
   sentenceHash: string
 ): AnalyzerOutput {
@@ -1961,53 +1926,21 @@ function createRenewableEnergyPhraseTargetAnalyzerOutput(
     sentenceHash,
     sourceText,
     tokens: [
-      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
-      token("renewable", "renewable", "adjective", 4, 13, ["JJ", "adjective"]),
-      token("energy", "energy", "noun", 14, 20, ["NN", "noun"]),
-      token("project", "project", "noun", 21, 28, ["NN", "noun"]),
-      token("plan", "plan", "noun", 29, 33, ["NN", "noun"]),
-      token("needs", "needs", "verb", 34, 39, ["VBZ", "verb"]),
-      token("support", "support", "noun", 40, 47, ["NN", "noun"])
+      token("We", "we", "pronoun", 0, 2, ["PRP", "pronoun"]),
+      token("saw", "saw", "verb", 3, 6, ["VBD", "verb"]),
+      token("the", "the", "determiner", 7, 10, ["DT", "determiner"]),
+      token("quiet", "quiet", "adjective", 11, 16, ["JJ", "adjective"]),
+      token("city", "city", "noun", 17, 21, ["NN", "noun"]),
+      token("center", "center", "noun", 22, 28, ["NN", "noun"]),
+      token("today", "today", "noun", 29, 34, ["NN", "noun"])
     ],
     chunks: [
       {
-        text: "renewable energy project plan",
-        normalized: "renewable energy project plan",
+        text: "the quiet city center",
+        normalized: "the quiet city center",
         type: "noun-phrase",
-        tokenStart: 1,
-        tokenEnd: 5,
-        confidence: 0.9
-      }
-    ],
-    grammarFeatures: []
-  };
-}
-
-function createSchoolBoardPhraseTargetAnalyzerOutput(
-  sourceText: string,
-  sentenceHash: string
-): AnalyzerOutput {
-  return {
-    analyzerId: "fixture-annotated",
-    analyzerVersion: "fixture-v1",
-    sentenceHash,
-    sourceText,
-    tokens: [
-      token("The", "the", "determiner", 0, 3, ["DT", "determiner"]),
-      token("school", "school", "noun", 4, 10, ["NN", "noun"]),
-      token("board", "board", "noun", 11, 16, ["NN", "noun"]),
-      token("meeting", "meeting", "noun", 17, 24, ["NN", "noun"]),
-      token("schedule", "schedule", "noun", 25, 33, ["NN", "noun"]),
-      token("needs", "needs", "verb", 34, 39, ["VBZ", "verb"]),
-      token("support", "support", "noun", 40, 47, ["NN", "noun"])
-    ],
-    chunks: [
-      {
-        text: "school board meeting schedule",
-        normalized: "school board meeting schedule",
-        type: "noun-phrase",
-        tokenStart: 1,
-        tokenEnd: 5,
+        tokenStart: 2,
+        tokenEnd: 6,
         confidence: 0.9
       }
     ],

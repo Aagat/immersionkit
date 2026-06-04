@@ -25,15 +25,15 @@ const extensionRelease = JSON.parse(
 const previewExtensionVersion = normalizeExtensionVersion(extensionRelease.version);
 
 const defaults = {
-  apiBaseUrl: "https://immersionkit-api.secondary-4cc.workers.dev",
-  assetBaseUrl: "https://pub-e554fa2b8b81455caf0be40404e3959a.r2.dev/assets",
+  apiBaseUrl: "https://api.example.invalid",
+  assetBaseUrl: "https://assets.example.invalid/assets",
   expectedExtensionId: extensionIdentity.expectedExtensionId,
-  extensionFolderName: "immersionkit-extension-preview",
+  extensionFolderName: "immersionkit-extension-example",
   extensionKey: previewExtensionKey,
   extensionVersion: previewExtensionVersion,
   pagesBranch: "main",
-  pagesProject: "immersionkit-preview",
-  sitePublicBaseUrl: "https://immersionkit-preview.pages.dev"
+  pagesProject: "immersionkit-preview-example",
+  sitePublicBaseUrl: "https://immersionkit-preview-example.pages.dev"
 };
 
 const usage = `
@@ -223,7 +223,7 @@ async function verifyPreview(resolvedConfig) {
     "Downloaded extension zip checksum does not match release metadata."
   );
 
-  const tempDir = join(tmpdir(), "immersionkit-preview-release");
+  const tempDir = join(tmpdir(), "immersionkit-preview-example-release");
   await mkdir(tempDir, { recursive: true });
   const zipPath = join(tempDir, "extension.zip");
   await writeFile(zipPath, zipBuffer);

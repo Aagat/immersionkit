@@ -1,0 +1,139 @@
+{
+  "schemaVersion": "1.0.0",
+  "assetVersion": "example-2026.06.05",
+  "languagePair": "en-es",
+  "entries": [
+    {
+      "lexemeId": "lx:city:noun",
+      "sourceLemma": "city",
+      "targetLemma": "ciudad",
+      "pos": "noun",
+      "frequencyRank": 120,
+      "cefrLevel": "A1",
+      "confidence": 0.95,
+      "exampleSentenceEnglish": "The city park opens early.",
+      "exampleSentenceNative": "El parque de la ciudad abre temprano.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:garden:noun",
+      "sourceLemma": "garden",
+      "targetLemma": "jardin",
+      "pos": "noun",
+      "frequencyRank": 380,
+      "cefrLevel": "A1",
+      "confidence": 0.94,
+      "exampleSentenceEnglish": "The garden is quiet today.",
+      "exampleSentenceNative": "El jardin esta tranquilo hoy.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:important:adjective",
+      "sourceLemma": "important",
+      "targetLemma": "importante",
+      "pos": "adjective",
+      "frequencyRank": 260,
+      "cefrLevel": "A1",
+      "confidence": 0.95,
+      "exampleSentenceEnglish": "This is an important note.",
+      "exampleSentenceNative": "Esta es una nota importante.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:visit:verb",
+      "sourceLemma": "visit",
+      "targetLemma": "visitar",
+      "pos": "verb",
+      "frequencyRank": 520,
+      "cefrLevel": "A1",
+      "confidence": 0.93,
+      "exampleSentenceEnglish": "We visit the city.",
+      "exampleSentenceNative": "Visitamos la ciudad.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:use:verb",
+      "sourceLemma": "use",
+      "targetLemma": "usar",
+      "pos": "verb",
+      "frequencyRank": 210,
+      "cefrLevel": "A1",
+      "confidence": 0.93,
+      "exampleSentenceEnglish": "I use the example app.",
+      "exampleSentenceNative": "Uso la app de ejemplo.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:do:verb",
+      "sourceLemma": "do",
+      "targetLemma": "hacer",
+      "pos": "verb",
+      "frequencyRank": 80,
+      "cefrLevel": "A1",
+      "confidence": 0.9,
+      "exampleSentenceEnglish": "I do the work.",
+      "exampleSentenceNative": "Hago el trabajo.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:have-tener:verb",
+      "sourceLemma": "have",
+      "targetLemma": "tener",
+      "pos": "verb",
+      "frequencyRank": 70,
+      "cefrLevel": "A1",
+      "confidence": 0.9,
+      "exampleSentenceEnglish": "I have time.",
+      "exampleSentenceNative": "Tengo tiempo.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:watch:verb",
+      "sourceLemma": "watch",
+      "targetLemma": "mirar",
+      "pos": "verb",
+      "frequencyRank": 480,
+      "cefrLevel": "A2",
+      "confidence": 0.88,
+      "exampleSentenceEnglish": "I watch the lesson.",
+      "exampleSentenceNative": "Miro la leccion.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:home:noun",
+      "sourceLemma": "home",
+      "targetLemma": "casa",
+      "pos": "noun",
+      "frequencyRank": 160,
+      "cefrLevel": "A1",
+      "confidence": 0.94,
+      "exampleSentenceEnglish": "We stay at home.",
+      "exampleSentenceNative": "Nos quedamos en casa.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:time-tiempo:noun",
+      "sourceLemma": "time",
+      "targetLemma": "tiempo",
+      "pos": "noun",
+      "frequencyRank": 90,
+      "cefrLevel": "A1",
+      "confidence": 0.92,
+      "exampleSentenceEnglish": "The time depends on the plan.",
+      "exampleSentenceNative": "El tiempo depende del plan.",
+      "sourceDataset": "public-example"
+    },
+    {
+      "lexemeId": "lx:use:noun",
+      "sourceLemma": "use",
+      "targetLemma": "uso",
+      "pos": "noun",
+      "frequencyRank": 500,
+      "cefrLevel": "A2",
+      "confidence": 0.9,
+      "exampleSentenceEnglish": "The use is clear.",
+      "exampleSentenceNative": "El uso es claro.",
+      "sourceDataset": "public-example"
+    }
+  ]
+}

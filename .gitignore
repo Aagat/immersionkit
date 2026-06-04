@@ -9,12 +9,11 @@ coverage/
 *.log
 __pycache__/
 *.py[cod]
-tools/importers/outputs/generated/
 .env
 .dev.vars
 apps/api/.dev.vars
 .wrangler/
 apps/api/.wrangler/
 
-# Large local Piper TTS model binaries. Restore with `pnpm assets:pull-tts-models`.
+# Optional local Piper TTS model binaries.
 /apps/extension/src/assets/tts/**/*.onnx

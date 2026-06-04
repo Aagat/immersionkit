@@ -62,6 +62,11 @@ for (const [bandId, packPayload] of assetPacks.packsByBandId.entries()) {
 await cp(ttsSourceRoot, ttsReleaseRoot, {
   recursive: true,
   filter: (source) => !source.endsWith(`${sep}.DS_Store`)
+}).catch((error) => {
+  if (error?.code === "ENOENT") {
+    return;
+  }
+  throw error;
 });
 
 const manifestBody = `${JSON.stringify(manifest)}\n`;
