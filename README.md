@@ -10,6 +10,10 @@ benchmarks, and a small set of example English-to-Spanish assets. It does not
 include private curriculum/content packs, private import or curation tooling, or
 large first-party TTS voice model files.
 
+This codebase is part of an experiment exploring what Codex can build end to
+end. It was written entirely with Codex, mostly using GPT-5.5 xhigh, without a
+single line of code authored by hand.
+
 ## Workspace
 
 - `apps/extension`: Chrome extension, content script, background worker, popup,
@@ -65,4 +69,3 @@ headless browser smoke test against public example fixtures.
 - [Extension assets](./apps/extension/src/assets/README.md)
 - [Validation](./docs/validation/README.md)
 - [Agent guide](./AGENTS.md)
-
