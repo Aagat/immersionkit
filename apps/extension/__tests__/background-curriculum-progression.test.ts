@@ -12,6 +12,7 @@ import {
   CurriculumProgressionService,
   type CurriculumProgressionDecisionDiagnostics,
   type CurriculumProgressionDiagnosticsStore,
+  type LearningProfileSnapshot,
   type LearningProfileStore
 } from "../src/background/curriculum-progression";
 import {
@@ -66,6 +67,57 @@ describe("background curriculum progression", () => {
     });
   });
 
+  it("does not overwrite an explicit band selection with stale progression", async () => {
+    const initialProfile: CurriculumRuntimeProfileInput = {
+      activeVocabularyBandId: "level-1a",
+      activePhraseBandId: "level-1a",
+      activeGrammarBandId: "level-1a",
+      unlockedBandIds: ["level-1a"]
+    };
+    const explicitProfile: CurriculumRuntimeProfileInput = {
+      activeVocabularyBandId: "level-3b",
+      activePhraseBandId: "level-3b",
+      activeGrammarBandId: "level-3b",
+      unlockedBandIds: [
+        "level-1a",
+        "level-1b",
+        "level-1c",
+        "level-2a",
+        "level-2b",
+        "level-2c",
+        "level-3a",
+        "level-3b"
+      ]
+    };
+    const profileStore = new ExplicitSelectionRacingProfileStore(
+      initialProfile,
+      explicitProfile
+    );
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
+
+    const result = await service.advanceAfterImplicitEvidence({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      items: createProgressionReadyItems("level-1a"),
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(result.profile).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-3b",
+      nextBandId: null,
+      eligible: false,
+      reason: "profile-changed",
+      activeVocabularyBandId: "level-3b",
+      activePhraseBandId: "level-3b",
+      activeGrammarBandId: "level-3b"
+    });
+    await expect(profileStore.load()).resolves.toEqual(explicitProfile);
+  });
+
   it("does not let auto-created no-exposure items block implicit advancement", async () => {
     const profileStore = new InMemoryLearningProfileStore({
       activeVocabularyBandId: "level-1a",
@@ -110,6 +162,94 @@ describe("background curriculum progression", () => {
       eligible: true,
       reason: "advanced",
       unmetRequirements: []
+    });
+  });
+
+  it("advances once a stable core is ready despite incidental one-off discoveries", async () => {
+    const profileStore = new InMemoryLearningProfileStore({
+      activeVocabularyBandId: "level-1a",
+      activePhraseBandId: "level-1a",
+      activeGrammarBandId: "level-1a",
+      unlockedBandIds: ["level-1a"]
+    });
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
+
+    const result = await service.advanceAfterImplicitEvidence({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      items: [
+        ...createProgressionReadyItems("level-1a"),
+        createLearningItem("word:incidental-discovery", "word", "level-1a", {
+          status: "learning",
+          qualifiedExposureCount: 1,
+          consecutiveUnassistedCount: 1,
+          distinctContextCount: 1
+        })
+      ],
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(result.profile).toMatchObject({
+      activeVocabularyBandId: "level-1b",
+      activePhraseBandId: "level-1b",
+      activeGrammarBandId: "level-1b"
+    });
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1a",
+      nextBandId: "level-1b",
+      eligible: true,
+      reason: "advanced",
+      unmetRequirements: []
+    });
+  });
+
+  it("does not let one-off discoveries dilute a blocking lapse rate", async () => {
+    const profileStore = new InMemoryLearningProfileStore({
+      activeVocabularyBandId: "level-1a",
+      activePhraseBandId: "level-1a",
+      activeGrammarBandId: "level-1a",
+      unlockedBandIds: ["level-1a"]
+    });
+    const diagnosticsStore = new InMemoryCurriculumProgressionDiagnosticsStore();
+    const service = new CurriculumProgressionService(
+      profileStore,
+      diagnosticsStore
+    );
+    const readyItems = createProgressionReadyItems("level-1a").map(
+      (item, index) => (index === 0 ? { ...item, lapses: 1 } : item)
+    );
+
+    const result = await service.advanceAfterImplicitEvidence({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      items: [
+        ...readyItems,
+        ...Array.from({ length: 2 }, (_unused, index) =>
+          createLearningItem(
+            `word:lapse-dilution-discovery-${index}`,
+            "word",
+            "level-1a",
+            {
+              status: "learning",
+              qualifiedExposureCount: 1,
+              consecutiveUnassistedCount: 1,
+              distinctContextCount: 1
+            }
+          )
+        )
+      ],
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(result.profile).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      previousBandId: "level-1a",
+      nextBandId: "level-1b",
+      eligible: false,
+      reason: "requirements-unmet",
+      unmetRequirements: ["recent-lapse-rate"]
     });
   });
 
@@ -478,6 +618,88 @@ describe("background curriculum progression", () => {
     }
   });
 
+  it("preserves concurrent runtime evidence and advances after the ready wave", async () => {
+    const indexedDbStub = installIndexedDbStub();
+    const chromeStub = installChromeStub();
+    const itemRepository = new IndexedDbLearningItemRepository();
+    const itemIds = Array.from(
+      { length: 4 },
+      (_unused, index) => `word:runtime-concurrent-${index}`
+    );
+
+    try {
+      await setUserDataValues({
+        [USER_DATA_KEYS.learningProfile]: {
+          activeVocabularyBandId: "level-1a",
+          activePhraseBandId: "level-1a",
+          activeGrammarBandId: "level-1a",
+          unlockedBandIds: ["level-1a"]
+        }
+      });
+
+      const coordinator = new BackgroundRuntimeCoordinator();
+      coordinator.boot();
+      const dispatchWave = (wave: number, occurredAt: string) =>
+        Promise.all(
+          itemIds.map((itemId, index) =>
+            chromeStub.dispatchRuntimeMessage(
+              {
+                type: RuntimeMessageType.QualifiedExposureEvent,
+                eventId: `runtime-concurrent-${index}-${wave}`,
+                itemId,
+                sentenceHash: `runtime-concurrent-sentence-${index}-${wave}`,
+                hostname: "reader.example",
+                sessionId: "session-runtime-concurrent",
+                occurredAt,
+                wasAssisted: false,
+                confidence: 0.72,
+                distinctContextKey: `reader.example:runtime-concurrent-${index}-${wave}`
+              },
+              {
+                tab: {
+                  id: 60 + index,
+                  url: "https://source.example/article"
+                } as chrome.tabs.Tab
+              }
+            )
+          )
+        );
+
+      await expect(
+        dispatchWave(1, "2026-04-12T09:00:00.000Z")
+      ).resolves.toEqual(Array.from({ length: 4 }, () => [{ ok: true, stored: true }]));
+      await expect(
+        dispatchWave(2, "2026-04-13T09:00:00.000Z")
+      ).resolves.toEqual(Array.from({ length: 4 }, () => [{ ok: true, stored: true }]));
+      await waitForAsyncRefresh();
+
+      const items = await itemRepository.loadAll();
+      expect(Object.keys(items)).toHaveLength(4);
+      for (const itemId of itemIds) {
+        expect(items[itemId]).toMatchObject({
+          status: "reviewing",
+          bandId: "level-1a",
+          qualifiedExposureCount: 2,
+          consecutiveUnassistedCount: 2,
+          distinctContextCount: 2
+        });
+      }
+      await expect(
+        loadUserDataValues([USER_DATA_KEYS.learningProfile])
+      ).resolves.toMatchObject({
+        [USER_DATA_KEYS.learningProfile]: {
+          activeVocabularyBandId: "level-1b",
+          activePhraseBandId: "level-1b",
+          activeGrammarBandId: "level-1b",
+          unlockedBandIds: ["level-1a", "level-1b"]
+        }
+      });
+    } finally {
+      chromeStub.restore();
+      indexedDbStub.restore();
+    }
+  });
+
   it("keeps runtime exposure from crossing checkpoint boundaries implicitly", async () => {
     const indexedDbStub = installIndexedDbStub();
     const chromeStub = installChromeStub();
@@ -560,14 +782,69 @@ describe("background curriculum progression", () => {
 });
 
 class InMemoryLearningProfileStore implements LearningProfileStore {
+  private revision = 0;
+
   constructor(private profile: CurriculumRuntimeProfileInput = {}) {}
 
   async load(): Promise<CurriculumRuntimeProfileInput> {
     return this.profile;
   }
 
-  async persist(profile: CurriculumRuntimeProfileInput): Promise<void> {
+  async loadSnapshot(): Promise<LearningProfileSnapshot> {
+    return {
+      profile: this.profile,
+      revision: String(this.revision)
+    };
+  }
+
+  async persistIfUnchanged(
+    expectedSnapshot: LearningProfileSnapshot,
+    profile: CurriculumRuntimeProfileInput
+  ): Promise<boolean> {
+    if (expectedSnapshot.revision !== String(this.revision)) {
+      return false;
+    }
+
     this.profile = profile;
+    this.revision += 1;
+    return true;
+  }
+}
+
+class ExplicitSelectionRacingProfileStore implements LearningProfileStore {
+  private profile: CurriculumRuntimeProfileInput;
+  private revision = 0;
+
+  constructor(
+    initialProfile: CurriculumRuntimeProfileInput,
+    private readonly explicitProfile: CurriculumRuntimeProfileInput
+  ) {
+    this.profile = initialProfile;
+  }
+
+  async load(): Promise<CurriculumRuntimeProfileInput> {
+    return this.profile;
+  }
+
+  async loadSnapshot(): Promise<LearningProfileSnapshot> {
+    return {
+      profile: this.profile,
+      revision: String(this.revision)
+    };
+  }
+
+  async persistIfUnchanged(
+    expectedSnapshot: LearningProfileSnapshot,
+    profile: CurriculumRuntimeProfileInput
+  ): Promise<boolean> {
+    this.profile = this.explicitProfile;
+    this.revision += 1;
+    if (expectedSnapshot.revision !== String(this.revision)) {
+      return false;
+    }
+
+    this.profile = profile;
+    return true;
   }
 }
 

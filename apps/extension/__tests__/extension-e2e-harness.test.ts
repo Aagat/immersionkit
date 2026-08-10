@@ -76,7 +76,7 @@ describe("extension E2E harness", () => {
   });
 
   it("opens Options on fresh install and persists first-run setup", async () => {
-    const { context, extensionId } = await launchBuiltExtension();
+    const { context, extensionId, serviceWorker } = await launchBuiltExtension();
     const options = await waitForExtensionOptionsPage(context, extensionId);
 
     await options.waitForSelector("text=Choose your starting point", {
@@ -119,6 +119,72 @@ describe("extension E2E harness", () => {
       timeout: 10_000
     });
     expect(await options.locator("text=Setup is complete").count()).toBe(0);
+
+    await options.getByRole("tab", { name: "Reading" }).click();
+    const readingBand = options.getByRole("combobox", {
+      name: "Current reading band"
+    });
+    await expect.poll(() => readingBand.textContent()).toContain("Level 2A");
+
+    await writeUserData(serviceWorker, "learning-profile", {
+      activeVocabularyBandId: "level-2b",
+      activePhraseBandId: "level-2b",
+      activeGrammarBandId: "level-2b",
+      unlockedBandIds: [
+        "level-1a",
+        "level-1b",
+        "level-1c",
+        "level-2a",
+        "level-2b"
+      ]
+    });
+    const readingDensity = options.locator("#settings-discovery-rate");
+    await readingDensity.focus();
+    await options.keyboard.press("ArrowRight");
+    await options.getByRole("button", { name: "Save changes" }).click();
+    await options.waitForSelector("text=Settings saved.", { timeout: 5_000 });
+
+    const profileAfterUnrelatedSave = await readUserDataValueFromExtensionPage(
+      options,
+      "learning-profile"
+    );
+    expect(profileAfterUnrelatedSave).toMatchObject({
+      activeVocabularyBandId: "level-2b",
+      activePhraseBandId: "level-2b",
+      activeGrammarBandId: "level-2b"
+    });
+    await expect.poll(() => readingBand.textContent()).toContain("Level 2B");
+
+    await readingBand.click();
+    await options.getByRole("option", { name: "Level 3B" }).click();
+    await options.getByRole("button", { name: "Save changes" }).click();
+    await options.waitForSelector("text=Settings saved.", { timeout: 5_000 });
+
+    const savedProfile = (await readUserDataValueFromExtensionPage(
+      options,
+      "learning-profile"
+    )) as {
+      activeVocabularyBandId?: string;
+      activePhraseBandId?: string;
+      activeGrammarBandId?: string;
+      unlockedBandIds?: string[];
+    };
+    expect(savedProfile).toMatchObject({
+      activeVocabularyBandId: "level-3b",
+      activePhraseBandId: "level-3b",
+      activeGrammarBandId: "level-3b"
+    });
+    expect(savedProfile.unlockedBandIds).toContain("level-3b");
+
+    await options.reload({ waitUntil: "domcontentloaded" });
+    await options.getByRole("tab", { name: "Reading" }).click();
+    await expect
+      .poll(() =>
+        options
+          .getByRole("combobox", { name: "Current reading band" })
+          .textContent()
+      )
+      .toContain("Level 3B");
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`, {

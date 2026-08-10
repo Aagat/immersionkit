@@ -132,6 +132,7 @@ export function ExtensionOptions({
   isCompletingFirstRun = false,
   discoveryRatePercent = 8,
   readingLevel,
+  isReadingLevelPresetActive,
   stats,
   checkpoint,
   currentFocus,
@@ -266,13 +267,18 @@ export function ExtensionOptions({
             </TabsContent>
             <TabsContent value="Reading" className="m-0">
               <OptionsReadingPanel
+                isSaving={isSaving}
                 discoveryRatePercent={discoveryRatePercent}
                 readingLevel={readingLevel}
+                isReadingLevelPresetActive={isReadingLevelPresetActive}
                 checkpoint={checkpoint}
                 currentFocus={currentFocus}
                 learningPath={learningPath}
+                exactActiveBandId={exactActiveBandId}
+                bandOptions={bandOptions}
                 onDiscoveryRateChange={onDiscoveryRateChange}
                 onReadingLevelChange={onReadingLevelChange}
+                onExactBandChange={onExactBandChange}
               />
             </TabsContent>
             <TabsContent value="Sites" className="m-0">
@@ -324,9 +330,6 @@ export function ExtensionOptions({
               <TabsContent value="Advanced" className="m-0">
                 <OptionsAdvancedPanel
                   diagnostics={advancedDiagnostics ?? null}
-                  exactActiveBandId={exactActiveBandId}
-                  bandOptions={bandOptions}
-                  onExactBandChange={onExactBandChange}
                 />
               </TabsContent>
             ) : null}
@@ -1096,25 +1099,37 @@ function OverviewTile({
 
 function OptionsReadingPanel({
   discoveryRatePercent = 8,
+  isSaving = false,
   readingLevel,
   checkpoint,
   currentFocus,
   learningPath = [],
+  exactActiveBandId,
+  bandOptions = [],
+  isReadingLevelPresetActive,
   onDiscoveryRateChange,
-  onReadingLevelChange
+  onReadingLevelChange,
+  onExactBandChange
 }: Pick<
   ExtensionOptionsProps,
   | "discoveryRatePercent"
+  | "isSaving"
   | "readingLevel"
   | "checkpoint"
   | "currentFocus"
   | "learningPath"
+  | "exactActiveBandId"
+  | "bandOptions"
+  | "isReadingLevelPresetActive"
   | "onDiscoveryRateChange"
   | "onReadingLevelChange"
+  | "onExactBandChange"
 >) {
   const [localReadingLevel, setLocalReadingLevel] =
     useState<ReadingLevel>("Beginner");
   const resolvedReadingLevel = readingLevel ?? localReadingLevel;
+  const activeReadingLevelPreset =
+    isReadingLevelPresetActive === false ? "" : resolvedReadingLevel;
   const densityLabel = getDensityLabel(discoveryRatePercent);
   const activeLevel = learningPath.find((level) => level.active);
   const chooseReadingLevel = (level: ReadingLevel) => {
@@ -1165,36 +1180,111 @@ function OptionsReadingPanel({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Starting point</CardTitle>
+            <CardTitle>Reading level</CardTitle>
             <CardDescription>
-              Choose the current reading band seed. You can adjust this later.
+              Use a broad preset or switch directly to any reading band whenever
+              you want.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <FieldSet>
-              <FieldLegend className="sr-only">Starting point</FieldLegend>
-              <RadioGroup
-                value={resolvedReadingLevel}
-                onValueChange={(value) => chooseReadingLevel(value as ReadingLevel)}
-                className="grid gap-2"
-              >
-                <ReadingLevelChoice
-                  value="Beginner"
-                  title="Beginner"
-                  copy="Just starting. Simple words and phrases."
-                />
-                <ReadingLevelChoice
-                  value="False beginner"
-                  title="False beginner"
-                  copy="I know some basics but need more exposure."
-                />
-                <ReadingLevelChoice
-                  value="Intermediate"
-                  title="Intermediate"
-                  copy="Comfortable with most everyday reading."
-                />
-              </RadioGroup>
-            </FieldSet>
+            <FieldGroup>
+              <FieldSet>
+                <FieldLegend>Starting presets</FieldLegend>
+                <RadioGroup
+                  value={activeReadingLevelPreset}
+                  disabled={isSaving}
+                  onValueChange={(value) =>
+                    chooseReadingLevel(value as ReadingLevel)
+                  }
+                  className="grid gap-2"
+                >
+                  <ReadingLevelChoice
+                    value="Beginner"
+                    title="Beginner"
+                    copy="Just starting. Simple words and phrases."
+                    onReselect={
+                      activeReadingLevelPreset === "Beginner"
+                        ? () => chooseReadingLevel("Beginner")
+                        : undefined
+                    }
+                  />
+                  <ReadingLevelChoice
+                    value="False beginner"
+                    title="False beginner"
+                    copy="I know some basics but need more exposure."
+                    onReselect={
+                      activeReadingLevelPreset === "False beginner"
+                        ? () => chooseReadingLevel("False beginner")
+                        : undefined
+                    }
+                  />
+                  <ReadingLevelChoice
+                    value="Intermediate"
+                    title="Intermediate"
+                    copy="Comfortable with most everyday reading."
+                    onReselect={
+                      activeReadingLevelPreset === "Intermediate"
+                        ? () => chooseReadingLevel("Intermediate")
+                        : undefined
+                    }
+                  />
+                </RadioGroup>
+                <FieldDescription>
+                  Choosing a preset recalibrates every learning track to its
+                  starting band.
+                </FieldDescription>
+              </FieldSet>
+              <Field>
+                <FieldLabel htmlFor="settings-exact-reading-band">
+                  Current reading band
+                </FieldLabel>
+                <Select
+                  value={exactActiveBandId ?? ""}
+                  disabled={isSaving}
+                  onValueChange={(value) => {
+                    if (value) {
+                      onExactBandChange?.(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id="settings-exact-reading-band"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Select band" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {bandOptions.map((band) => (
+                        <SelectItem
+                          key={band.id}
+                          value={band.id}
+                          onClick={() => {
+                            if (band.id === exactActiveBandId) {
+                              onExactBandChange?.(band.id);
+                            }
+                          }}
+                          onKeyDown={(event) => {
+                            if (
+                              (event.key === "Enter" || event.key === " ") &&
+                              band.id === exactActiveBandId
+                            ) {
+                              onExactBandChange?.(band.id);
+                            }
+                          }}
+                        >
+                          {band.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  A direct choice updates vocabulary, phrases, and grammar
+                  together. The preset choices above remain available.
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
           </CardContent>
         </Card>
       </div>
@@ -1325,12 +1415,14 @@ function ReadingLevelChoice({
   idPrefix = "reading-level",
   value,
   title,
-  copy
+  copy,
+  onReselect
 }: {
   idPrefix?: string;
   value: ReadingLevel;
   title: string;
   copy: string;
+  onReselect?: () => void;
 }) {
   const id = `${idPrefix}-${value.toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -1339,7 +1431,7 @@ function ReadingLevelChoice({
       orientation="horizontal"
       className="rounded-lg bg-muted/30 p-3 ring-1 ring-foreground/5 has-data-[state=checked]:bg-card has-data-[state=checked]:ring-primary/40"
     >
-      <RadioGroupItem id={id} value={value} />
+      <RadioGroupItem id={id} value={value} onClick={onReselect} />
       <FieldContent>
         <FieldLabel htmlFor={id}>{title}</FieldLabel>
         <FieldDescription>{copy}</FieldDescription>
@@ -2386,15 +2478,9 @@ function OptionsSupportPanel({
 }
 
 function OptionsAdvancedPanel({
-  diagnostics,
-  exactActiveBandId,
-  bandOptions = [],
-  onExactBandChange
+  diagnostics
 }: {
   diagnostics: ExtensionOptionsProps["advancedDiagnostics"];
-  exactActiveBandId?: ExtensionOptionsProps["exactActiveBandId"];
-  bandOptions?: ExtensionOptionsProps["bandOptions"];
-  onExactBandChange?: ExtensionOptionsProps["onExactBandChange"];
 }) {
   const activePageMetrics = diagnostics?.activePageMetrics ?? [];
   const storageMetrics = diagnostics?.storageMetrics ?? [];
@@ -2437,52 +2523,6 @@ function OptionsAdvancedPanel({
             </div>
           </CardContent>
         </Card>
-      </div>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Exact reading band</CardTitle>
-            <CardDescription>
-              Diagnostic override for vocabulary, phrase, and grammar placement.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field>
-                <FieldLabel>Reading band</FieldLabel>
-                <Select
-                  value={exactActiveBandId ?? ""}
-                  onValueChange={(value) => {
-                    if (value) {
-                      onExactBandChange?.(value);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select band" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {bandOptions.map((band) => (
-                        <SelectItem key={band.id} value={band.id}>
-                          {band.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
-        <Alert>
-          <IkIcon name="band" />
-          <AlertDescription>
-            {exactActiveBandId
-              ? `${exactActiveBandId} is active across all curriculum tracks.`
-              : "No exact active band is selected."}
-          </AlertDescription>
-        </Alert>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>

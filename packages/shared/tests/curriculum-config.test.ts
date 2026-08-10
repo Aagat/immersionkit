@@ -373,6 +373,53 @@ describe("curriculum configuration", () => {
     });
   });
 
+  it("does not let incidental one-off discoveries veto a ready evidence cohort", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: [
+        ...createTransitionItems(4),
+        ...createTransitionItems(12, (index) => ({
+          itemId: `word:incidental-discovery-${index}`,
+          unitRefId: `incidental-discovery-${index}`,
+          status: "learning",
+          qualifiedExposureCount: 1,
+          consecutiveUnassistedCount: 1,
+          distinctContextCount: 1
+        }))
+      ],
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision).toMatchObject({
+      eligible: true,
+      nextBand: expect.objectContaining({ bandId: "level-1b" }),
+      unmetRequirements: []
+    });
+  });
+
+  it("does not let one-off discoveries satisfy qualified evidence breadth", () => {
+    const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
+      bandId: "level-1a",
+      items: [
+        ...createTransitionItems(3),
+        ...createTransitionItems(12, (index) => ({
+          itemId: `word:incidental-discovery-${index}`,
+          unitRefId: `incidental-discovery-${index}`,
+          status: "learning",
+          qualifiedExposureCount: 1,
+          consecutiveUnassistedCount: 1,
+          distinctContextCount: 1
+        }))
+      ],
+      recentLapseRate: 0,
+      checkpointPassed: false
+    });
+
+    expect(decision.eligible).toBe(false);
+    expect(decision.unmetRequirements).toContain("qualified-exposures");
+  });
+
   it("does not count assisted-only exposures as progression readiness", () => {
     const decision = evaluateCurriculumBandTransition(DEFAULT_CURRICULUM_CONFIG, {
       bandId: "level-1a",

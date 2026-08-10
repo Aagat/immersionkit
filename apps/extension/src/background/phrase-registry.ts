@@ -17,6 +17,10 @@ import {
   requestToPromise,
   transactionDone
 } from "../storage/indexeddb";
+import {
+  runLearningStateMutation,
+  waitForLearningStateMutations
+} from "./learning-state-mutations";
 
 export type PhraseRegistryRecord = Record<string, PhraseRegistryEntry>;
 
@@ -48,6 +52,7 @@ export class IndexedDbPhraseRegistryRepository
       return null;
     }
 
+    await waitForLearningStateMutations();
     const registry = await this.loadRegistry();
     return registry[phraseId] ?? null;
   }
@@ -60,20 +65,22 @@ export class IndexedDbPhraseRegistryRepository
       return [];
     }
 
-    const registry = await this.loadRegistry();
-    const learningItems = await this.loadLearningItems();
-    const updated: PhraseRegistryEntry[] = [];
-    for (const occurrence of occurrences) {
-      const existing = registry[occurrence.phraseId];
-      const nextEntry = mergePhraseOccurrence(existing, occurrence, now);
-      registry[nextEntry.phraseId] = nextEntry;
-      ensurePhraseLearningItem(learningItems, nextEntry, now);
-      updated.push(nextEntry);
-    }
+    return runLearningStateMutation(async () => {
+      const registry = await this.loadRegistry();
+      const learningItems = await this.loadLearningItems();
+      const updated: PhraseRegistryEntry[] = [];
+      for (const occurrence of occurrences) {
+        const existing = registry[occurrence.phraseId];
+        const nextEntry = mergePhraseOccurrence(existing, occurrence, now);
+        registry[nextEntry.phraseId] = nextEntry;
+        ensurePhraseLearningItem(learningItems, nextEntry, now);
+        updated.push(nextEntry);
+      }
 
-    await this.persistRegistry(registry);
-    await this.learningItems.persistAll(learningItems);
-    return updated;
+      await this.persistRegistry(registry);
+      await this.learningItems.persistAll(learningItems);
+      return updated;
+    });
   }
 
   private async loadRegistry(): Promise<PhraseRegistryRecord> {

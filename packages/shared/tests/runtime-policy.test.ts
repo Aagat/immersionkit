@@ -328,6 +328,39 @@ describe("checkpoint summaries", () => {
       unmetRequirements: ["evidence-breadth", "checkpoint"]
     });
   });
+
+  it("does not let one-off discoveries dilute the checkpoint lapse gate", () => {
+    const readyItems = createCheckpointReadyItems("level-1c").map(
+      (item, index) => (index === 0 ? { ...item, lapses: 1 } : item)
+    );
+    const summary = summarizeCheckpointEligibility({
+      config: DEFAULT_CURRICULUM_CONFIG,
+      profile: {
+        activeVocabularyBandId: "level-1c",
+        activePhraseBandId: "level-1c",
+        activeGrammarBandId: "level-1c",
+        unlockedBandIds: ["level-1a", "level-1b", "level-1c"]
+      },
+      items: [
+        ...readyItems,
+        ...Array.from({ length: 2 }, (_unused, index) =>
+          createLearningItem({
+            itemId: `word:checkpoint-discovery-${index}`,
+            unitRefId: `checkpoint-discovery-${index}`,
+            unitType: "word",
+            bandId: "level-1c"
+          })
+        )
+      ],
+      now: "2026-04-28T12:00:00.000Z"
+    });
+
+    expect(summary).toMatchObject({
+      checkpointRequired: true,
+      checkpointIsOnlyBlocker: false,
+      unmetRequirements: ["recent-lapse-rate", "checkpoint"]
+    });
+  });
 });
 
 function createCheckpointReadyItems(bandId: string): LearningItem[] {

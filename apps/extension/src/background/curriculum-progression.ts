@@ -6,24 +6,32 @@ import {
   parseCurriculumRuntimeProfile,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
-  selectCurriculumTransitionEvidenceItems,
+  selectCurriculumTransitionProgressionCohort,
   type CurriculumConfig,
   type CurriculumRuntimeProfileInput,
   type LearningItem
 } from "@immersionkit/shared";
 
-import { pickFirstDefinedValue } from "../storage/serialization";
 import {
-  loadUserDataValues,
+  IndexedDbUserDataRepository,
   setUserDataValues,
   USER_DATA_KEYS
 } from "../storage/user-data-repository";
 
-const LEARNING_PROFILE_STORAGE_KEYS = [USER_DATA_KEYS.learningProfile] as const;
+export type LearningProfileSnapshot = {
+  profile: CurriculumRuntimeProfileInput;
+  revision: string | null;
+};
 
 export interface LearningProfileStore {
   load(): Promise<CurriculumRuntimeProfileInput>;
-  persist(profile: CurriculumRuntimeProfileInput): Promise<void>;
+  loadSnapshot(
+    fallbackProfile?: CurriculumRuntimeProfileInput | null
+  ): Promise<LearningProfileSnapshot>;
+  persistIfUnchanged(
+    expectedSnapshot: LearningProfileSnapshot,
+    profile: CurriculumRuntimeProfileInput
+  ): Promise<boolean>;
 }
 
 export type CurriculumProgressionDecisionDiagnostics = {
@@ -48,15 +56,33 @@ export type CurriculumProgressionResult = {
 
 class ChromeLearningProfileStore implements LearningProfileStore {
   async load(): Promise<CurriculumRuntimeProfileInput> {
-    const storage = await loadUserDataValues(LEARNING_PROFILE_STORAGE_KEYS);
-    const rawProfile = pickFirstDefinedValue(storage, LEARNING_PROFILE_STORAGE_KEYS);
-    return parseCurriculumRuntimeProfile(rawProfile);
+    return (await this.loadSnapshot()).profile;
   }
 
-  async persist(profile: CurriculumRuntimeProfileInput): Promise<void> {
-    await setUserDataValues({
-      [USER_DATA_KEYS.learningProfile]: profile
-    });
+  async loadSnapshot(
+    fallbackProfile?: CurriculumRuntimeProfileInput | null
+  ): Promise<LearningProfileSnapshot> {
+    const snapshot = await new IndexedDbUserDataRepository().getValueSnapshot(
+      USER_DATA_KEYS.learningProfile
+    );
+    return {
+      profile:
+        snapshot.revision === null && fallbackProfile
+          ? fallbackProfile
+          : parseCurriculumRuntimeProfile(snapshot.value),
+      revision: snapshot.revision
+    };
+  }
+
+  async persistIfUnchanged(
+    expectedSnapshot: LearningProfileSnapshot,
+    profile: CurriculumRuntimeProfileInput
+  ): Promise<boolean> {
+    return new IndexedDbUserDataRepository().setValueIfRevision(
+      USER_DATA_KEYS.learningProfile,
+      expectedSnapshot.revision,
+      profile
+    );
   }
 }
 
@@ -89,7 +115,8 @@ export class CurriculumProgressionService {
     now?: string;
   }): Promise<CurriculumProgressionResult> {
     const config = resolveCurriculumConfig(input.config);
-    const profile = input.profile ?? (await this.profileStore.load());
+    const profileSnapshot = await this.profileStore.loadSnapshot(input.profile);
+    const profile = profileSnapshot.profile;
     const decidedAt = input.now ?? new Date().toISOString();
     const activeBand = resolveActiveCurriculumBand(config, "word", profile);
     if (!activeBand) {
@@ -105,7 +132,8 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
-    const evidenceItems = selectCurriculumTransitionEvidenceItems(
+    const progressionCohort = selectCurriculumTransitionProgressionCohort(
+      config,
       activeBand.bandId,
       input.items
     );
@@ -113,7 +141,7 @@ export class CurriculumProgressionService {
       bandId: activeBand.bandId,
       items: input.items,
       recentLapseRate: estimateRecentLearningItemLapseRate(
-        evidenceItems,
+        progressionCohort,
         decidedAt
       ),
       checkpointPassed: false
@@ -137,7 +165,14 @@ export class CurriculumProgressionService {
     }
 
     const nextProfile = applyActiveBand(profile, decision.nextBand.bandId);
-    await this.profileStore.persist(nextProfile);
+    if (
+      !(await this.profileStore.persistIfUnchanged(
+        profileSnapshot,
+        nextProfile
+      ))
+    ) {
+      return this.createProfileChangedResult(config, decidedAt);
+    }
     const diagnostics = createProgressionDiagnostics({
       decidedAt,
       configId: config.configId,
@@ -157,7 +192,8 @@ export class CurriculumProgressionService {
     now?: string;
   }): Promise<CurriculumProgressionResult> {
     const config = resolveCurriculumConfig(input.config);
-    const profile = input.profile ?? (await this.profileStore.load());
+    const profileSnapshot = await this.profileStore.loadSnapshot(input.profile);
+    const profile = profileSnapshot.profile;
     const decidedAt = input.now ?? new Date().toISOString();
     const activeBand = resolveActiveCurriculumBand(config, "word", profile);
     if (!activeBand) {
@@ -173,12 +209,13 @@ export class CurriculumProgressionService {
       return { profile: null, diagnostics };
     }
 
-    const evidenceItems = selectCurriculumTransitionEvidenceItems(
+    const progressionCohort = selectCurriculumTransitionProgressionCohort(
+      config,
       activeBand.bandId,
       input.items
     );
     const recentLapseRate = estimateRecentLearningItemLapseRate(
-      evidenceItems,
+      progressionCohort,
       decidedAt
     );
     const blockedDecision = evaluateCurriculumBandTransition(config, {
@@ -220,7 +257,14 @@ export class CurriculumProgressionService {
       profile,
       checkpointDecision.nextBand.bandId
     );
-    await this.profileStore.persist(nextProfile);
+    if (
+      !(await this.profileStore.persistIfUnchanged(
+        profileSnapshot,
+        nextProfile
+      ))
+    ) {
+      return this.createProfileChangedResult(config, decidedAt);
+    }
     const diagnostics = createProgressionDiagnostics({
       decidedAt,
       configId: config.configId,
@@ -231,6 +275,23 @@ export class CurriculumProgressionService {
     });
     await this.diagnosticsStore.persist(diagnostics);
     return { profile: nextProfile, diagnostics };
+  }
+
+  private async createProfileChangedResult(
+    config: CurriculumConfig,
+    decidedAt: string
+  ): Promise<CurriculumProgressionResult> {
+    const currentProfile = (await this.profileStore.loadSnapshot()).profile;
+    const diagnostics = createProgressionDiagnostics({
+      decidedAt,
+      configId: config.configId,
+      profile: currentProfile,
+      activeBand: resolveActiveCurriculumBand(config, "word", currentProfile),
+      decision: null,
+      reason: "profile-changed"
+    });
+    await this.diagnosticsStore.persist(diagnostics);
+    return { profile: null, diagnostics };
   }
 }
 

@@ -299,6 +299,7 @@ export const baseOptionsProps: ExtensionOptionsProps = {
   savedSiteCount: 4,
   discoveryRatePercent: 8,
   readingLevel: "False beginner",
+  isReadingLevelPresetActive: true,
   advancedDiagnostics: diagnostics,
   exactActiveBandId: "level-1b",
   bandOptions: [

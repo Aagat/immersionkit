@@ -1,11 +1,20 @@
-import type { PhraseOccurrence } from "@immersionkit/shared";
+import {
+  RuntimeMessageType,
+  type PhraseOccurrence,
+  type ReviewEvent
+} from "@immersionkit/shared";
 import { describe, expect, it } from "vitest";
 
+import { BackgroundLearningItemService } from "../src/background/learning-items";
 import { IndexedDbPhraseRegistryRepository } from "../src/background/phrase-registry";
 import type {
   PhraseRegistryRecord,
   PhraseRegistryStore
 } from "../src/background/phrase-registry";
+import type {
+  LearningHistoryRepository,
+  LearningItemContextHistoryRecord
+} from "../src/background/learning-history-repository";
 import type {
   LearningItemRecord,
   LearningItemRepository
@@ -86,6 +95,65 @@ describe("background phrase registry", () => {
     });
   });
 
+  it("preserves concurrent phrase occurrence batches", async () => {
+    const learningItems = new InMemoryLearningItemRepository();
+    const registryStore = new InMemoryPhraseRegistryStore();
+    const registry = new IndexedDbPhraseRegistryRepository(
+      learningItems,
+      registryStore
+    );
+
+    await Promise.all(
+      Array.from({ length: 4 }, (_unused, index) =>
+        registry.upsertOccurrences(
+          [
+            createPhraseOccurrence(
+              `phrase:fixed-phrase:take-care-of-${index}:cuidar-de`
+            )
+          ],
+          "2026-04-25T10:00:00.000Z"
+        )
+      )
+    );
+
+    expect(Object.keys(registryStore.registry)).toHaveLength(4);
+    expect(Object.keys(learningItems.items)).toHaveLength(4);
+  });
+
+  it("preserves overlapping phrase and exposure learning-item writes", async () => {
+    const learningItems = new InMemoryLearningItemRepository();
+    const registry = new IndexedDbPhraseRegistryRepository(
+      learningItems,
+      new InMemoryPhraseRegistryStore()
+    );
+    const learningService = new BackgroundLearningItemService(
+      new InMemoryLearningHistoryRepository(),
+      learningItems,
+      () => Promise.resolve("level-1a")
+    );
+    const occurrence = createPhraseOccurrence(
+      "phrase:fixed-phrase:take-care-of:cuidar-de"
+    );
+
+    await Promise.all([
+      registry.upsertOccurrences([occurrence], "2026-04-25T10:00:00.000Z"),
+      learningService.recordQualifiedExposure({
+        type: RuntimeMessageType.QualifiedExposureEvent,
+        eventId: "cross-service-exposure-1",
+        itemId: "word:cross-service",
+        sentenceHash: "cross-service-sentence-1",
+        hostname: "fixtures.immersionkit.test",
+        sessionId: "cross-service-session",
+        occurredAt: "2026-04-25T10:00:00.000Z",
+        wasAssisted: false,
+        confidence: 0.72,
+        distinctContextKey: "fixtures.immersionkit.test:cross-service-sentence-1"
+      })
+    ]);
+
+    expect(learningItems.items).toHaveProperty(`phrase:${occurrence.phraseId}`);
+    expect(learningItems.items).toHaveProperty("word:cross-service");
+  });
 });
 
 class InMemoryLearningItemRepository implements LearningItemRepository {
@@ -109,6 +177,34 @@ class InMemoryPhraseRegistryStore implements PhraseRegistryStore {
 
   async persistAll(registry: PhraseRegistryRecord): Promise<void> {
     this.registry = { ...registry };
+  }
+}
+
+class InMemoryLearningHistoryRepository implements LearningHistoryRepository {
+  private events: ReviewEvent[] = [];
+  private contextHistory: LearningItemContextHistoryRecord = {};
+
+  async loadReviewEvents(): Promise<ReviewEvent[]> {
+    return [...this.events];
+  }
+
+  async persistReviewEvents(events: readonly ReviewEvent[]): Promise<void> {
+    this.events = [...events];
+  }
+
+  async loadContextHistory(): Promise<LearningItemContextHistoryRecord> {
+    return { ...this.contextHistory };
+  }
+
+  async persistContextHistory(
+    history: LearningItemContextHistoryRecord
+  ): Promise<void> {
+    this.contextHistory = { ...history };
+  }
+
+  async clear(): Promise<void> {
+    this.events = [];
+    this.contextHistory = {};
   }
 }
 

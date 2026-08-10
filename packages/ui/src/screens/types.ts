@@ -196,6 +196,7 @@ export type ExtensionOptionsProps = {
   isCompletingFirstRun?: boolean;
   discoveryRatePercent?: number;
   readingLevel?: ReadingLevel;
+  isReadingLevelPresetActive?: boolean;
   stats?: OptionsStats;
   checkpoint?: OptionsCheckpoint;
   currentFocus?: OptionsCurrentFocus | null;

@@ -33,6 +33,10 @@ import {
   type LearningItemRepository
 } from "../storage/learning-item-repository";
 import { loadBackgroundRuntimeConfig } from "./settings";
+import {
+  runLearningStateMutation,
+  waitForLearningStateMutations
+} from "./learning-state-mutations";
 
 const MAX_CONTEXT_HISTORY_PER_ITEM = 50;
 const DEFAULT_BAND_BACKFILL_LIMIT = 50;
@@ -49,10 +53,12 @@ export class BackgroundLearningItemService {
   ) {}
 
   async listItems(): Promise<LearningItem[]> {
+    await waitForLearningStateMutations();
     return Object.values(await this.itemRepository.loadAll());
   }
 
   async listItemsByUnitRefIds(unitRefIds: readonly string[]): Promise<LearningItem[]> {
+    await waitForLearningStateMutations();
     const requested = new Set(
       unitRefIds.map((unitRefId) => unitRefId.trim()).filter(Boolean)
     );
@@ -69,25 +75,27 @@ export class BackgroundLearningItemService {
     features: readonly GrammarFeatureMatch[],
     now: string = new Date().toISOString()
   ): Promise<LearningItem[]> {
-    const uniqueFeatures = dedupeGrammarFeatures(features);
-    if (uniqueFeatures.length === 0) {
-      return [];
-    }
+    return runLearningStateMutation(async () => {
+      const uniqueFeatures = dedupeGrammarFeatures(features);
+      if (uniqueFeatures.length === 0) {
+        return [];
+      }
 
-    const items = await this.itemRepository.loadAll();
-    const updatedItems: LearningItem[] = [];
-    for (const feature of uniqueFeatures) {
-      const item = await this.buildGrammarFeatureLearningItem(
-        items[buildLearningItemId("grammar-feature", feature.featureKey)],
-        feature,
-        now
-      );
-      items[item.itemId] = item;
-      updatedItems.push(item);
-    }
+      const items = await this.itemRepository.loadAll();
+      const updatedItems: LearningItem[] = [];
+      for (const feature of uniqueFeatures) {
+        const item = await this.buildGrammarFeatureLearningItem(
+          items[buildLearningItemId("grammar-feature", feature.featureKey)],
+          feature,
+          now
+        );
+        items[item.itemId] = item;
+        updatedItems.push(item);
+      }
 
-    await this.itemRepository.persistAll(items);
-    return updatedItems;
+      await this.itemRepository.persistAll(items);
+      return updatedItems;
+    });
   }
 
   async backfillMissingBands(limit: number = DEFAULT_BAND_BACKFILL_LIMIT): Promise<{
@@ -95,71 +103,75 @@ export class BackgroundLearningItemService {
     updated: number;
     remaining: number;
   }> {
-    const normalizedLimit = Math.max(0, Math.floor(limit));
-    if (normalizedLimit === 0) {
+    return runLearningStateMutation(async () => {
+      const normalizedLimit = Math.max(0, Math.floor(limit));
+      if (normalizedLimit === 0) {
+        return {
+          scanned: 0,
+          updated: 0,
+          remaining: 0
+        };
+      }
+
+      const items = await this.itemRepository.loadAll();
+      const entries = Object.entries(items).filter(([, item]) => !item.bandId);
+      const batch = entries.slice(0, normalizedLimit);
+      const resolvedBands = new Map<LearningUnitType, string | null>();
+      let updated = 0;
+
+      for (const [itemId, item] of batch) {
+        let bandId = resolvedBands.get(item.unitType);
+        if (!resolvedBands.has(item.unitType)) {
+          bandId = await this.resolveActiveBandId(item.unitType);
+          resolvedBands.set(item.unitType, bandId ?? null);
+        }
+
+        if (!bandId) {
+          continue;
+        }
+
+        items[itemId] = {
+          ...item,
+          bandId
+        };
+        updated += 1;
+      }
+
+      if (updated > 0) {
+        await this.itemRepository.persistAll(items);
+      }
+
       return {
-        scanned: 0,
-        updated: 0,
-        remaining: 0
+        scanned: batch.length,
+        updated,
+        remaining: Math.max(0, entries.length - batch.length)
       };
-    }
-
-    const items = await this.itemRepository.loadAll();
-    const entries = Object.entries(items).filter(([, item]) => !item.bandId);
-    const batch = entries.slice(0, normalizedLimit);
-    const resolvedBands = new Map<LearningUnitType, string | null>();
-    let updated = 0;
-
-    for (const [itemId, item] of batch) {
-      let bandId = resolvedBands.get(item.unitType);
-      if (!resolvedBands.has(item.unitType)) {
-        bandId = await this.resolveActiveBandId(item.unitType);
-        resolvedBands.set(item.unitType, bandId ?? null);
-      }
-
-      if (!bandId) {
-        continue;
-      }
-
-      items[itemId] = {
-        ...item,
-        bandId
-      };
-      updated += 1;
-    }
-
-    if (updated > 0) {
-      await this.itemRepository.persistAll(items);
-    }
-
-    return {
-      scanned: batch.length,
-      updated,
-      remaining: Math.max(0, entries.length - batch.length)
-    };
+    });
   }
 
   async recordAssist(message: AssistEventMessage): Promise<LearningItem | null> {
-    if (!isSupportedLearningItemId(message.itemId)) {
-      return null;
-    }
+    return runLearningStateMutation(async () => {
+      if (!isSupportedLearningItemId(message.itemId)) {
+        return null;
+      }
 
-    const now = message.createdAt || new Date().toISOString();
-    const state = await this.loadState();
-    const existing = state.items[message.itemId];
-    const item = ensureLearningItem(existing, message.itemId, now);
-    if (!item) {
-      return null;
-    }
+      const now = message.createdAt || new Date().toISOString();
+      const state = await this.loadState();
+      const existing = state.items[message.itemId];
+      const item = ensureLearningItem(existing, message.itemId, now);
+      if (!item) {
+        return null;
+      }
 
-    const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
-    const grade = inferAssistReviewGrade(bandedItem, now);
-    const nextItem = scheduleAssistReview(bandedItem, now);
+      const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
+      const grade = inferAssistReviewGrade(bandedItem, now);
+      const nextItem = scheduleAssistReview(bandedItem, now);
 
-    state.items[nextItem.itemId] = nextItem;
-    state.events.push(createReviewEvent(message, grade, now));
-    await this.persistState(state);
-    return nextItem;
+      state.items[nextItem.itemId] = nextItem;
+      state.events.push(createReviewEvent(message, grade, now));
+      await this.persistState(state);
+      return nextItem;
+    });
   }
 
   private async buildGrammarFeatureLearningItem(
@@ -208,46 +220,48 @@ export class BackgroundLearningItemService {
   async recordQualifiedExposure(
     message: QualifiedExposureEventMessage
   ): Promise<LearningItem | null> {
-    if (!isSupportedLearningItemId(message.itemId)) {
-      return null;
-    }
+    return runLearningStateMutation(async () => {
+      if (!isSupportedLearningItemId(message.itemId)) {
+        return null;
+      }
 
-    const now = message.occurredAt || new Date().toISOString();
-    const state = await this.loadState();
-    const existing = state.items[message.itemId];
-    const item = ensureLearningItem(existing, message.itemId, now);
-    if (!item) {
-      return null;
-    }
+      const now = message.occurredAt || new Date().toISOString();
+      const state = await this.loadState();
+      const existing = state.items[message.itemId];
+      const item = ensureLearningItem(existing, message.itemId, now);
+      if (!item) {
+        return null;
+      }
 
-    const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
-    const contextUpdate = updateContextHistory({
-      history: state.contextHistory[message.itemId],
-      itemId: message.itemId,
-      contextKey: readExposureContextKey(message),
-      now
-    });
-    state.contextHistory[message.itemId] = contextUpdate.history;
-    if (contextUpdate.isDuplicateWithinWindow) {
-      state.items[bandedItem.itemId] = bandedItem;
+      const bandedItem = await assignBandIfMissing(item, this.resolveActiveBandId);
+      const contextUpdate = updateContextHistory({
+        history: state.contextHistory[message.itemId],
+        itemId: message.itemId,
+        contextKey: readExposureContextKey(message),
+        now
+      });
+      state.contextHistory[message.itemId] = contextUpdate.history;
+      if (contextUpdate.isDuplicateWithinWindow) {
+        state.items[bandedItem.itemId] = bandedItem;
+        await this.persistState(state);
+        return bandedItem;
+      }
+
+      const scheduled = scheduleQualifiedExposure(bandedItem, {
+        now,
+        wasAssisted: message.wasAssisted,
+        isDistinctContext: contextUpdate.isNewContext
+      });
+      const nextItem = scheduled.item;
+
+      state.items[nextItem.itemId] = nextItem;
+      if (scheduled.shouldCreateReviewEvent) {
+        state.events.push(createReviewEvent(message, scheduled.grade, now));
+      }
+
       await this.persistState(state);
-      return bandedItem;
-    }
-
-    const scheduled = scheduleQualifiedExposure(bandedItem, {
-      now,
-      wasAssisted: message.wasAssisted,
-      isDistinctContext: contextUpdate.isNewContext
+      return nextItem;
     });
-    const nextItem = scheduled.item;
-
-    state.items[nextItem.itemId] = nextItem;
-    if (scheduled.shouldCreateReviewEvent) {
-      state.events.push(createReviewEvent(message, scheduled.grade, now));
-    }
-
-    await this.persistState(state);
-    return nextItem;
   }
 
   private async loadState(): Promise<{

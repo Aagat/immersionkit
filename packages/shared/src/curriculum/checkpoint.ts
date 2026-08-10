@@ -3,7 +3,7 @@ import {
   evaluateCurriculumBandTransition,
   resolveActiveCurriculumBand,
   resolveCurriculumConfig,
-  selectCurriculumTransitionEvidenceItems,
+  selectCurriculumTransitionProgressionCohort,
   type CurriculumConfig,
   type CurriculumLevel,
   type CurriculumRuntimeProfileInput
@@ -106,12 +106,13 @@ export function summarizeCheckpointEligibility(input: {
     };
   }
 
-  const evidenceItems = selectCurriculumTransitionEvidenceItems(
+  const progressionCohort = selectCurriculumTransitionProgressionCohort(
+    config,
     activeBand.bandId,
     input.items
   );
   const recentLapseRate = estimateRecentLearningItemLapseRate(
-    evidenceItems,
+    progressionCohort,
     input.now ?? new Date().toISOString()
   );
   const blockedDecision = evaluateCurriculumBandTransition(config, {

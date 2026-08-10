@@ -33,6 +33,7 @@ import {
   normalizeDiscoveryRate,
   notifySettingsRefresh,
   parseProficiencySeed,
+  proficiencySeedToBandId,
   saveSettingsState,
   saveLearningProfile,
   CURRICULUM_BAND_OPTIONS,
@@ -109,6 +110,7 @@ export function OptionsApp() {
   const [isPreviewSignInPending, setIsPreviewSignInPending] = useState(false);
   const [isCompletingFirstRun, setIsCompletingFirstRun] = useState(false);
   const [isGraduatingCheckpoint, setIsGraduatingCheckpoint] = useState(false);
+  const [isLearningProfileDirty, setIsLearningProfileDirty] = useState(false);
   const [isGeneratingSupportReport, setIsGeneratingSupportReport] =
     useState(false);
   const [isSubmittingSupportFeedback, setIsSubmittingSupportFeedback] =
@@ -162,6 +164,7 @@ export function OptionsApp() {
       setCheckpointPreview(loadedCheckpointPreview);
       setShowFirstRunIntro(loadedFirstRunIntroVisible);
       setCurriculumDiagnostics(loadedCurriculumDiagnostics);
+      setIsLearningProfileDirty(false);
       setActivePageDiagnostics(loadedActivePageDiagnostics);
       setAccountState(loadedAccountState);
     } catch {
@@ -212,6 +215,7 @@ export function OptionsApp() {
         current?.lastProgressionDecision ?? null
       )
     );
+    setIsLearningProfileDirty(true);
     setStatusMessage(null);
     setErrorMessage(null);
   }, []);
@@ -224,6 +228,7 @@ export function OptionsApp() {
         current?.lastProgressionDecision ?? null
       )
     );
+    setIsLearningProfileDirty(true);
     setStatusMessage(null);
     setErrorMessage(null);
   }, []);
@@ -368,7 +373,10 @@ export function OptionsApp() {
     []
   );
 
-  const persistCurrentSettings = useCallback(async (successMessage: string) => {
+  const persistCurrentSettings = useCallback(async (
+    successMessage: string,
+    options: { forceLearningProfilePersist?: boolean } = {}
+  ) => {
     if (!settingsState) {
       return false;
     }
@@ -405,18 +413,24 @@ export function OptionsApp() {
     setIsSaving(true);
 
     try {
+      const shouldPersistLearningProfile =
+        isLearningProfileDirty || options.forceLearningProfilePersist === true;
       const profileToPersist =
         curriculumDiagnostics?.profile ??
         createLearningProfileForProficiencySeed(normalizedState.proficiencySeed);
       const savedState = await saveSettingsState(normalizedState);
-      await saveLearningProfile(profileToPersist);
+      const nextCurriculumDiagnostics = shouldPersistLearningProfile
+        ? createCurriculumDiagnosticsForProfile(
+            profileToPersist,
+            curriculumDiagnostics?.lastProgressionDecision ?? null
+          )
+        : await loadCurriculumDiagnostics();
+      if (shouldPersistLearningProfile) {
+        await saveLearningProfile(profileToPersist);
+        setIsLearningProfileDirty(false);
+      }
       setSettingsState(savedState);
-      setCurriculumDiagnostics((current) =>
-        createCurriculumDiagnosticsForProfile(
-          profileToPersist,
-          current?.lastProgressionDecision ?? null
-        )
-      );
+      setCurriculumDiagnostics(nextCurriculumDiagnostics);
       await notifySettingsRefresh();
       setStatusMessage(successMessage);
       return true;
@@ -426,7 +440,7 @@ export function OptionsApp() {
     } finally {
       setIsSaving(false);
     }
-  }, [curriculumDiagnostics?.profile, settingsState]);
+  }, [curriculumDiagnostics, isLearningProfileDirty, settingsState]);
 
   const handleSave = useCallback(async () => {
     await persistCurrentSettings("Settings saved.");
@@ -484,7 +498,8 @@ export function OptionsApp() {
     setIsCompletingFirstRun(true);
     try {
       const saved = await persistCurrentSettings(
-        "Setup complete. Open a supported page to start reading."
+        "Setup complete. Open a supported page to start reading.",
+        { forceLearningProfilePersist: true }
       );
       if (!saved) {
         return;
@@ -697,6 +712,8 @@ export function OptionsApp() {
     activePageDiagnostics,
     curriculumDiagnostics
   });
+  const exactActiveBandId = getExactActiveBandId(curriculumDiagnostics?.profile);
+  const proficiencySeed = settingsState?.proficiencySeed ?? parseProficiencySeed(null);
 
   return (
     <ExtensionOptions
@@ -711,7 +728,10 @@ export function OptionsApp() {
       isPreviewSignInPending={isPreviewSignInPending}
       isCompletingFirstRun={isCompletingFirstRun}
       discoveryRatePercent={discoveryRatePercent}
-      readingLevel={toUiReadingLevel(settingsState?.proficiencySeed)}
+      readingLevel={toUiReadingLevel(proficiencySeed)}
+      isReadingLevelPresetActive={
+        exactActiveBandId === proficiencySeedToBandId(proficiencySeed)
+      }
       stats={{
         comfortable: formatCount(vocabStats.known),
         practice: formatCount(vocabStats.learning),
@@ -749,7 +769,7 @@ export function OptionsApp() {
       savedSiteCount={formatCount(siteEntries.length)}
       pausedSiteCount={formatCount(disabledSiteCount)}
       advancedDiagnostics={advancedDiagnostics}
-      exactActiveBandId={getExactActiveBandId(curriculumDiagnostics?.profile)}
+      exactActiveBandId={exactActiveBandId}
       bandOptions={CURRICULUM_BAND_OPTIONS}
       account={toUiAccountState(accountState)}
       supportCategory={supportCategory}

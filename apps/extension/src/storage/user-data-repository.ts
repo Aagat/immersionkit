@@ -66,6 +66,12 @@ type UserDataRecord = {
   value: unknown;
   schemaVersion: number;
   updatedAt: string;
+  revision: string;
+};
+
+export type UserDataValueSnapshot = {
+  value: unknown;
+  revision: string | null;
 };
 
 type StoredVocabRecord = UserVocabEntry & {
@@ -79,6 +85,54 @@ export class IndexedDbUserDataRepository {
 
   async setValue(key: string, value: unknown): Promise<void> {
     await this.setValues({ [key]: value });
+  }
+
+  async getValueSnapshot(key: string): Promise<UserDataValueSnapshot> {
+    if (!isIndexedDbAvailable()) {
+      return { value: undefined, revision: null };
+    }
+
+    const store = await getIndexedDbStore(INDEXEDDB_STORES.userData, "readonly");
+    const transaction = store.transaction;
+    const done = transactionDone(transaction);
+    const storedRecord = await requestToPromise(store.get(key));
+    await done;
+    return {
+      value:
+        isRecord(storedRecord) && "value" in storedRecord
+          ? storedRecord.value
+          : undefined,
+      revision: readUserDataRevision(storedRecord)
+    };
+  }
+
+  async setValueIfRevision(
+    key: string,
+    expectedRevision: string | null,
+    value: unknown
+  ): Promise<boolean> {
+    if (!isIndexedDbAvailable()) {
+      return false;
+    }
+
+    const store = await getIndexedDbStore(INDEXEDDB_STORES.userData, "readwrite");
+    const transaction = store.transaction;
+    const done = transactionDone(transaction);
+    const storedRecord = await requestToPromise(store.get(key));
+    if (readUserDataRevision(storedRecord) !== expectedRevision) {
+      await done;
+      return false;
+    }
+
+    store.put({
+      key,
+      value,
+      schemaVersion: USER_DATA_SCHEMA_VERSION,
+      updatedAt: new Date().toISOString(),
+      revision: createUserDataRevision()
+    } satisfies UserDataRecord);
+    await done;
+    return true;
   }
 
   async removeValue(key: string): Promise<void> {
@@ -107,7 +161,8 @@ export class IndexedDbUserDataRepository {
         key,
         value,
         schemaVersion: USER_DATA_SCHEMA_VERSION,
-        updatedAt
+        updatedAt,
+        revision: createUserDataRevision()
       } satisfies UserDataRecord);
     }
     await transactionDone(transaction);
@@ -310,6 +365,22 @@ function findDefinitionForKey(key: string): UserDataKeyDefinition | null {
   return (
     USER_DATA_KEY_DEFINITIONS.find((definition) => definition.key === key) ?? null
   );
+}
+
+function readUserDataRevision(input: unknown): string | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  return readString(input.revision) ?? readString(input.updatedAt);
+}
+
+function createUserDataRevision(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function normalizeVocabEntry(input: unknown): UserVocabEntry | null {

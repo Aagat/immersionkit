@@ -6,6 +6,7 @@ import {
 } from "../src/storage/learning-item-repository";
 import { IndexedDbLearningHistoryRepository } from "../src/background/learning-history-repository";
 import {
+  IndexedDbUserDataRepository,
   IndexedDbUserVocabRepository,
   loadUserDataValues,
   setUserDataValues
@@ -143,6 +144,64 @@ describe("background user data repositories", () => {
       expect(chromeStub.getStorageSnapshot()).toEqual({});
     } finally {
       chromeStub.restore();
+      indexedDbStub.restore();
+    }
+  });
+
+  it("atomically rejects a stale user-data compare-and-set", async () => {
+    const indexedDbStub = installIndexedDbStub();
+    const repository = new IndexedDbUserDataRepository();
+    const initialProfile = {
+      activeVocabularyBandId: "level-1a",
+      activePhraseBandId: "level-1a",
+      activeGrammarBandId: "level-1a",
+      unlockedBandIds: ["level-1a"]
+    };
+    const explicitProfile = {
+      activeVocabularyBandId: "level-3b",
+      activePhraseBandId: "level-3b",
+      activeGrammarBandId: "level-3b",
+      unlockedBandIds: ["level-1a", "level-3b"]
+    };
+
+    try {
+      await repository.setValue("learning-profile", initialProfile);
+      const initialSnapshot = await repository.getValueSnapshot(
+        "learning-profile"
+      );
+      await repository.setValue("learning-profile", initialProfile);
+      await expect(
+        repository.setValueIfRevision(
+          "learning-profile",
+          initialSnapshot.revision,
+          explicitProfile
+        )
+      ).resolves.toBe(false);
+
+      const currentSnapshot = await repository.getValueSnapshot(
+        "learning-profile"
+      );
+      await expect(
+        repository.setValueIfRevision(
+          "learning-profile",
+          currentSnapshot.revision,
+          explicitProfile
+        )
+      ).resolves.toBe(true);
+      await expect(
+        repository.setValueIfRevision(
+          "learning-profile",
+          currentSnapshot.revision,
+          {
+            ...initialProfile,
+            activeVocabularyBandId: "level-1b"
+          }
+        )
+      ).resolves.toBe(false);
+      await expect(repository.getValue("learning-profile")).resolves.toEqual(
+        explicitProfile
+      );
+    } finally {
       indexedDbStub.restore();
     }
   });

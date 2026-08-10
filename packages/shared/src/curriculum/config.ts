@@ -208,33 +208,34 @@ export function evaluateCurriculumBandTransition(
   }
 
   const policy = resolveTransitionPolicy(config, band);
-  const evidenceBearingItems = selectCurriculumTransitionEvidenceItems(
+  const progressionCohort = selectCurriculumTransitionProgressionCohort(
+    config,
     band.bandId,
     input.items
   );
-  const stableItems = evidenceBearingItems.filter((item) =>
+  const stableItems = progressionCohort.filter((item) =>
     policy.stableStatuses.includes(item.status)
   );
   const stableRatio =
-    evidenceBearingItems.length > 0
-      ? stableItems.length / evidenceBearingItems.length
+    progressionCohort.length > 0
+      ? stableItems.length / progressionCohort.length
       : 0;
-  const minimumExposureMet = evidenceBearingItems.every(
+  const minimumExposureMet = progressionCohort.every(
     (item) => item.qualifiedExposureCount >= policy.minimumQualifiedExposures
   );
-  const distinctContextReadyItems = evidenceBearingItems.filter(
+  const distinctContextReadyItems = progressionCohort.filter(
     hasEnoughDistinctContextForProgression
   );
-  const unassistedReadyItems = evidenceBearingItems.filter(
+  const unassistedReadyItems = progressionCohort.filter(
     hasEnoughUnassistedEvidenceForProgression
   );
   const requiredDistinctContextItems = resolveRequiredItemCount({
-    totalItems: evidenceBearingItems.length,
+    totalItems: progressionCohort.length,
     minimumItems: policy.minimumDistinctContextItems,
     minimumRatio: policy.minimumDistinctContextItemRatio
   });
   const requiredUnassistedItems = resolveRequiredItemCount({
-    totalItems: evidenceBearingItems.length,
+    totalItems: progressionCohort.length,
     minimumItems: policy.minimumUnassistedItems,
     minimumRatio: policy.minimumUnassistedItemRatio
   });
@@ -248,7 +249,7 @@ export function evaluateCurriculumBandTransition(
     unmetRequirements.push("qualified-exposures");
   }
 
-  if (evidenceBearingItems.length < policy.minimumEvidenceBearingItems) {
+  if (progressionCohort.length < policy.minimumEvidenceBearingItems) {
     unmetRequirements.push("evidence-breadth");
   }
 
@@ -287,6 +288,30 @@ export function selectCurriculumTransitionEvidenceItems(
       item.status !== "suspended" &&
       item.consecutiveUnassistedCount > 0
   );
+}
+
+export function selectCurriculumTransitionProgressionCohort(
+  config: CurriculumConfig,
+  bandId: string,
+  items: readonly LearningItem[]
+): LearningItem[] {
+  const band = config.bands.find((candidate) => candidate.bandId === bandId);
+  if (!band) {
+    return [];
+  }
+
+  const policy = resolveTransitionPolicy(config, band);
+  const evidenceItems = selectCurriculumTransitionEvidenceItems(bandId, items);
+  const exposureQualifiedItems = evidenceItems.filter(
+    (item) => item.qualifiedExposureCount >= policy.minimumQualifiedExposures
+  );
+  // Normal browsing continuously introduces one-off discoveries. Once enough
+  // items have repeated evidence, keep those discoveries outside every
+  // readiness denominator so a ready cohort cannot be reset or diluted by
+  // meeting something new.
+  return exposureQualifiedItems.length >= policy.minimumEvidenceBearingItems
+    ? exposureQualifiedItems
+    : evidenceItems;
 }
 
 export function resolveActiveCurriculumBand(

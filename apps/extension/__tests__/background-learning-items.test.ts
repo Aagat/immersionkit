@@ -511,6 +511,37 @@ describe("background learning item service", () => {
     ]);
   });
 
+  it("preserves concurrent qualified exposures for distinct learning items", async () => {
+    const history = new InMemoryLearningHistoryRepository();
+    const items = new InMemoryLearningItemRepository();
+    const service = new BackgroundLearningItemService(
+      history,
+      items,
+      createBandResolver("level-1a")
+    );
+
+    await Promise.all(
+      Array.from({ length: 4 }, (_unused, index) =>
+        service.recordQualifiedExposure({
+          type: RuntimeMessageType.QualifiedExposureEvent,
+          eventId: `exposure-concurrent-${index}`,
+          itemId: `word:lexeme-concurrent-${index}`,
+          sentenceHash: `sentence-concurrent-${index}`,
+          hostname: "fixtures.immersionkit.test",
+          sessionId: "session-concurrent",
+          occurredAt: "2026-04-18T10:00:00.000Z",
+          wasAssisted: false,
+          confidence: 0.72,
+          distinctContextKey: `fixtures.immersionkit.test:sentence-concurrent-${index}`
+        })
+      )
+    );
+
+    expect(Object.keys(items.items)).toHaveLength(4);
+    expect(history.reviewEvents).toHaveLength(4);
+    expect(Object.keys(history.contextHistory)).toHaveLength(4);
+  });
+
   it("dedupes repeated qualified exposures in the same context window", async () => {
     const history = new InMemoryLearningHistoryRepository({
       contextHistory: createContextHistory("2026-04-18T10:00:00.000Z"),
